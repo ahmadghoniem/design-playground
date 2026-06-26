@@ -2,6 +2,8 @@
 
 **Type:** excision · **Risk:** high · **Depends on:** none · **Do BEFORE Task 10** · **Blast radius:** ~18 files
 
+> **Current repo state (Batches A–C have landed).** Shell files now live in `app/` (Task 06) and **the zustand stores now live in `stores/`, not `lib/` (Task 08)**. So `flow-mocks-store.ts` is at **`stores/flow-mocks-store.ts`**, and every `useFlowMocksStore` importer already points at `'…/stores/flow-mocks-store'`. Delete the store from `stores/`, and grep paths accordingly — there is no `lib/flow-mocks-store.ts` anymore.
+
 ## Goal
 
 Remove the **signup-Flow "decompose into stages" demo feature** in its entirety. It is a domain-specific demo (a signup page broken into stages with mock data and a simulator) that does not belong in a general-purpose design playground. After this task the canvas keeps components, iterations, frames, draw/shape tools, discovery, and generation — but has no "Decompose into stages", no StageNodes, no FlowSimulator, no MockDataPanel.
@@ -30,7 +32,7 @@ components/stage-renderers.tsx
 data/flows/signup.ts                    (delete data/flows/ dir; keep data/ai-models.json)
 lib/flows/registry.ts
 lib/flows/types.ts                      (delete lib/flows/ dir)
-lib/flow-mocks-store.ts                 (or stores/flow-mocks-store.ts if Task 08 ran first)
+stores/flow-mocks-store.ts              (Task 08 moved it here from lib/ — it is NOT in lib/)
 nodes/StageNode.tsx
 nodes/StageGroupNode.tsx
 server/routes/flow-adopt.ts
@@ -76,7 +78,8 @@ Remove the flow event + payload types and the event-name constants:
 
 1. **Clean integration points first** (constants → nodes → canvas → header → server). This makes the feature unreachable.
 2. **Then delete the feature files** listed above.
-3. **Sweep:** `git grep -in "FlowSimulator\|FlowAdopt\|MockDataPanel\|StageNode\|StageGroup\|flowsByComponentId\|findFlowDescriptor\|useFlowMocksStore\|FLOW_DECOMPOSE\|FlowDecompose\|FlowPlay\|signupFlow\|SignupPageShell\|stage-renderers\|StageNodeData"` → **zero** hits.
+3. **Sweep (symbols):** `git grep -in "FlowSimulator\|FlowAdopt\|MockDataPanel\|StageNode\|StageGroup\|flowsByComponentId\|findFlowDescriptor\|useFlowMocksStore\|FLOW_DECOMPOSE\|FlowDecompose\|FlowPlay\|signupFlow\|SignupPageShell\|stage-renderers\|StageNodeData"` → **zero** hits.
+   - **Dangling-import gate (the delete analog of the orphaned-import gate).** A symbol sweep can miss a surviving `import` of a now-deleted *file path*. After deleting, grep for any reference to the deleted module paths: `git grep -n "flow-mocks-store\|FlowSimulator\|FlowAdoptModal\|MockDataPanel\|SignupPageShell\|stage-renderers\|/flows/\|StageNode\|StageGroupNode\|flow-adopt"` → **zero** hits. Any hit is a file importing something you deleted — clean it. (This is the same failure shape as a half-finished move: the build only catches it if the host typechecks, so the grep is the real guard.)
 4. **Confirm React Flow untouched:** `git grep -c "@xyflow/react"` unchanged; `useCanvasFlow`/`lib/canvas-flow.tsx` intact; canvas still imports `ReactFlow`.
 
 ## Verification

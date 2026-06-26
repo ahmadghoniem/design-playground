@@ -4,6 +4,8 @@ How to work the refactor tasks in **related groups**, two-ish at a time, so each
 
 Each batch lists: the tasks, why they're grouped, the dependency reason for its position, and **how to commit** (one commit or split). After a batch, run every task's zero-grep gate and verification before committing.
 
+> **Commit hygiene (reviewer note).** Agents pre-stage their work: a `git mv` or `git rm` lands in the **index** before you review. So when you commit a batch, first run `git status` and check the **staged** set — do not use a narrow `git add <path>` that silently inherits already-staged renames/deletes into an unrelated commit (this happened once: a store-move rename rode into a docs commit). Either `git reset` to unstage everything and re-add deliberately, or `git add -A` and commit the whole batch as one intended unit. Verify `git show --stat HEAD` after committing.
+
 ---
 
 ## Batch A — Quick wins (01–05) ✅ DONE
@@ -18,7 +20,10 @@ Reference for how a batch closes out.
 
 ---
 
-## Batch B — Restructure moves (06 + 07)
+## Batch B — Restructure moves (06 + 07) ✅ DONE
+
+Landed as `5f47a65 refactor(structure): relocate shell files to app/ and rename iteration route` (DeepSeek; review fixed 32 imports it left un-re-depthed in `PlaygroundCanvas`/`PlaygroundClient`).
+
 
 **Tasks:** 06 (move shell files out of root) → 07 (rename `iterations/[slug]/` route).
 **Why grouped:** both are pure file relocations and both touch `dev-entry.tsx`'s import block. Doing them together means one rewrite of `dev-entry.tsx` and one mental model ("we are moving files, fixing relative imports").
@@ -29,7 +34,10 @@ Reference for how a batch closes out.
 
 ---
 
-## Batch C — Store relocation (08)
+## Batch C — Store relocation (08) ✅ DONE
+
+Landed as `0caf51f refactor(stores): move zustand stores out of lib into stores/` (Qwen 3.7 Max; reviewed defect-free — all 26 importers repointed at correct depth, even one the spec table missed).
+
 
 **Task:** 08 (move 8 Zustand stores `lib/` → `stores/`). **Solo** — it is mechanical but spans ~30 import sites; pairing it would muddy the review.
 **Position:** after Batch B (so `iterations/[slug]` → renamed path and shell paths are settled — Task 08's importer table calls this out). Before Batch D only matters for `flow-mocks-store` (see note in Task 08).
