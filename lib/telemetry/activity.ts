@@ -31,7 +31,6 @@ export type CountableNodeType =
   | 'component'
   | 'iteration'
   | 'image'
-  | 'pdf'
   | 'text'
   | 'stage';
 
@@ -51,7 +50,6 @@ const zeroNodes = (): Record<CountableNodeType, number> => ({
   component: 0,
   iteration: 0,
   image: 0,
-  pdf: 0,
   text: 0,
   stage: 0,
 });
@@ -99,7 +97,6 @@ function flushWindow(): void {
     nodes_added_component: nodesAdded.component,
     nodes_added_iteration: nodesAdded.iteration,
     nodes_added_image: nodesAdded.image,
-    nodes_added_pdf: nodesAdded.pdf,
     nodes_added_text: nodesAdded.text,
     nodes_added_stage: nodesAdded.stage,
   });

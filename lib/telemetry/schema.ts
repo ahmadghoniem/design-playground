@@ -126,7 +126,6 @@ const RENDER_MODES = ['react', 'html', 'jsx'] as const;
 const CHAT_MODES = ['edit', 'explore', 'raw'] as const;
 
 const FEATURES = [
-  'pdf_import',
   'draw',
   'flow_simulator_play',
   'prompt_copied',
@@ -190,7 +189,6 @@ export const EVENT_SCHEMA: Record<TelemetryEventName, Record<string, PropSpec>> 
     nodes_added_component: { kind: 'number', min: 0, max: 500, integer: true },
     nodes_added_iteration: { kind: 'number', min: 0, max: 500, integer: true },
     nodes_added_image: { kind: 'number', min: 0, max: 500, integer: true },
-    nodes_added_pdf: { kind: 'number', min: 0, max: 500, integer: true },
     nodes_added_text: { kind: 'number', min: 0, max: 500, integer: true },
     nodes_added_stage: { kind: 'number', min: 0, max: 500, integer: true },
   },
@@ -435,7 +433,7 @@ export const SANITIZER_TEST_VECTORS: {
   },
   {
     desc: 'array injection into scalar prop is dropped',
-    in: { name: 'feature_used', props: { feature: ['draw', 'pdf_import'] } },
+    in: { name: 'feature_used', props: { feature: ['draw', 'flow_simulator_play'] } },
     expect: { name: 'feature_used', props: {} },
   },
 ];

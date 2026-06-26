@@ -34,7 +34,6 @@ const COUNTABLE_NODE_TYPES: Record<string, CountableNodeType> = {
   component: "component",
   iteration: "iteration",
   image: "image",
-  pdf: "pdf",
   text: "text",
   stage: "stage",
   stageGroup: "stage",

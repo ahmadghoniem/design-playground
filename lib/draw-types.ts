@@ -44,8 +44,6 @@ export function getStrokeOpacity(stroke: DrawStroke): number {
   return 1;
 }
 
-export type PdfDrawingsMap = Record<string, DrawStroke[]>;
-
 export function createStrokeId(): string {
   return `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

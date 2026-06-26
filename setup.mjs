@@ -151,11 +151,11 @@ function printTelemetryNote() {
   console.log('');
 }
 
-function configureGitignore(hostRoot, includePdfWorker) {
+function configureGitignore(hostRoot) {
   const untrack = process.argv.includes('--untrack');
 
   try {
-    const result = ensureHostGitignore(hostRoot, { untrack, includePdfWorker });
+    const result = ensureHostGitignore(hostRoot, { untrack });
     console.log('');
     console.log(bold('  Git:'));
     console.log(`    ${green('+')} Updated .gitignore (playground + artifacts)`);
@@ -175,8 +175,8 @@ function configureGitignore(hostRoot, includePdfWorker) {
   }
 }
 
-async function finishSetup(hostRoot, includePdfWorker) {
-  configureGitignore(hostRoot, includePdfWorker);
+async function finishSetup(hostRoot) {
+  configureGitignore(hostRoot);
   console.log('');
   console.log(green('  Done! Start your dev server and visit /playground'));
   console.log('');
@@ -203,7 +203,6 @@ async function main() {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
   const required = Object.keys(manifest.dependencies || {});
   const assumed  = Object.keys(manifest.peerDependencies || {});
-  const includePdfWorker = Boolean((manifest.dependencies || {})['pdfjs-dist']);
 
   // 2. Find the HOST root (first package.json ABOVE the playground folder).
   //    Used only for prerequisite checks + .gitignore — never written to.
@@ -285,7 +284,7 @@ async function main() {
     console.log('');
     console.log(bold('  Dependencies:'));
     console.log(`    ${green('+')} All ${required.length} packages already installed (nested).`);
-    await finishSetup(hostRoot, includePdfWorker);
+    await finishSetup(hostRoot);
     process.exit(0);
   }
 
@@ -325,7 +324,7 @@ async function main() {
     process.exit(1);
   }
 
-  await finishSetup(hostRoot, includePdfWorker);
+  await finishSetup(hostRoot);
 }
 
 main();

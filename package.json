@@ -19,7 +19,6 @@
     "hono": "^4.12.27",
     "html-to-image": "^1.11.13",
     "lucide-react": "^1.17.0",
-    "pdfjs-dist": "5.4.296",
     "react-router-dom": "^7.0.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",

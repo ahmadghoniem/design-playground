@@ -29,7 +29,6 @@ import { modelsRoutes } from './routes/models';
 import { oncanvasComponentsRoutes } from './routes/oncanvas-components';
 import { openInRoutes } from './routes/open-in';
 import { pagesRoutes } from './routes/pages';
-import { pdfsRoutes } from './routes/pdfs';
 import { projectIdRoutes } from './routes/project-id';
 import { providersRoutes } from './routes/providers';
 import { screenshotRoutes } from './routes/screenshot';
@@ -56,7 +55,6 @@ export function createPlaygroundRouter(): Hono {
   router.route('/', oncanvasComponentsRoutes());
   router.route('/', openInRoutes());
   router.route('/', pagesRoutes());
-  router.route('/', pdfsRoutes());
   router.route('/', projectIdRoutes());
   router.route('/', providersRoutes());
   router.route('/', screenshotRoutes());
@@ -75,7 +73,7 @@ export const playgroundRouter: Hono = createPlaygroundRouter();
  * router mounted at `/playground`. Routes inside the router are registered at
  * `/api/...`, so the full served path is `/playground/api/...` — the path every
  * client fetch() call in this package already expects. The 50 MB limit
- * accommodates base64-encoded image/PDF/screenshot payloads.
+ * accommodates base64-encoded image/screenshot payloads.
  */
 export function createPlaygroundServer(): Hono {
   const app = new Hono();

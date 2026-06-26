@@ -1,9 +1,7 @@
 import { create } from 'zustand';
 import type { DrawPenKind } from './draw-types';
 
-export type DrawStrokeSelection =
-  | { scope: 'canvas'; strokeId: string }
-  | { scope: 'pdf'; nodeId: string; pageKey: string; strokeId: string };
+export type DrawStrokeSelection = { scope: 'canvas'; strokeId: string };
 
 interface PlaygroundDrawStore {
   /** True when the left-toolbar draw tool is active */
