@@ -1,0 +1,873 @@
+// ============================================================================
+// Playground Constants
+// All fixed variables used across the playground feature.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Custom Event Names
+// ---------------------------------------------------------------------------
+
+/** Fired when the iteration prompt is copied to clipboard */
+export const ITERATION_PROMPT_COPIED_EVENT = 'iteration-prompt-copied';
+
+/** Fired to request an immediate iteration fetch/scan */
+export const ITERATION_FETCH_EVENT = 'iteration-fetch-requested';
+
+/** Fired when a component enters/exits fullscreen */
+export const FULLSCREEN_NODE_EVENT = 'playground:fullscreen-node';
+
+/** Fired when a ComponentNode changes its viewport size */
+export const COMPONENT_SIZE_CHANGE_EVENT = 'playground:component-size-change';
+
+/** Fired when generation starts (skeleton nodes are created) */
+export const GENERATION_START_EVENT = 'playground:generation-start';
+
+/** Fired when generation completes successfully */
+export const GENERATION_COMPLETE_EVENT = 'playground:generation-complete';
+
+/** Fired when generation encounters an error */
+export const GENERATION_ERROR_EVENT = 'playground:generation-error';
+
+/** Fired when a generation request is queued behind an in-progress generation */
+export const GENERATION_QUEUED_EVENT = 'playground:generation-queued';
+
+/**
+ * Live Claude Code assistant text accumulated from stream-json (forwarded from SSE).
+ * Used for presence bubble tooltips during generation.
+ */
+export const GENERATION_AGENT_PREVIEW_EVENT = 'playground:generation-agent-preview';
+
+/** Fired when an adoption completes successfully */
+export const ADOPTION_COMPLETE_EVENT = 'playground:adoption-complete';
+
+/** Fired when an adoption encounters an error */
+export const ADOPTION_ERROR_EVENT = 'playground:adoption-error';
+
+/** Fired to pan the canvas to a specific flow position */
+export const PAN_TO_POSITION_EVENT = 'playground:pan-to-position';
+
+/** Fired to fit the viewport around all nodes for a given component */
+export const FIT_COMPONENT_NODES_EVENT = 'playground:fit-component-nodes';
+
+/** Fired to dismiss a generation presence bubble across header + canvas layers */
+export const PRESENCE_BUBBLE_DISMISS_EVENT = 'playground:presence-bubble-dismiss';
+
+/** Fired to trigger auto-arrange of canvas nodes */
+export const PLAYGROUND_AUTO_ARRANGE_EVENT = 'PLAYGROUND_AUTO_ARRANGE';
+
+/** Fired to open the Skills catalog modal */
+export const OPEN_SKILLS_CATALOG_EVENT = 'playground:open-skills-catalog';
+
+/** Fired after a skill is added or removed so listeners can refresh */
+export const SKILLS_CHANGED_EVENT = 'playground:skills-changed';
+
+/** Fired when an iteration node's collapse/expand state is toggled */
+export const ITERATION_COLLAPSE_TOGGLE_EVENT = 'playground:iteration-collapse-toggle';
+
+/** Fired to open the clear-all confirmation dialog */
+export const PLAYGROUND_CLEAR_EVENT = 'playground:clear-requested';
+
+/** Fired when drag-to-iterate releases (triggers toast + generation) */
+export const DRAG_ITERATE_EVENT = 'playground:drag-iterate';
+
+/** Fired to programmatically open cursor chat on a target node */
+export const CURSOR_CHAT_OPEN_EVENT = 'playground:cursor-chat-open';
+
+/** Fired when the cursor chat activates/deactivates, so other surfaces (the
+ *  bottom DockedChatBar) can defer while it's in use — they do the same thing. */
+export const CURSOR_CHAT_ACTIVE_EVENT = 'playground:cursor-chat-active';
+
+export interface CursorChatActivePayload {
+  active: boolean;
+}
+
+/** Fired to decompose a component/iteration node into per-stage StageNodes */
+export const FLOW_DECOMPOSE_EVENT = 'playground:flow-decompose';
+
+export interface FlowDecomposePayload {
+  /** Node id of the ComponentNode/IterationNode being decomposed */
+  parentNodeId: string;
+  /** Source component registry id (e.g. 'signup') */
+  componentId: string;
+  /** Anchor canvas position (parent node's position) used to place stages */
+  anchor: { x: number; y: number };
+}
+
+/** Fired to open the flow simulator and play a flow's stages end-to-end */
+export const FLOW_PLAY_EVENT = 'playground:flow-play';
+
+export interface FlowPlayPayload {
+  /** Flow instance id (matches StageNodeData.flowId) */
+  flowId: string;
+  /** When true, use the canonical iteration for each stage instead of base */
+  useCanonical?: boolean;
+}
+
+/** Fired to open the Combine preview (plays canonical variants stitched together) */
+export const FLOW_COMBINE_EVENT = 'playground:flow-combine';
+
+/** Fired to open the Adopt diff modal for a flow */
+export const FLOW_ADOPT_EVENT = 'playground:flow-adopt';
+
+export interface FlowAdoptPayload {
+  flowId: string;
+}
+
+export interface CursorChatOpenPayload {
+  targetNode: import('../hooks/useCursorChat').CursorChatTargetNode;
+  screenX: number;
+  screenY: number;
+  editMode?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// localStorage Keys
+// ---------------------------------------------------------------------------
+
+/** Key for persisting canvas state (nodes, edges, counter) */
+export const STORAGE_KEY = 'playground-canvas-state';
+
+/** Key for persisting the list of available AI models */
+export const MODELS_STORAGE_KEY = 'playground-ai-models';
+
+/** Key for persisting the user's last selected AI model */
+export const SELECTED_MODEL_STORAGE_KEY = 'playground-selected-model';
+
+/** Key for persisting enabled model selections in settings */
+export const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
+
+/** Key for persisting user keybinding overrides */
+export const KEYBINDINGS_STORAGE_KEY = 'playground-keybindings';
+
+/** Key for persisting the dev-mode toggle (gates Refresh/Clear in the header) */
+export const DEV_MODE_STORAGE_KEY = 'playground-dev-mode';
+
+/** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
+export const PREVIEW_COLOR_SCHEME_STORAGE_KEY = 'playground-preview-color-scheme';
+
+/** Sidebar drag id for the generated design-system showcase */
+export const DESIGN_SYSTEM_SHOWCASE_ID = 'design-system:showcase';
+
+/** API URL serving raw HTML for the generated design-system showcase */
+export const DESIGN_SYSTEM_SHOWCASE_RAW_URL = '/playground/api/design/preview-showcase?raw=1';
+
+/** Fires after a successful design-system showcase generation */
+export const DESIGN_SYSTEM_GENERATED_EVENT = 'playground:design-system-generated';
+
+/** Key for persisting presence bubbles across page reloads */
+export const PRESENCE_BUBBLES_STORAGE_KEY = 'playground-presence-bubbles';
+
+/** Key for persisting generation info across page reloads */
+export const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
+
+/** Key for persisting the add-all queue in sessionStorage */
+export const ADD_ALL_QUEUE_STORAGE_KEY = 'playground-add-all-queue';
+
+// Telemetry storage keys (notice ack, session dedupe) live with the rest of
+// the telemetry module — see ./telemetry/constants.ts and TELEMETRY.md.
+
+// ---------------------------------------------------------------------------
+// Timing Constants
+// ---------------------------------------------------------------------------
+
+/** Interval between iteration polling scans (ms) */
+export const POLL_INTERVAL = 10_000; // 10 seconds
+
+/** Maximum duration to keep polling after a prompt copy (ms) */
+export const POLL_DURATION = 120_000; // 120 seconds
+
+/** TTL for the shared async-props cache (ms) */
+export const PROPS_CACHE_TTL_MS = 60_000; // 60 seconds
+
+/** TTL for the server-side AI models cache (ms) */
+export const MODELS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// ---------------------------------------------------------------------------
+// Canvas Zoom Limits
+// ---------------------------------------------------------------------------
+
+/** Maximum zoom level for the playground canvas */
+export const CANVAS_MAX_ZOOM = 2;
+
+/** Minimum zoom level for the playground canvas */
+export const CANVAS_MIN_ZOOM = 0.1;
+
+// ---------------------------------------------------------------------------
+// Node Label Zoom Scaling
+// ---------------------------------------------------------------------------
+
+/** Threshold zoom at/above which labels stay at their natural size (no inverse scaling) */
+export const NODE_LABEL_SCALE_THRESHOLD = 0.8;
+
+/** Maximum inverse-scale factor applied to node labels when zoomed out */
+export const NODE_LABEL_MAX_INV_SCALE = 7;
+
+// ---------------------------------------------------------------------------
+// Canvas Layout Constants
+// ---------------------------------------------------------------------------
+
+/** Starting X position for auto-arranged nodes */
+export const ARRANGE_START_X = 50;
+
+/** Starting Y position for auto-arranged nodes */
+export const ARRANGE_START_Y = 50;
+
+/** Vertical gap between nodes within a component group (px) */
+export const ARRANGE_VERTICAL_GAP = 80;
+
+/** Extra vertical gap between component groups (px) */
+export const ARRANGE_GROUP_GAP = 100;
+
+/** Horizontal gap between the component column and iteration column (px) */
+export const ARRANGE_HORIZONTAL_GAP = 80;
+
+/** Padding around the decomposed stage cluster's dotted backdrop (px) */
+export const STAGE_GROUP_PADDING = 32;
+
+/** Horizontal gap between tiles inside a bento cluster (px) */
+export const ARRANGE_BENTO_TILE_GAP_X = 48;
+
+/** Vertical gap between tiles inside a bento cluster (px) */
+export const ARRANGE_BENTO_TILE_GAP_Y = 48;
+
+/** Maximum width before wrapping tiles inside a bento cluster (px) */
+export const ARRANGE_BENTO_CLUSTER_MAX_WIDTH = 2200;
+
+/** Horizontal gap between component clusters in global bento layout (px) */
+export const ARRANGE_BENTO_CLUSTER_GAP_X = 140;
+
+/** Vertical gap between component clusters in global bento layout (px) */
+export const ARRANGE_BENTO_CLUSTER_GAP_Y = 140;
+
+/** Maximum width before wrapping to a new row of clusters (px) */
+export const ARRANGE_BENTO_CLUSTER_ROW_MAX_WIDTH = 5200;
+
+/** Base horizontal label padding used when zoom scaling enlarges node labels */
+export const ARRANGE_LABEL_PADDING_X_BASE = 18;
+
+/** Base vertical label padding used when zoom scaling enlarges node labels */
+export const ARRANGE_LABEL_PADDING_Y_BASE = 14;
+
+/** Minimum gap preserved between effective node footprints during collision pass (px) */
+export const ARRANGE_COLLISION_MIN_SEPARATION = 16;
+
+/** Maximum number of deterministic collision-resolution passes */
+export const ARRANGE_COLLISION_MAX_PASSES = 12;
+
+/** Horizontal spacing between iteration nodes when placed below parent */
+export const ITERATION_HORIZONTAL_SPACING = 420;
+
+/** Vertical offset below parent for iteration nodes */
+export const ITERATION_VERTICAL_OFFSET = 350;
+
+// ---------------------------------------------------------------------------
+// Default Node Dimensions (estimated, used when measured size is unavailable)
+// ---------------------------------------------------------------------------
+
+/** Default estimated width for iteration / skeleton nodes (px) */
+export const DEFAULT_ITERATION_NODE_WIDTH = 400;
+
+/** Default estimated height for iteration / skeleton nodes (px) */
+export const DEFAULT_ITERATION_NODE_HEIGHT = 300;
+
+/** Default estimated width for component nodes (px) */
+export const DEFAULT_COMPONENT_NODE_WIDTH = 650;
+
+/** Default estimated height for component nodes (px) */
+export const DEFAULT_COMPONENT_NODE_HEIGHT = 450;
+
+/** Minimum width when freeform-resizing a node (px) */
+export const RESIZE_MIN_WIDTH = 150;
+
+/** Minimum height when freeform-resizing a node (px) */
+export const RESIZE_MIN_HEIGHT = 100;
+
+// ---------------------------------------------------------------------------
+// Component Size Configurations
+// ---------------------------------------------------------------------------
+
+export type ComponentSize = 'default' | 'laptop' | 'tablet' | 'mobile';
+
+export interface SizeConfigEntry {
+  width: number;
+  height: number;
+  scale: number;
+  label: string;
+}
+
+/** Viewport presets for previewing components at different device sizes */
+export const SIZE_CONFIG: Record<ComponentSize, SizeConfigEntry> = {
+  default: { width: 0, height: 0, scale: 1, label: 'Auto' },
+  laptop:  { width: 1470, height: 832, scale: 0.6, label: 'Laptop' },
+  tablet:  { width: 768, height: 1024, scale: 0.5, label: 'Tablet' },
+  mobile:  { width: 393, height: 852, scale: 0.7, label: 'Mobile' },
+};
+
+/** Calculate display dimensions (scaled) for a given size preset */
+export function getDisplayDimensions(size: ComponentSize) {
+  const config = SIZE_CONFIG[size];
+  if (size === 'default') return { width: 'auto' as const, height: 'auto' as const };
+  return {
+    width: Math.round(config.width * config.scale),
+    height: Math.round(config.height * config.scale),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Iteration Dialog Defaults
+// ---------------------------------------------------------------------------
+
+/** Available iteration count options */
+export const ITERATION_COUNT_OPTIONS = [1, 2, 3, 4] as const;
+
+/** Default number of iterations to generate */
+export const DEFAULT_ITERATION_COUNT = 3;
+
+/** Default iteration depth */
+export const DEFAULT_DEPTH: 'shell' | '1-level' | 'all' = 'shell';
+
+/** Depth option definitions */
+export const DEPTH_OPTIONS: { key: 'shell' | '1-level' | 'all'; label: string }[] = [
+  { key: 'shell', label: 'Shell only' },
+  { key: '1-level', label: '1 level deep' },
+  { key: 'all', label: 'All levels' },
+];
+
+/** Default instructions used when the iterate chat is empty or drag-to-iterate is used */
+export const DEFAULT_EMPTY_ITERATION_INSTRUCTIONS = 'make the layout professional and polished. elements should not overlap or clash.';
+
+// ---------------------------------------------------------------------------
+// Styling Mode
+// ---------------------------------------------------------------------------
+
+export type StylingMode = 'tailwind' | 'inline-css';
+
+/** Default styling mode when no skill overrides it */
+export const DEFAULT_STYLING_MODE: StylingMode = 'tailwind';
+
+/** Styling mode options (for future UI dropdown) */
+export const STYLING_MODE_OPTIONS: { key: StylingMode; label: string }[] = [
+  { key: 'tailwind', label: 'Design System (Tailwind)' },
+  { key: 'inline-css', label: 'Creative (Inline CSS)' },
+];
+
+// ---------------------------------------------------------------------------
+// Provider Types (re-exported from providers module)
+// ---------------------------------------------------------------------------
+
+export type { ProviderId } from './providers/types';
+export { DEFAULT_PROVIDER_ID } from './providers/registry';
+export { DEFAULT_CLAUDE_CODE_OPTIONS } from './providers/types';
+export type { ClaudeCodeOptions } from './providers/types';
+
+/** localStorage key for persisting the active provider selection */
+export const PROVIDER_STORAGE_KEY = 'playground-provider';
+
+// ---------------------------------------------------------------------------
+// AI Models
+// ---------------------------------------------------------------------------
+
+export interface ModelOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Default enabled models for the Cursor provider.
+ * Canonical source is `cursorProvider.defaultEnabledModels` — this re-export
+ * is kept for backward compatibility with existing consumers.
+ */
+export { cursorProvider } from './providers/cursor';
+import { cursorProvider } from './providers/cursor';
+export const DEFAULT_ENABLED_MODELS: string[] = cursorProvider.defaultEnabledModels;
+export const FALLBACK_MODELS: ModelOption[] = cursorProvider.fallbackModels;
+
+// ---------------------------------------------------------------------------
+// FitView Configurations
+// ---------------------------------------------------------------------------
+
+/** FitView config when entering fullscreen on a specific node */
+export const FITVIEW_FULLSCREEN_ENTER = {
+  padding: 0.02,
+  duration: 400,
+  maxZoom: 2,
+  minZoom: 0.1,
+} as const;
+
+/** FitView config when exiting fullscreen (show all nodes) */
+export const FITVIEW_FULLSCREEN_EXIT = {
+  padding: 0.2,
+  duration: 300,
+} as const;
+
+/** FitView config after auto-arrange */
+export const FITVIEW_AFTER_ARRANGE = {
+  padding: 0.15,
+  duration: 400,
+  maxZoom: 1,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Animation / Transition Delays (ms)
+// ---------------------------------------------------------------------------
+
+/** Delay before fitting view after entering fullscreen (waits for sidebar animation) */
+export const FULLSCREEN_ENTER_DELAY = 350;
+
+/** Delay before fitting view after exiting fullscreen */
+export const FULLSCREEN_EXIT_DELAY = 100;
+
+/** Delay before fitting view after auto-arrange */
+export const ARRANGE_FITVIEW_DELAY = 50;
+
+/** Delay after generation completes before scanning for iterations */
+export const POST_GENERATION_SCAN_DELAY = 1000;
+
+/** Delay after scan before auto-arrange */
+export const POST_GENERATION_ARRANGE_DELAY = 200;
+
+/** Delay before dispatching auto-arrange after skeleton nodes are added */
+export const SKELETON_ARRANGE_DELAY = 100;
+
+/** Duration to show "Copied!" feedback (ms) */
+export const COPIED_FEEDBACK_DURATION = 2000;
+
+// ---------------------------------------------------------------------------
+// Edge Styles
+// ---------------------------------------------------------------------------
+
+/** Edge style for normal iteration connections */
+export const ITERATION_EDGE_STYLE = {
+  stroke: '#9ca3af',
+  strokeWidth: 1.5,
+} as const;
+
+/** Edge style for skeleton (generating) connections */
+export const SKELETON_EDGE_STYLE = {
+  stroke: '#f59e0b',
+  strokeWidth: 1.5,
+  strokeDasharray: '5,5',
+} as const;
+
+// ---------------------------------------------------------------------------
+// MiniMap Colors
+// ---------------------------------------------------------------------------
+
+/** MiniMap node color for skeleton nodes */
+export const MINIMAP_SKELETON_COLOR = '#f59e0b';
+
+/** MiniMap node color for iteration nodes */
+export const MINIMAP_ITERATION_COLOR = '#6b7280';
+
+/** MiniMap node color for component nodes */
+export const MINIMAP_COMPONENT_COLOR = '#3b82f6';
+
+/** MiniMap node color for image nodes */
+export const MINIMAP_IMAGE_COLOR = '#a78bfa';
+
+/** MiniMap node color for text nodes */
+export const MINIMAP_TEXT_COLOR = '#f472b6';
+
+/** MiniMap mask color */
+export const MINIMAP_MASK_COLOR = 'rgba(0, 0, 0, 0.08)';
+
+// ---------------------------------------------------------------------------
+// ReactFlow Background
+// ---------------------------------------------------------------------------
+
+/** Solid pane fill behind nodes/dots (see `--xy-background-color` + Background `bgColor`) */
+export const CANVAS_BACKGROUND_COLOR = '#ebebeb';
+
+/** Gap between background dots (px) */
+export const BACKGROUND_GAP = 10;
+
+/** Size of each background dot (px) */
+export const BACKGROUND_DOT_SIZE = 1;
+
+/** Color of background dots */
+export const BACKGROUND_COLOR = '#efefef';
+
+/** Minimum computed gap in flow coordinates (at max zoom-in) */
+export const BACKGROUND_MIN_GAP = 10;
+
+/** Maximum computed gap in flow coordinates (at max zoom-out) */
+export const BACKGROUND_MAX_GAP = 300;
+
+/** Minimum computed dot size in flow coordinates */
+export const BACKGROUND_MIN_DOT_SIZE = 1;
+
+/** Maximum computed dot size in flow coordinates */
+export const BACKGROUND_MAX_DOT_SIZE = 30;
+
+/** Number of discrete zoom steps for background dot scaling */
+export const BACKGROUND_ZOOM_STEPS = 6;
+
+// ---------------------------------------------------------------------------
+// Server-Side API Constants (used in route handlers)
+// ---------------------------------------------------------------------------
+
+/** Name of the iterations index file */
+export const ITERATIONS_INDEX_FILENAME = 'index.ts';
+
+/** Relative path to the temporary directory for generation artifacts */
+export const TEMP_DIR_RELATIVE = '.playground-temp';
+
+/** Filename for the generation lockfile */
+export const GENERATION_LOCKFILE_FILENAME = 'generation.lock';
+
+/** Filename for the discovery scan lockfile */
+export const DISCOVERY_LOCKFILE_FILENAME = 'discovery.lock';
+
+/** Filename for the discovery manifest */
+export const DISCOVERY_MANIFEST_FILENAME = 'discovery.json';
+
+/** Regex pattern to validate iteration filenames (prevents directory traversal) */
+export const ITERATION_FILENAME_PATTERN = /^[A-Za-z0-9]+\.iteration-\d+\.tsx$/;
+
+/** Regex pattern to parse iteration filenames into componentName + number */
+export const ITERATION_FILENAME_PARSE_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
+
+// ---------------------------------------------------------------------------
+// HTML Pages Constants
+// ---------------------------------------------------------------------------
+
+/** Prefix for HTML page IDs in drag-and-drop and canvas state */
+export const HTML_ID_PREFIX = 'html:';
+
+/** Directory name inside /public for the HTML tree manifest */
+export const HTML_TREE_DIR = '.playground';
+
+/** Filename for the HTML iteration tree manifest */
+export const HTML_TREE_FILENAME = 'html-tree.json';
+
+// ---------------------------------------------------------------------------
+// Host .gitignore markers (managed by lib/host-gitignore.mjs + setup.mjs)
+// ---------------------------------------------------------------------------
+
+/** Start marker for the static playground block in the host .gitignore */
+export const GITIGNORE_STATIC_START = '# BEGIN design-playground';
+
+/** End marker for the static playground block in the host .gitignore */
+export const GITIGNORE_STATIC_END = '# END design-playground';
+
+/** Start marker for the dynamic public HTML frames block in the host .gitignore */
+export const GITIGNORE_FRAMES_START = '# BEGIN design-playground-public-frames';
+
+/** End marker for the dynamic public HTML frames block in the host .gitignore */
+export const GITIGNORE_FRAMES_END = '# END design-playground-public-frames';
+
+/** Info about a static HTML page discovered in /public */
+export interface HtmlPageInfo {
+  id: string;           // "html:landing"
+  label: string;        // "landing"
+  folder: string;       // "landing"
+  iterations: { folder: string; number: number }[];
+}
+
+/** An iteration file within an HTML page directory */
+export interface HtmlIterationFile {
+  folder: string;       // "iteration-1"
+  number: number;
+  pageFolder: string;   // "landing"
+  parentId: string;     // "html:landing" or "iteration-1" (for sub-iterations)
+}
+
+// ---------------------------------------------------------------------------
+// JSX On-Canvas Components
+// ---------------------------------------------------------------------------
+
+/** Prefix for on-canvas JSX component IDs in drag-and-drop and canvas state */
+export const JSX_ID_PREFIX = 'jsx:';
+
+/** Fired when a new JSX component file is added to the canvas */
+export const JSX_COMPONENT_ADDED_EVENT = 'playground:jsx-component-added';
+
+/** Regex to match on-canvas JSX base component filenames (e.g. frame-1.tsx, but not iterations) */
+export const CANVAS_COMPONENT_FILENAME_PATTERN = /^frame-\d+\.tsx$/;
+
+/** Regex to match on-canvas JSX iteration filenames (e.g. frame-1.iteration-2.tsx) */
+export const CANVAS_ITERATION_FILENAME_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
+
+/** Regex to parse on-canvas JSX iteration filenames into [name, number] */
+export const CANVAS_ITERATION_PARSE_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
+
+/** Info about an on-canvas JSX component */
+export interface JsxComponentInfo {
+  id: string;             // "jsx:frame-1"
+  label: string;          // "frame-1"
+  filename: string;       // "frame-1.tsx"
+  iterations: JsxIterationInfo[];
+}
+
+/** Info about a JSX iteration file */
+export interface JsxIterationInfo {
+  id: string;
+  label: string;
+  filename: string;
+  baseFilename: string;
+  iterationNumber: number;
+}
+
+// ---------------------------------------------------------------------------
+// Canvas Events
+// ---------------------------------------------------------------------------
+
+/** Fired to focus/pan to a specific node on the canvas */
+export const FOCUS_NODE_EVENT = 'playground:focus-node';
+
+/** Fired to delete a frame and its canvas nodes */
+export const DELETE_FRAME_EVENT = 'playground:delete-frame';
+
+/** Fired to create a new untitled HTML design (same as canvas right-click → Create a new design) */
+export const CREATE_DESIGN_EVENT = 'playground:create-design';
+
+// ---------------------------------------------------------------------------
+// Edit Mode Constants
+// ---------------------------------------------------------------------------
+
+/** Fired when an in-place edit completes (iframe refresh trigger) */
+export const EDIT_COMPLETE_EVENT = 'playground:edit-complete';
+
+// ---------------------------------------------------------------------------
+// Drag & Drop
+// ---------------------------------------------------------------------------
+
+/** MIME-like key used for drag-and-drop data transfer of playground components */
+export const DND_DATA_KEY = 'application/x-playground-component';
+
+
+// ---------------------------------------------------------------------------
+// Drag-to-Iterate Constants
+// ---------------------------------------------------------------------------
+
+/** Pixels of drag distance per grid step (row or column) */
+export const DRAG_ITERATE_PX_PER_STEP = 200;
+
+/** Minimum pointer distance (px) to enter drag state (prevents accidental drags) */
+export const DRAG_ITERATE_THRESHOLD_PX = 5;
+
+/** Maximum time (ms) for a pointerdown→pointerup to count as a click */
+export const DRAG_ITERATE_CLICK_TIMEOUT_MS = 150;
+
+/** Duration (ms) of the undo window before generation starts */
+export const DRAG_ITERATE_UNDO_DURATION_MS = 3000;
+
+/** Duration (ms) for the Sonner toast auto-dismiss */
+export const DRAG_ITERATE_TOAST_DURATION_MS = 4000;
+
+/** Maximum total new iterations from a single drag */
+export const DRAG_ITERATE_MAX_TOTAL = 8;
+
+/** Maximum grid columns for drag-to-iterate */
+export const DRAG_ITERATE_MAX_COLS = 4;
+
+/** Maximum grid rows for drag-to-iterate */
+export const DRAG_ITERATE_MAX_ROWS = 4;
+
+/** Gap between ghost boxes in flow coordinates (px) */
+export const DRAG_GHOST_GAP = 20;
+
+/** Screen-pixel padding around the selection overlay so it visually encompasses the original node */
+export const DRAG_OVERLAY_PADDING_X = 0;
+export const DRAG_OVERLAY_PADDING_Y = 0;
+
+// ---------------------------------------------------------------------------
+// Tree Layout Constants
+// ---------------------------------------------------------------------------
+
+/** Filename for the iteration tree manifest */
+export const TREE_MANIFEST_FILENAME = 'tree.json';
+
+/** Horizontal spacing between depth columns in tree layout (px) */
+export const TREE_COLUMN_WIDTH = 500;
+
+// ---------------------------------------------------------------------------
+// Cursor Chat Constants
+// ---------------------------------------------------------------------------
+
+/**
+ * When true, chat with no canvas selection creates a freeform node.
+ * When false, users must select a frame to edit or explore.
+ */
+export const ENABLE_FREEFORM_CHAT = false;
+
+/** Submit without an edit target when reference nodes (e.g. text notes) carry the context. */
+export function canSubmitReferenceOnlyChat(input: {
+  hasEditTarget: boolean;
+  referenceNodeCount: number;
+  skillPromptCount: number;
+  text?: string;
+}): boolean {
+  if (input.hasEditTarget) return false;
+  if (input.referenceNodeCount <= 0) return false;
+  return input.skillPromptCount > 0 || Boolean(input.text?.trim());
+}
+
+/** Default iteration count when submitting via cursor chat */
+export const CURSOR_CHAT_DEFAULT_COUNT = 3;
+
+/** Default depth when submitting via cursor chat */
+export const CURSOR_CHAT_DEFAULT_DEPTH = 'all' as const;
+
+/** Payload submitted by the CursorChat component */
+export interface CursorChatSubmitPayload {
+  text: string;
+  skillPrompts: string[];
+  skillIds: string[];
+  model: string;
+  provider?: import('./providers/types').ProviderId;
+  targetNodeId: string | null;
+  targetComponentId: string | null;
+  targetComponentName: string | null;
+  targetType: 'component' | 'iteration' | 'image' | 'text' | 'stage' | null;
+  sourceFilename?: string;
+  iterationCount?: number;
+  canvasPosition: { x: number; y: number };
+  elementSelections?: {
+    tagName: string;
+    displayName: string;
+    textContent: string;
+    cssSelector: string;
+    htmlSource: string;
+    ancestorComponents: string[];
+    nodeId: string;
+    componentName: string;
+  }[];
+  referenceNodes?: {
+    nodeId: string;
+    componentId: string;
+    componentName: string;
+    type: 'component' | 'iteration' | 'image' | 'text';
+    sourceFilename?: string;
+    screenshotPath?: string;
+    imagePath?: string;
+    imageUrl?: string;
+    textContent?: string;
+    /** Pasted URL embed (reference metadata; componentName is also the URL) */
+    embedUrl?: string;
+  }[];
+  /** When true, edit the target file in-place instead of creating iterations */
+  editMode?: boolean;
+  /** Cursor chat behavior mode */
+  chatMode?: 'explore' | 'edit' | 'raw';
+  /** Render mode of the target node */
+  renderMode?: 'react' | 'html' | 'jsx' | 'embed';
+  /** HTML page folder for the target (when renderMode is 'html') */
+  htmlPageSlug?: string;
+  /** HTML iteration folder (when targeting an HTML iteration) */
+  htmlIterationFolder?: string;
+  /** On-canvas JSX filename in canvas-components/ (when renderMode is 'jsx') */
+  jsxFile?: string;
+  /** Remote URL (when renderMode is 'embed') */
+  embedUrl?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Generation Event Payload Types
+// ---------------------------------------------------------------------------
+
+/** Payload for GENERATION_START_EVENT */
+export interface GenerationStartPayload {
+  componentId: string;
+  componentName: string;
+  parentNodeId: string;
+  iterationCount: number;
+  /** First iteration number in this batch (e.g. 9 when iterations 1–8 already exist) */
+  startNumber?: number;
+  /** When set, skeleton nodes are placed in a grid matching drag-to-iterate ghost positions */
+  gridLayout?: {
+    rows: number;
+    cols: number;
+  };
+  /** Model used for this generation (for presence bubbles) */
+  model?: string;
+  /** Provider used for this generation */
+  provider?: import('./providers/types').ProviderId;
+  /** Flow-space position where the generation was initiated */
+  flowPosition?: { x: number; y: number };
+  /** Node the presence bubble is anchored to, when dropped on a frame */
+  targetNodeId?: string | null;
+  /** Render mode for generated nodes */
+  renderMode?: 'react' | 'html' | 'jsx';
+  /** HTML page folder name (when renderMode is 'html') */
+  htmlFolder?: string;
+  /** Base or iteration filename in canvas-components/ (when renderMode is 'jsx') */
+  jsxFile?: string;
+  /** When true, this is an edit-in-place operation — no skeleton nodes should be created */
+  editMode?: boolean;
+  /** When true, this is an adoption operation — presence bubbles show green spinner */
+  adoptionMode?: boolean;
+}
+
+/** Payload for GENERATION_COMPLETE_EVENT */
+export interface GenerationCompletePayload {
+  componentId: string;
+  parentNodeId: string;
+  output: string;
+}
+
+/** Payload for GENERATION_ERROR_EVENT */
+export interface GenerationErrorPayload {
+  componentId: string;
+  parentNodeId: string;
+  error: string;
+}
+
+/** Payload for GENERATION_QUEUED_EVENT */
+export interface GenerationQueuedPayload {
+  componentId: string;
+  model: string;
+  provider?: import('./providers/types').ProviderId;
+  flowPosition: { x: number; y: number } | null;
+  /** Node the queued presence bubble is anchored to, when dropped on a frame */
+  targetNodeId?: string | null;
+}
+
+/** Payload for GENERATION_AGENT_PREVIEW_EVENT (Claude Code stream-json assistant text) */
+export interface GenerationAgentPreviewPayload {
+  componentId: string;
+  text: string;
+}
+
+/** Payload for PRESENCE_BUBBLE_DISMISS_EVENT */
+export interface PresenceBubbleDismissPayload {
+  componentId: string;
+  flowPosition?: { x: number; y: number } | null;
+  targetNodeId?: string | null;
+}
+
+/** Payload for DRAG_ITERATE_EVENT */
+export interface DragIteratePayload {
+  componentId: string;
+  componentName: string;
+  parentNodeId: string;
+  iterationCount: number;
+  rows: number;
+  cols: number;
+  model?: string;
+  provider?: import('./providers/types').ProviderId;
+  sourceFilename?: string;
+  renderMode?: 'react' | 'html' | 'jsx';
+  htmlFolder?: string;
+  /** Base or iteration JSX filename (when renderMode is 'jsx') */
+  jsxFile?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Adoption Event Payload Types
+// ---------------------------------------------------------------------------
+
+/** Payload for ADOPTION_COMPLETE_EVENT */
+export interface AdoptionCompletePayload {
+  iterationNodeId: string;
+  componentId: string;
+  parentNodeId: string;
+}
+
+/** Payload for ADOPTION_ERROR_EVENT */
+export interface AdoptionErrorPayload {
+  iterationNodeId: string;
+  componentId: string;
+  parentNodeId: string;
+  error: string;
+}

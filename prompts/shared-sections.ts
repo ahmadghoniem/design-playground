@@ -1,0 +1,231 @@
+// ---------------------------------------------------------------------------
+// Shared Prompt Sections
+// ---------------------------------------------------------------------------
+// Reusable prompt content shared across iteration templates.
+// ---------------------------------------------------------------------------
+
+import type { StylingMode } from '../lib/constants';
+
+// ---------------------------------------------------------------------------
+// Styling constraint resolvers
+// ---------------------------------------------------------------------------
+
+/** Returns the styling constraint instruction for a given mode */
+export function getStylingConstraint(mode: StylingMode): string {
+  if (mode === 'inline-css') {
+    return 'You may use inline style={{}} for any CSS property. Do NOT use Tailwind utility classes for visual styling. Use inline styles for maximum creative expressiveness.';
+  }
+  return "Use only existing Tailwind classes already present in the codebase. Prefer the host app's semantic theme tokens (bg-background, text-foreground, bg-primary, text-primary-foreground, bg-card, bg-muted, text-muted-foreground, border-border, etc.) over literal colors so the result inherits the host's theme — including light/dark mode. Do NOT hardcode hex/rgb colors. Do not use inline style={{}}.";
+}
+
+/** Returns the quality checklist line item for styling */
+export function getStylingQualityItem(mode: StylingMode): string {
+  if (mode === 'inline-css') {
+    return 'Uses inline style={{}} for styling (no Tailwind utility classes)';
+  }
+  return "Uses the host's semantic theme tokens (no hardcoded hex); only allowed Tailwind classes already present in the codebase";
+}
+
+/** Returns the full quality checklist with the appropriate styling line */
+export function getQualityChecklist(mode: StylingMode = 'tailwind'): string {
+  return `QUALITY CHECKLIST (FOR EACH ITERATION)
+- [ ] Props interface unchanged from original
+- [ ] All imports resolve correctly with no TypeScript errors
+- [ ] Metadata comment included with correct @iteration/@parent (and @sourceIteration when applicable)
+- [ ] File named correctly: PascalCaseComponentName.iteration-{n}.tsx (must match the default export function name)
+- [ ] ${getStylingQualityItem(mode)}
+- [ ] Registered in iterations/index.ts with a ".tsx" key
+- [ ] Entry added/updated in iterations/tree.json with correct parent
+- [ ] @sourceIteration set when derived from another iteration`;
+}
+
+/** Common quality checklist (Tailwind default) — kept for backward compatibility */
+export const QUALITY_CHECKLIST = getQualityChecklist('tailwind');
+
+/** File registration instructions shared across templates */
+export const FILE_REGISTRATION_INSTRUCTIONS = `IMPORTANT — SEQUENTIAL WORKFLOW: Process iterations ONE AT A TIME. For each iteration, complete ALL of the following steps before starting the next:
+   a. Create and save the iteration file
+   b. Include the required metadata comment block with @iteration, @parent, optional @sourceIteration, and @description
+   c. Immediately register that file in: src/app/playground/iterations/index.ts (map key MUST include ".tsx")
+   d. Immediately add a matching entry to: src/app/playground/iterations/tree.json with parent set to "{{componentId}}"
+   e. Only then proceed to the next iteration
+
+   This sequential approach ensures each iteration is visible on the canvas as soon as it's done.`;
+
+/** Props constraint block shared across templates */
+export const PROPS_CONSTRAINT = `- **Props interface**: Keep it IDENTICAL to the original component (no added/removed/renamed props, no type changes).
+- **Iteration depth**: Follow the requested depth (Shell only, 1 level deep, or All levels).
+- **Tree manifest**: Update src/app/playground/iterations/tree.json for every new iteration file.
+- **Registry index**: Register every iteration in src/app/playground/iterations/index.ts with a ".tsx" map key.`;
+
+/** Appended to Codex generation prompts to prevent browser-based verification */
+export const NO_BROWSER_INSTRUCTIONS = `ENVIRONMENT CONSTRAINTS
+- Do NOT open a browser (Chrome, Safari, etc.), run \`open\`, or launch any GUI app to preview or verify changes.
+- Do NOT start a dev server or take screenshots to check your work.
+- The playground canvas hot-reloads and renders your files automatically — writing the files correctly IS the verification.`;
+
+// ---------------------------------------------------------------------------
+// Prompt section formatters
+// ---------------------------------------------------------------------------
+
+export function formatChildrenSection(children?: string[]): string {
+  if (!children || children.length === 0) return '';
+  return `
+Children to keep stable:
+${children.map((c) => `- ${c}`).join('\n')}
+`;
+}
+
+export function formatCustomInstructionsSection(customInstructions?: string): string {
+  if (!customInstructions || !customInstructions.trim()) return '';
+  return `
+
+CUSTOM INSTRUCTIONS:
+FAST FAST FAST FAST!!!!!! MAKE IT FAST AND MAKE IT GOOD. MAKE IS FASTER FASTEST.
+RUN PARALLEL AGENTS WHILE CREATING THE ITERATIONS. TO MAKE IT EVEN FASTER.
+${customInstructions.trim()}
+
+`;
+}
+
+export function formatSkillSection(skillPrompt?: string): string {
+  if (!skillPrompt || !skillPrompt.trim()) return '';
+  return `SKILL CONTEXT (read each SKILL.md at the repo paths below)
+══════════════
+
+${skillPrompt.trim()}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+}
+
+export function formatScreenshotSection(screenshotPath?: string): string {
+  if (!screenshotPath || !screenshotPath.trim()) return '';
+  return `
+CURRENT VISUAL STATE
+Screenshot of the current component: ${screenshotPath.trim()}
+Read this image to understand the current appearance before generating variations.
+`;
+}
+
+export function formatReferenceNodesSection(
+  nodes?: {
+    componentName: string;
+    type: 'component' | 'iteration' | 'image' | 'text';
+    sourceFilename?: string;
+    sourcePath?: string;
+    screenshotPath?: string;
+    imagePath?: string;
+    imageUrl?: string;
+    textContent?: string;
+    embedUrl?: string;
+  }[],
+): string {
+  if (!nodes || nodes.length === 0) return '';
+
+  const lines: string[] = [
+    'REFERENCE COMPONENTS',
+    '════════════════════',
+    '',
+    'The following components/images are selected on the canvas as design references.',
+    'Use their visual style, structure, and patterns as context.',
+    '',
+  ];
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const isUrlEmbed =
+      !!node.embedUrl ||
+      (node.type === 'component' && /^https?:\/\//i.test(node.componentName.trim()));
+    const typeLabel =
+      node.type === 'text'
+        ? 'text note'
+        : node.type === 'image'
+          ? 'image reference'
+          : node.type === 'iteration'
+            ? 'iteration'
+            : isUrlEmbed
+              ? 'url embed'
+              : 'component';
+    const path = node.type === 'text' ? undefined : node.type === 'image'
+      ? (node.imagePath || node.imageUrl)
+      : (node.sourcePath || (node.sourceFilename
+        ? `src/app/playground/iterations/${node.sourceFilename}`
+        : undefined));
+
+    lines.push(`${i + 1}. ${node.componentName} (${typeLabel})${path ? ` — ${path}` : ''}`);
+
+    if (node.type === 'text' && node.textContent) {
+      lines.push(`   Text note content: "${node.textContent}"`);
+      lines.push(`   Use this text as design context or instructions.`);
+    } else if (node.type === 'image' && (node.imagePath || node.imageUrl)) {
+      if (node.imagePath) {
+        lines.push(`   Repo file: ${node.imagePath}`);
+      }
+      if (node.imageUrl) {
+        lines.push(`   Public URL: ${node.imageUrl}`);
+      }
+      lines.push(`   Read this image to understand the visual design to match.`);
+    } else if (node.screenshotPath) {
+      lines.push(`   Screenshot: ${node.screenshotPath}`);
+    }
+
+    lines.push('');
+  }
+
+  lines.push('Maintain visual and structural consistency with these reference components.');
+  lines.push(
+    'Use listed source paths when present; for url embed rows, rely on the URL and screenshot (there is no repo file).',
+  );
+
+  return lines.join('\n');
+}
+
+export function formatElementSelectionsSection(
+  elements?: {
+    tagName: string;
+    displayName: string;
+    textContent: string;
+    cssSelector: string;
+    htmlSource: string;
+    ancestorComponents: string[];
+    nodeId: string;
+    componentName: string;
+  }[],
+): string {
+  if (!elements || elements.length === 0) return '';
+
+  const lines: string[] = [
+    'TARGETED ELEMENTS',
+    '══════════════════',
+    '',
+  ];
+
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i];
+    lines.push(`Element ${i + 1}: <${el.tagName}> in ${el.componentName}`);
+
+    if (el.textContent) {
+      lines.push(`- Text: "${el.textContent}"`);
+    }
+
+    if (el.cssSelector) {
+      lines.push(`- Selector: ${el.cssSelector}`);
+    }
+
+    if (el.htmlSource) {
+      lines.push(`- HTML: ${el.htmlSource}`);
+    }
+
+    if (el.ancestorComponents.length > 0) {
+      lines.push(`- Component ancestry: ${el.ancestorComponents.join(' > ')}`);
+    }
+
+    lines.push('');
+  }
+
+  lines.push('Focus your changes on these specific elements while keeping the rest of the component intact.');
+
+  return lines.join('\n');
+}

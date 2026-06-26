@@ -1,0 +1,343 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useReactFlow, useOnViewportChange } from '@xyflow/react';
+import { loadSelectedModel, saveSelectedModel } from '../nodes/shared/IterateDialogParts';
+import { resolveAgentModel } from '../lib/resolve-agent-model';
+import { useModelSettingsStore } from '../lib/model-settings-store';
+import type { ProviderId } from '../lib/providers/types';
+import type { ModelOption } from '../nodes/shared/IterateDialogParts';
+import { flatRegistry } from '../registry';
+import { matchesAction } from '../lib/keybindings';
+import { CURSOR_CHAT_ACTIVE_EVENT } from '../lib/constants';
+
+const CURSOR_CHAT_CURSOR_CLASS = 'cursor-chat-cursor-mode';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type CursorChatMode = 'inactive' | 'peek' | 'placed';
+
+export interface CursorChatTargetNode {
+  nodeId: string;
+  componentId: string;
+  componentName: string;
+  type: 'component' | 'iteration' | 'image';
+  sourceFilename?: string;
+  renderMode?: 'react' | 'html' | 'jsx' | 'embed';
+  htmlPageSlug?: string;
+  htmlIterationFolder?: string;
+  jsxFile?: string;
+  embedUrl?: string;
+}
+
+export interface CursorChatState {
+  mode: CursorChatMode;
+  screenPosition: { x: number; y: number };
+  flowPosition: { x: number; y: number } | null;
+  model: string;
+  targetNode: CursorChatTargetNode | null;
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+export function useCursorChat(models: ModelOption[]) {
+  const [mode, setMode] = useState<CursorChatMode>('inactive');
+  const [model, setModel] = useState(() => {
+    const provider = useModelSettingsStore.getState().activeProvider as ProviderId;
+    return resolveAgentModel(provider, loadSelectedModel()) ?? 'auto';
+  });
+  const [targetNode, setTargetNode] = useState<CursorChatTargetNode | null>(null);
+  const [flowPosition, setFlowPosition] = useState<{ x: number; y: number } | null>(null);
+
+  // Screen position stored in ref for RAF updates (avoids re-renders on every mouse move)
+  const screenPosRef = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+  const modeRef = useRef<CursorChatMode>('inactive');
+
+  const { screenToFlowPosition, flowToScreenPosition, getNodes } = useReactFlow();
+
+  const enableChatCursor = useCallback(() => {
+    document.body.classList.add(CURSOR_CHAT_CURSOR_CLASS);
+    document.body.style.cursor = 'none';
+  }, []);
+
+  const disableChatCursor = useCallback(() => {
+    document.body.classList.remove(CURSOR_CHAT_CURSOR_CLASS);
+    document.body.style.cursor = '';
+  }, []);
+
+  // Keep mode ref in sync
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  // Broadcast active/inactive so other surfaces (the bottom DockedChatBar) can
+  // defer while the cursor chat is in use — they do the same thing.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(CURSOR_CHAT_ACTIVE_EVENT, { detail: { active: mode !== 'inactive' } }),
+    );
+  }, [mode]);
+
+  // RAF-based cursor tracking for peek mode
+  const startTracking = useCallback(() => {
+    const tick = () => {
+      if (modeRef.current !== 'peek') return;
+      const el = containerRef.current;
+      if (el) {
+        const x = mousePosRef.current.x;
+        const y = mousePosRef.current.y;
+        // Clamp to viewport
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const clampedX = Math.min(x, vw - 420);
+        const clampedY = Math.min(y, vh - 200);
+        el.style.transform = `translate3d(${Math.max(0, clampedX)}px, ${Math.max(0, clampedY)}px, 0)`;
+      }
+      screenPosRef.current = { ...mousePosRef.current };
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const stopTracking = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  // Mouse move listener (always on, just stores position)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Activate (Cmd+/ or Ctrl+/)
+  const activate = useCallback(() => {
+    // Guard: don't activate if focus is in input/textarea/contenteditable
+    const active = document.activeElement;
+    if (active) {
+      const tag = active.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      if ((active as HTMLElement).isContentEditable) return;
+      // Also skip if a dialog/popover is open
+      if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return;
+    }
+
+    setMode('peek');
+    enableChatCursor();
+    startTracking();
+  }, [enableChatCursor, startTracking]);
+
+  // Deactivate fully
+  const deactivate = useCallback(() => {
+    setMode('inactive');
+    setTargetNode(null);
+    setFlowPosition(null);
+    disableChatCursor();
+    stopTracking();
+  }, [disableChatCursor, stopTracking]);
+
+  // Place at current position (peek -> placed)
+  const place = useCallback((clickX: number, clickY: number, hitNode: CursorChatTargetNode | null) => {
+    const fp = screenToFlowPosition({ x: clickX, y: clickY });
+    setFlowPosition(fp);
+    setTargetNode(hitNode);
+    setMode('placed');
+    disableChatCursor();
+    stopTracking();
+
+    // Set the container to the click position
+    if (containerRef.current) {
+      containerRef.current.style.transform = `translate3d(${clickX + 16}px, ${clickY + 16}px, 0)`;
+    }
+  }, [disableChatCursor, screenToFlowPosition, stopTracking]);
+
+  // Snapshot of the latest known cursor position (used by callers to place the
+  // chat box at the bubble's current spot, e.g. when typing in peek mode).
+  const getMousePos = useCallback(() => ({ ...mousePosRef.current }), []);
+
+  // Unplace (placed -> peek)
+  const unplace = useCallback(() => {
+    setMode('peek');
+    setTargetNode(null);
+    setFlowPosition(null);
+    enableChatCursor();
+    startTracking();
+  }, [enableChatCursor, startTracking]);
+
+  // Flip animation state
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [nextModel, setNextModel] = useState<string | null>(null);
+  const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cycle model with Shift+Tab (with flip animation)
+  const cycleModel = useCallback(() => {
+    if (models.length === 0 || isSwitching) return;
+    const currentIdx = models.findIndex(m => m.value === model);
+    const nextIdx = (currentIdx + 1) % models.length;
+    const next = models[nextIdx].value;
+
+    setNextModel(next);
+    setIsSwitching(true);
+
+    switchTimeoutRef.current = setTimeout(() => {
+      setModel(next);
+      saveSelectedModel(next);
+      setIsSwitching(false);
+      setNextModel(null);
+    }, 350);
+  }, [models, model, isSwitching]);
+
+  // Node hit testing for click placement
+  const hitTestNode = useCallback((screenX: number, screenY: number): CursorChatTargetNode | null => {
+    const nodes = getNodes();
+    // Iterate in reverse z-order (last rendered = on top)
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const node = nodes[i];
+      if (node.type !== 'component' && node.type !== 'iteration') continue;
+
+      const flowPos = screenToFlowPosition({ x: screenX, y: screenY });
+      const nodeX = node.position.x;
+      const nodeY = node.position.y;
+      const nodeW = node.measured?.width ?? 400;
+      const nodeH = node.measured?.height ?? 300;
+
+      if (
+        flowPos.x >= nodeX &&
+        flowPos.x <= nodeX + nodeW &&
+        flowPos.y >= nodeY &&
+        flowPos.y <= nodeY + nodeH
+      ) {
+        if (node.type === 'component') {
+          const isJsx = node.data.renderMode === 'jsx';
+          const isHtml = node.data.renderMode === 'html';
+          const isEmbed = node.data.renderMode === 'embed';
+          const embedUrl = (node.data.embedUrl as string) || undefined;
+          return {
+            nodeId: node.id,
+            componentId: (node.data.componentId as string) || '',
+            componentName: isEmbed
+              ? embedUrl || (node.data.componentId as string) || ''
+              : isJsx
+              ? (node.data.jsxFile as string)?.replace('.tsx', '') || (node.data.componentId as string) || ''
+              : isHtml
+              ? (node.data.htmlFolder as string) || (node.data.componentId as string) || ''
+              : flatRegistry[(node.data.componentId as string)]?.label || (node.data.componentId as string) || '',
+            type: 'component',
+            renderMode: isEmbed ? 'embed' : isJsx ? 'jsx' : isHtml ? 'html' : 'react',
+            htmlPageSlug: isHtml ? (node.data.htmlFolder as string) : undefined,
+            jsxFile: isJsx ? (node.data.jsxFile as string) : undefined,
+            embedUrl: isEmbed ? embedUrl : undefined,
+          };
+        } else {
+          const isJsx = node.data.renderMode === 'jsx';
+          const isHtml = node.data.renderMode === 'html';
+          return {
+            nodeId: node.id,
+            componentId: isJsx
+              ? `jsx:${node.data.componentName as string}`
+              : isHtml
+              ? `html:${node.data.htmlFolder as string}`
+              : (node.data.componentName as string)?.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '') || '',
+            componentName: isJsx
+              ? (node.data.componentName as string) || ''
+              : isHtml
+              ? (node.data.htmlFolder as string) || ''
+              : (node.data.componentName as string) || '',
+            type: 'iteration',
+            sourceFilename: (node.data.filename as string) || undefined,
+            renderMode: isJsx ? 'jsx' : isHtml ? 'html' : 'react',
+            htmlPageSlug: isHtml ? (node.data.htmlFolder as string) : undefined,
+            htmlIterationFolder: isHtml ? (node.data.htmlIterationFolder as string) : undefined,
+            jsxFile: isJsx ? (node.data.jsxFile as string) : undefined,
+          };
+        }
+      }
+    }
+    return null;
+  }, [getNodes, screenToFlowPosition]);
+
+  // Viewport change: update screen position in placed mode
+  useOnViewportChange({
+    onChange: useCallback(() => {
+      if (modeRef.current === 'placed' && flowPosition && containerRef.current) {
+        const sp = flowToScreenPosition(flowPosition);
+        containerRef.current.style.transform = `translate3d(${sp.x + 16}px, ${sp.y + 16}px, 0)`;
+      }
+    }, [flowPosition, flowToScreenPosition]),
+  });
+
+  // Global keyboard listener for Cmd+/
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (matchesAction(e, 'cursor-chat.activate')) {
+        // Guard: don't intercept if focus is in input/textarea/contenteditable
+        const active = document.activeElement;
+        if (active) {
+          const tag = active.tagName.toLowerCase();
+          if (tag === 'input' || tag === 'textarea') return;
+          if ((active as HTMLElement).isContentEditable) return;
+          if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return;
+        }
+        e.preventDefault();
+        if (modeRef.current === 'inactive') {
+          activate();
+        }
+        // If already active, no-op (idempotent)
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activate]);
+
+  // Toolbar button activation event
+  useEffect(() => {
+    const handler = () => {
+      if (modeRef.current === 'inactive') {
+        activate();
+      }
+    };
+    window.addEventListener('playground:toolbar-activate-chat', handler);
+    return () => window.removeEventListener('playground:toolbar-activate-chat', handler);
+  }, [activate]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      disableChatCursor();
+      stopTracking();
+      if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
+    };
+  }, [disableChatCursor, stopTracking]);
+
+  return {
+    mode,
+    model,
+    targetNode,
+    flowPosition,
+    containerRef,
+    modeRef,
+    activate,
+    deactivate,
+    place,
+    unplace,
+    cycleModel,
+    hitTestNode,
+    setModel,
+    isSwitching,
+    nextModel,
+    getMousePos,
+  };
+}

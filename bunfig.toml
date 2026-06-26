@@ -1,0 +1,9 @@
+# The nested install must NOT pull react / react-dom / tailwindcss / vite into
+# src/app/playground/node_modules. They are peerDependencies provided by the
+# host; keeping them out of the nested tree lets every playground import resolve
+# UP to the host's single copy (no duplicate React / "invalid hook call").
+#
+# Bun installs peerDependencies by default, so we turn that off here — this is
+# the bun equivalent of the npm `legacy-peer-deps` flag we used to set.
+[install]
+peer = false

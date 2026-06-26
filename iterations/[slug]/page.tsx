@@ -1,0 +1,74 @@
+import { useParams } from 'react-router-dom';
+import { flatRegistry } from '../../registry';
+import { getIterationComponent } from '..';
+import type { ComponentSize } from '../../lib/constants';
+import { previewSchemeClass, usePreviewColorSchemeStore } from '../../lib/preview-color-scheme-store';
+
+function getRegistryItemForIteration(filename: string) {
+  const baseName = filename.replace(/\.tsx$/, '').split('.')[0]; // e.g. "PricingCard"
+  const kebab = baseName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '');
+
+  const possibleIds = [
+    kebab,
+    `${kebab}-expanded`,
+    `${kebab}-minimal`,
+  ];
+
+  for (const id of possibleIds) {
+    const item = flatRegistry[id];
+    if (item) return item;
+  }
+
+  return undefined;
+}
+
+const isFullPage = (size?: ComponentSize) => size === 'laptop' || size === 'tablet' || size === 'mobile';
+
+function ScreenFrame({ children, size }: { children: React.ReactNode; size?: ComponentSize }) {
+  const full = isFullPage(size);
+  const schemeClass = previewSchemeClass(usePreviewColorSchemeStore((s) => s.scheme));
+
+  return (
+    <div className="playground-iteration-view fixed inset-0 bg-gray-100 p-4">
+      <div className={`app-theme w-full h-full overflow-auto rounded-2xl border border-gray-300 bg-background shadow-sm ${schemeClass}`}>
+        <div className={full ? 'min-h-full' : 'grid min-h-full place-items-center p-[5%]'}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PlaygroundIterationIsolatedPage() {
+  const { slug = '' } = useParams<{ slug: string }>();
+
+  // 1) Try to resolve as an iteration first (by filename)
+  const iterationFilename = `${slug}.tsx`;
+  const IterationComponent = getIterationComponent(iterationFilename);
+
+  if (IterationComponent) {
+    const registryItem = getRegistryItemForIteration(iterationFilename);
+    const props = (registryItem?.props ?? {}) as Record<string, unknown>;
+
+    return (
+      <ScreenFrame size={registryItem?.size}>
+        <IterationComponent {...props} />
+      </ScreenFrame>
+    );
+  }
+
+  // 2) Fall back to rendering a registry component by id
+  const registryItem = flatRegistry[slug];
+  if (!registryItem) {
+    return null;
+  }
+
+  const { Component, props, size } = registryItem;
+  const effectiveProps = (props ?? {}) as Record<string, unknown>;
+
+  return (
+    <ScreenFrame size={size}>
+      <Component {...effectiveProps} />
+    </ScreenFrame>
+  );
+}

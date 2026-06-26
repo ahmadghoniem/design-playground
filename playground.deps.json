@@ -1,0 +1,4 @@
+{
+  "description": "Deprecated pointer. The playground's dependencies now live in ./package.json and are installed NESTED under ./node_modules by setup.mjs (never into the host package.json). Edit package.json to add or update dependencies.",
+  "movedTo": "./package.json"
+}

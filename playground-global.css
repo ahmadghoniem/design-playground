@@ -1,0 +1,832 @@
+/*
+ * Playground chrome stylesheet — vanilla CSS only (no Tailwind @import / @theme
+ * here; the Tailwind build lives in `playground-tailwind-entry.css`).
+ *
+ * Theming model:
+ *  - The playground's own UI ("chrome": sidebar, header, toolbars, menus) is
+ *    fixed & neutral and reads a PRIVATE token namespace (`--pg-*`) defined on
+ *    :root below. These never reach component previews.
+ *  - Component previews are wrapped in `.app-theme`, which redefines NO color
+ *    tokens — host components inherit the host app's own :root design tokens
+ *    (the host `globals.css` is loaded on every route, so they're already
+ *    present on /playground).
+ */
+/* stylelint-disable at-rule-no-unknown, csstools/use-nesting */
+
+/* Hand-drawn font for annotation shape labels (--pg-font-hand). @import must
+   precede all style rules. Local-dev-only tool, so a remote font is acceptable;
+   it degrades to the system fallbacks in the token below when offline. */
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap");
+
+/* Private, host-independent chrome tokens. Defined on :root (not on
+   .playground-main-view) so Radix portals — dropdown/tooltip/dialog content
+   rendered at document.body, OUTSIDE the chrome wrapper — can still resolve
+   them. `--pg-*` names never collide with a host's tokens and are never read
+   inside `.app-theme`, so they cannot leak into previews. */
+:root {
+  --pg-background: #ffffff;
+  --pg-foreground: #1c1917;
+  --pg-popover: #ffffff;
+  --pg-popover-foreground: #1c1917;
+  --pg-muted: #f5f5f4;
+  --pg-muted-foreground: #78716c;
+  --pg-accent: #f5f5f4;
+  --pg-accent-foreground: #1c1917;
+  --pg-border: #e7e5e4;
+  --pg-input: #e7e5e4;
+  --pg-ring: #d6d3d1;
+  --pg-destructive: #dc2626;
+  --pg-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --pg-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  /* Hand-drawn font for annotation shape labels. Loaded from Google Fonts when
+     online (this is a local-dev-only tool); falls back to system cursive/sans. */
+  --pg-font-hand: "Caveat", "Patrick Hand", "Comic Sans MS", ui-rounded, var(--pg-font-sans);
+}
+
+.playground-main-view {
+    /* Prevent browser back/forward swipe gestures and pull-to-refresh while the
+       playground is open. Wheel-based history navigation (macOS trackpad) is
+       additionally suppressed via a non-passive wheel handler in
+       PlaygroundCanvas. */
+    overscroll-behavior: none;
+
+    /* Compact spacing scale for the chrome, reset to the Tailwind default on
+       `.app-theme` (below) so previews use the host's own geometry. */
+    --spacing: 0.2rem;
+    font-family: var(--pg-font-sans);
+  }
+
+/*
+ * Preview boundary. `.app-theme` defines NO color tokens, so host components
+ * inherit the host app's own :root tokens (colors, radius, shadows). We only
+ * (a) reset the chrome's compact --spacing back to the Tailwind default so
+ * preview geometry matches the host, and (b) re-assert the host font so
+ * previews use the host typeface rather than the chrome's pinned
+ * --pg-font-sans (inherited from .playground-main-view). The runtime dark-mode
+ * override appends a `.dark`/`.light` class to this element.
+ */
+.app-theme {
+  --spacing: 0.25rem;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+body:has(.playground-main-view),
+body:has(.playground-iteration-view) {
+  scrollbar-gutter: stable;
+}
+
+/* Chrome buttons only — the :not(.app-theme button) guard prevents this from
+   repainting host buttons rendered inside `.app-theme` previews. */
+.playground-main-view button:not(.app-theme button) {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.5rem;
+  color: var(--pg-muted-foreground);
+}
+
+.playground-main-view button:not(.app-theme button):hover {
+  color: var(--pg-foreground);
+  background-color: var(--pg-muted);
+}
+
+/* Canvas right-click menu — override global button colors for dark surface */
+.playground-main-view .playground-canvas-context-menu button {
+  color: rgb(245, 245, 244);
+  background-color: transparent;
+}
+
+.playground-main-view .playground-canvas-context-menu button:hover {
+  color: rgb(255, 255, 255);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.playground-main-view .playground-canvas-context-menu button svg,
+.playground-main-view .playground-canvas-context-menu button .lucide {
+  color: rgb(214, 211, 209);
+}
+
+.playground-main-view .playground-canvas-context-menu button:hover svg,
+.playground-main-view .playground-canvas-context-menu button:hover .lucide {
+  color: rgb(245, 245, 244);
+}
+
+/* aiverse-specific font classes (.font-louize/.font-pixelify/.font-bricolage)
+   and the .theme-products-dark example theme were removed — hosts theme their
+   own previews from their globals.css, and demo content carries literal CSS. */
+
+:where(.playground-main-view, .playground-iteration-view) .prose blockquote {
+  border-left-width: 4px;
+  border-style: solid;
+  border-color: var(--muted);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+:is(.playground-main-view, .playground-iteration-view) .prose img {
+  border-radius: 1rem;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .community-blog-content blockquote {
+  background-color: #F3EBE5 !important;
+  border-left: 6px solid #916757 !important;
+  border-radius: 8px 8px 8px 8px;
+  padding: 1rem 1rem 1rem 1rem;
+  margin: 1.5rem 0;
+  color: #333333;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+:is(.playground-main-view, .playground-iteration-view) .community-blog-content blockquote p {
+  margin: 0;
+  font-style: italic;
+  color: #333333;
+  line-height: 2.2;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .community-blog-content blockquote p + p {
+  margin-top: 1rem;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .embed-contained iframe,
+:is(.playground-main-view, .playground-iteration-view) .embed-fullwidth iframe {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+}
+
+:is(.playground-main-view, .playground-iteration-view) .embed-fullwidth {
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (min-width: 900px) {
+  :is(.playground-main-view, .playground-iteration-view) .embed-fullwidth {
+    padding-left: 10%;
+    padding-right: 10%;
+  }
+}
+/* stylelint-enable at-rule-no-unknown, csstools/use-nesting */
+
+/* Utility patterns also used inside embedded previews (scoped to playground). */
+:is(.playground-main-view, .playground-iteration-view) .hide-scrollbar {
+  scrollbar-width: none;
+}
+:is(.playground-main-view, .playground-iteration-view) .hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #a8a29e transparent;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #a8a29e;
+  border-radius: 3px;
+  border: none;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #78716c;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element:focus {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element:active:focus {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) button:focus,
+:is(.playground-main-view, .playground-iteration-view) [role="button"]:focus,
+:is(.playground-main-view, .playground-iteration-view) .clickable:focus {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) button:focus-visible,
+:is(.playground-main-view, .playground-iteration-view) [role="button"]:focus-visible,
+:is(.playground-main-view, .playground-iteration-view) .clickable:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+:is(.playground-main-view, .playground-iteration-view) button:active:focus,
+:is(.playground-main-view, .playground-iteration-view) [role="button"]:active:focus,
+:is(.playground-main-view, .playground-iteration-view) .clickable:active:focus {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) motion.div:focus,
+:is(.playground-main-view, .playground-iteration-view) motion.div:active:focus,
+:is(.playground-main-view, .playground-iteration-view) motion.div:focus-visible {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) motion.div:focus:not(:focus-visible),
+:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:focus,
+:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:active:focus,
+:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:focus-visible,
+:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element:hover {
+  transition: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element * {
+  transition: none !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element:hover * {
+  transition-delay: 0s !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element {
+  transition: color 0.1s ease-out, background-color 0.1s ease-out !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .interactive-element.transition-all,
+:is(.playground-main-view, .playground-iteration-view) .interactive-element.transition-all:hover {
+  transition: all 0.2s ease-out !important;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .insight-editor-content {
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .insight-editor-content:focus {
+  outline: none;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .insight-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  pointer-events: none;
+  height: 0;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .insight-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 1rem;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .insight-editor-content img.ProseMirror-selectednode {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 1rem;
+}
+
+:is(.playground-main-view, .playground-iteration-view) .canvas-embed-node.ProseMirror-selectednode {
+  outline: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Default cursor — Lucide `mouse-pointer-2`
+   ---------------------------------------------------------------------------
+   Replaces the system arrow on every playground page. Scoped via
+   playground-global.css (only imported by app/playground/layout.tsx) so it
+   does not leak to the rest of the app.
+
+   The data URI is hoisted onto :root as `--pg-default-cursor` so we can
+   reuse it on body AND on ReactFlow elements (which would otherwise win the
+   cascade with their own grab/grabbing/default cursor).
+
+   Cascade notes:
+   - Element-select mode (.element-select-mode *) still wins via `!important`.
+   - `button { cursor: pointer }` in @layer base still wins for buttons.
+   - Inline `style.cursor` on body/elements still wins for ad-hoc overrides
+     (cursor-chat peek, drag-to-iterate, iframe selection bridge, ...).
+   - Hotspot `3 3` aligns with the path tip near (3.27, 4.42); `default` is
+     the fallback if the data URI fails to parse. */
+:root {
+  --pg-default-cursor:
+    url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='black' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M17.2607 12.4008C19.3774 11.2626 20.4357 10.6935 20.7035 10.0084C20.9359 9.41393 20.8705 8.74423 20.5276 8.20587C20.1324 7.58551 18.984 7.23176 16.6872 6.52425L8.00612 3.85014C6.06819 3.25318 5.09923 2.95471 4.45846 3.19669C3.90068 3.40733 3.46597 3.85584 3.27285 4.41993C3.051 5.06794 3.3796 6.02711 4.03681 7.94545L6.94793 16.4429C7.75632 18.8025 8.16052 19.9824 8.80519 20.3574C9.36428 20.6826 10.0461 20.7174 10.6354 20.4507C11.3149 20.1432 11.837 19.0106 12.8813 16.7454L13.6528 15.0719C13.819 14.7113 13.9021 14.531 14.0159 14.3736C14.1168 14.2338 14.2354 14.1078 14.3686 13.9984C14.5188 13.8752 14.6936 13.7812 15.0433 13.5932L17.2607 12.4008Z'/></svg>")
+    3 3, default;
+}
+
+body:has(.playground-main-view),
+body:has(.playground-iteration-view) {
+  cursor: var(--pg-default-cursor);
+}
+
+/* Cursor Chat peek mode hides the native pointer while the chat bubble tracks
+   the mouse, making the model pill itself feel like the active cursor. */
+body.cursor-chat-cursor-mode,
+body.cursor-chat-cursor-mode .playground-main-view,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane.draggable,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane.dragging,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane.selection,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__node,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__node.selectable,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__node.draggable,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__node.draggable.dragging,
+body.cursor-chat-cursor-mode .playground-main-view .react-flow__nodesselection-rect {
+  cursor: none !important;
+}
+
+/* @xyflow/react/dist/style.css forces its own cursor on the canvas pane
+   and nodes, which would otherwise replace our SVG once the canvas mounts:
+     .react-flow__pane.draggable     -> grab        (panOnDrag)
+     .react-flow__pane.dragging      -> grabbing    (panning)
+     .react-flow__pane.selection     -> pointer     (selectionOnDrag) ← the
+                                                     "hand" PlaygroundCanvas
+                                                     actually shows because
+                                                     it sets `panOnDrag={false}
+                                                     selectionOnDrag`.
+     .react-flow__node.{selectable,draggable,...} -> pointer/grab/grabbing
+     .react-flow__nodesselection-rect             -> grab
+   We scope under `.playground-main-view` (the PlaygroundClient wrapper) to
+   bump specificity above xyflow's two-class rules regardless of CSS bundle
+   order. The interactive cursors that *aren't* the hand we're replacing
+   (.handle.connectionindicator -> crosshair, .edgeupdater -> move) are left
+   alone — those are intentional affordances. Inline `style.cursor` writes
+   from cursor-chat / drag-to-iterate / iframe-selection-bridge still win. */
+.playground-main-view .react-flow__pane,
+.playground-main-view .react-flow__pane.draggable,
+.playground-main-view .react-flow__pane.dragging,
+.playground-main-view .react-flow__pane.selection,
+.playground-main-view .react-flow__node,
+.playground-main-view .react-flow__node.selectable,
+.playground-main-view .react-flow__node.draggable,
+.playground-main-view .react-flow__node.draggable.dragging,
+.playground-main-view .react-flow__nodesselection-rect {
+  cursor: var(--pg-default-cursor);
+}
+
+/* Text tool (T / toolbar): I-beam on pane + nodes so it wins over xyflow defaults */
+.playground-main-view .playground-text-tool .react-flow__pane,
+.playground-main-view .playground-text-tool .react-flow__pane.draggable,
+.playground-main-view .playground-text-tool .react-flow__pane.dragging,
+.playground-main-view .playground-text-tool .react-flow__pane.selection,
+.playground-main-view .playground-text-tool .react-flow__node,
+.playground-main-view .playground-text-tool .react-flow__node.selectable,
+.playground-main-view .playground-text-tool .react-flow__node.draggable,
+.playground-main-view .playground-text-tool .react-flow__node.draggable.dragging,
+.playground-main-view .playground-text-tool .react-flow__nodesselection-rect {
+  cursor: text;
+}
+
+.playground-main-view .react-flow__node-text {
+  width: max-content !important;
+  height: max-content !important;
+}
+
+.playground-main-view .react-flow__node-text.selected,
+.playground-main-view .react-flow__node-text:focus,
+.playground-main-view .react-flow__node-text:focus-visible {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Draw tool (P/H): scoped cursors for pen vs highlighter. */
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane.draggable,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane.dragging,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane.selection,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node.selectable,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node.draggable,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node.draggable.dragging,
+.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__nodesselection-rect {
+  cursor:
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231c1917' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20l4.1-.8L19 8.3a1.6 1.6 0 0 0 0-2.2l-1.1-1.1a1.6 1.6 0 0 0-2.2 0L4.8 15.9z'/%3E%3Cpath d='M13.8 6.2l4 4'/%3E%3Cpath d='M4 20h5'/%3E%3C/svg%3E")
+    2 20,
+    crosshair;
+}
+
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__pane,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__pane.draggable,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__pane.dragging,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__pane.selection,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__node,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__node.selectable,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__node.draggable,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__node.draggable.dragging,
+.playground-main-view .playground-draw-tool[data-draw-kind="highlight"] .react-flow__nodesselection-rect {
+  cursor: crosshair;
+}
+
+/* Shape tool (R/O/L): crosshair on pane so drag-to-draw reads clearly. */
+.playground-main-view .playground-shape-tool .react-flow__pane,
+.playground-main-view .playground-shape-tool .react-flow__pane.draggable,
+.playground-main-view .playground-shape-tool .react-flow__pane.dragging,
+.playground-main-view .playground-shape-tool .react-flow__pane.selection {
+  cursor: crosshair;
+}
+
+/* Once a node is double-clicked into "interactive" mode (Component/Iteration
+   nodes set `data-interactive="true"` on their frame wrapper), hand the
+   cursor back to the browser so the system arrow shows over content,
+   `<a>`/`<button>` keep their UA pointer, and `<input>` shows the text
+   caret — matching ordinary desktop interaction. */
+.playground-main-view [data-interactive="true"],
+.playground-main-view [data-interactive="true"] * {
+  cursor: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Cursor Chat — Bubble + Flip Animation
+   --------------------------------------------------------------------------- */
+
+.cursor-bubble {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  perspective: 200px;
+  flex-shrink: 0;
+}
+
+.bubble-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 50% 50% 50% 6px;
+  /* background set per-model via inline style from model-icons.ts */
+  background-size: 70%;
+  background-position: center;
+  background-repeat: no-repeat;
+  outline: 2.5px solid rgba(255, 255, 255, 0.9);
+  padding-right: 10%;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.18),
+    inset 0 -4px 6px 0 rgba(0, 0, 0, 0.08),
+    inset 0 4px 4px 0 rgba(255, 255, 255, 0.25);
+}
+
+.bubble-face--next {
+  transform: rotateY(180deg);
+}
+
+@keyframes flip-out {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(-180deg); }
+}
+
+@keyframes flip-in {
+  from { transform: rotateY(180deg); }
+  to   { transform: rotateY(0deg); }
+}
+
+.cursor-bubble.is-switching .bubble-face--current {
+  animation: flip-out 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.cursor-bubble.is-switching .bubble-face--next {
+  animation: flip-in 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ---------------------------------------------------------------------------
+   Presence Bubbles (Header)
+   --------------------------------------------------------------------------- */
+
+.presence-bubble-stack {
+  display: flex;
+  align-items: center;
+  margin-left: 6px;
+}
+
+.presence-bubble-stack .presence-bubble + .presence-bubble {
+  margin-left: -10px;
+}
+
+.presence-bubble {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.presence-bubble:hover {
+  transform: scale(1.08);
+}
+
+.presence-bubble-face {
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  margin: 3px;
+  border-radius: 50% 50% 50% 3px;
+  /* background set per-model via inline style from model-icons.ts */
+  background-size: 60%;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.18),
+    inset 0 -2px 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* Done state: full-size face with subtle border */
+.presence-bubble[data-status="done"] .presence-bubble-face {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 50% 50% 50% 4px;
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Queued state: same size as generating but with a static muted ring */
+.presence-bubble[data-status="queued"] .presence-bubble-face {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  margin: 3px;
+}
+
+.presence-bubble[data-status="queued"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50% 50% 50% 3px;
+  background: rgba(120, 113, 108, 0.3);
+}
+
+/* Spinning gradient ring behind the face */
+.presence-bubble-spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50% 50% 50% 3px;
+  overflow: hidden;
+  background: rgba(120, 113, 108, 0.3);
+}
+
+.presence-bubble-spinner::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(168, 162, 158, 0.6) 60%,
+    rgba(255, 255, 255, 0.85) 80%,
+    #ffffff 100%
+  );
+  animation: presence-spin 0.9s linear infinite;
+}
+
+/* Green spinner variant for adoption — bolder ring for visibility */
+.presence-bubble-spinner--adopt {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50% 50% 50% 4px;
+  overflow: hidden;
+  background: rgba(34, 197, 94, 0.35);
+}
+
+.presence-bubble-spinner--adopt::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(34, 197, 94, 0.6) 50%,
+    rgba(74, 222, 128, 0.9) 70%,
+    #22c55e 85%,
+    #16a34a 100%
+  );
+  animation: presence-spin 0.9s linear infinite;
+}
+
+@keyframes presence-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------------------------------------------------------------------
+   Docked Chat Bar — bottom-center composer (DockedChatBar.tsx)
+   --------------------------------------------------------------------------- */
+
+.docked-chat-pill {
+  position: relative;
+}
+
+/* Opaque pill surface (light theme). Radius is set inline on .docked-chat-pill
+   and inherited so the surface + glow share the exact same shape. */
+.docked-chat-pill__surface {
+  position: relative;
+  z-index: 1;
+  border-radius: inherit;
+  background: #fbfbfb;
+  border: 1px solid rgb(232, 229, 228);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 10px 30px -12px rgba(0, 0, 0, 0.18);
+}
+
+/* Animated gradient glow ring — only mounted while generating. Mirrors the
+   .presence-bubble-spinner idiom: a clipped rotating conic-gradient sits
+   behind the opaque surface; only the ~1.5px overhang shows as a ring, so
+   rotating the gradient sweeps colour around the pill without distorting its
+   rounded shape. */
+.docked-chat-pill__glow {
+  position: absolute;
+  inset: -1.5px;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.docked-chat-pill__glow::before {
+  content: '';
+  position: absolute;
+  inset: -150%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(168, 162, 158, 0) 0%,
+    rgba(168, 162, 158, 0) 35%,
+    rgba(120, 113, 108, 0.5) 58%,
+    rgba(255, 255, 255, 0.95) 76%,
+    rgba(168, 162, 158, 0) 100%
+  );
+  animation: presence-spin 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docked-chat-pill__glow::before {
+    animation: none;
+    background: rgba(120, 113, 108, 0.4);
+  }
+}
+
+/* Minimised resting state — a thin orange bubble that expands when the cursor
+   nears it (proximity logic lives in DockedChatBar). */
+.docked-chat-minimized {
+  width: 60px;
+  height: 7px;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  background: linear-gradient(180deg, #fb923c, #f97316);
+  box-shadow:
+    0 2px 12px -2px rgba(249, 115, 22, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+  animation: docked-bubble-pulse 2.6s ease-in-out infinite;
+  transition: width 150ms ease, height 150ms ease, transform 150ms ease;
+}
+
+.docked-chat-minimized:hover {
+  width: 76px;
+  height: 8px;
+  transform: translateY(-1px);
+}
+
+/* Pulse a little faster while a generation is running. */
+.docked-chat-minimized[data-generating="true"] {
+  animation-duration: 1.1s;
+}
+
+@keyframes docked-bubble-pulse {
+  0%, 100% {
+    box-shadow:
+      0 2px 12px -2px rgba(249, 115, 22, 0.45),
+      0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 3px 16px -1px rgba(249, 115, 22, 0.72),
+      0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docked-chat-minimized { animation: none; }
+  .docked-chat-expand-anim { animation: none !important; }
+}
+
+.presence-bubble-dot {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #2f2f2f;
+  z-index: 2;
+}
+
+/* Inline-reference placeholder — rendered as ::before so it naturally
+   sits inside the contentEditable's padding box. No JS sync needed. */
+.inline-reference-input[data-empty]::before {
+  content: attr(data-placeholder);
+  color: var(--pg-muted-foreground);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Cursor Chat input — lighter placeholder */
+.cursor-chat-inline-input .inline-reference-input[data-empty]::before {
+  color: rgb(185, 183, 181); /* stone-400 */
+}
+
+/* Skill pill — looks like normal inline text, just blue */
+.inline-reference-pill--skill {
+  gap: 0;
+  margin: 0 1px;
+  padding: 1px 2px;
+  border-radius: 3px;
+  vertical-align: baseline;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.inline-reference-pill--skill .inline-reference-pill__label {
+  font-size: inherit;
+  font-weight: 500;
+  line-height: inherit;
+  color: rgb(59, 130, 246);
+}
+
+/* First backspace: selection highlight before delete */
+.inline-reference-pill--skill[data-pending-delete] {
+  background: rgb(219, 234, 254);
+  border-radius: 3px;
+}
+
+.inline-reference-pill--skill[data-pending-delete] .inline-reference-pill__label {
+  color: rgb(29, 78, 216);
+}
+
+/* Impeccable pill: command cleared state (stage 1 of 3-stage deletion). */
+.inline-reference-pill--skill[data-command-cleared] {
+  background: rgb(254, 243, 199);
+  border-radius: 3px;
+}
+
+.inline-reference-pill--skill[data-command-cleared] .inline-reference-pill__label {
+  color: rgb(146, 64, 14);
+}
+
+/* Impeccable command category badge in the sub-menu dropdown */
+.impeccable-cmd-category {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  background: rgb(243, 244, 246);
+  color: rgb(107, 114, 128);
+  line-height: 1.4;
+}
+
+/* Prevent iframes from capturing mouse events during node drag */
+.react-flow__node.dragging iframe,
+.react-flow__node.dragging [data-screenshot-target] iframe {
+  pointer-events: none !important;
+}
+
+/* Element selection mode — override all cursors when Alt is held */
+.element-select-mode,
+.element-select-mode *,
+.element-select-mode .react-flow__node,
+.element-select-mode .react-flow__node * {
+  cursor: crosshair !important;
+}
+
+/* Allow mouse events through the iframe overlay during element selection */
+.element-select-mode [data-iframe-overlay] {
+  pointer-events: none !important;
+}
+
+nextjs-portal { display: none !important; }
