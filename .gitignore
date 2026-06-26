@@ -11,6 +11,8 @@
 # Lockfile from the nested Bun install — intentionally not committed (local-dev only).
 /bun.lock
 /bun.lockb
+# npm lockfile is redundant here — the project standardizes on Bun (see setup.mjs).
+/package-lock.json
 
 # Generated iteration files - AI creates these when iterating on components
 iterations/*.iteration-*.tsx
