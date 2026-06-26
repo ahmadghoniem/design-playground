@@ -24,7 +24,7 @@ The package is designed to be **dropped into a host project** at `src/app/playgr
 - `res.status(n).json(o)` → `return c.json(o, n)`; empty responses → `c.body(null, n)`.
 - Custom headers → `c.header(k, v)` then `return c.body(...)`.
 - **Streaming**: text/plain agent output uses `streamText` from `hono/streaming` (`design.ts`); SSE uses `streamSSE` (`generate.ts`). Client-disconnect cleanup is `stream.onAbort(...)`.
-- **Callback/spawn-driven handlers** (tunnel, discover, generate POST): wrap the child-process `close`/`error` events in `new Promise<Response>((resolve) => {...})` and `return await` it.
+- **Callback/spawn-driven handlers** (discover, generate POST): wrap the child-process `close`/`error` events in `new Promise<Response>((resolve) => {...})` and `return await` it.
 - Module-level state (process handles, caches, `generationEvents` EventEmitter, lockfile recovery) is plain Node and lives at module scope — unaffected by the HTTP layer.
 
 ## Setup & running

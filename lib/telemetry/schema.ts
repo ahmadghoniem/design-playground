@@ -129,7 +129,6 @@ const FEATURES = [
   'draw',
   'flow_simulator_play',
   'prompt_copied',
-  'tunnel_started',
   'design_system_generated',
 ] as const;
 

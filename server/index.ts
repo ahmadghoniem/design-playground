@@ -34,7 +34,6 @@ import { providersRoutes } from './routes/providers';
 import { screenshotRoutes } from './routes/screenshot';
 import { skillsRoutes } from './routes/skills';
 import { telemetryRoutes } from './routes/telemetry';
-import { tunnelRoutes } from './routes/tunnel';
 
 /**
  * Build the Hono app exposing every ported playground API route. Each route
@@ -60,8 +59,6 @@ export function createPlaygroundRouter(): Hono {
   router.route('/', screenshotRoutes());
   router.route('/', skillsRoutes());
   router.route('/', telemetryRoutes());
-  router.route('/', tunnelRoutes());
-
   return router;
 }
 

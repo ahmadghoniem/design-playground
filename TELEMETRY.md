@@ -25,9 +25,6 @@ prioritize accordingly.
    [`lib/telemetry/server.ts`](lib/telemetry/server.ts) (~300 lines). Run with
    `PLAYGROUND_TELEMETRY_DEBUG=1` to print every event to your terminal instead
    of sending it.
-5. **Tunnel guests are never recorded.** Anyone viewing via a shared tunnel link
-   never saw this notice, so nothing they trigger is recorded — client-side and
-   server-side (tunnel-origin requests are dropped).
 
 ## What is NEVER collected
 
@@ -37,11 +34,9 @@ prioritize accordingly.
 - Your project's name or directory (the project id is a salted one-way hash —
   see `project_hash` below)
 - Custom skill names (reported only as `custom`)
-- Room IDs, share URLs, tunnel URLs, display names
 - Raw error messages or stack traces (errors are reported as fixed category
   enums like `timeout` or `cli_not_found`)
 - IP addresses (discarded server-side at PostHog), geolocation
-- Anything at all from tunnel guests
 
 ## What is collected
 
@@ -59,7 +54,7 @@ per-dev-server-session UUID, the playground version, schema version, OS platform
 | `generation_completed` | the above + duration, time to first iteration, iterations detected, lines added/removed + files changed (numbers only) | when a generation succeeds |
 | `generation_failed` | provider/model/source + duration + error category enum | when a generation fails |
 | `code_adopted` | kind (flow/iteration), lines added/removed, files changed (numbers only) | when generated code is adopted into your project |
-| `feature_used` | feature enum (`pdf_import`, `draw`, `flow_simulator_play`, `prompt_copied`, `tunnel_started`, `design_system_generated`), page count for PDFs | on feature use |
+| `feature_used` | feature enum (`draw`, `flow_simulator_play`, `prompt_copied`, `design_system_generated`) | on feature use |
 | `error_occurred` | area enum + category enum (never messages) | on render/route errors |
 | `telemetry_opt_out` | method | the final event before the UI toggle disables telemetry |
 

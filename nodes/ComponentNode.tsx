@@ -2,7 +2,6 @@
 
 import { memo, useState, useCallback, useRef, useEffect, type ComponentType, type MouseEvent } from 'react';
 import { useNodeId, useReactFlow, NodeResizeControl } from '@xyflow/react';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { resolveRegistryItem } from '../registry';
@@ -14,7 +13,6 @@ import { NodeLabel, useInverseZoom } from './shared/NodeLabel';
 import { loadOnCanvasComponentModule } from './oncanvas-loader';
 
 import { useAsyncProps, useScrollCapture, useHtmlContent } from '../hooks/useNodeShared';
-import { useTunnelShare } from '../hooks/useTunnelShare';
 import ComponentErrorBoundary from './ComponentErrorBoundary';
 import { useInteractiveNodeStore, useIsInteractiveNode } from '../lib/interactive-node-store';
 import { useFrameHoverHint } from './shared/FrameHoverHint';
@@ -172,28 +170,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       try { innerDoc?.removeEventListener('keydown', handleEsc); } catch { /* noop */ }
     };
   }, [isInteractive, setInteractiveNodeId]);
-
-  const sharePath = isHtml
-    ? `/${data.htmlFolder || componentId}/index.html`
-    : componentId;
-  const { share: handleTunnelShare, state: shareState, disabledTooltip: shareDisabledTooltip } = useTunnelShare(sharePath);
-
-  const [embedLinkCopied, setEmbedLinkCopied] = useState(false);
-  const handleShare = useCallback(async () => {
-    if (isEmbed && data.embedUrl) {
-      try {
-        await navigator.clipboard.writeText(data.embedUrl);
-        setEmbedLinkCopied(true);
-        window.setTimeout(() => setEmbedLinkCopied(false), 2000);
-      } catch {
-        /* ignore */
-      }
-      return;
-    }
-    await handleTunnelShare();
-  }, [isEmbed, data.embedUrl, handleTunnelShare]);
-
-  const effectiveShareState = isEmbed ? (embedLinkCopied ? 'copied' : 'idle') : shareState;
 
   // Prefer the persisted size from node data (survives reload), then registry default
   const [size, setSize] = useState<ComponentSize>(
@@ -676,52 +652,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                   </Tooltip>
                 )}
 
-                {!isDesignSystem && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={handleShare}
-                      disabled={!isEmbed && (shareState === 'connecting' || shareState === 'disabled')}
-                      className={`w-8 h-8 flex items-center justify-center rounded-full bg-white border transition-colors disabled:opacity-50 ${
-                        effectiveShareState === 'copied'
-                          ? 'border-green-300 text-green-600'
-                          : effectiveShareState === 'error'
-                            ? 'border-red-300 text-red-500'
-                            : 'border-stone-200 text-stone-400 hover:text-stone-700 hover:border-stone-300'
-                      }`}
-                      aria-label={isEmbed ? 'Copy page URL' : 'Copy public link'}
-                    >
-                      {effectiveShareState === 'connecting' ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : effectiveShareState === 'copied' ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                        </svg>
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>
-                      {isEmbed
-                        ? (effectiveShareState === 'copied' ? 'URL copied!' : 'Copy page URL')
-                        : shareState === 'disabled'
-                          ? shareDisabledTooltip
-                          : effectiveShareState === 'connecting'
-                            ? 'Starting tunnel…'
-                            : effectiveShareState === 'copied'
-                              ? 'Link copied!'
-                              : effectiveShareState === 'error'
-                                ? 'Tunnel failed'
-                                : 'Copy public link'}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-                )}
           </div>
       </div>
 

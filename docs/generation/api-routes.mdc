@@ -1,6 +1,6 @@
 ---
 globs: ["src/app/playground/api/**"]
-description: "Playground API routes: generate, discover, iterations, models, screenshot, images, skills, tunnel"
+description: "Playground API routes: generate, discover, iterations, models, screenshot, images, skills"
 ---
 
 # Playground API Routes
@@ -26,8 +26,6 @@ All routes are in `src/app/playground/api/`.
 | `/playground/api/html-pages` | POST | HTML page iteration support |
 | `/playground/api/oncanvas-components` | POST | Canvas-only component generation |
 | `/playground/api/skills` | GET | List available skills |
-| `/playground/api/tunnel` | POST | Create SSH tunnel for sharing |
-| `/playground/api/tunnel/beacon` | GET | Tunnel health check |
 
 ## Generation Lifecycle
 

@@ -50,7 +50,6 @@ import { getProviderFields } from '../lib/generation-body';
 import { generateHtmlAdoptPrompt } from '../lib/html-prompts';
 import { generateJsxAdoptPrompt } from '../lib/jsx-prompts';
 import { useAsyncProps, useScrollCapture, useHtmlContent } from '../hooks/useNodeShared';
-import { useTunnelShare } from '../hooks/useTunnelShare';
 import ComponentErrorBoundary from './ComponentErrorBoundary';
 import IterateDialog from './shared/IterateDialog';
 import { useInteractiveNodeStore, useIsInteractiveNode } from '../lib/interactive-node-store';
@@ -209,12 +208,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
       ?? data.componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')),
     [data.registryId, data.componentName, isHtml, isJsx],
   );
-
-  const iterationSlug = useMemo(() => isHtml
-    ? `/${data.htmlFolder}/${data.htmlIterationFolder}/index.html`
-    : data.filename.replace(/\.tsx$/, ''),
-    [data.filename, isHtml, data.htmlFolder, data.htmlIterationFolder]);
-  const { share: handleShare, state: shareState, disabledTooltip: shareDisabledTooltip } = useTunnelShare(iterationSlug);
 
   const { resolvedProps, isLoadingProps, propsError } = useAsyncProps((isHtml || isJsx) ? '' : registryId);
   const registryItem = useMemo(() => (isHtml || isJsx) ? null : resolveRegistryItem(registryId), [registryId, isHtml, isJsx]);
@@ -868,46 +861,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right"><p>Delete variation</p></TooltipContent>
-            </Tooltip>
-
-            {/* Share public link */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleShare}
-                  disabled={shareState === 'connecting' || shareState === 'disabled'}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-white border transition-colors disabled:opacity-50 ${
-                    shareState === 'copied'
-                      ? 'border-green-300 text-green-600'
-                      : shareState === 'error'
-                        ? 'border-red-300 text-red-500'
-                        : 'border-stone-200 text-stone-400 hover:text-stone-700 hover:border-stone-300'
-                  }`}
-                  aria-label="Copy public link"
-                >
-                  {shareState === 'connecting' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : shareState === 'copied' ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                    </svg>
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>
-                  {shareState === 'disabled' ? shareDisabledTooltip :
-                   shareState === 'connecting' ? 'Starting tunnel…' :
-                   shareState === 'copied' ? 'Link copied!' :
-                   shareState === 'error' ? 'Tunnel failed' :
-                   'Copy public link'}
-                </p>
-              </TooltipContent>
             </Tooltip>
           </div>
       </div>
