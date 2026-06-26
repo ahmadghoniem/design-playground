@@ -2,6 +2,8 @@
 
 > Drag components onto a canvas and generate AI-powered layout and style variations — right inside your React + Vite project.
 
+_Originally forked from [B1u3B01t/design-playground](https://github.com/B1u3B01t/design-playground)._
+
 ## Quick Start
 
 ```bash
