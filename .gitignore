@@ -27,7 +27,7 @@ previews/
 discovery.json
 data/*.mockData.ts
 canvas-components/*
-!canvas-components/index.ts
+!canvas-components/.gitkeep
 
 skills/
 
