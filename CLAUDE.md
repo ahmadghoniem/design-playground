@@ -4,13 +4,13 @@ Guidance for working in this repository.
 
 ## What this is
 
-`design-playground` is a **local-dev-only** design canvas that embeds into a host React app. You drag components onto an infinite canvas and use an agent CLI (Cursor / Claude Code / Codex) to generate AI layout and style variations. It is never built in CI/prod — it runs only in the host's dev server.
+`design-playground` is a **local-dev-only** design canvas that embeds into a host React app. You drag components onto an infinite canvas and use an agent CLI to generate AI layout and style variations. **Claude Code is the default and only provider shown in the UI**; Cursor and Codex remain fully implemented but are hidden behind the `SHOW_ALL_PROVIDERS` flag in `lib/providers/registry.ts` (flip to `true` to surface them). It is never built in CI/prod — it runs only in the host's dev server.
 
 The package is designed to be **dropped into a host project** at `src/app/playground/` (or `app/playground/`). Its dependencies install **nested** under `src/app/playground/node_modules/` so the host's `package.json` and lockfile are never touched. `react`, `react-dom`, `tailwindcss`, and `vite` are `peerDependencies` provided by the host.
 
 ## Architecture
 
-- **Frontend**: React + `react-router-dom` v7, rendered by the host's Vite dev server. Entry is `page.tsx`; `layout.tsx` wraps it. Tailwind v4. State via `zustand`. Canvas via `@xyflow/react`. Single-player only (solo builders).
+- **Frontend**: React + `react-router-dom` v7, rendered by the host's Vite dev server. Entry is `page.tsx`; `layout.tsx` wraps it. Tailwind v4. State via `zustand`. Canvas via `@xyflow/react`. Single-player only (solo builders). Served at the clean URL `/playground` — `server/vite-plugin.ts` rewrites `/playground` (and deep links) to the `playground.html` entry; the host's `dev-entry.tsx` react-router `basename` must be `/playground` to match.
 - **Backend**: a **Hono** app under `server/`, mounted into the host's Vite dev server (no second process).
   - `server/index.ts` — `createPlaygroundRouter()` (mounts all route modules), `createPlaygroundServer()` (root app with `cors()` + `bodyLimit(50MB)`, routes under `/playground`), and a standalone `serve()` entry on `PORT` (default 4319).
   - `server/vite-plugin.ts` — `designPlaygroundPlugin()` bridges Hono into Vite's connect middleware via `getRequestListener(app.fetch)` from `@hono/node-server`. Vite's `server.middlewares` is connect/Node `(req,res)`, so this adapter is required for the embedded path even under Bun.
@@ -38,7 +38,9 @@ The package is designed to be **dropped into a host project** at `src/app/playgr
 ## Conventions
 
 - Match the surrounding code's style; this package favors small focused modules and explicit error handling with `console.error` + JSON error bodies.
-- Binary uploads (images/PDFs/screenshots) are **base64 in JSON**, not multipart — hence the 50MB body limit.
+- Binary uploads (images/screenshots) are **base64 in JSON**, not multipart — hence the 50MB body limit. (PDF-on-canvas support was removed; there is no `pdfjs-dist` dependency or `pdf` node type.)
+- **Leaf UI components are grouped under `components/<type>/`** — `modals/`, `chat/`, `canvas/` (plus the pre-existing `flow/`). Entry/shell files (`page`, `layout`, `PlaygroundClient`, `PlaygroundCanvas`, `PlaygroundHeader`, `registry`) stay at the package root. New leaf components should follow this convention.
+- **Provider visibility** is gated by `SHOW_ALL_PROVIDERS` in `lib/providers/registry.ts`; UI surfaces use `getVisibleProviders()`/`getVisibleProviderIds()`, and `DEFAULT_PROVIDER_ID` (re-exported from `lib/constants.ts`) is `claude-code`. Don't hardcode provider-id literals — use `DEFAULT_PROVIDER_ID`.
 - Local-only endpoints (`telemetry`, `providers`) gate on `isLocalRequest(c.req.raw)`.
 - Telemetry is anonymous, dev-only, content-free; see `TELEMETRY.md`. Never log prompts, code, file paths, or names.
 - There is **no root `tsconfig.json`** — the host compiles the TS. When typechecking locally, `react`/`vite` resolve only in a host (they're peerDependencies), so module-not-found errors for those are environmental, not real.

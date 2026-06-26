@@ -46,16 +46,9 @@ Everything happens locally. Your code stays on your machine.
 
 ## Providers
 
-The playground supports two AI provider CLIs. You can switch between them from **Model Settings** in the toolbar.
+**Claude Code is the default provider** and the only one shown in **Model Settings**. Cursor and Codex are still implemented and can be re-enabled by setting `SHOW_ALL_PROVIDERS = true` in `lib/providers/registry.ts`.
 
-### Cursor (Default)
-
-The Cursor editor's agent CLI. If you use Cursor as your editor, this is already available.
-
-- [Install Cursor](https://cursor.com)
-- Enable the CLI: Cursor → Settings → Enable CLI
-
-### Claude Code
+### Claude Code (Default)
 
 Anthropic's command-line coding agent.
 
@@ -141,8 +134,7 @@ Skills provide optimized prompts so you get better results without needing to wr
 
 Open **Model Settings** from the toolbar gear icon to:
 
-- Switch between Cursor and Claude Code providers
-- Enable or disable specific AI models
+- Enable or disable specific AI models (Claude Code; enable `SHOW_ALL_PROVIDERS` to also switch to Cursor/Codex)
 - Configure Claude Code advanced options (effort, budget, turns)
 - Refresh the available model list
 
