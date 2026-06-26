@@ -35,6 +35,7 @@ This is the complete edit set per Operating Rule 1 — re-grep to confirm, but e
 1. Create `stores/`.
 2. `git mv` each store file from `lib/` into `stores/` (preserve history). Keep filenames identical.
 3. **Fix imports inside each moved store** — their own relative paths to other `lib/` helpers gain a `../lib/` prefix (e.g. `./constants` → `../lib/constants`). Some stores import sibling stores (`flow-mocks-store` ↔ `flows/types`); update those to the new sibling location.
+   - ⚠️ **Re-depth EVERY import in the moved file, top to bottom — not just the first import block.** A prior agent on the previous batch re-depthed the first ~40 import lines of a moved file and silently abandoned the rest; the tail of the file kept pointing at the old depth and resolved into a non-existent dir. Imports can also appear *below* the top block (lazy `import()`, a mid-file `export … from`, a re-export). Scroll to the **end** of each moved file and fix every relative specifier — then run the orphaned-import gate below to prove none were missed. Operating Rule 1 applies *within* a file, not only across files.
 4. **Fix every importer.** For each store, `git grep -ln "lib/<store-name>"` and rewrite `'.../lib/<store>'` → `'.../stores/<store>'`. Watch relative depth: a file in `nodes/` importing `../lib/model-settings-store` becomes `../stores/model-settings-store`; a file in `components/modals/` importing `../../lib/...` becomes `../../stores/...`.
 5. **Decide on a barrel.** Optional: add `stores/index.ts` re-exporting each store for shorter imports — only if it doesn't create circular-import risk with `lib/`. If unsure, skip the barrel; direct file imports are fine.
 6. **Update `CLAUDE.md`** — the "Shared logic: `lib/`" architecture bullet currently lists stores implicitly. Add a one-line note that Zustand stores live in `stores/`, and `lib/` is stateless helpers. (Minor edit; keep it accurate.)
@@ -45,8 +46,11 @@ This is the complete edit set per Operating Rule 1 — re-grep to confirm, but e
 git grep -n "lib/[a-z-]*-store'"        # no importer still points at lib/<store>
 git grep -n "from 'zustand'" -- lib     # no store file left in lib/
 git grep -n "from '\.\./lib/.*-store'\|from '\./lib/.*-store'"
+git grep -n "from '\./" -- stores/      # ORPHAN gate: a moved file's own imports left at the old depth
 ```
-All three empty. This is the real guard — a missed importer compiles fine only if a barrel masks it, so the grep is mandatory, not the build.
+The first three: empty. This is the real guard — a missed importer compiles fine only if a barrel masks it, so the grep is mandatory, not the build.
+
+The fourth (**orphaned-import gate**) catches the mid-file-stop failure from the last batch. After the move, a file in `stores/` may only `from './X'` when `X` is **another store** (a real sibling). Every hit must be a store-to-store import; **any `from './constants'`, `from './flows/types'`, `from './providers/…'` etc. is a missed re-depth** that should now read `../lib/…`. If the grep returns a non-store hit, you stopped partway — fix it. (If you added the optional `stores/index.ts` barrel, its `./` re-exports of sibling stores are also legitimate.)
 
 ## Verification
 

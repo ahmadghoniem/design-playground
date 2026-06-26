@@ -1,6 +1,6 @@
 # Refactor Tasks — design-playground
 
-A batch of self-contained refactor briefs for autonomous coding agents (DeepSeek V4 Pro). Each file is one task. Each task is written to be picked up **cold** — no shared memory with the others beyond this README.
+A batch of self-contained refactor briefs for autonomous coding agents (run so far on DeepSeek V4 Pro and Qwen 3.7 Max). Each file is one task. Each task is written to be picked up **cold** — no shared memory with the others beyond this README. The operating rules below were hardened from real agent failures on earlier batches and apply to whichever model runs the task.
 
 ## Read this first (every agent)
 
@@ -30,7 +30,8 @@ These tasks use the **deep-module** vocabulary. Use the words precisely; do not 
 
 These exist because earlier agents on this repo failed in three specific ways. Do not repeat them.
 
-1. **Chase the symbol across the whole repo — do not stop at the files the task names.** When a task says "remove X", `git grep -n "X"` first, edit **every** hit, and re-run the grep until it returns only intended survivors. A task naming 2 files does not mean only 2 files change. A prior agent narrowed a type in one file but left a now-invalid call in another file the task didn't name — a compile error. The task's "Files that will change" list is a **minimum**, not the boundary.
+1. **Chase the symbol across the whole repo — do not stop at the files the task names, and do not stop partway through a file.** When a task says "remove X", `git grep -n "X"` first, edit **every** hit, and re-run the grep until it returns only intended survivors. A task naming 2 files does not mean only 2 files change. A prior agent narrowed a type in one file but left a now-invalid call in another file the task didn't name — a compile error. The task's "Files that will change" list is a **minimum**, not the boundary.
+   - **This rule applies *within* a file too.** When you move a file and re-depth its relative imports (`./lib/…` → `../lib/…`), fix **every** import to the **end of the file**, not just the top import block. A prior agent re-depthed the first ~40 import lines of a large moved file and abandoned the remaining ~30 — the tail resolved into a non-existent dir. Imports also hide *below* the top block (lazy `import()`, mid-file `export … from`, re-exports). After any move, run the **orphaned-import gate**: `git grep -nE "from '\./(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- <moved-dir-or-file>` — every hit is either a genuine same-dir sibling or a missed re-depth. It must contain *only* real siblings.
 2. **Do not over-delete. Remove only what is in scope; preserve unrelated code sharing the same block.** If a `useEffect`/function/cleanup block does two things and only one is in scope, keep the other. A prior agent deleted a whole unmount-cleanup effect to remove one timer and silently dropped an unrelated timer's cleanup. When in doubt, narrow the block, don't delete it.
 3. **Finish the non-code side-channels.** A move/delete is not done until config catches up: `.gitignore`, `playground.html`/Vite wiring, `CLAUDE.md`, generated barrels. A prior agent deleted a file but left a now-dangling `.gitignore` negation. Each task lists its side-channel items — treat them as required, not optional.
 
