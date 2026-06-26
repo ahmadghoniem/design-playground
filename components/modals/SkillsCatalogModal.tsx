@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '../../ui/dialog';
-import { getSkillBubbleStyle } from '../../lib/skill-icons';
+import { getSkillBubbleStyle } from '../../ui/skill-bubble-helpers';
 import { FEATURED_SKILLS, type FeaturedSkill } from '../../lib/featured-skills';
 import type { PlaygroundSkill } from '../../skills';
 

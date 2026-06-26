@@ -8,7 +8,7 @@ import {
   InlineReferenceGroup,
   type InlineReferenceItemData,
 } from './inline-reference';
-import { getSkillBubbleStyle } from '../lib/skill-icons';
+import { getSkillBubbleStyle } from './skill-bubble-helpers';
 import { IMPECCABLE_ITEM_ID } from '../lib/impeccable-skill';
 import { OPEN_SKILLS_CATALOG_EVENT } from '../lib/constants';
 
