@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useEffect, useState, DragEvent, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState, DragEvent, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -32,17 +32,17 @@ import { getProviderFields } from './lib/generation-body';
 import { requireCursorAuthIfNeeded } from './lib/require-cursor-auth';
 import { isCursorAuthError } from './lib/cursor-auth-client';
 import { showCursorAuthToast } from './lib/cursor-auth-toast';
-import { getProvider } from './lib/providers/registry';
+import { getProvider, DEFAULT_PROVIDER_ID } from './lib/providers/registry';
 import { loadCanvasState, saveCanvasState, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from './lib/canvas-persistence';
 import { useCanvasFlow } from './lib/canvas-flow';
 import { resolveAgentModel } from './lib/resolve-agent-model';
 import { getModelIconConfig } from './lib/model-icons';
 import type { ProviderId } from './lib/providers/types';
 import { captureClient } from './lib/telemetry/client';
-import PlaygroundCanvasDrawLayer from './PlaygroundCanvasDrawLayer';
+import PlaygroundCanvasDrawLayer from './components/canvas/PlaygroundCanvasDrawLayer';
 import { usePlaygroundDrawStore } from './lib/playground-draw-store';
 import { createNewStroke, type DrawPenKind, type DrawStroke } from './lib/draw-types';
-import { Highlighter, Pencil, LayoutGrid, Frame, Square, Circle, Slash, Grid3x3 } from 'lucide-react';
+import { Highlighter, Pencil, LayoutGrid, Frame, Square, Circle, Slash } from 'lucide-react';
 import { PageDocumentIcon, ProjectBoxIcon } from './ui/playground-nav-icons';
 
 import ComponentNode from './nodes/ComponentNode';
@@ -50,7 +50,6 @@ import IterationNode from './nodes/IterationNode';
 import SkeletonIterationNode from './nodes/SkeletonIterationNode';
 import DragGhostNode from './nodes/DragGhostNode';
 import ImageNode from './nodes/ImageNode';
-import PdfNode, { type PdfNodeData } from './nodes/PdfNode';
 import StageNode, {
   STAGE_NODE_DEFAULT_HEIGHT,
   STAGE_NODE_FRAME_WIDTH,
@@ -64,14 +63,6 @@ import { FlowSimulator } from './components/FlowSimulator';
 import { FlowAdoptModal } from './components/FlowAdoptModal';
 import type { StageNodeData } from './lib/flows/types';
 import { hitTestStrokes } from './lib/draw-hit-test';
-import { computePageInsertIndex } from './lib/pdf-page-order';
-import {
-  applyMergePdfNodes,
-  applyMovePdfPage,
-  applyReorderPdfPage,
-} from './lib/pdf-page-move';
-import { usePdfPageGlobalDrag } from './hooks/usePdfPageGlobalDrag';
-import { usePlaygroundPdfDragStore } from './lib/playground-pdf-drag-store';
 import TextNode from './nodes/TextNode';
 import ShapeNode, { type ShapeKind } from './nodes/ShapeNode';
 import FrameNode from './nodes/FrameNode';
@@ -178,9 +169,9 @@ import {
   type JsxComponentInfo,
 } from './lib/constants';
 import type { PlaygroundSkill } from './skills';
-import CursorChat from './CursorChat';
-import DockedChatBar from './DockedChatBar';
-import ElementHighlight from './ElementHighlight';
+import CursorChat from './components/chat/CursorChat';
+import DockedChatBar from './components/chat/DockedChatBar';
+import ElementHighlight from './components/canvas/ElementHighlight';
 import { useElementSelection } from './hooks/useElementSelection';
 import { useNodeSelection } from './hooks/useNodeSelection';
 import { useInteractiveNodeStore } from './lib/interactive-node-store';
@@ -196,7 +187,6 @@ const nodeTypes = {
   skeleton: SkeletonIterationNode,
   'drag-ghost': DragGhostNode,
   image: ImageNode,
-  pdf: PdfNode,
   text: TextNode,
   shape: ShapeNode,
   frame: FrameNode,
@@ -210,7 +200,6 @@ const MINIMAP_NODE_COLORS: Record<string, string> = {
   iteration: '#34d399',
   skeleton: '#e7e5e4',
   image: '#60a5fa',
-  pdf: '#f87171',
   text: '#d6d3d1',
   shape: '#fbbf24',
   frame: '#c4b5fd',
@@ -341,6 +330,117 @@ function resolveCanvasBubbleDisplayName(model: string, provider: ProviderId): st
   return `${config.displayName} (${modelLabel})`;
 }
 
+/**
+ * Presence-bubble overlay, extracted from PlaygroundCanvas so that ONLY this
+ * layer re-renders on pan/zoom. It owns the `useViewport()` subscription; the
+ * parent no longer subscribes, so dragging the canvas no longer re-renders the
+ * whole (very large) PlaygroundCanvas tree every frame.
+ */
+function CanvasPresenceLayer({
+  bubbles,
+  nodes,
+  getPosition,
+  onBubbleClick,
+}: {
+  bubbles: CanvasPresenceBubble[];
+  nodes: Node[];
+  getPosition: (bubble: CanvasPresenceBubble, sourceNodes?: Node[]) => { x: number; y: number } | null;
+  onBubbleClick: (bubble: CanvasPresenceBubble) => void;
+}) {
+  const viewport = useViewport();
+  if (bubbles.length === 0) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[7]">
+      {bubbles.map((bubble) => {
+        const currentPosition = getPosition(bubble, nodes);
+        if (!currentPosition) return null;
+        const screenX = currentPosition.x * viewport.zoom + viewport.x;
+        const screenY = currentPosition.y * viewport.zoom + viewport.y;
+        const provider = (bubble.provider ?? DEFAULT_PROVIDER_ID) as ProviderId;
+        const iconConfig = getModelIconConfig(bubble.model, provider);
+        const displayName = resolveCanvasBubbleDisplayName(bubble.model, provider);
+        const tooltipText = bubble.status === 'queued'
+          ? 'Queued - will run after current generation'
+          : bubble.type === 'adopt'
+            ? `Adopting - ${displayName}`
+            : `${displayName} - ${bubble.status}`;
+        const showAgentStreamTooltip =
+          (provider === 'claude-code' || provider === 'codex') &&
+          (bubble.status === 'generating' ||
+            (bubble.status === 'done' && Boolean(bubble.agentPreviewText?.trim())));
+        return (
+          <div
+            key={bubble.id}
+            className="absolute"
+            style={{
+              left: screenX,
+              top: screenY,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <Tooltip delayDuration={showAgentStreamTooltip ? 280 : undefined}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="presence-bubble group pointer-events-auto border-0 bg-transparent p-0"
+                  data-status={bubble.status}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBubbleClick(bubble);
+                  }}
+                >
+                  {bubble.status === 'generating' && (
+                    <div className={bubble.type === 'adopt' ? 'presence-bubble-spinner--adopt' : 'presence-bubble-spinner'} />
+                  )}
+                  <div
+                    className="presence-bubble-face"
+                    style={{
+                      backgroundColor: iconConfig.bg,
+                      backgroundImage: `url(${iconConfig.src})`,
+                    }}
+                  />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                sideOffset={12}
+                className={cn(
+                  showAgentStreamTooltip
+                    ? 'w-[min(22rem,calc(100vw-2rem))] p-0 border border-stone-200/80 bg-[#fbfbfb] text-stone-800 shadow-[0_20px_48px_-22px_rgba(28,25,23,0.38)] pointer-events-auto overflow-hidden rounded-2xl'
+                    : 'text-xs',
+                )}
+              >
+                {showAgentStreamTooltip ? (
+                  <>
+                    <div className="border-b border-stone-200/70 px-3.5 py-2.5 text-[11px] font-semibold tracking-[-0.01em] text-stone-600 bg-gradient-to-b from-white to-stone-50/80">
+                      {bubble.status === 'done'
+                        ? `${displayName} · done`
+                        : bubble.type === 'adopt'
+                          ? `Adopting - ${displayName}`
+                          : displayName}
+                    </div>
+                    <div
+                      className="max-h-48 min-h-[3.25rem] overflow-y-auto overscroll-y-contain px-3.5 py-3 text-[12px] leading-5 font-mono text-stone-700 whitespace-pre-wrap break-words bg-[#fbfbfb]"
+                      onWheel={(e) => e.stopPropagation()}
+                    >
+                      {bubble.agentPreviewText?.trim()
+                        ? bubble.agentPreviewText
+                        : 'Waiting for assistant text...'}
+                    </div>
+                  </>
+                ) : (
+                  <p>{tooltipText}</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // CanvasState, loadCanvasState, saveCanvasState moved to ./lib/canvas-persistence
 
 // Re-export event names so existing imports keep working
@@ -421,11 +521,32 @@ export default function PlaygroundCanvas({
   // 'shape' is drag-to-draw annotation shapes (kind chosen via shapeKind).
   const [activeTool, setActiveTool] = useState<'select' | 'text' | 'draw' | 'shape'>('select');
   const [shapeKind, setShapeKind] = useState<ShapeKind>('rect');
-  // Snap-to-grid (off by default so it doesn't fight freeform placement) +
-  // transient Figma-style alignment guides shown while dragging.
+  // Snap-to-grid is modal like Excalidraw: freeform placement is the default and
+  // snapping only engages while the user holds Control/⌘ (see the effect below).
+  // Plus transient Figma-style alignment guides shown while dragging.
   const [snapEnabled, setSnapEnabled] = useState(false);
   const [helperLines, setHelperLines] = useState<HelperLineState>({});
   const SNAP_GRID = 16;
+
+  // Engage snap-to-grid only while Control (or ⌘) is held; release — or losing
+  // window focus mid-hold — turns it back off so it never sticks on.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.key === 'Meta') setSnapEnabled(true);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.key === 'Meta') setSnapEnabled(false);
+    };
+    const reset = () => setSnapEnabled(false);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', reset);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', reset);
+    };
+  }, []);
   const [canvasDrawings, setCanvasDrawings] = useState<DrawStroke[]>(
     initialState?.canvasDrawings ?? [],
   );
@@ -477,115 +598,13 @@ export default function PlaygroundCanvas({
     undo,
     redo,
   } = useCanvasFlow();
-  const { screenToFlowPosition, fitView, setCenter, getViewport, getNode } = useReactFlow();
-  const viewport = useViewport();
+  const { screenToFlowPosition, fitView, setCenter, getViewport } = useReactFlow();
   const [canvasPresenceBubbles, setCanvasPresenceBubbles] = useState<CanvasPresenceBubble[]>([]);
   const canvasPresenceBubblesRef = useRef<CanvasPresenceBubble[]>([]);
 
   useEffect(() => {
     canvasPresenceBubblesRef.current = canvasPresenceBubbles;
   }, [canvasPresenceBubbles]);
-
-  const getPdfTotalPages = useCallback((pdfData: PdfNodeData): number => {
-    if (pdfData.totalPages) return pdfData.totalPages;
-    const nums = [
-      ...(pdfData.pageOrder ?? []),
-      ...(pdfData.hiddenPages ?? []),
-      ...(typeof pdfData.extractedPage === 'number' ? [pdfData.extractedPage] : []),
-    ];
-    return Math.max(1, ...nums, 1);
-  }, []);
-
-  const onNodeDragStop = useCallback(
-    (event: MouseEvent | TouchEvent, node: Node, _nodes: Node[]) => {
-      if (node.type !== 'pdf') return;
-
-      const point =
-        'clientX' in event
-          ? { clientX: event.clientX, clientY: event.clientY }
-          : (() => {
-              const touch = event.changedTouches[0] ?? event.touches[0];
-              return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null;
-            })();
-      if (!point) return;
-      const { clientX, clientY } = point;
-      const el = document.elementFromPoint(clientX, clientY);
-      const dropTarget = el?.closest('[data-pdf-drop-target]') as HTMLElement | null;
-      if (!dropTarget) return;
-
-      const targetId = dropTarget.getAttribute('data-pdf-node-id');
-      if (!targetId) return;
-
-      const targetNode = getNode(targetId);
-      if (!targetNode || targetNode.type !== 'pdf') return;
-
-      const targetData = targetNode.data as unknown as PdfNodeData;
-      if (typeof targetData.extractedPage === 'number') return;
-
-      const insertIndex = computePageInsertIndex(dropTarget, clientY);
-      const sourceData = node.data as unknown as PdfNodeData;
-      const targetTotal = getPdfTotalPages(targetData);
-      const sourceTotal = getPdfTotalPages(sourceData);
-
-      if (typeof sourceData.extractedPage === 'number') {
-        const storePayload = usePlaygroundPdfDragStore.getState().payload;
-        if (!storePayload) return;
-      }
-
-      setNodes((nds) => {
-        if (typeof sourceData.extractedPage === 'number') {
-          if (node.id === targetId) {
-            return applyReorderPdfPage(
-              nds,
-              targetId,
-              sourceData.extractedPage,
-              insertIndex,
-              targetTotal,
-            );
-          }
-          return applyMovePdfPage(
-            nds,
-            node.id,
-            targetId,
-            sourceData.extractedPage,
-            insertIndex,
-            targetTotal,
-          ).nodes;
-        }
-        if (node.id === targetId) return nds;
-        return applyMergePdfNodes(
-          nds,
-          node.id,
-          targetId,
-          insertIndex,
-          sourceTotal,
-          targetTotal,
-        ).nodes;
-      });
-      usePlaygroundPdfDragStore.getState().clear();
-    },
-    [getNode, getPdfTotalPages, setNodes],
-  );
-
-  usePdfPageGlobalDrag(setNodes, getNode);
-
-  const onNodeDragStart = useCallback(
-    (_event: MouseEvent | TouchEvent, node: Node, _nodes: Node[]) => {
-      if (node.type !== 'pdf') return;
-      const sourceData = node.data as unknown as PdfNodeData;
-      if (typeof sourceData.extractedPage !== 'number') return;
-      const payload = {
-        sourceNodeId: node.id,
-        pageNum: sourceData.extractedPage,
-        pdfPath: sourceData.pdfPath,
-        pdfUrl: sourceData.pdfUrl,
-        filename: sourceData.filename,
-        originalName: sourceData.originalName,
-      };
-      usePlaygroundPdfDragStore.getState().setPayload(payload);
-    },
-    [],
-  );
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -779,20 +798,7 @@ export default function PlaygroundCanvas({
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      if (sel.scope === 'canvas') {
-        setCanvasDrawings((prev) => prev.filter((s) => s.id !== sel.strokeId));
-      } else {
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.id !== sel.nodeId || n.type !== 'pdf') return n;
-            const pdfData = n.data as unknown as PdfNodeData;
-            const drawings = { ...(pdfData.drawings ?? {}) };
-            const pageStrokes = drawings[sel.pageKey] ?? [];
-            drawings[sel.pageKey] = pageStrokes.filter((s) => s.id !== sel.strokeId);
-            return { ...n, data: { ...pdfData, drawings } };
-          }),
-        );
-      }
+      setCanvasDrawings((prev) => prev.filter((s) => s.id !== sel.strokeId));
       clearAllStrokeSelection();
     };
     window.addEventListener('keydown', handler, true);
@@ -808,7 +814,6 @@ export default function PlaygroundCanvas({
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || canvasDrawingsRef.current.length === 0) return;
       if (e.target instanceof Element && e.target.closest('[data-canvas-draw-stroke]')) return;
-      if (e.target instanceof Element && e.target.closest('[data-pdf-draw-layer]')) return;
       if (e.target instanceof Element && e.target.closest('.react-flow__node')) return;
       const pane = wrapper.querySelector('.react-flow__pane');
       if (!pane?.contains(e.target as globalThis.Node)) return;
@@ -868,7 +873,7 @@ export default function PlaygroundCanvas({
     return () => window.removeEventListener('beforeunload', handler);
   }, [edges, getViewport, storageKey]);
 
-  // Freehand drawing on empty canvas (PDF pages use DrawSurface inside the node)
+  // Freehand drawing on empty canvas.
   useEffect(() => {
     if (activeTool !== 'draw') return;
 
@@ -879,11 +884,8 @@ export default function PlaygroundCanvas({
     let drawing = false;
     let points: DrawStroke['points'] = [];
 
-    const isPdfDrawTarget = (target: EventTarget | null) =>
-      target instanceof Element && !!target.closest('[data-pdf-draw-layer]');
-
     const onPointerDown = (e: PointerEvent) => {
-      if (e.button !== 0 || isPdfDrawTarget(e.target)) return;
+      if (e.button !== 0) return;
       const pane = wrapper.querySelector('.react-flow__pane');
       if (!pane?.contains(e.target as globalThis.Node)) return;
       if ((e.target as Element).closest('.react-flow__node')) return;
@@ -2378,7 +2380,7 @@ export default function PlaygroundCanvas({
     if (isGeneratingRef.current) {
       generationQueueRef.current.push(payload);
       const queuePf = getProviderFields();
-      const queueProvider = (queuePf.provider ?? 'cursor') as ProviderId;
+      const queueProvider = (queuePf.provider ?? DEFAULT_PROVIDER_ID) as ProviderId;
       window.dispatchEvent(
         new CustomEvent<GenerationQueuedPayload>(GENERATION_QUEUED_EVENT, {
           detail: {
@@ -2502,7 +2504,7 @@ export default function PlaygroundCanvas({
       });
 
       const editPf = getProviderFields();
-      const editProvider = (editPf.provider ?? 'cursor') as ProviderId;
+      const editProvider = (editPf.provider ?? DEFAULT_PROVIDER_ID) as ProviderId;
       const editResolvedModel = resolveAgentModel(editProvider, payload.model);
       // Dispatch GENERATION_START_EVENT so the presence bubble appears
       window.dispatchEvent(
@@ -2588,7 +2590,7 @@ export default function PlaygroundCanvas({
     } = payload;
 
     const canvasGenPfEarly = getProviderFields();
-    const genProvider = (canvasGenPfEarly.provider ?? 'cursor') as ProviderId;
+    const genProvider = (canvasGenPfEarly.provider ?? DEFAULT_PROVIDER_ID) as ProviderId;
     const resolvedModel = resolveAgentModel(genProvider, payloadModel);
 
     // Combine skill prompts — explicit skills always apply (including raw / text-only refs)
@@ -3447,50 +3449,6 @@ export default function PlaygroundCanvas({
                 }
               } catch (err) {
                 console.error('[Playground] Image upload failed:', err);
-              }
-            };
-            reader.readAsDataURL(file);
-          });
-          return;
-        }
-
-        // Check for PDF file drops
-        const pdfFiles = Array.from(files).filter(
-          (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name),
-        );
-        if (pdfFiles.length > 0) {
-          const position = screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          });
-          pdfFiles.forEach((file, idx) => {
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const base64 = reader.result as string;
-              try {
-                const res = await fetch('/playground/api/pdfs', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ pdfBase64: base64, originalName: file.name }),
-                });
-                const data = await res.json();
-                if (data.success) {
-                  const newNode: Node = {
-                    id: getNodeId(),
-                    type: 'pdf',
-                    position: { x: position.x + idx * 420, y: position.y },
-                    style: { width: 480, height: 640 },
-                    data: {
-                      pdfPath: data.path,
-                      pdfUrl: data.url,
-                      filename: data.filename,
-                      originalName: file.name,
-                    },
-                  };
-                  setNodes((nds) => nds.concat(newNode));
-                }
-              } catch (err) {
-                console.error('[Playground] PDF upload failed:', err);
               }
             };
             reader.readAsDataURL(file);
@@ -5281,7 +5239,7 @@ export default function PlaygroundCanvas({
   // ---------------------------------------------------------------------------
   // Compute hasChildren + isCollapsed for iteration nodes and filter visible
   // ---------------------------------------------------------------------------
-  const { visibleNodes, visibleEdges } = (() => {
+  const { visibleNodes, visibleEdges } = useMemo(() => {
     // Build adjacency from current edges
     const childrenMap = new Map<string, string[]>();
     edges.forEach(edge => {
@@ -5318,7 +5276,7 @@ export default function PlaygroundCanvas({
 
     const vEdges = edges.filter(e => !hiddenSet.has(e.target) && !hiddenSet.has(e.source));
     return { visibleNodes: annotatedNodes, visibleEdges: vEdges };
-  })();
+  }, [nodes, edges, collapsedNodeIds]);
 
   // Clear all nodes and edges, and delete all iteration files from disk
   const confirmClearAllNodes = useCallback(async () => {
@@ -5525,12 +5483,8 @@ export default function PlaygroundCanvas({
           onConnect={onConnect}
           onDragOver={onDragOver}
           onDrop={onDrop}
-          onNodeDragStart={onNodeDragStart}
           onNodeDrag={onNodeDrag}
-          onNodeDragStop={(e, n, ns) => {
-            clearHelperLines();
-            onNodeDragStop(e, n, ns);
-          }}
+          onNodeDragStop={() => clearHelperLines()}
           snapToGrid={snapEnabled}
           snapGrid={[SNAP_GRID, SNAP_GRID]}
           onPaneClick={handlePaneClick}
@@ -5580,96 +5534,12 @@ export default function PlaygroundCanvas({
           nodeBorderRadius={4}
         />
         <HelperLines vertical={helperLines.vertical} horizontal={helperLines.horizontal} />
-        {canvasPresenceBubbles.length > 0 && (
-          <div className="pointer-events-none absolute inset-0 z-[7]">
-            {canvasPresenceBubbles.map((bubble) => {
-              const currentPosition = getCanvasPresenceBubblePosition(bubble, nodes);
-              if (!currentPosition) return null;
-              const screenX = currentPosition.x * viewport.zoom + viewport.x;
-              const screenY = currentPosition.y * viewport.zoom + viewport.y;
-              const provider = (bubble.provider ?? 'cursor') as ProviderId;
-              const iconConfig = getModelIconConfig(bubble.model, provider);
-              const displayName = resolveCanvasBubbleDisplayName(bubble.model, provider);
-              const tooltipText = bubble.status === 'queued'
-                ? 'Queued - will run after current generation'
-                : bubble.type === 'adopt'
-                  ? `Adopting - ${displayName}`
-                  : `${displayName} - ${bubble.status}`;
-              const showAgentStreamTooltip =
-                (provider === 'claude-code' || provider === 'codex') &&
-                (bubble.status === 'generating' ||
-                  (bubble.status === 'done' && Boolean(bubble.agentPreviewText?.trim())));
-              return (
-                <div
-                  key={bubble.id}
-                  className="absolute"
-                  style={{
-                    left: screenX,
-                    top: screenY,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  <Tooltip delayDuration={showAgentStreamTooltip ? 280 : undefined}>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="presence-bubble group pointer-events-auto border-0 bg-transparent p-0"
-                        data-status={bubble.status}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCanvasPresenceBubbleClick(bubble);
-                        }}
-                      >
-                        {bubble.status === 'generating' && (
-                          <div className={bubble.type === 'adopt' ? 'presence-bubble-spinner--adopt' : 'presence-bubble-spinner'} />
-                        )}
-                        <div
-                          className="presence-bubble-face"
-                          style={{
-                            backgroundColor: iconConfig.bg,
-                            backgroundImage: `url(${iconConfig.src})`,
-                          }}
-                        />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      sideOffset={12}
-                      className={cn(
-                        showAgentStreamTooltip
-                          ? 'w-[min(22rem,calc(100vw-2rem))] p-0 border border-stone-200/80 bg-[#fbfbfb] text-stone-800 shadow-[0_20px_48px_-22px_rgba(28,25,23,0.38)] pointer-events-auto overflow-hidden rounded-2xl'
-                          : 'text-xs',
-                      )}
-                    >
-                      {showAgentStreamTooltip ? (
-                        <>
-                          <div className="border-b border-stone-200/70 px-3.5 py-2.5 text-[11px] font-semibold tracking-[-0.01em] text-stone-600 bg-gradient-to-b from-white to-stone-50/80">
-                            {bubble.status === 'done'
-                              ? `${displayName} · done`
-                              : bubble.type === 'adopt'
-                                ? `Adopting - ${displayName}`
-                                : displayName}
-                          </div>
-                          <div
-                            className="max-h-48 min-h-[3.25rem] overflow-y-auto overscroll-y-contain px-3.5 py-3 text-[12px] leading-5 font-mono text-stone-700 whitespace-pre-wrap break-words bg-[#fbfbfb]"
-                            onWheel={(e) => e.stopPropagation()}
-                          >
-                            {bubble.agentPreviewText?.trim()
-                              ? bubble.agentPreviewText
-                              : 'Waiting for assistant text...'}
-                          </div>
-                        </>
-                      ) : (
-                        <p>{tooltipText}</p>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <CanvasPresenceLayer
+          bubbles={canvasPresenceBubbles}
+          nodes={nodes}
+          getPosition={getCanvasPresenceBubblePosition}
+          onBubbleClick={handleCanvasPresenceBubbleClick}
+        />
       </ReactFlow>
 
       {/* Hidden file input for image upload */}
@@ -5785,18 +5655,7 @@ export default function PlaygroundCanvas({
           );
         })}
 
-        {/* Snap-to-grid toggle */}
-        <button
-          onClick={() => setSnapEnabled((v) => !v)}
-          className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-            snapEnabled ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-          }`}
-          aria-label="Snap to grid"
-          aria-pressed={snapEnabled}
-          title={snapEnabled ? 'Snap to grid: on' : 'Snap to grid: off'}
-        >
-          <Grid3x3 className="w-[18px] h-[18px]" strokeWidth={1.75} />
-        </button>
+        {/* Snap-to-grid is now modal (hold Control/⌘ while dragging) — no toolbar toggle. */}
 
         {/* Image upload */}
         <button
