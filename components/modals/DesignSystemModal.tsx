@@ -32,10 +32,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from './ui/dialog';
-import { useDesignSystemStore } from './lib/design-system-store';
-import { useModelSettingsStore } from './lib/model-settings-store';
-import { getProvider } from './lib/providers/registry';
+} from '../../ui/dialog';
+import { useDesignSystemStore } from '../../lib/design-system-store';
+import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { getProvider } from '../../lib/providers/registry';
 import {
   parseDesignMd,
   resolveToken,
@@ -43,7 +43,7 @@ import {
   readableTextColor,
   pickSurfaceColor,
   type ParsedDesignSystem,
-} from './lib/parse-design-md';
+} from '../../lib/parse-design-md';
 
 type Section = 'home' | 'preview' | 'edit' | 'check' | 'history' | 'export' | 'spec';
 

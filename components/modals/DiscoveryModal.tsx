@@ -10,9 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from './ui/dialog';
-import { getProviderFields } from './lib/generation-body';
-import { requireCursorAuthForProvider } from './lib/require-cursor-auth';
+} from '../../ui/dialog';
+import { getProviderFields } from '../../lib/generation-body';
+import { requireCursorAuthForProvider } from '../../lib/require-cursor-auth';
 
 // ---------------------------------------------------------------------------
 // Types

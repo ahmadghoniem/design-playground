@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useOnViewportChange, useReactFlow } from '@xyflow/react';
-import { type DrawStroke } from './lib/draw-types';
-import { DrawStrokePaths } from './nodes/shared/DrawStrokePaths';
-import { usePlaygroundDrawStore } from './lib/playground-draw-store';
+import { type DrawStroke } from '../../lib/draw-types';
+import { DrawStrokePaths } from '../../nodes/shared/DrawStrokePaths';
+import { usePlaygroundDrawStore } from '../../lib/playground-draw-store';
 
 interface PlaygroundCanvasDrawLayerProps {
   strokes: DrawStroke[];
@@ -74,7 +74,6 @@ export default function PlaygroundCanvasDrawLayer({ strokes, wrapperRef }: Playg
       draggingRef.current = false;
       if (e.button !== 0 || strokesRef.current.length === 0) return;
       if (e.target instanceof Element && e.target.closest('[data-canvas-draw-stroke]')) return;
-      if (e.target instanceof Element && e.target.closest('[data-pdf-draw-layer]')) return;
       if (e.target instanceof Element && e.target.closest('.react-flow__node')) return;
       if (e.target instanceof Element && e.target.closest('.react-flow__nodesselection')) return;
       const pane = wrapper.querySelector('.react-flow__pane');

@@ -7,17 +7,17 @@ import {
   InlineReferenceContent,
   type Segment,
   type InlineReferenceHandle,
-} from './ui/inline-reference';
-import type { PlaygroundSkill } from './skills';
-import { ImpeccableSkillPicker } from './ui/impeccable-skill-picker';
-import { ImpeccableDemoteMenu } from './ui/impeccable-demote-menu';
-import { BracketIcon, FrameIcon, EditIcon, ExploreIcon, PillLeadingRemoveSlot, IterationCountDragger } from './ui/chat-bits';
-import { useImpeccableSkillPicker } from './hooks/useImpeccableSkillPicker';
-import { useSkills } from './hooks/useSkills';
-import { impeccablePromptFromSegment } from './lib/impeccable-skill';
-import { useAvailableModels } from './nodes/shared/IterateDialogParts';
-import { useCursorChat } from './hooks/useCursorChat';
-import { getModelIconConfig } from './lib/model-icons';
+} from '../../ui/inline-reference';
+import type { PlaygroundSkill } from '../../skills';
+import { ImpeccableSkillPicker } from '../../ui/impeccable-skill-picker';
+import { ImpeccableDemoteMenu } from '../../ui/impeccable-demote-menu';
+import { BracketIcon, FrameIcon, EditIcon, ExploreIcon, PillLeadingRemoveSlot, IterationCountDragger } from '../../ui/chat-bits';
+import { useImpeccableSkillPicker } from '../../hooks/useImpeccableSkillPicker';
+import { useSkills } from '../../hooks/useSkills';
+import { impeccablePromptFromSegment } from '../../lib/impeccable-skill';
+import { useAvailableModels } from '../../nodes/shared/IterateDialogParts';
+import { useCursorChat } from '../../hooks/useCursorChat';
+import { getModelIconConfig } from '../../lib/model-icons';
 import {
   CURSOR_CHAT_DEFAULT_COUNT,
   CURSOR_CHAT_OPEN_EVENT,
@@ -25,11 +25,11 @@ import {
   canSubmitReferenceOnlyChat,
   type CursorChatSubmitPayload,
   type CursorChatOpenPayload,
-} from './lib/constants';
-import { matchesAction, formatKeyCombo, getCombo } from './lib/keybindings';
-import type { SelectedElement } from './lib/element-context';
-import { useModelSettingsStore } from './lib/model-settings-store';
-import type { SelectedNodeContext } from './hooks/useNodeSelection';
+} from '../../lib/constants';
+import { matchesAction, formatKeyCombo, getCombo } from '../../lib/keybindings';
+import type { SelectedElement } from '../../lib/element-context';
+import { useModelSettingsStore } from '../../lib/model-settings-store';
+import type { SelectedNodeContext } from '../../hooks/useNodeSelection';
 
 // ---------------------------------------------------------------------------
 // Props

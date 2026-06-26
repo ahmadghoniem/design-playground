@@ -8,18 +8,18 @@ import {
   InlineReferenceContent,
   type Segment,
   type InlineReferenceHandle,
-} from './ui/inline-reference';
-import type { PlaygroundSkill } from './skills';
-import { ImpeccableSkillPicker } from './ui/impeccable-skill-picker';
-import { ImpeccableDemoteMenu } from './ui/impeccable-demote-menu';
-import { useImpeccableSkillPicker } from './hooks/useImpeccableSkillPicker';
-import { impeccablePromptFromSegment } from './lib/impeccable-skill';
-import { useAvailableModels } from './nodes/shared/IterateDialogParts';
-import { useModelCycle } from './hooks/useModelCycle';
-import { useSkills } from './hooks/useSkills';
-import { captureClient } from './lib/telemetry/client';
-import { safeModel, safeSkills } from './lib/telemetry/schema';
-import { getModelIconConfig } from './lib/model-icons';
+} from '../../ui/inline-reference';
+import type { PlaygroundSkill } from '../../skills';
+import { ImpeccableSkillPicker } from '../../ui/impeccable-skill-picker';
+import { ImpeccableDemoteMenu } from '../../ui/impeccable-demote-menu';
+import { useImpeccableSkillPicker } from '../../hooks/useImpeccableSkillPicker';
+import { impeccablePromptFromSegment } from '../../lib/impeccable-skill';
+import { useAvailableModels } from '../../nodes/shared/IterateDialogParts';
+import { useModelCycle } from '../../hooks/useModelCycle';
+import { useSkills } from '../../hooks/useSkills';
+import { captureClient } from '../../lib/telemetry/client';
+import { safeModel, safeSkills } from '../../lib/telemetry/schema';
+import { getModelIconConfig } from '../../lib/model-icons';
 import {
   CURSOR_CHAT_ACTIVE_EVENT,
   CURSOR_CHAT_DEFAULT_COUNT,
@@ -27,11 +27,11 @@ import {
   canSubmitReferenceOnlyChat,
   type CursorChatActivePayload,
   type CursorChatSubmitPayload,
-} from './lib/constants';
-import { matchesAction, formatKeyCombo, getCombo } from './lib/keybindings';
-import type { SelectedElement } from './lib/element-context';
-import type { SelectedNodeContext } from './hooks/useNodeSelection';
-import { useModelSettingsStore } from './lib/model-settings-store';
+} from '../../lib/constants';
+import { matchesAction, formatKeyCombo, getCombo } from '../../lib/keybindings';
+import type { SelectedElement } from '../../lib/element-context';
+import type { SelectedNodeContext } from '../../hooks/useNodeSelection';
+import { useModelSettingsStore } from '../../lib/model-settings-store';
 import {
   EditIcon,
   ExploreIcon,
@@ -40,7 +40,7 @@ import {
   PillLeadingRemoveSlot,
   IterationCountDragger,
   SendArrowIcon,
-} from './ui/chat-bits';
+} from '../../ui/chat-bits';
 
 // ---------------------------------------------------------------------------
 // Props

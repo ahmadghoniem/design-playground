@@ -8,9 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from './ui/dialog';
-import { Kbd } from './ui/kbd';
-import { useKeybindingStore } from './lib/keybinding-store';
+} from '../../ui/dialog';
+import { Kbd } from '../../ui/kbd';
+import { useKeybindingStore } from '../../lib/keybinding-store';
 import {
   DEFAULT_KEYBINDINGS,
   formatKeyComboSegments,
@@ -18,7 +18,7 @@ import {
   getCombo,
   type KeyCombo,
   type PlaygroundAction,
-} from './lib/keybindings';
+} from '../../lib/keybindings';
 
 interface KeyboardShortcutsModalProps {
   open: boolean;

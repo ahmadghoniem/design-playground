@@ -16,7 +16,7 @@ import {
 import { Play, Combine, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { getModelIconConfig } from './lib/model-icons';
-import { getProvider } from './lib/providers/registry';
+import { getProvider, DEFAULT_PROVIDER_ID } from './lib/providers/registry';
 import type { ProviderId } from './lib/providers/types';
 
 function resolveBubbleDisplayName(model: string, provider: ProviderId): string {
@@ -57,8 +57,8 @@ import {
   type PresenceBubbleDismissPayload,
 } from './lib/constants';
 import { cn } from './lib/utils';
-import ModelSettingsModal from './ModelSettingsModal';
-import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import ModelSettingsModal from './components/modals/ModelSettingsModal';
+import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal';
 
 // ---------------------------------------------------------------------------
 // Presence Bubble Type
@@ -716,7 +716,7 @@ export default function PlaygroundHeader({
           {presenceBubbles.length > 0 && (
          <div className="flex items-center ml-1.5 gap-0.5">
             {presenceBubbles.map((bubble) => {
-              const bubbleProvider = (bubble.provider ?? 'cursor') as ProviderId;
+              const bubbleProvider = (bubble.provider ?? DEFAULT_PROVIDER_ID) as ProviderId;
               const iconConfig = getModelIconConfig(bubble.model, bubbleProvider);
               const displayName = resolveBubbleDisplayName(bubble.model, bubbleProvider);
               const tooltipText = bubble.status === 'queued'

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { cancelCursorAuthPolling, useCursorAuth } from './hooks/useCursorAuth';
+import { cancelCursorAuthPolling, useCursorAuth } from '../../hooks/useCursorAuth';
 
 const CURSOR_CLI_INSTALL_URL = 'https://cursor.com/docs/cli/installation';
 

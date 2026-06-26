@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { toast, Toaster } from 'sonner';
-import PlaygroundSidebar from './PlaygroundSidebar';
+import PlaygroundSidebar from './components/canvas/PlaygroundSidebar';
 import PlaygroundCanvas from './PlaygroundCanvas';
 import PlaygroundHeader from './PlaygroundHeader';
-import DiscoveryModal, { type DiscoveryEntry } from './DiscoveryModal';
-import SkillsCatalogModal from './SkillsCatalogModal';
+import DiscoveryModal, { type DiscoveryEntry } from './components/modals/DiscoveryModal';
+import SkillsCatalogModal from './components/modals/SkillsCatalogModal';
 import { getProviderFields } from './lib/generation-body';
 import { matchesAction } from './lib/keybindings';
 import {

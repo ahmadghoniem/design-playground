@@ -8,16 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from './ui/dialog';
-import { useAvailableModels } from './nodes/shared/IterateDialogParts';
-import { useModelSettingsStore } from './lib/model-settings-store';
-import { getModelIconConfig } from './lib/model-icons';
-import { type ModelOption } from './lib/constants';
-import type { ProviderId, ClaudeCodeOptions, CodexOptions } from './lib/providers/types';
-import { getAllProviders, getProvider } from './lib/providers/registry';
-import { partitionCursorModels, partitionClaudeModels } from './lib/model-catalog';
-import ConnectCursorPanel from './ConnectCursorPanel';
-import { useCursorAuth } from './hooks/useCursorAuth';
+} from '../../ui/dialog';
+import { useAvailableModels } from '../../nodes/shared/IterateDialogParts';
+import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { getModelIconConfig } from '../../lib/model-icons';
+import { type ModelOption } from '../../lib/constants';
+import type { ProviderId, ClaudeCodeOptions, CodexOptions } from '../../lib/providers/types';
+import { getVisibleProviders, getProvider } from '../../lib/providers/registry';
+import { partitionCursorModels, partitionClaudeModels } from '../../lib/model-catalog';
+import ConnectCursorPanel from '../chat/ConnectCursorPanel';
+import { useCursorAuth } from '../../hooks/useCursorAuth';
 
 // ---------------------------------------------------------------------------
 // Effort level options for Claude Code
@@ -135,7 +135,7 @@ export default function ModelSettingsModal({ open, onOpenChange }: ModelSettings
     };
   }, [activeProvider, allModels]);
 
-  const providers = getAllProviders();
+  const providers = getVisibleProviders();
   const allSelected = selected.size === selectableModels.length;
 
   const renderModelRow = (m: ModelOption) => {

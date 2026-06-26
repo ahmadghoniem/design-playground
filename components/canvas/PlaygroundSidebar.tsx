@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef, DragEvent, MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight, ChevronDown, ChevronLeft, Plus, Palette, Loader2, RefreshCw, RotateCcw, Frame, FileCode, Component, Trash2 } from 'lucide-react';
-import { ProjectBoxIcon, PageDocumentIcon } from './ui/playground-nav-icons';
-import { registry, RegistryItem, RegistryLeafItem, isGroup, isLeaf } from './registry';
+import { ProjectBoxIcon, PageDocumentIcon } from '../../ui/playground-nav-icons';
+import { registry, RegistryItem, RegistryLeafItem, isGroup, isLeaf } from '../../registry';
 import {
   DND_DATA_KEY,
   HTML_ID_PREFIX,
@@ -16,14 +16,14 @@ import {
   DESIGN_SYSTEM_GENERATED_EVENT,
   GENERATION_COMPLETE_EVENT,
   JSX_COMPONENT_ADDED_EVENT,
-} from './lib/constants';
-import type { HtmlPageInfo, JsxComponentInfo, ComponentSize } from './lib/constants';
-import type { PendingChild } from './PlaygroundClient';
-import ComponentErrorBoundary from './nodes/ComponentErrorBoundary';
-import DesignSystemModal from './DesignSystemModal';
-import { useModelSettingsStore } from './lib/model-settings-store';
-import { requireCursorAuthIfNeeded } from './lib/require-cursor-auth';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+} from '../../lib/constants';
+import type { HtmlPageInfo, JsxComponentInfo, ComponentSize } from '../../lib/constants';
+import type { PendingChild } from '../../PlaygroundClient';
+import ComponentErrorBoundary from '../../nodes/ComponentErrorBoundary';
+import DesignSystemModal from '../modals/DesignSystemModal';
+import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { requireCursorAuthIfNeeded } from '../../lib/require-cursor-auth';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------

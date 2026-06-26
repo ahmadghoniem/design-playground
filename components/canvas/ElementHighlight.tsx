@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useOnViewportChange } from '@xyflow/react';
-import type { SelectedElement } from './lib/element-context';
+import type { SelectedElement } from '../../lib/element-context';
 
 interface ElementHighlightProps {
   isAltHeld: boolean;
