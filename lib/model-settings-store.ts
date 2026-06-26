@@ -2,7 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ProviderId, ClaudeCodeOptions, CodexOptions } from './providers/types';
 import { DEFAULT_CLAUDE_CODE_OPTIONS, DEFAULT_CODEX_OPTIONS } from './providers/types';
-import { getProvider, DEFAULT_PROVIDER_ID, getAllProviderIds } from './providers/registry';
+import {
+  getProvider,
+  DEFAULT_PROVIDER_ID,
+  getAllProviderIds,
+  getVisibleProviderIds,
+} from './providers/registry';
 import type { ModelOption } from './constants';
 import { migrateEnabledModels, isModelEnabled } from './model-catalog';
 
@@ -88,7 +93,9 @@ function getPersistedProvider(): ProviderId {
     if (raw) {
       const parsed = JSON.parse(raw);
       const id = parsed?.state?.activeProvider;
-      if (id && getAllProviderIds().includes(id)) return id;
+      // Coerce to a currently-visible provider so a previously-persisted
+      // hidden provider (e.g. 'cursor') doesn't become an unselectable tab.
+      if (id && getVisibleProviderIds().includes(id)) return id;
     }
   } catch {
     // ignore — fall back to default
