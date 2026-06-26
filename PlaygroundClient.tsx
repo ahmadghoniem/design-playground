@@ -57,8 +57,6 @@ export default function PlaygroundClient({
   const [skillsCatalogOpen, setSkillsCatalogOpen] = useState(false);
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [pendingChildren, setPendingChildren] = useState<Map<string, PendingChild[]>>(new Map());
-  const hasScanTriggered = useRef(false);
-  const scanPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -110,10 +108,9 @@ export default function PlaygroundClient({
     });
   }, [cancelSidebarHideTimer]);
 
-  // Cleanup polling on unmount
+  // Cleanup the sidebar-hide timer on unmount
   useEffect(() => {
     return () => {
-      if (scanPollRef.current) clearTimeout(scanPollRef.current);
       if (sidebarHideTimerRef.current) clearTimeout(sidebarHideTimerRef.current);
     };
   }, []);
@@ -150,99 +147,7 @@ export default function PlaygroundClient({
     return () => window.removeEventListener(OPEN_SKILLS_CATALOG_EVENT, handler);
   }, []);
 
-  // Auto-scan on first visit
-  useEffect(() => {
-    if (hasScanTriggered.current) return;
-    hasScanTriggered.current = true;
 
-    (async () => {
-      try {
-        const res = await fetch('/playground/api/discover');
-        const data = await res.json();
-
-        if (data.status === 'not_scanned') {
-          const providerFields = getProviderFields();
-
-          const scanToastId = toast.loading('Scanning your project for components…', {
-            duration: Infinity,
-            closeButton: true,
-            dismissible: true,
-          });
-
-          try {
-            const scanRes = await fetch('/playground/api/discover', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...getProviderFields() }),
-            });
-            const scanData = await scanRes.json();
-
-            if (scanData.success && scanData.entries) {
-              const pages = scanData.entries.filter((e: { type: string }) => e.type === 'page');
-              const components = scanData.entries.filter((e: { type: string }) => e.type === 'component');
-
-              toast.success(
-                `Found ${pages.length} page${pages.length !== 1 ? 's' : ''} and ${components.length} component${components.length !== 1 ? 's' : ''}`,
-                {
-                  id: scanToastId,
-                  duration: 5000,
-                  action: {
-                    label: 'View',
-                    onClick: () => setDiscoveryOpen(true),
-                  },
-                },
-              );
-            } else {
-              toast.error(scanData.error || 'Scan failed', {
-                id: scanToastId,
-                duration: 4000,
-              });
-            }
-          } catch {
-            toast.error('Failed to scan project', {
-              id: scanToastId,
-              duration: 4000,
-            });
-          }
-        } else if (data.status === 'scanning') {
-          // A scan was already running (e.g. from a previous session) — join it with a toast
-          const scanToastId = toast.loading('Scanning your project for components…', {
-            duration: Infinity,
-            closeButton: true,
-            dismissible: true,
-          });
-
-          const poll = async () => {
-            try {
-              const r = await fetch('/playground/api/discover');
-              const d = await r.json();
-              if (d.status === 'complete' && d.entries) {
-                const pages = d.entries.filter((e: { type: string }) => e.type === 'page');
-                const components = d.entries.filter((e: { type: string }) => e.type === 'component');
-                toast.success(
-                  `Found ${pages.length} page${pages.length !== 1 ? 's' : ''} and ${components.length} component${components.length !== 1 ? 's' : ''}`,
-                  {
-                    id: scanToastId,
-                    duration: 5000,
-                    action: { label: 'View', onClick: () => setDiscoveryOpen(true) },
-                  },
-                );
-              } else if (d.status === 'scanning') {
-                scanPollRef.current = setTimeout(poll, 2500);
-              } else {
-                toast.dismiss(scanToastId);
-              }
-            } catch {
-              toast.dismiss(scanToastId);
-            }
-          };
-          scanPollRef.current = setTimeout(poll, 2500);
-        }
-      } catch {
-        // Silently fail — discovery is optional
-      }
-    })();
-  }, []);
 
   // Notify sidebar to refresh discovered components
   const notifySidebar = useCallback(() => {
