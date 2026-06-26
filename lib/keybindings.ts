@@ -19,9 +19,8 @@ export interface KeyCombo {
 }
 
 export type PlaygroundAction =
-  | 'cursor-chat.activate'
-  | 'cursor-chat.cycle-model'
-  | 'cursor-chat.toggle-edit-mode'
+  | 'chat.cycle-model'
+  | 'chat.toggle-edit-mode'
   | 'iterate.copy-prompt'
   | 'iterate.run'
   | 'element-select.hold'
@@ -41,7 +40,7 @@ export interface KeybindingDefinition {
   action: PlaygroundAction;
   label: string;
   description: string;
-  category: 'Cursor Chat' | 'Iterate Dialog' | 'Canvas' | 'Sidebar';
+  category: 'Chat' | 'Iterate Dialog' | 'Canvas' | 'Sidebar';
   defaultCombo: KeyCombo;
 }
 
@@ -51,24 +50,17 @@ export interface KeybindingDefinition {
 
 export const DEFAULT_KEYBINDINGS: KeybindingDefinition[] = [
   {
-    action: 'cursor-chat.activate',
-    label: 'Activate Cursor Chat',
-    description: 'Open the cursor chat overlay',
-    category: 'Cursor Chat',
-    defaultCombo: { key: 'c' },
-  },
-  {
-    action: 'cursor-chat.cycle-model',
+    action: 'chat.cycle-model',
     label: 'Cycle AI Model',
     description: 'Switch to the next AI model',
-    category: 'Cursor Chat',
+    category: 'Chat',
     defaultCombo: { key: 'Tab', shift: true },
   },
   {
-    action: 'cursor-chat.toggle-edit-mode',
+    action: 'chat.toggle-edit-mode',
     label: 'Toggle Edit/Iterate Mode',
     description: 'Switch between edit and iterate mode',
-    category: 'Cursor Chat',
+    category: 'Chat',
     defaultCombo: { key: 'e', meta: true },
   },
   {

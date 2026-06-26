@@ -7,9 +7,9 @@ import { SKILLS_CHANGED_EVENT } from '../lib/constants';
 // ---------------------------------------------------------------------------
 // useSkills — shared, deduped skills fetch
 // ---------------------------------------------------------------------------
-// Both chat surfaces (CursorChat and DockedChatBar) need the skills catalog.
-// A module-level cache + in-flight promise means they share a single
-// `/playground/api/skills` request instead of each firing their own. Refreshes
+// The docked chat bar (DockedChatBar) and the skills catalog modal both need
+// the skills list. A module-level cache + in-flight promise means they share a
+// single `/playground/api/skills` request instead of each firing their own. Refreshes
 // when a SKILLS_CHANGED_EVENT is dispatched (skill added/removed).
 // ---------------------------------------------------------------------------
 

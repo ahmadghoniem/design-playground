@@ -4,7 +4,7 @@
 // Skills can optionally provide a custom icon URL (e.g. via SKILL.md
 // frontmatter). When no icon is supplied, we render a colored pastel circle
 // derived from the skill's id, with subtle inner shadows to give it a 3D look
-// (matching the cursor-bubble face style in playground-global.css).
+// (matching the chat-bubble face style in playground-global.css).
 // ---------------------------------------------------------------------------
 
 import type { CSSProperties } from 'react';
@@ -39,7 +39,7 @@ export function getSkillBubbleColor(skillId: string): string {
 
 /**
  * Inline style for a small "3D" skill bubble — uses inner shadows to mimic
- * the cursor-chat bubble-face treatment in playground-global.css.
+ * the chat bubble-face treatment in playground-global.css.
  */
 export function getSkillBubbleStyle(skillId: string, size = 24): CSSProperties {
   return {

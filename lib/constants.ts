@@ -70,17 +70,6 @@ export const PLAYGROUND_CLEAR_EVENT = 'playground:clear-requested';
 /** Fired when drag-to-iterate releases (triggers toast + generation) */
 export const DRAG_ITERATE_EVENT = 'playground:drag-iterate';
 
-/** Fired to programmatically open cursor chat on a target node */
-export const CURSOR_CHAT_OPEN_EVENT = 'playground:cursor-chat-open';
-
-/** Fired when the cursor chat activates/deactivates, so other surfaces (the
- *  bottom DockedChatBar) can defer while it's in use — they do the same thing. */
-export const CURSOR_CHAT_ACTIVE_EVENT = 'playground:cursor-chat-active';
-
-export interface CursorChatActivePayload {
-  active: boolean;
-}
-
 /** Fired to decompose a component/iteration node into per-stage StageNodes */
 export const FLOW_DECOMPOSE_EVENT = 'playground:flow-decompose';
 
@@ -111,13 +100,6 @@ export const FLOW_ADOPT_EVENT = 'playground:flow-adopt';
 
 export interface FlowAdoptPayload {
   flowId: string;
-}
-
-export interface CursorChatOpenPayload {
-  targetNode: import('../hooks/useCursorChat').CursorChatTargetNode;
-  screenX: number;
-  screenY: number;
-  editMode?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -682,7 +664,7 @@ export const TREE_MANIFEST_FILENAME = 'tree.json';
 export const TREE_COLUMN_WIDTH = 500;
 
 // ---------------------------------------------------------------------------
-// Cursor Chat Constants
+// Chat Constants
 // ---------------------------------------------------------------------------
 
 /**
@@ -703,14 +685,14 @@ export function canSubmitReferenceOnlyChat(input: {
   return input.skillPromptCount > 0 || Boolean(input.text?.trim());
 }
 
-/** Default iteration count when submitting via cursor chat */
-export const CURSOR_CHAT_DEFAULT_COUNT = 3;
+/** Default iteration count when submitting via the docked chat bar */
+export const CHAT_DEFAULT_COUNT = 3;
 
-/** Default depth when submitting via cursor chat */
-export const CURSOR_CHAT_DEFAULT_DEPTH = 'all' as const;
+/** Default depth when submitting via the docked chat bar */
+export const CHAT_DEFAULT_DEPTH = 'all' as const;
 
-/** Payload submitted by the CursorChat component */
-export interface CursorChatSubmitPayload {
+/** Payload submitted by the chat composer */
+export interface ChatSubmitPayload {
   text: string;
   skillPrompts: string[];
   skillIds: string[];

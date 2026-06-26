@@ -1,5 +1,5 @@
 import { ComponentType } from 'react';
-import type { ComponentSize, CursorChatSubmitPayload, StylingMode } from './lib/constants';
+import type { ComponentSize, ChatSubmitPayload, StylingMode } from './lib/constants';
 import { DEFAULT_STYLING_MODE } from './lib/constants';
 import { iterationPrompt } from './prompts/iteration.prompt';
 import { iterationFromIterationPrompt } from './prompts/iteration-from-iteration.prompt';
@@ -265,7 +265,7 @@ export function generateElementIterationPrompt(
   startNumber: number,
   iterationCount: number,
   depth: 'shell' | '1-level' | 'all' = 'all',
-  elementSelections: CursorChatSubmitPayload['elementSelections'],
+  elementSelections: ChatSubmitPayload['elementSelections'],
   customInstructions?: string,
   skillPrompt?: string,
   stylingMode: StylingMode = DEFAULT_STYLING_MODE,
@@ -319,7 +319,7 @@ export function generateElementIterationFromIterationPrompt(
   startNumber: number,
   iterationCount: number,
   depth: 'shell' | '1-level' | 'all' = 'all',
-  elementSelections: CursorChatSubmitPayload['elementSelections'],
+  elementSelections: ChatSubmitPayload['elementSelections'],
   customInstructions?: string,
   skillPrompt?: string,
   stylingMode: StylingMode = DEFAULT_STYLING_MODE,

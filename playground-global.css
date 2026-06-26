@@ -326,7 +326,7 @@ body:has(.playground-iteration-view) {
    - Element-select mode (.element-select-mode *) still wins via `!important`.
    - `button { cursor: pointer }` in @layer base still wins for buttons.
    - Inline `style.cursor` on body/elements still wins for ad-hoc overrides
-     (cursor-chat peek, drag-to-iterate, iframe selection bridge, ...).
+     (drag-to-iterate, iframe selection bridge, ...).
    - Hotspot `3 3` aligns with the path tip near (3.27, 4.42); `default` is
      the fallback if the data URI fails to parse. */
 :root {
@@ -338,22 +338,6 @@ body:has(.playground-iteration-view) {
 body:has(.playground-main-view),
 body:has(.playground-iteration-view) {
   cursor: var(--pg-default-cursor);
-}
-
-/* Cursor Chat peek mode hides the native pointer while the chat bubble tracks
-   the mouse, making the model pill itself feel like the active cursor. */
-body.cursor-chat-cursor-mode,
-body.cursor-chat-cursor-mode .playground-main-view,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane.draggable,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane.dragging,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__pane.selection,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__node,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__node.selectable,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__node.draggable,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__node.draggable.dragging,
-body.cursor-chat-cursor-mode .playground-main-view .react-flow__nodesselection-rect {
-  cursor: none !important;
 }
 
 /* @xyflow/react/dist/style.css forces its own cursor on the canvas pane
@@ -372,7 +356,7 @@ body.cursor-chat-cursor-mode .playground-main-view .react-flow__nodesselection-r
    order. The interactive cursors that *aren't* the hand we're replacing
    (.handle.connectionindicator -> crosshair, .edgeupdater -> move) are left
    alone — those are intentional affordances. Inline `style.cursor` writes
-   from cursor-chat / drag-to-iterate / iframe-selection-bridge still win. */
+   from drag-to-iterate / iframe-selection-bridge still win. */
 .playground-main-view .react-flow__pane,
 .playground-main-view .react-flow__pane.draggable,
 .playground-main-view .react-flow__pane.dragging,
@@ -457,10 +441,10 @@ body.cursor-chat-cursor-mode .playground-main-view .react-flow__nodesselection-r
 }
 
 /* ---------------------------------------------------------------------------
-   Cursor Chat — Bubble + Flip Animation
+   Chat Model Bubble + Flip Animation (docked chat bar model avatar)
    --------------------------------------------------------------------------- */
 
-.cursor-bubble {
+.chat-bubble {
   position: relative;
   width: 28px;
   height: 28px;
@@ -499,11 +483,11 @@ body.cursor-chat-cursor-mode .playground-main-view .react-flow__nodesselection-r
   to   { transform: rotateY(0deg); }
 }
 
-.cursor-bubble.is-switching .bubble-face--current {
+.chat-bubble.is-switching .bubble-face--current {
   animation: flip-out 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.cursor-bubble.is-switching .bubble-face--next {
+.chat-bubble.is-switching .bubble-face--next {
   animation: flip-in 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 

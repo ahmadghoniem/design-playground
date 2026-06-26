@@ -21,12 +21,10 @@ import { captureClient } from '../../lib/telemetry/client';
 import { safeModel, safeSkills } from '../../lib/telemetry/schema';
 import { getModelIconConfig } from '../../lib/model-icons';
 import {
-  CURSOR_CHAT_ACTIVE_EVENT,
-  CURSOR_CHAT_DEFAULT_COUNT,
+  CHAT_DEFAULT_COUNT,
   ENABLE_FREEFORM_CHAT,
   canSubmitReferenceOnlyChat,
-  type CursorChatActivePayload,
-  type CursorChatSubmitPayload,
+  type ChatSubmitPayload,
 } from '../../lib/constants';
 import { matchesAction, formatKeyCombo, getCombo } from '../../lib/keybindings';
 import type { SelectedElement } from '../../lib/element-context';
@@ -48,7 +46,7 @@ import {
 
 interface DockedChatBarProps {
   isGenerating: boolean;
-  onSubmit: (payload: CursorChatSubmitPayload) => Promise<void>;
+  onSubmit: (payload: ChatSubmitPayload) => Promise<void>;
   selectedElements?: SelectedElement[];
   onRemoveElement?: (index: number) => void;
   onClearElements?: () => void;
@@ -58,7 +56,7 @@ interface DockedChatBarProps {
 }
 
 // ---------------------------------------------------------------------------
-// Small node-reference glyphs (match CursorChat's reference chips)
+// Small node-reference glyphs for the chat's reference chips
 // ---------------------------------------------------------------------------
 
 function ImageRefIcon() {
@@ -81,13 +79,11 @@ function NodeRefIcon() {
 }
 
 // ---------------------------------------------------------------------------
-// DockedChatBar — always-on, bottom-center composer
-// ---------------------------------------------------------------------------
-// A new chat surface that COEXISTS with the cursor-following CursorChat. It is
-// docked at the bottom-center of the screen, collapsed to a slim pill when idle
-// and expanded on focus. It reuses the same submit→generate pipeline
-// (CursorChatSubmitPayload → onSubmit) as CursorChat: raw freeform generation
-// with nothing selected, or Edit/Explore against the current canvas selection.
+// DockedChatBar — the always-on, bottom-center chat composer (the only chat
+// surface). It is docked at the bottom-center of the screen, collapsed to a
+// slim pill when idle and expanded on focus. It drives the submit→generate
+// pipeline (ChatSubmitPayload → onSubmit): raw freeform generation with nothing
+// selected, or Edit/Explore against the current canvas selection.
 // ---------------------------------------------------------------------------
 
 // Cursor-proximity thresholds (px) for the minimise/expand hysteresis.
@@ -108,9 +104,7 @@ export default function DockedChatBar({
   const [segments, setSegments] = useState<Segment[]>([]);
   const skills = useSkills();
   const [chatMode, setChatMode] = useState<'edit' | 'explore'>('edit');
-  const [iterationCount, setIterationCount] = useState(CURSOR_CHAT_DEFAULT_COUNT);
-  // While the cursor-following CursorChat is active, the dock defers entirely.
-  const [cursorChatActive, setCursorChatActive] = useState(false);
+  const [iterationCount, setIterationCount] = useState(CHAT_DEFAULT_COUNT);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inlineRefContainerRef = useRef<HTMLDivElement | null>(null);
@@ -121,7 +115,6 @@ export default function DockedChatBar({
   const dismissedRef = useRef(false); // Esc suppresses re-expand until cursor leaves
   const dwellTimerRef = useRef<number | null>(null);
   const rectRef = useRef<DOMRect | null>(null);
-  const cursorChatActiveRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -240,22 +233,6 @@ export default function DockedChatBar({
     expandedRef.current = expanded;
   }, [expanded]);
 
-  // Defer to the cursor-following chat: hide the dock (display:none, so the
-  // draft survives) while CursorChat is up — they do the same thing.
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const active = !!(e as CustomEvent<CursorChatActivePayload>).detail?.active;
-      cursorChatActiveRef.current = active;
-      setCursorChatActive(active);
-      if (active) {
-        clearDwell();
-        setExpanded(false);
-      }
-    };
-    window.addEventListener(CURSOR_CHAT_ACTIVE_EVENT, handler);
-    return () => window.removeEventListener(CURSOR_CHAT_ACTIVE_EVENT, handler);
-  }, [clearDwell]);
-
   // Cache the bar's rect so the hot mousemove path doesn't force a layout read
   // every move. It only changes when the bar resizes (expand/collapse), hides,
   // or the window resizes.
@@ -266,7 +243,7 @@ export default function DockedChatBar({
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, [shouldExpand, cursorChatActive]);
+  }, [shouldExpand]);
 
   // Proximity (mouse only — desktop). rAF-coalesced; reads the cached rect.
   // Expanding requires a brief dwell so brushing past the bottom doesn't pop it
@@ -278,7 +255,7 @@ export default function DockedChatBar({
       rafRef.current = null;
       const pt = lastPointRef.current;
       const rect = rectRef.current;
-      if (!pt || !rect || cursorChatActiveRef.current) {
+      if (!pt || !rect) {
         clearDwell();
         return;
       }
@@ -311,7 +288,7 @@ export default function DockedChatBar({
         if (dwellTimerRef.current == null) {
           dwellTimerRef.current = window.setTimeout(() => {
             dwellTimerRef.current = null;
-            if (!dismissedRef.current && !cursorChatActiveRef.current) setExpanded(true);
+            if (!dismissedRef.current) setExpanded(true);
           }, 150);
         }
       } else {
@@ -406,7 +383,7 @@ export default function DockedChatBar({
       skills: safeSkills(skillIds),
     });
 
-    const payload: CursorChatSubmitPayload = {
+    const payload: ChatSubmitPayload = {
       text,
       skillPrompts,
       skillIds,
@@ -510,7 +487,7 @@ export default function DockedChatBar({
       }
 
       // Cycle model (default Shift+Tab). Defer to the picker (Tab accepts an item).
-      if (matchesAction(e.nativeEvent, 'cursor-chat.cycle-model')) {
+      if (matchesAction(e.nativeEvent, 'chat.cycle-model')) {
         if (pickerOpen()) return;
         e.preventDefault();
         cycleModel();
@@ -518,7 +495,7 @@ export default function DockedChatBar({
       }
 
       // Toggle Edit/Explore (default Cmd+E).
-      if (matchesAction(e.nativeEvent, 'cursor-chat.toggle-edit-mode')) {
+      if (matchesAction(e.nativeEvent, 'chat.toggle-edit-mode')) {
         e.preventDefault();
         setChatMode((prev) => (prev === 'edit' ? 'explore' : 'edit'));
         return;
@@ -591,7 +568,7 @@ export default function DockedChatBar({
       data-docked-chat
       role="region"
       aria-label="AI chat"
-      className={`fixed bottom-6 left-1/2 z-[9998] flex -translate-x-1/2 flex-col items-center ${cursorChatActive ? 'hidden' : ''}`}
+      className="fixed bottom-6 left-1/2 z-[9998] flex -translate-x-1/2 flex-col items-center"
       style={{ pointerEvents: 'none' }}
     >
       {!shouldExpand ? (
@@ -619,7 +596,7 @@ export default function DockedChatBar({
               tabIndex={-1}
               onMouseDown={(e) => e.preventDefault()}
               onClick={cycleModel}
-              className={`cursor-bubble inline-block border-0 bg-transparent p-0 ${isSwitching ? 'is-switching' : ''}`}
+              className={`chat-bubble inline-block border-0 bg-transparent p-0 ${isSwitching ? 'is-switching' : ''}`}
               style={{ width: 16, height: 16 }}
             >
               {bubbleFaces}
@@ -629,7 +606,7 @@ export default function DockedChatBar({
               onMouseDown={(e) => e.preventDefault()}
               onClick={cycleModel}
               aria-label="Switch model"
-              title={`Switch model (${formatKeyCombo(getCombo('cursor-chat.cycle-model'))})`}
+              title={`Switch model (${formatKeyCombo(getCombo('chat.cycle-model'))})`}
               className="select-none whitespace-nowrap text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-600"
             >
               {shortModelName}
@@ -653,7 +630,7 @@ export default function DockedChatBar({
                   : 'text-stone-500 hover:text-stone-800'
               }`}
               aria-pressed={effectiveChatMode === 'edit'}
-              title={`Edit design (${formatKeyCombo(getCombo('cursor-chat.toggle-edit-mode'))})`}
+              title={`Edit design (${formatKeyCombo(getCombo('chat.toggle-edit-mode'))})`}
             >
               <EditIcon className="flex-shrink-0" />
               <span>Edit</span>
@@ -671,7 +648,7 @@ export default function DockedChatBar({
                   effectiveChatMode === 'explore' ? 'py-1 pr-0 text-stone-900' : 'py-1 pr-2.5 text-stone-500 hover:text-stone-800'
                 }`}
                 aria-pressed={effectiveChatMode === 'explore'}
-                title={`Explore (${formatKeyCombo(getCombo('cursor-chat.toggle-edit-mode'))})`}
+                title={`Explore (${formatKeyCombo(getCombo('chat.toggle-edit-mode'))})`}
               >
                 <ExploreIcon className="flex-shrink-0" />
                 <span>Explore</span>

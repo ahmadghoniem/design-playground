@@ -42,7 +42,8 @@ import { captureClient } from './lib/telemetry/client';
 import PlaygroundCanvasDrawLayer from './components/canvas/PlaygroundCanvasDrawLayer';
 import { usePlaygroundDrawStore } from './lib/playground-draw-store';
 import { createNewStroke, type DrawPenKind, type DrawStroke } from './lib/draw-types';
-import { Highlighter, Pencil, LayoutGrid, Frame, Square, Circle, Slash } from 'lucide-react';
+import { LayoutGrid, Frame } from 'lucide-react';
+import { ShapeToolGroup } from './components/canvas/ShapeToolGroup';
 import { PageDocumentIcon, ProjectBoxIcon } from './ui/playground-nav-icons';
 
 import ComponentNode from './nodes/ComponentNode';
@@ -150,9 +151,8 @@ import {
   DRAG_GHOST_GAP,
   DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
   DEFAULT_STYLING_MODE,
-  CURSOR_CHAT_DEFAULT_COUNT,
-  CURSOR_CHAT_DEFAULT_DEPTH,
-  CURSOR_CHAT_OPEN_EVENT,
+  CHAT_DEFAULT_COUNT,
+  CHAT_DEFAULT_DEPTH,
   ENABLE_FREEFORM_CHAT,
   canSubmitReferenceOnlyChat,
   FLOW_DECOMPOSE_EVENT,
@@ -165,11 +165,10 @@ import {
   type GenerationAgentPreviewPayload,
   type PresenceBubbleDismissPayload,
   type DragIteratePayload,
-  type CursorChatSubmitPayload,
+  type ChatSubmitPayload,
   type JsxComponentInfo,
 } from './lib/constants';
 import type { PlaygroundSkill } from './skills';
-import CursorChat from './components/chat/CursorChat';
 import DockedChatBar from './components/chat/DockedChatBar';
 import ElementHighlight from './components/canvas/ElementHighlight';
 import { useElementSelection } from './hooks/useElementSelection';
@@ -456,8 +455,6 @@ interface PlaygroundCanvasProps {
   onHideSidebar: () => void;
   /** Stable per-project id used to scope persisted canvas state to this project. */
   projectId?: string;
-  /** PostHog-gated: render the always-on bottom dock composer. */
-  dockedChatBarEnabled?: boolean;
 }
 
 export default function PlaygroundCanvas({
@@ -466,7 +463,6 @@ export default function PlaygroundCanvas({
   onShowSidebar,
   onHideSidebar,
   projectId,
-  dockedChatBarEnabled = false,
 }: PlaygroundCanvasProps) {
   const dynamicBg = useDynamicBackground();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -933,7 +929,7 @@ export default function PlaygroundCanvas({
     };
 
     wrapper.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
     window.addEventListener('pointerup', onPointerUp);
     return () => {
       wrapper.removeEventListener('pointerdown', onPointerDown);
@@ -1027,7 +1023,7 @@ export default function PlaygroundCanvas({
     };
 
     wrapper.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
     window.addEventListener('pointerup', onPointerUp);
     return () => {
       wrapper.removeEventListener('pointerdown', onPointerDown);
@@ -2373,9 +2369,9 @@ export default function PlaygroundCanvas({
   // ---------------------------------------------------------------------------
   const elementSelection = useElementSelection();
   const nodeSelection = useNodeSelection();
-  const generationQueueRef = useRef<CursorChatSubmitPayload[]>([]);
+  const generationQueueRef = useRef<ChatSubmitPayload[]>([]);
 
-  const handleCursorChatSubmit = useCallback(async (payload: CursorChatSubmitPayload) => {
+  const handleChatSubmit = useCallback(async (payload: ChatSubmitPayload) => {
     // If generation already in progress, queue it
     if (isGeneratingRef.current) {
       generationQueueRef.current.push(payload);
@@ -2384,7 +2380,7 @@ export default function PlaygroundCanvas({
       window.dispatchEvent(
         new CustomEvent<GenerationQueuedPayload>(GENERATION_QUEUED_EVENT, {
           detail: {
-            componentId: payload.targetComponentId || 'cursor-chat-freeform',
+            componentId: payload.targetComponentId || 'chat-freeform',
             model: resolveAgentModel(queueProvider, payload.model) ?? 'auto',
             provider: queuePf.provider as GenerationQueuedPayload['provider'],
             flowPosition: payload.canvasPosition ?? null,
@@ -2672,7 +2668,7 @@ export default function PlaygroundCanvas({
       let prompt = rawPrompt;
       const componentId = targetComponentId;
       const componentName = targetComponentName;
-      const iterationCount = payload.iterationCount ?? CURSOR_CHAT_DEFAULT_COUNT;
+      const iterationCount = payload.iterationCount ?? CHAT_DEFAULT_COUNT;
       let startNumber = 1;
       let screenshotPath: string | undefined;
 
@@ -2778,7 +2774,7 @@ export default function PlaygroundCanvas({
             sourceFilename,
             startNumber,
             iterationCount,
-            CURSOR_CHAT_DEFAULT_DEPTH,
+            CHAT_DEFAULT_DEPTH,
             payload.elementSelections,
             customInstructions,
             combinedSkillPrompt,
@@ -2792,7 +2788,7 @@ export default function PlaygroundCanvas({
             sourceFilename,
             iterationCount,
             startNumber,
-            CURSOR_CHAT_DEFAULT_DEPTH,
+            CHAT_DEFAULT_DEPTH,
             customInstructions,
             combinedSkillPrompt,
             stylingMode,
@@ -2807,7 +2803,7 @@ export default function PlaygroundCanvas({
             componentId,
             startNumber,
             iterationCount,
-            CURSOR_CHAT_DEFAULT_DEPTH,
+            CHAT_DEFAULT_DEPTH,
             payload.elementSelections,
             customInstructions,
             combinedSkillPrompt,
@@ -2820,7 +2816,7 @@ export default function PlaygroundCanvas({
             componentId,
             iterationCount,
             startNumber,
-            CURSOR_CHAT_DEFAULT_DEPTH,
+            CHAT_DEFAULT_DEPTH,
             customInstructions,
             combinedSkillPrompt,
             stylingMode,
@@ -3029,7 +3025,7 @@ export default function PlaygroundCanvas({
       }
     } else {
       // --- FREEFORM (no target) ---
-      const freeformComponentId = 'cursor-chat-freeform';
+      const freeformComponentId = 'chat-freeform';
 
       // Dispatch start event — creates skeleton node + presence bubble
       window.dispatchEvent(
@@ -3078,7 +3074,7 @@ export default function PlaygroundCanvas({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: freeformPrompt,
-            componentId: 'cursor-chat-freeform',
+            componentId: 'chat-freeform',
             iterationCount: 0,
             model: resolvedModel,
             source: 'chat_freeform',
@@ -3089,7 +3085,7 @@ export default function PlaygroundCanvas({
 
         const data = await response.json().catch(() => ({ success: false }));
         if (!response.ok || !data.success) {
-          console.error('[CursorChat] Freeform generation failed:', data?.error);
+          console.error('[Chat] Freeform generation failed:', data?.error);
           window.dispatchEvent(
             new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
               detail: { componentId: freeformComponentId, parentNodeId: '', error: data?.error || 'Generation failed' },
@@ -3103,7 +3099,7 @@ export default function PlaygroundCanvas({
           );
         }
       } catch (err) {
-        console.error('[CursorChat] Freeform generation error:', err);
+        console.error('[Chat] Freeform generation error:', err);
         const msg = err instanceof Error ? err.message : 'Unknown error';
         window.dispatchEvent(
           new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
@@ -3129,7 +3125,7 @@ export default function PlaygroundCanvas({
       setTimeout(() => {
         if (generationQueueRef.current.length > 0) {
           const next = generationQueueRef.current.shift()!;
-          handleCursorChatSubmit(next);
+          handleChatSubmit(next);
         }
       }, POST_GENERATION_SCAN_DELAY + 500);
     };
@@ -3140,7 +3136,7 @@ export default function PlaygroundCanvas({
       window.removeEventListener(GENERATION_COMPLETE_EVENT, drainQueue);
       window.removeEventListener(GENERATION_ERROR_EVENT, drainQueue);
     };
-  }, [handleCursorChatSubmit]);
+  }, [handleChatSubmit]);
 
   // Fullscreen fitView behavior is no longer used; nodes open in a new tab instead
 
@@ -4450,27 +4446,6 @@ export default function PlaygroundCanvas({
       };
       setNodes((nds) => nds.concat(newNode));
       window.dispatchEvent(new CustomEvent('playground:html-pages-updated'));
-
-      // Auto-open cursor chat in edit mode on the new node
-      requestAnimationFrame(() => {
-        window.dispatchEvent(
-          new CustomEvent(CURSOR_CHAT_OPEN_EVENT, {
-            detail: {
-              targetNode: {
-                nodeId: newNode.id,
-                componentId: pageId,
-                componentName: folder,
-                type: 'component' as const,
-                renderMode: 'html' as const,
-                htmlPageSlug: folder,
-              },
-              screenX,
-              screenY,
-              editMode: true,
-            },
-          })
-        );
-      });
     } catch {
       toast.error('Failed to create design');
     }
@@ -4513,7 +4488,7 @@ export default function PlaygroundCanvas({
       reservedSlugs: RESERVED_TOP_LEVEL_SLUGS.join(', '),
     });
 
-    const componentId = 'cursor-chat-new-page';
+    const componentId = 'chat-new-page';
     const pf = getProviderFields();
     const toastId = `create-page-${Date.now()}`;
 
@@ -5381,12 +5356,6 @@ export default function PlaygroundCanvas({
     e.target.value = '';
   }, [screenToFlowPosition, getNodeId, setNodes]);
 
-  // Activate cursor chat (same as pressing C)
-  const handleActivateCursorChat = useCallback(() => {
-    setActiveTool('select');
-    window.dispatchEvent(new CustomEvent('playground:toolbar-activate-chat'));
-  }, []);
-
   const toggleDrawPenKind = useCallback(
     (kind: DrawPenKind) => {
       if (activeTool === 'draw' && drawPenKind === kind) {
@@ -5398,14 +5367,6 @@ export default function PlaygroundCanvas({
     },
     [activeTool, drawPenKind, setDrawPenKind],
   );
-
-  const handleDrawToolButtonClick = useCallback(() => {
-    if (activeTool === 'draw') {
-      setDrawPenKind(drawPenKind === 'highlight' ? 'pen' : 'highlight');
-      return;
-    }
-    setActiveTool('draw');
-  }, [activeTool, drawPenKind, setDrawPenKind]);
 
   const handleSidebarButtonMouseEnter = useCallback(() => {
     sidebarOpenedByButtonHoverRef.current = !sidebarVisible;
@@ -5584,31 +5545,15 @@ export default function PlaygroundCanvas({
           </svg>
         </button>
 
-        {/* Draw tool — icon shows pen vs highlighter; repeated clicks swap kind */}
-        <button
-          onClick={handleDrawToolButtonClick}
-          className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-            activeTool === 'draw'
-              ? drawPenKind === 'highlight'
-                ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/80'
-                : 'bg-stone-100 text-stone-900'
-              : drawPenKind === 'highlight'
-                ? 'text-amber-600 hover:bg-amber-50/60'
-                : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-          }`}
-          aria-label={drawPenKind === 'highlight' ? 'Highlighter' : 'Pen'}
-          title={
-            drawPenKind === 'highlight'
-              ? 'Highlighter (H) - click to switch to pen'
-              : 'Pen (P) - click to switch to highlighter'
-          }
-        >
-          {drawPenKind === 'highlight' ? (
-            <Highlighter className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          ) : (
-            <Pencil className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          )}
-        </button>
+        {/* Shape tools — pen, highlighter, rectangle, ellipse, line grouped into one flyout slot */}
+        <ShapeToolGroup
+          activeTool={activeTool}
+          shapeKind={shapeKind}
+          drawPenKind={drawPenKind}
+          setActiveTool={setActiveTool}
+          setShapeKind={setShapeKind}
+          setDrawPenKind={setDrawPenKind}
+        />
 
         {/* Text tool */}
         <button
@@ -5626,35 +5571,6 @@ export default function PlaygroundCanvas({
           </svg>
         </button>
 
-        {/* Annotation shapes — rectangle, ellipse, line/arrow (drag to draw) */}
-        {([
-          { kind: 'rect' as ShapeKind, Icon: Square, label: 'Rectangle (R)' },
-          { kind: 'ellipse' as ShapeKind, Icon: Circle, label: 'Ellipse (O)' },
-          { kind: 'line' as ShapeKind, Icon: Slash, label: 'Line / arrow (L)' },
-        ]).map(({ kind, Icon, label }) => {
-          const active = activeTool === 'shape' && shapeKind === kind;
-          return (
-            <button
-              key={kind}
-              onClick={() => {
-                if (active) {
-                  setActiveTool('select');
-                } else {
-                  setShapeKind(kind);
-                  setActiveTool('shape');
-                }
-              }}
-              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-                active ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-              }`}
-              aria-label={label}
-              title={label}
-            >
-              <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
-            </button>
-          );
-        })}
-
         {/* Snap-to-grid is now modal (hold Control/⌘ while dragging) — no toolbar toggle. */}
 
         {/* Image upload */}
@@ -5670,23 +5586,6 @@ export default function PlaygroundCanvas({
             <polyline points="21 15 16 10 5 21" />
           </svg>
         </button>
-
-        {/* Cursor Chat — teardrop bubble shape, mirrors CursorChat avatar */}
-        <button
-          onClick={handleActivateCursorChat}
-          className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors group/chat"          aria-label="Cursor Chat"
-          title="Cursor Chat (C)"
-        >
-          <span
-            className="flex items-center justify-center w-[22px] h-[22px] bg-stone-900 text-white transition-transform group-hover/chat:scale-105"
-            style={{ borderRadius: '50% 50% 50% 4px' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </span>
-        </button>
       </div>
 
       {/* Element selection highlights */}
@@ -5698,10 +5597,10 @@ export default function PlaygroundCanvas({
         selectedElements={elementSelection.selectedElements}
       />
 
-      {/* Cursor Chat overlay */}
-      <CursorChat
+      {/* Always-on bottom-center chat composer (the only chat surface) */}
+      <DockedChatBar
         isGenerating={isGenerating}
-        onSubmit={handleCursorChatSubmit}
+        onSubmit={handleChatSubmit}
         selectedElements={elementSelection.selectedElements}
         onRemoveElement={(idx) => elementSelection.removeElement(idx)}
         onClearElements={elementSelection.clearSelection}
@@ -5709,21 +5608,6 @@ export default function PlaygroundCanvas({
         onRemoveNode={nodeSelection.removeNode}
         onClearNodes={nodeSelection.clearNodeSelection}
       />
-
-      {/* Always-on bottom-center composer — coexists with CursorChat.
-          Gated behind the PostHog `playground-docked-chat-bar` flag. */}
-      {dockedChatBarEnabled && (
-        <DockedChatBar
-          isGenerating={isGenerating}
-          onSubmit={handleCursorChatSubmit}
-          selectedElements={elementSelection.selectedElements}
-          onRemoveElement={(idx) => elementSelection.removeElement(idx)}
-          onClearElements={elementSelection.clearSelection}
-          selectedNodes={nodeSelection.selectedNodes}
-          onRemoveNode={nodeSelection.removeNode}
-          onClearNodes={nodeSelection.clearNodeSelection}
-        />
-      )}
 
       {/* Clear canvas confirmation dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>

@@ -148,56 +148,6 @@ export function isTelemetryEnabled(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Feature flags (PostHog) — reuse the same project + anonymous id as telemetry.
-// Server-side remote evaluation, briefly cached. Respects the telemetry opt-out
-// (no network call → fallback) and fails closed to the caller's fallback so a
-// PostHog outage or missing flag never blocks the page.
-// ---------------------------------------------------------------------------
-
-const FLAG_CACHE_TTL_MS = 60_000;
-const FLAG_EVAL_TIMEOUT_MS = 1_500;
-const flagCache = new Map<string, { value: boolean; at: number }>();
-
-export async function getFeatureFlag(key: string, fallback: boolean): Promise<boolean> {
-  // Same gate as telemetry: dev-only, honors DO_NOT_TRACK / opt-out.
-  if (!hasRealKey() || !isTelemetryEnabled()) return fallback;
-  const distinctId = loadConfig()?.anonymousId;
-  if (!distinctId) return fallback;
-
-  const cacheKey = `${key}:${distinctId}`;
-  const cached = flagCache.get(cacheKey);
-  if (cached && Date.now() - cached.at < FLAG_CACHE_TTL_MS) return cached.value;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FLAG_EVAL_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${POSTHOG_HOST}/flags/?v=2`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: POSTHOG_KEY, distinct_id: distinctId }),
-      signal: controller.signal,
-    });
-    if (!res.ok) return fallback;
-    const data = (await res.json()) as {
-      flags?: Record<string, { enabled?: boolean }>;
-      featureFlags?: Record<string, boolean | string>;
-    };
-    let value = fallback;
-    if (data.flags && key in data.flags) {
-      value = data.flags[key]?.enabled === true;
-    } else if (data.featureFlags && key in data.featureFlags) {
-      value = data.featureFlags[key] === true;
-    }
-    flagCache.set(cacheKey, { value, at: Date.now() });
-    return value;
-  } catch {
-    return fallback;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Machine config (~/.config/design-playground/telemetry.json)
 // ---------------------------------------------------------------------------
 
@@ -336,7 +286,7 @@ export function capture(name: TelemetryEventName, props?: Record<string, unknown
   }
 }
 
-/** True when the request reached us from this machine (not a tunnel/LAN guest). */
+/** True when the request reached us from this machine (not a remote or LAN guest). */
 export function isLocalRequest(req: Request): boolean {
   try {
     const host = req.headers.get('host') ?? '';
@@ -354,8 +304,8 @@ export function isLocalRequest(req: Request): boolean {
 }
 
 /**
- * capture() gated on local origin — use in API routes so guest-triggered
- * work (via tunnel/room URLs) is never recorded; guests never saw a notice.
+ * capture() gated on local origin — use in API routes so only local
+ * requests are recorded.
  */
 export function captureFromRequest(
   req: Request,
@@ -375,8 +325,8 @@ function ensureFlushLoop(): void {
   if (!s.exitHookInstalled) {
     s.exitHookInstalled = true;
     // 'beforeExit' only: registering SIGINT/SIGTERM handlers changes process
-    // semantics (Node skips default termination once any handler exists) and
-    // races the tunnel route's exit handler. Tail-batch loss is accepted.
+    // semantics (Node skips default termination once any handler exists).
+    // Tail-batch loss is accepted.
     process.once('beforeExit', () => void flushTelemetry(800));
   }
 }

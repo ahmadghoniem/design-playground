@@ -53,10 +53,8 @@ function loadSidebarVisibility(storageKey: string) {
 
 export default function PlaygroundClient({
   projectId,
-  dockedChatBarEnabled = false,
 }: {
   projectId?: string;
-  dockedChatBarEnabled?: boolean;
 } = {}) {
   const sidebarVisibilityStorageKey = getSidebarVisibilityStorageKey(projectId);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(() =>
@@ -694,7 +692,6 @@ export default function PlaygroundClient({
                 onShowSidebar={handleShowSidebar}
                 onHideSidebar={startSidebarHideTimer}
                 projectId={projectId}
-                dockedChatBarEnabled={dockedChatBarEnabled}
               />
             </CanvasFlowProvider>
           </div>

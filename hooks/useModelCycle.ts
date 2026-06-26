@@ -10,11 +10,9 @@ import type { ModelOption } from '../nodes/shared/IterateDialogParts';
 // ---------------------------------------------------------------------------
 // useModelCycle
 // ---------------------------------------------------------------------------
-// The model-selection slice extracted from useCursorChat: it owns the selected
+// The model-selection slice used by the docked chat bar: it owns the selected
 // model, persists it, and cycles to the next available model with a 350ms flip
-// animation (mirrors the .cursor-bubble.is-switching CSS). Kept free of the
-// cursor-tracking / placement machinery so the bottom-docked composer can reuse
-// just the model bubble without a second Cmd+/ global handler or RAF loop.
+// animation (mirrors the .chat-bubble.is-switching CSS).
 // ---------------------------------------------------------------------------
 
 export interface UseModelCycleReturn {

@@ -3,11 +3,8 @@
 // ---------------------------------------------------------------------------
 // Shared chat composer bits
 // ---------------------------------------------------------------------------
-// Small presentational pieces shared between the cursor-following chat
-// (CursorChat.tsx) and the bottom-docked composer (DockedChatBar.tsx).
-// These were originally local to CursorChat; lifted here so both surfaces can
-// reuse them without importing the whole CursorChat module (and its cursor
-// tracking machinery) just for icons.
+// Presentational pieces for the docked chat bar (DockedChatBar.tsx) — the
+// playground's only chat surface.
 // ---------------------------------------------------------------------------
 
 import React, { useCallback, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
