@@ -39,7 +39,8 @@ The package is designed to be **dropped into a host project** at `src/app/playgr
 
 - Match the surrounding code's style; this package favors small focused modules and explicit error handling with `console.error` + JSON error bodies.
 - Binary uploads (images/screenshots) are **base64 in JSON**, not multipart — hence the 50MB body limit. (PDF-on-canvas support was removed; there is no `pdfjs-dist` dependency or `pdf` node type.)
-- **Leaf UI components are grouped under `components/<type>/`** — `modals/`, `chat/`, `canvas/` (plus the pre-existing `flow/`). Entry/shell files (`page`, `layout`, `PlaygroundClient`, `PlaygroundCanvas`, `PlaygroundHeader`, `registry`) stay at the package root. New leaf components should follow this convention.
+- **Leaf UI components are grouped under `components/<type>/`** — `modals/`, `chat/`, `canvas/` (plus the pre-existing `flow/`). New leaf components should follow this convention.
+- **Shell composition files are grouped under `app/`** — `PlaygroundCanvas`, `PlaygroundClient`, `PlaygroundHeader`, `page`, `layout`, `loading`. Global styles live in `styles/` (`playground-global.css`). Tooling-pinned entry files stay at root: `dev-entry.tsx` (the react-router mount entry) and `registry.tsx` (imported widely across subsystems). `playground-tailwind-entry.css` also stays at root as the Vite/Tailwind build entry.
 - **Provider visibility** is gated by `SHOW_ALL_PROVIDERS` in `lib/providers/registry.ts`; UI surfaces use `getVisibleProviders()`/`getVisibleProviderIds()`, and `DEFAULT_PROVIDER_ID` (re-exported from `lib/constants.ts`) is `claude-code`. Don't hardcode provider-id literals — use `DEFAULT_PROVIDER_ID`.
 - Local-only endpoints (`providers`) gate on `isLocalRequest(c.req.raw)`.
 - There is **no root `tsconfig.json`** — the host compiles the TS. When typechecking locally, `react`/`vite` resolve only in a host (they're peerDependencies), so module-not-found errors for those are environmental, not real.

@@ -2,7 +2,7 @@ import {
   BACKGROUND_COLOR,
   BACKGROUND_GAP,
   CANVAS_BACKGROUND_COLOR,
-} from './lib/constants';
+} from '../lib/constants';
 
 const DOT_PATTERN = {
   backgroundColor: CANVAS_BACKGROUND_COLOR,

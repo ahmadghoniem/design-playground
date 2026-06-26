@@ -18,7 +18,7 @@ import {
   JSX_COMPONENT_ADDED_EVENT,
 } from '../../lib/constants';
 import type { HtmlPageInfo, JsxComponentInfo, ComponentSize } from '../../lib/constants';
-import type { PendingChild } from '../../PlaygroundClient';
+import type { PendingChild } from '../../app/PlaygroundClient';
 import ComponentErrorBoundary from '../../nodes/ComponentErrorBoundary';
 import DesignSystemModal from '../modals/DesignSystemModal';
 import { useModelSettingsStore } from '../../lib/model-settings-store';

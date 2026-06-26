@@ -1,8 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { PlaygroundLayout } from './layout';
-import { PlaygroundPage } from './page';
-import { PlaygroundIterationIsolatedPage } from './iterations/[slug]/page';
+import { PlaygroundLayout } from './app/layout';
+import { PlaygroundPage } from './app/page';
+import { PlaygroundIterationIsolatedPage } from './iterations/IterationIsolatedPage';
 
 // basename="/playground" matches the clean URL the vite-plugin serves at.
 // Routes are declared relative to that basename.

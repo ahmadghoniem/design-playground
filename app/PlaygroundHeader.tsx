@@ -3,21 +3,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Eraser, RefreshCw, X, SlidersVertical, Keyboard, ChevronDown, Copy, Wrench, Sun, Moon, Monitor } from 'lucide-react';
-import { useDevModeStore } from './lib/dev-mode-store';
-import { usePreviewColorSchemeStore } from './lib/preview-color-scheme-store';
-import { useFlowMocksStore } from './lib/flow-mocks-store';
+import { useDevModeStore } from '../lib/dev-mode-store';
+import { usePreviewColorSchemeStore } from '../lib/preview-color-scheme-store';
+import { useFlowMocksStore } from '../lib/flow-mocks-store';
 import {
   FLOW_PLAY_EVENT,
   FLOW_COMBINE_EVENT,
   FLOW_ADOPT_EVENT,
   type FlowPlayPayload,
   type FlowAdoptPayload,
-} from './lib/constants';
+} from '../lib/constants';
 import { Play, Combine, Upload } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { getModelIconConfig } from './lib/model-icons';
-import { getProvider, DEFAULT_PROVIDER_ID } from './lib/providers/registry';
-import type { ProviderId } from './lib/providers/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { getModelIconConfig } from '../lib/model-icons';
+import { getProvider, DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
+import type { ProviderId } from '../lib/providers/types';
 
 function resolveBubbleDisplayName(model: string, provider: ProviderId): string {
   if (provider === 'cursor') return model;
@@ -25,18 +25,18 @@ function resolveBubbleDisplayName(model: string, provider: ProviderId): string {
   const modelLabel = model && model !== 'auto' ? model : 'default';
   return `${config.displayName} (${modelLabel})`;
 }
-import { CANVAS_BACKGROUND_COLOR } from './lib/constants';
+import { CANVAS_BACKGROUND_COLOR } from '../lib/constants';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import cursorIcon from './assets/cursor-icon.svg';
-import finderIcon from './assets/finder-icon.png';
-import githubDesktopIcon from './assets/github-desktop-icon.png';
-import antigravityIcon from './assets/antigravity-icon.png';
-import codexIcon from './assets/codex-icon.png';
+} from '../ui/dropdown-menu';
+import cursorIcon from '../assets/cursor-icon.svg';
+import finderIcon from '../assets/finder-icon.png';
+import githubDesktopIcon from '../assets/github-desktop-icon.png';
+import antigravityIcon from '../assets/antigravity-icon.png';
+import codexIcon from '../assets/codex-icon.png';
 import {
   OPEN_SKILLS_CATALOG_EVENT,
   ITERATION_FETCH_EVENT,
@@ -55,10 +55,10 @@ import {
   type GenerationQueuedPayload,
   type GenerationAgentPreviewPayload,
   type PresenceBubbleDismissPayload,
-} from './lib/constants';
-import { cn } from './lib/utils';
-import ModelSettingsModal from './components/modals/ModelSettingsModal';
-import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal';
+} from '../lib/constants';
+import { cn } from '../lib/utils';
+import ModelSettingsModal from '../components/modals/ModelSettingsModal';
+import KeyboardShortcutsModal from '../components/modals/KeyboardShortcutsModal';
 
 // ---------------------------------------------------------------------------
 // Presence Bubble Type

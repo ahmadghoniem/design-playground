@@ -17,7 +17,7 @@ import {
   useViewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,66 +27,66 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
-import { getProviderFields } from './lib/generation-body';
+} from '../ui/alert-dialog';
+import { getProviderFields } from '../lib/generation-body';
 
-import { getProvider, DEFAULT_PROVIDER_ID } from './lib/providers/registry';
-import { loadCanvasState, saveCanvasState, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from './lib/canvas-persistence';
-import { useCanvasFlow } from './lib/canvas-flow';
-import { resolveAgentModel } from './lib/resolve-agent-model';
-import { getModelIconConfig } from './lib/model-icons';
-import type { ProviderId } from './lib/providers/types';
-import PlaygroundCanvasDrawLayer from './components/canvas/PlaygroundCanvasDrawLayer';
-import { usePlaygroundDrawStore } from './lib/playground-draw-store';
-import { createNewStroke, type DrawPenKind, type DrawStroke } from './lib/draw-types';
+import { getProvider, DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
+import { loadCanvasState, saveCanvasState, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
+import { useCanvasFlow } from '../lib/canvas-flow';
+import { resolveAgentModel } from '../lib/resolve-agent-model';
+import { getModelIconConfig } from '../lib/model-icons';
+import type { ProviderId } from '../lib/providers/types';
+import PlaygroundCanvasDrawLayer from '../components/canvas/PlaygroundCanvasDrawLayer';
+import { usePlaygroundDrawStore } from '../lib/playground-draw-store';
+import { createNewStroke, type DrawPenKind, type DrawStroke } from '../lib/draw-types';
 import { LayoutGrid, Frame } from 'lucide-react';
-import { ShapeToolGroup } from './components/canvas/ShapeToolGroup';
-import { PageDocumentIcon, ProjectBoxIcon } from './ui/playground-nav-icons';
+import { ShapeToolGroup } from '../components/canvas/ShapeToolGroup';
+import { PageDocumentIcon, ProjectBoxIcon } from '../ui/playground-nav-icons';
 
-import ComponentNode from './nodes/ComponentNode';
-import IterationNode from './nodes/IterationNode';
-import SkeletonIterationNode from './nodes/SkeletonIterationNode';
-import DragGhostNode from './nodes/DragGhostNode';
-import ImageNode from './nodes/ImageNode';
+import ComponentNode from '../nodes/ComponentNode';
+import IterationNode from '../nodes/IterationNode';
+import SkeletonIterationNode from '../nodes/SkeletonIterationNode';
+import DragGhostNode from '../nodes/DragGhostNode';
+import ImageNode from '../nodes/ImageNode';
 import StageNode, {
   STAGE_NODE_DEFAULT_HEIGHT,
   STAGE_NODE_FRAME_WIDTH,
   STAGE_NODE_HEADER_HEIGHT,
-} from './nodes/StageNode';
-import StageGroupNode from './nodes/StageGroupNode';
-import { findFlowDescriptorForComponent } from './lib/flows/registry';
-import { useFlowMocksStore } from './lib/flow-mocks-store';
-import { MockDataPanel } from './components/MockDataPanel';
-import { FlowSimulator } from './components/FlowSimulator';
-import { FlowAdoptModal } from './components/FlowAdoptModal';
-import type { StageNodeData } from './lib/flows/types';
-import { hitTestStrokes } from './lib/draw-hit-test';
-import TextNode from './nodes/TextNode';
-import ShapeNode, { type ShapeKind } from './nodes/ShapeNode';
-import FrameNode from './nodes/FrameNode';
-import HelperLines, { type HelperLineState } from './nodes/shared/HelperLines';
-import { matchesAction } from './lib/keybindings';
+} from '../nodes/StageNode';
+import StageGroupNode from '../nodes/StageGroupNode';
+import { findFlowDescriptorForComponent } from '../lib/flows/registry';
+import { useFlowMocksStore } from '../lib/flow-mocks-store';
+import { MockDataPanel } from '../components/MockDataPanel';
+import { FlowSimulator } from '../components/FlowSimulator';
+import { FlowAdoptModal } from '../components/FlowAdoptModal';
+import type { StageNodeData } from '../lib/flows/types';
+import { hitTestStrokes } from '../lib/draw-hit-test';
+import TextNode from '../nodes/TextNode';
+import ShapeNode, { type ShapeKind } from '../nodes/ShapeNode';
+import FrameNode from '../nodes/FrameNode';
+import HelperLines, { type HelperLineState } from '../nodes/shared/HelperLines';
+import { matchesAction } from '../lib/keybindings';
 import {
   generateIterationPrompt,
   generateIterationFromIterationPrompt,
   generateElementIterationPrompt,
   generateElementIterationFromIterationPrompt,
   resolveRegistryItem,
-} from './registry';
+} from '../registry';
 import {
   formatReferenceNodesSection,
   formatSkillSection,
   formatCustomInstructionsSection,
   getStylingConstraint,
-} from './prompts/shared-sections';
-import { freeformReferencePrompt } from './prompts/freeform-reference.prompt';
-import { editPrompt } from './prompts/edit.prompt';
-import { pickPlanFrameName } from './lib/plan-frame-name';
-import { createPagePrompt, RESERVED_TOP_LEVEL_SLUGS } from './prompts/create-page.prompt';
-import { generateHtmlIterationPrompt, generateHtmlIterationFromIterationPrompt } from './lib/html-prompts';
-import { generateJsxIterationPrompt, generateJsxIterationFromIterationPrompt } from './lib/jsx-prompts';
-import { captureAndSaveScreenshot, getScreenshotFilename } from './lib/captureAndSaveScreenshot';
-import { loadSelectedModel } from './nodes/shared/IterateDialogParts';
+} from '../prompts/shared-sections';
+import { freeformReferencePrompt } from '../prompts/freeform-reference.prompt';
+import { editPrompt } from '../prompts/edit.prompt';
+import { pickPlanFrameName } from '../lib/plan-frame-name';
+import { createPagePrompt, RESERVED_TOP_LEVEL_SLUGS } from '../prompts/create-page.prompt';
+import { generateHtmlIterationPrompt, generateHtmlIterationFromIterationPrompt } from '../lib/html-prompts';
+import { generateJsxIterationPrompt, generateJsxIterationFromIterationPrompt } from '../lib/jsx-prompts';
+import { captureAndSaveScreenshot, getScreenshotFilename } from '../lib/captureAndSaveScreenshot';
+import { loadSelectedModel } from '../nodes/shared/IterateDialogParts';
 import {
   GENERATION_START_EVENT,
   GENERATION_COMPLETE_EVENT,
@@ -164,18 +164,18 @@ import {
   type DragIteratePayload,
   type ChatSubmitPayload,
   type JsxComponentInfo,
-} from './lib/constants';
-import type { PlaygroundSkill } from './skills';
-import DockedChatBar from './components/chat/DockedChatBar';
-import ElementHighlight from './components/canvas/ElementHighlight';
-import { useElementSelection } from './hooks/useElementSelection';
-import { useNodeSelection } from './hooks/useNodeSelection';
-import { useInteractiveNodeStore } from './lib/interactive-node-store';
-import { useDynamicBackground } from './hooks/useDynamicBackground';
+} from '../lib/constants';
+import type { PlaygroundSkill } from '../skills';
+import DockedChatBar from '../components/chat/DockedChatBar';
+import ElementHighlight from '../components/canvas/ElementHighlight';
+import { useElementSelection } from '../hooks/useElementSelection';
+import { useNodeSelection } from '../hooks/useNodeSelection';
+import { useInteractiveNodeStore } from '../lib/interactive-node-store';
+import { useDynamicBackground } from '../hooks/useDynamicBackground';
 import { toast } from 'sonner';
-import { wrapHtmlFragment, parsePastedHttpUrl } from './lib/html-utils';
-import { looksLikeJsx, wrapJsxComponent } from './lib/jsx-utils';
-import { cn } from './lib/utils';
+import { wrapHtmlFragment, parsePastedHttpUrl } from '../lib/html-utils';
+import { looksLikeJsx, wrapJsxComponent } from '../lib/jsx-utils';
+import { cn } from '../lib/utils';
 
 const nodeTypes = {
   component: ComponentNode,
@@ -436,8 +436,8 @@ function CanvasPresenceLayer({
 // CanvasState, loadCanvasState, saveCanvasState moved to ./lib/canvas-persistence
 
 // Re-export event names so existing imports keep working
-export { ITERATION_PROMPT_COPIED_EVENT, ITERATION_FETCH_EVENT } from './lib/constants';
-import { ITERATION_PROMPT_COPIED_EVENT, ITERATION_FETCH_EVENT } from './lib/constants';
+export { ITERATION_PROMPT_COPIED_EVENT, ITERATION_FETCH_EVENT } from '../lib/constants';
+import { ITERATION_PROMPT_COPIED_EVENT, ITERATION_FETCH_EVENT } from '../lib/constants';
 
 // GenerationInfo moved to ./lib/canvas-persistence
 

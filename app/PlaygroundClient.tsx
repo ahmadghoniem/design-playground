@@ -3,22 +3,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { toast, Toaster } from 'sonner';
-import PlaygroundSidebar from './components/canvas/PlaygroundSidebar';
+import PlaygroundSidebar from '../components/canvas/PlaygroundSidebar';
 import PlaygroundCanvas from './PlaygroundCanvas';
 import PlaygroundHeader from './PlaygroundHeader';
-import DiscoveryModal, { type DiscoveryEntry } from './components/modals/DiscoveryModal';
-import SkillsCatalogModal from './components/modals/SkillsCatalogModal';
-import { getProviderFields } from './lib/generation-body';
-import { matchesAction } from './lib/keybindings';
+import DiscoveryModal, { type DiscoveryEntry } from '../components/modals/DiscoveryModal';
+import SkillsCatalogModal from '../components/modals/SkillsCatalogModal';
+import { getProviderFields } from '../lib/generation-body';
+import { matchesAction } from '../lib/keybindings';
 import {
   ADD_ALL_QUEUE_STORAGE_KEY,
   OPEN_SKILLS_CATALOG_EVENT,
   SKILLS_CHANGED_EVENT,
   STORAGE_KEY,
-} from './lib/constants';
-import { preloadAllComponents } from './registry';
-import { CanvasFlowProvider } from './lib/canvas-flow';
-import { previewSchemeClass, usePreviewColorSchemeStore } from './lib/preview-color-scheme-store';
+} from '../lib/constants';
+import { preloadAllComponents } from '../registry';
+import { CanvasFlowProvider } from '../lib/canvas-flow';
+import { previewSchemeClass, usePreviewColorSchemeStore } from '../lib/preview-color-scheme-store';
 
 export interface PendingChild {
   id: string;
