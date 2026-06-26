@@ -16,7 +16,7 @@ The package is designed to be **dropped into a host project** at `src/app/playgr
   - `server/vite-plugin.ts` — `designPlaygroundPlugin()` bridges Hono into Vite's connect middleware via `getRequestListener(app.fetch)` from `@hono/node-server`. Vite's `server.middlewares` is connect/Node `(req,res)`, so this adapter is required for the embedded path even under Bun.
   - `server/routes/*.ts` — one module per API area, each exporting a `xxxRoutes()` factory returning a `Hono` sub-app. Handlers register at `/api/...`; served path is `/playground/api/...`.
   - `server/lib/hono-helpers.ts` — `readJson<T>(c)` parses a JSON body, returning `null` on missing/invalid input (mirrors the old Express `req.body ?? null`).
-- **Shared logic**: `lib/` (provider configs, telemetry, design-md helpers, path resolvers). Server routes import from `lib/` and pass `c.req.raw` (a native Web `Request`) to helpers like `isLocalRequest` / `captureFromRequest`.
+- **Shared logic**: `lib/` (stateless helpers: provider configs, telemetry, design-md helpers, path resolvers). Zustand stores live in `stores/`. Server routes import from `lib/` and pass `c.req.raw` (a native Web `Request`) to helpers like `isLocalRequest` / `captureFromRequest`.
 
 ## Route conventions (Hono)
 

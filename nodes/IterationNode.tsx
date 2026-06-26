@@ -18,7 +18,7 @@ import {
 } from '../ui/alert-dialog';
 import { resolveRegistryItem, generateAdoptPrompt } from '../registry';
 import { getIterationComponent } from '../iterations';
-import { useFlowMocksStore } from '../lib/flow-mocks-store';
+import { useFlowMocksStore } from '../stores/flow-mocks-store';
 import type { StageNodeData } from '../lib/flows/types';
 import { Star } from 'lucide-react';
 import { SizeButtons } from './shared/SizeButtons';
@@ -52,7 +52,7 @@ import { generateJsxAdoptPrompt } from '../lib/jsx-prompts';
 import { useAsyncProps, useScrollCapture, useHtmlContent } from '../hooks/useNodeShared';
 import ComponentErrorBoundary from './ComponentErrorBoundary';
 import IterateDialog from './shared/IterateDialog';
-import { useInteractiveNodeStore, useIsInteractiveNode } from '../lib/interactive-node-store';
+import { useInteractiveNodeStore, useIsInteractiveNode } from '../stores/interactive-node-store';
 import { useFrameHoverHint } from './shared/FrameHoverHint';
 
 interface IterationNodeProps {

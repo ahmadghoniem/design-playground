@@ -1,4 +1,4 @@
-import { useModelSettingsStore } from './model-settings-store';
+import { useModelSettingsStore } from '../stores/model-settings-store';
 
 /**
  * Build the request body fields for generation API calls.

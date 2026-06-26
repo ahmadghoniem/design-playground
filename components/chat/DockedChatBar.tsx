@@ -27,7 +27,7 @@ import {
 import { matchesAction, formatKeyCombo, getCombo } from '../../lib/keybindings';
 import type { SelectedElement } from '../../lib/element-context';
 import type { SelectedNodeContext } from '../../hooks/useNodeSelection';
-import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { useModelSettingsStore } from '../../stores/model-settings-store';
 import {
   EditIcon,
   ExploreIcon,

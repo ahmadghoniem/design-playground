@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from '../../ui/dialog';
 import { Kbd } from '../../ui/kbd';
-import { useKeybindingStore } from '../../lib/keybinding-store';
+import { useKeybindingStore } from '../../stores/keybinding-store';
 import {
   DEFAULT_KEYBINDINGS,
   formatKeyComboSegments,

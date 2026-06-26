@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useOnViewportChange, useReactFlow } from "@xyflow/react";
 import { type DrawStroke } from "../../lib/draw-types";
 import { DrawStrokePaths } from "../../nodes/shared/DrawStrokePaths";
-import { usePlaygroundDrawStore } from "../../lib/playground-draw-store";
+import { usePlaygroundDrawStore } from "../../stores/playground-draw-store";
 
 interface PlaygroundCanvasDrawLayerProps {
   strokes: DrawStroke[];

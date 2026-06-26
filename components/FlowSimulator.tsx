@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { X, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
-import { useFlowMocksStore } from '../lib/flow-mocks-store';
+import { useFlowMocksStore } from '../stores/flow-mocks-store';
 import { findFlowDescriptorById } from '../lib/flows/registry';
 import { getIterationComponent } from '../iterations';
 import {

@@ -54,7 +54,7 @@ import {
 import { useDragToIterate, clampGrid, type DragDelta, type CursorScreenPos, type DragIterateGrid } from '../../hooks/useDragToIterate';
 import DragSelectionOverlay from './DragSelectionOverlay';
 import { getModelIconConfig } from '../../lib/model-icons';
-import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { useModelSettingsStore } from '../../stores/model-settings-store';
 
 // Ghost node ID prefix to identify and clean up drag-ghost nodes
 const GHOST_NODE_PREFIX = 'drag-ghost-';

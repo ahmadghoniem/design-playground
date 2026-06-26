@@ -33,8 +33,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '../../ui/dialog';
-import { useDesignSystemStore } from '../../lib/design-system-store';
-import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { useDesignSystemStore } from '../../stores/design-system-store';
+import { useModelSettingsStore } from '../../stores/model-settings-store';
 import { getProvider } from '../../lib/providers/registry';
 import {
   parseDesignMd,

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DrawPenKind } from './draw-types';
+import type { DrawPenKind } from '../lib/draw-types';
 
 export type DrawStrokeSelection = { scope: 'canvas'; strokeId: string };
 

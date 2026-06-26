@@ -21,7 +21,7 @@ import type { HtmlPageInfo, JsxComponentInfo, ComponentSize } from '../../lib/co
 import type { PendingChild } from '../../app/PlaygroundClient';
 import ComponentErrorBoundary from '../../nodes/ComponentErrorBoundary';
 import DesignSystemModal from '../modals/DesignSystemModal';
-import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { useModelSettingsStore } from '../../stores/model-settings-store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
 

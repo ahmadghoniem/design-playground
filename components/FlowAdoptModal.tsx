@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Loader2, FileCheck2, AlertTriangle } from 'lucide-react';
-import { useFlowMocksStore } from '../lib/flow-mocks-store';
+import { useFlowMocksStore } from '../stores/flow-mocks-store';
 import { findFlowDescriptorById } from '../lib/flows/registry';
 import { FLOW_ADOPT_EVENT, type FlowAdoptPayload } from '../lib/constants';
 import { toast } from 'sonner';

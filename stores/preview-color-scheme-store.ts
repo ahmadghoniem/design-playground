@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { PREVIEW_COLOR_SCHEME_STORAGE_KEY } from './constants';
+import { PREVIEW_COLOR_SCHEME_STORAGE_KEY } from '../lib/constants';
 
 /**
  * Per-canvas color-scheme override for component previews.

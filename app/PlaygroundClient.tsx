@@ -18,7 +18,7 @@ import {
 } from '../lib/constants';
 import { preloadAllComponents } from '../registry';
 import { CanvasFlowProvider } from '../lib/canvas-flow';
-import { previewSchemeClass, usePreviewColorSchemeStore } from '../lib/preview-color-scheme-store';
+import { previewSchemeClass, usePreviewColorSchemeStore } from '../stores/preview-color-scheme-store';
 
 export interface PendingChild {
   id: string;

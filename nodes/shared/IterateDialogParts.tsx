@@ -11,7 +11,7 @@ import {
   type ModelOption,
   type GenerationErrorPayload,
 } from '../../lib/constants';
-import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { useModelSettingsStore } from '../../stores/model-settings-store';
 import { getProvider } from '../../lib/providers/registry';
 import { resolveAgentModel } from '../../lib/resolve-agent-model';
 import {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { KEYBINDINGS_STORAGE_KEY } from './constants';
-import type { KeyCombo, PlaygroundAction } from './keybindings';
+import { KEYBINDINGS_STORAGE_KEY } from '../lib/constants';
+import type { KeyCombo, PlaygroundAction } from '../lib/keybindings';
 
 interface KeybindingState {
   /** Only stores user overrides. Empty = all defaults. */

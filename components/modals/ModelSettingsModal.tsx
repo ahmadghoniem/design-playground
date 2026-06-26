@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from '../../ui/dialog';
 import { useAvailableModels } from '../../nodes/shared/IterateDialogParts';
-import { useModelSettingsStore } from '../../lib/model-settings-store';
+import { useModelSettingsStore } from '../../stores/model-settings-store';
 import { getModelIconConfig } from '../../lib/model-icons';
 import { type ModelOption } from '../../lib/constants';
 import type { ClaudeCodeOptions } from '../../lib/providers/types';

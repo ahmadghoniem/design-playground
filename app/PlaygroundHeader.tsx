@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Eraser, RefreshCw, X, SlidersVertical, Keyboard, ChevronDown, Copy, Wrench, Sun, Moon, Monitor } from 'lucide-react';
-import { useDevModeStore } from '../lib/dev-mode-store';
-import { usePreviewColorSchemeStore } from '../lib/preview-color-scheme-store';
-import { useFlowMocksStore } from '../lib/flow-mocks-store';
+import { useDevModeStore } from '../stores/dev-mode-store';
+import { usePreviewColorSchemeStore } from '../stores/preview-color-scheme-store';
+import { useFlowMocksStore } from '../stores/flow-mocks-store';
 import {
   FLOW_PLAY_EVENT,
   FLOW_COMBINE_EVENT,

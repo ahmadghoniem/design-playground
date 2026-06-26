@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useNodes } from '@xyflow/react';
-import { useFlowMocksStore } from '../lib/flow-mocks-store';
+import { useFlowMocksStore } from '../stores/flow-mocks-store';
 import { findFlowDescriptorById } from '../lib/flows/registry';
 import type { StageNodeData } from '../lib/flows/types';
 import { X } from 'lucide-react';

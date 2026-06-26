@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ProviderId, ClaudeCodeOptions } from './providers/types';
-import { DEFAULT_CLAUDE_CODE_OPTIONS } from './providers/types';
+import type { ProviderId, ClaudeCodeOptions } from '../lib/providers/types';
+import { DEFAULT_CLAUDE_CODE_OPTIONS } from '../lib/providers/types';
 import {
   getProvider,
   DEFAULT_PROVIDER_ID,
   getAllProviderIds,
   getVisibleProviderIds,
-} from './providers/registry';
-import type { ModelOption } from './constants';
-import { migrateEnabledModels, isModelEnabled } from './model-catalog';
+} from '../lib/providers/registry';
+import type { ModelOption } from '../lib/constants';
+import { migrateEnabledModels, isModelEnabled } from '../lib/model-catalog';
 
 // ---------------------------------------------------------------------------
 // Per-Provider State

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DEV_MODE_STORAGE_KEY } from './constants';
+import { DEV_MODE_STORAGE_KEY } from '../lib/constants';
 
 interface DevModeState {
   enabled: boolean;

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadSelectedModel, saveSelectedModel } from '../nodes/shared/IterateDialogParts';
 import { resolveAgentModel } from '../lib/resolve-agent-model';
-import { useModelSettingsStore } from '../lib/model-settings-store';
+import { useModelSettingsStore } from '../stores/model-settings-store';
 import type { ProviderId } from '../lib/providers/types';
 import type { ModelOption } from '../nodes/shared/IterateDialogParts';
 

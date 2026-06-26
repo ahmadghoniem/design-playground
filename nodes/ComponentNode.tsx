@@ -14,7 +14,7 @@ import { loadOnCanvasComponentModule } from './oncanvas-loader';
 
 import { useAsyncProps, useScrollCapture, useHtmlContent } from '../hooks/useNodeShared';
 import ComponentErrorBoundary from './ComponentErrorBoundary';
-import { useInteractiveNodeStore, useIsInteractiveNode } from '../lib/interactive-node-store';
+import { useInteractiveNodeStore, useIsInteractiveNode } from '../stores/interactive-node-store';
 import { useFrameHoverHint } from './shared/FrameHoverHint';
 import {
   COMPONENT_SIZE_CHANGE_EVENT,
