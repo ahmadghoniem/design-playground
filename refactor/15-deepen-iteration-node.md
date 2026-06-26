@@ -26,6 +26,14 @@ Task 09 removes the stage canonical wiring (lines ~95–108, ~749). Run 09 first
 
 - Extract the pure filename helpers first, then the screenshot hook, then the adoption hook (most entangled). The component should lose `fetch` calls to the hooks.
 
+## Extraction gate (run after each new file)
+
+Logic moved into `hooks/` or `lib/` from `nodes/` changes import depth. Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- hooks/useIterationAdoption.ts hooks/useIterationScreenshot.ts lib/iteration-filename.ts
+```
+Every hit must resolve. `IterationNode.tsx` must **import** the hooks/helpers (no leftover copy) and shrink. Keep the adoption API contract and `Name.iteration-N.tsx` scheme intact (deepening recipe 7).
+
 ## Verification
 
 - Generate iterations, then on an iteration node: **Adopt** it → source file is updated, node reflects adopted state (the adoption flow). **Iterate again** from it → spawns child iterations. Screenshot capture still fires where used.

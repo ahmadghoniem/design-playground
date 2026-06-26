@@ -24,6 +24,14 @@ The sidebar file holds: registry-tree helpers (`buildChildrenMap`, `flattenLeave
 
 - Extract `lib/registry-tree.ts` first (pure, tested), then the card/tree components, then the discovery-sync hook. The shell composes them.
 
+## Extraction gate (run after each new file)
+
+Cards/tree moved into `components/canvas/sidebar/` sit one level deeper than `components/canvas/` (imports gain a `../`); `lib/registry-tree.ts` moves to the `lib/` depth. Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- components/canvas/sidebar/ lib/registry-tree.ts
+```
+Every hit must resolve. `PlaygroundSidebar.tsx` must **import** the new modules (no leftover copy) and shrink.
+
 ## Verification
 
 - Discover/add components → they appear in the sidebar tree with correct nesting (`buildChildrenMap`/`TreeNode`), preview cards render at the right viewport (`pickPreviewViewport`).

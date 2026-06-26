@@ -52,6 +52,14 @@ Each becomes a custom hook (`hooks/`) or pure module (`lib/`). The component cal
 3. Where logic is pure (scanning, paste parsing, positioning, geometry), make it a pure function in `lib/` and write a small test that exercises it directly. **The interface is the test surface** — if you can't test it without React Flow, the seam is in the wrong place.
 4. Behaviour must not change. Each extraction is a separate commit so a regression bisects cleanly.
 
+## Extraction gate (run after each seam)
+
+If Task 06 ran first this file lives in `app/`, so a block moved into `hooks/`/`lib/`/`components/canvas/` changes import depth — **recompute each carried import, don't assume**. Fix them **to the end of the moved block** (Operating Rule 1 — the batch-B agent stopped ~40 imports in on this very file), then on each new file:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- <new-file>
+```
+Every hit must resolve. The parent must **import** the seam (no leftover copy) and shrink by the moved block — that is the replace-don't-layer proof.
+
 ## Verification (exercise every seam after each extraction)
 
 - Generate iterations via the chat bar and via drag-to-iterate → skeletons appear, real iterations replace them progressively (SSE), tree edges connect correctly.

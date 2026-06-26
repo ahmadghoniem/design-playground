@@ -32,6 +32,14 @@ The DOM engine is pure-ish (operates on elements) but is trapped inside the comp
 - Extract the DOM engine **without changing its logic** — contenteditable behaviour is brittle; a pure move + import is safest. Add jsdom tests around it to lock current behaviour *before* touching anything else.
 - Then lift the context out. The component is last and should mostly lose imports, not logic.
 
+## Extraction gate (run after each new file)
+
+The dom-engine/context move into `ui/inline-reference/` one level deeper than `ui/` — relative imports gain a `../`. Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- ui/inline-reference/
+```
+Every hit must resolve. `ui/inline-reference.tsx` must **import** the engine/context (no leftover copy) and shrink, and must still export `InlineReference`, `InlineReferenceHandle`, `OnSelectItemResult` from the same path so `DockedChatBar` (Task 18) keeps compiling (deepening recipe 7).
+
 ## Verification
 
 - In the chat bar (`DockedChatBar`), type `@` → reference suggestions trigger (`detectTrigger`), select one → a pill renders (`createPillElement`), backspace over a pill removes it cleanly, the submitted value serializes pills correctly (`readSegmentsFromDOM`).

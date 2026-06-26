@@ -25,6 +25,14 @@ This is shallow-by-accumulation: a wide interface (every section + every card + 
 - Move the CLI/status logic into the hook **first**; have the existing inline code call the hook. Confirm the modal still works. Then split sections into files, passing the hook's values down.
 - Sections must be **presentational + callbacks** — no `fetch` inside a section. That is the seam: the CLI hook is the single place I/O happens (locality).
 
+## Extraction gate (run after each new file)
+
+Every section/card/hook you move into `components/modals/design-system/` sits one level deeper than the original — its relative imports change depth (`'../../lib/x'` → `'../../../lib/x'`, `'./cards'` stays sibling). Fix them **to the end of each moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- components/modals/design-system/
+```
+Every hit must resolve. Then confirm `DesignSystemModal.tsx` **imports** each section/hook (it didn't keep a copy) and shrank.
+
 ## Verification
 
 - Open the Design System modal. Walk every nav item: Home, Preview, Edit, Check, History, Export, Spec. Each renders as before.

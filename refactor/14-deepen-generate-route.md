@@ -25,6 +25,14 @@ This Hono route module mixes the HTTP handlers with a lot of **plain Node infras
 - Extract `claude-jsonl.ts` first (pure, fully testable), then lockfile, then watcher/timer. Each extraction is a move + an import; the route calls the new modules.
 - Preserve the module-scope singletons where they must persist across requests (process handle, `generationEvents` EventEmitter) — those stay in the route module as orchestration state, but the *behaviour* they trigger moves into the extracted modules.
 
+## Extraction gate (run after each new file)
+
+Logic moved into `server/lib/` from `server/routes/` changes import depth (`'../lib/x'` → `'./x'` for a `server/lib/` sibling; `'../providers'` → `'../providers'` stays). Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|providers|routes)" -- server/lib/generation-lockfile.ts server/lib/generation-file-watcher.ts server/lib/claude-jsonl.ts server/lib/generation-timer.ts
+```
+Every hit must resolve. `generate.ts` must **import** the new modules (no leftover copy) and shrink. Do not change the SSE contract (deepening recipe 7).
+
 ## Verification
 
 - Start a generation via the UI → SSE streams agent preview text (JSONL parse), lockfile is written.

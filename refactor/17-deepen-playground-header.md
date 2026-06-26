@@ -29,6 +29,14 @@ The header owns: presence bubbles (`PresenceBubble`, `resolveBubbleDisplayName`)
 
 - Unify the duplicated display-name resolver first (shared pure fn) — that removes a cross-file duplication and is a clean test target. Then extract `useOpenIn`, then presence row.
 
+## Extraction gate (run after each new file)
+
+If Task 06 ran first, this file lives in `app/`, so blocks moved into `hooks/`/`lib/`/`components/` change depth relative to `app/PlaygroundHeader.tsx` (e.g. `'../lib/x'` from `app/` → `'../lib/x'` from `hooks/`; recompute, don't assume). Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- hooks/useOpenIn.ts hooks/useProjectContext.ts lib/presence-display-name.ts
+```
+Every hit must resolve. The header must **import** the new modules (no leftover copy) and shrink, and the shared display-name helper must have **one** definition (both header and canvas import it — no second copy).
+
 ## Verification
 
 - Header renders presence bubbles with correct display names (matching the canvas presence layer — now from the same helper).

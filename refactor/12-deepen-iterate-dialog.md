@@ -24,6 +24,14 @@ The iterate dialog mixes: two inline dropdown components (`ModelPillDropdown` ~l
 - Pull the grid math out as a pure function first (highest test leverage), then the dropdowns/icons (mechanical), then the state hook (collapses the hook count).
 - The dialog component should end up reading as: gather state from `useIterateDialogState`, render parts, dispatch on submit.
 
+## Extraction gate (run after each new file)
+
+Code moved into `nodes/shared/iterate-dialog/` or `lib/` changes import depth from the original `nodes/shared/` location. Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- nodes/shared/iterate-dialog/ lib/drag-ghost-grid.ts
+```
+Every hit must resolve. Confirm `IterateDialog.tsx` **imports** the new modules (no leftover copy) and shrank. Keep the submit payload shape exactly as-is (the canvas lifecycle, Task 10, consumes it — see deepening recipe 7).
+
 ## Verification
 
 - Open the iterate dialog on a component node and on an iteration node.

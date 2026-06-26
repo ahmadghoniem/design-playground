@@ -27,6 +27,14 @@ This is the primary consumer of `ui/inline-reference.tsx`. Task 13 splits that f
 
 - Extract icons (trivial), then the proximity hook (pure geometry), then attachments (the stateful core). The submit handler should read attachments via `toPayload()` rather than reaching into local state.
 
+## Extraction gate (run after each new file)
+
+Logic moved into `hooks/` from `components/chat/` changes import depth; `chat-icons.tsx` stays a `components/chat/` sibling. Fix every carried import **to the end of the moved block** (Operating Rule 1 — don't stop partway), then:
+```
+git grep -nE "from '\.\.?/(lib|nodes|prompts|hooks|components|server|ui|registry|skills|data)" -- hooks/useChatAttachments.ts hooks/useChatDockProximity.ts components/chat/chat-icons.tsx
+```
+Every hit must resolve. `DockedChatBar.tsx` must **import** the new modules (no leftover copy) and shrink. Get inline-ref segments from `InlineReferenceHandle`; don't duplicate serialization, and keep the submit payload shape (deepening recipe 7).
+
 ## Verification
 
 - Attach an image (paste/drag) → an image-ref chip appears; attach a node reference (`@`-pick or selection) → a node-ref chip appears; remove each → chip clears.
