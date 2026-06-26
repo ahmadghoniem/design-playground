@@ -1,55 +1,19 @@
 import { Hono } from 'hono';
-import { execFile } from 'child_process';
 import { MODELS_CACHE_TTL_MS, type ModelOption } from '../../lib/constants';
 import type { ProviderId } from '../../lib/providers';
 import { getProvider } from '../../lib/providers';
-import { filterCursorModelsFromCli } from '../../lib/model-catalog';
 
 const modelCache = new Map<ProviderId, { models: ModelOption[]; timestamp: number }>();
-const CACHE_TTL_MS = MODELS_CACHE_TTL_MS;
-
-function fetchModelsFromCLI(binary: string, args: string[], parse: (stdout: string) => ModelOption[]): Promise<ModelOption[]> {
-  return new Promise((resolve, reject) => {
-    execFile(binary, args, { timeout: 15000 }, (error, stdout, stderr) => {
-      if (error) {
-        const config = getProvider('cursor');
-        reject(new Error(
-          error.message.includes('ENOENT')
-            ? config.notFoundMessage
-            : `${binary} ${args.join(' ')} failed: ${stderr || error.message}`
-        ));
-        return;
-      }
-
-      const models = parse(stdout);
-
-      if (models.length <= 1) {
-        reject(new Error(`No models parsed from ${binary} ${args.join(' ')} output`));
-        return;
-      }
-
-      resolve(models);
-    });
-  });
-}
-
-function postProcessModels(providerId: ProviderId, models: ModelOption[]): ModelOption[] {
-  if (providerId === 'cursor') {
-    return filterCursorModelsFromCli(models);
-  }
-  return models;
-}
 
 export function modelsRoutes() {
   const app = new Hono();
 
   app.get('/api/models', async (c) => {
-    const providerId = c.req.query('provider') || 'cursor';
-    const provider = providerId as ProviderId;
-
-    const config = getProvider(provider);
+    const providerId = (c.req.query('provider') || 'claude-code') as ProviderId;
+    const config = getProvider(providerId);
     const modelListArgs = config.buildModelListArgs();
 
+    // Claude Code has no CLI model listing — serve static catalog directly.
     if (!modelListArgs) {
       return c.json({
         success: true,
@@ -59,8 +23,8 @@ export function modelsRoutes() {
     }
 
     const now = Date.now();
-    const cached = modelCache.get(provider);
-    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    const cached = modelCache.get(providerId);
+    if (cached && now - cached.timestamp < MODELS_CACHE_TTL_MS) {
       return c.json({
         success: true,
         models: cached.models,
@@ -69,20 +33,28 @@ export function modelsRoutes() {
     }
 
     try {
-      const rawModels = await fetchModelsFromCLI(
-        config.binary,
-        modelListArgs,
-        config.parseModelOutput!,
-      );
-      const models = postProcessModels(provider, rawModels);
-
-      modelCache.set(provider, { models, timestamp: Date.now() });
-
-      return c.json({
-        success: true,
-        models,
-        source: `${provider}-cli`,
+      const models = await new Promise<ModelOption[]>((resolve, reject) => {
+        const { execFile } = require('child_process') as typeof import('child_process');
+        execFile(config.binary, modelListArgs, { timeout: 15000 }, (error, stdout, stderr) => {
+          if (error) {
+            reject(new Error(
+              error.message.includes('ENOENT')
+                ? config.notFoundMessage
+                : `${config.binary} ${modelListArgs.join(' ')} failed: ${stderr || error.message}`
+            ));
+            return;
+          }
+          const parsed = config.parseModelOutput!(String(stdout));
+          if (parsed.length <= 1) {
+            reject(new Error(`No models parsed from ${config.binary} output`));
+            return;
+          }
+          resolve(parsed);
+        });
       });
+
+      modelCache.set(providerId, { models, timestamp: Date.now() });
+      return c.json({ success: true, models, source: `${providerId}-cli` });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.warn(`[Playground][models] ${config.displayName} CLI fetch failed:`, message);

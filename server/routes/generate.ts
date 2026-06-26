@@ -19,20 +19,7 @@ import {
   resolveAgentModel,
 } from '../../lib/providers';
 import { readDesignMd, buildSystemPromptAddon } from '../../lib/design-md-helpers';
-import { NO_BROWSER_INSTRUCTIONS } from '../../prompts/shared-sections';
-import {
-  capture,
-  diffTotalsDelta,
-  getGitDiffTotals,
-  isLocalRequest,
-  isTelemetryEnabled,
-} from '../../lib/telemetry/server';
-import { safeModel, safeSkills } from '../../lib/telemetry/schema';
-import type { GenerationSource } from '../../lib/telemetry/constants';
-import {
-  CURSOR_AUTH_ERROR_PATTERN,
-  CURSOR_AUTH_USER_MESSAGE,
-} from '../../lib/cursor-auth-constants';
+
 import {
   resolvePlaygroundDirRelative,
   resolveCanvasComponentsDir,
@@ -363,22 +350,10 @@ function startGenerationTimer() {
 const AGENT_PREVIEW_MAX_CHARS = 14_000;
 const JSONL_PARSE_MAX_LINE_CHARS = 512_000;
 
-type StreamJsonProvider = 'claude-code' | 'codex';
-
 function shouldStreamJsonForPreview(
-  providerId: ProviderId,
-  body: {
-    claudeDetailedStdout?: boolean;
-    codexDetailedStdout?: boolean;
-  },
-): StreamJsonProvider | null {
-  if (providerId === 'claude-code' && body.claudeDetailedStdout !== false) {
-    return 'claude-code';
-  }
-  if (providerId === 'codex' && body.codexDetailedStdout !== false) {
-    return 'codex';
-  }
-  return null;
+  body: { claudeDetailedStdout?: boolean },
+): boolean {
+  return body.claudeDetailedStdout !== false;
 }
 
 const readJsonString = (value: unknown): string | null => {
@@ -429,57 +404,6 @@ function trimAssistantPreview(assistantPreview: { value: string }): void {
   }
 }
 
-function appendAssistantTextFromCodexJsonlLines(
-  lines: string[],
-  assistantPreview: { value: string },
-): { textChanged: boolean; sessionId: string | null } {
-  let changed = false;
-  let discoveredSessionId: string | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.length === 0 || !trimmed.startsWith('{')) continue;
-    if (trimmed.length > JSONL_PARSE_MAX_LINE_CHARS) continue;
-    try {
-      const obj = JSON.parse(trimmed) as {
-        type?: string;
-        thread_id?: string;
-        item?: { type?: string; text?: string };
-        message?: string;
-        error?: string | { message?: string };
-      };
-
-      if (obj.type === 'item.completed' && obj.item) {
-        const itemType = obj.item.type;
-        if (
-          (itemType === 'agent_message' || itemType === 'reasoning') &&
-          typeof obj.item.text === 'string' &&
-          obj.item.text.length > 0
-        ) {
-          if (assistantPreview.value.length > 0) {
-            assistantPreview.value += '\n\n';
-          }
-          assistantPreview.value += obj.item.text;
-          changed = true;
-        }
-      }
-
-      if (!discoveredSessionId) {
-        if (obj.type === 'thread.started' && obj.thread_id) {
-          discoveredSessionId = obj.thread_id;
-        } else {
-          discoveredSessionId = findSessionId(obj);
-        }
-      }
-    } catch {
-      /* ignore non-JSON or unexpected shape */
-    }
-  }
-
-  trimAssistantPreview(assistantPreview);
-  return { textChanged: changed, sessionId: discoveredSessionId };
-}
-
 function appendAssistantTextFromClaudeJsonlLines(
   lines: string[],
   assistantPreview: { value: string },
@@ -519,21 +443,7 @@ function appendAssistantTextFromClaudeJsonlLines(
   return { textChanged: changed, sessionId: discoveredSessionId };
 }
 
-function appendAssistantTextFromJsonlLines(
-  lines: string[],
-  assistantPreview: { value: string },
-  provider: StreamJsonProvider,
-): { textChanged: boolean; sessionId: string | null } {
-  if (provider === 'codex') {
-    return appendAssistantTextFromCodexJsonlLines(lines, assistantPreview);
-  }
-  return appendAssistantTextFromClaudeJsonlLines(lines, assistantPreview);
-}
-
-function extractStreamJsonError(
-  lines: string[],
-  provider: StreamJsonProvider,
-): string | null {
+function extractStreamJsonError(lines: string[]): string | null {
   for (let i = lines.length - 1; i >= 0; i--) {
     const trimmed = lines[i]?.trim();
     if (!trimmed?.startsWith('{')) continue;
@@ -545,18 +455,6 @@ function extractStreamJsonError(
         error?: string | { message?: string };
         message?: string | { content?: Array<{ type?: string; text?: string }> };
       };
-
-      if (provider === 'codex' && obj.type === 'error') {
-        if (typeof obj.message === 'string' && obj.message.trim()) {
-          return obj.message.trim();
-        }
-        if (typeof obj.error === 'string' && obj.error.trim()) {
-          return obj.error.trim();
-        }
-        if (obj.error && typeof obj.error === 'object' && typeof obj.error.message === 'string') {
-          return obj.error.message.trim() || null;
-        }
-      }
 
       if (obj.type === 'result' && obj.is_error && typeof obj.result === 'string') {
         return obj.result.trim() || null;
@@ -576,21 +474,7 @@ function extractStreamJsonError(
   return null;
 }
 
-function cleanCodexStderr(stderr: string): string {
-  return stderr
-    .split('\n')
-    .filter((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return false;
-      if (trimmed.startsWith('Reading prompt from stdin')) return false;
-      return true;
-    })
-    .join('\n')
-    .trim();
-}
-
 function formatAgentErrorMessage(
-  providerId: ProviderId,
   stderr: string,
   streamError: string | null,
   previewError: string,
@@ -598,25 +482,6 @@ function formatAgentErrorMessage(
   providerName: string,
 ): string {
   const fallback = `${providerName} agent exited with code ${exitCode}`;
-
-  let base: string;
-  if (providerId === 'codex') {
-    base = streamError || cleanCodexStderr(stderr) || previewError || fallback;
-    const authPattern = /not\s+logged\s+in|login|unauthorized|authentication|auth\s+required|invalid\s+api\s+key/i;
-    if (authPattern.test(base) || authPattern.test(stderr)) {
-      return `${base}\n\nRun \`codex login\` to authenticate the Codex CLI.`;
-    }
-    return base;
-  }
-
-  if (providerId === 'cursor') {
-    base = stderr.trim() || streamError || previewError || fallback;
-    if (CURSOR_AUTH_ERROR_PATTERN.test(base) || CURSOR_AUTH_ERROR_PATTERN.test(stderr)) {
-      return CURSOR_AUTH_USER_MESSAGE;
-    }
-    return base;
-  }
-
   return stderr.trim() || streamError || previewError || fallback;
 }
 
@@ -639,10 +504,6 @@ function combineLineStat(deltaValue: number | null, extra: number): number | nul
   if (deltaValue === null && extra === 0) return null;
   return (deltaValue ?? 0) + extra;
 }
-
-const GENERATION_SOURCE_VALUES: GenerationSource[] = [
-  'dialog', 'drag', 'chat', 'chat_edit', 'chat_freeform', 'new_page', 'adopt',
-];
 
 // ---------------------------------------------------------------------------
 // Route registration
@@ -672,9 +533,6 @@ export function generateRoutes() {
         maxBudgetUsd?: number;
         maxTurns?: number;
         claudeDetailedStdout?: boolean;
-        codexSandbox?: 'workspace-write' | 'danger-full-access';
-        codexReasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh';
-        codexDetailedStdout?: boolean;
         htmlFolder?: string;
         jsxFile?: string;
         source?: string;
@@ -692,7 +550,7 @@ export function generateRoutes() {
         prompt = prompt.split('src/app/playground/').join(`${playgroundRelativeDir}/`);
       }
 
-      const providerId: ProviderId = body.provider ?? 'cursor';
+      const providerId: ProviderId = body.provider ?? 'claude-code';
       const model = resolveAgentModel(providerId, body.model);
 
       const cookieHeader = c.req.header('cookie') ?? '';
@@ -703,37 +561,16 @@ export function generateRoutes() {
           prompt = buildSystemPromptAddon(md) + '\n' + prompt;
         }
       }
-      if (providerId === 'codex') {
-        prompt = `${prompt}\n\n${NO_BROWSER_INSTRUCTIONS}`;
-      }
-      const streamJsonProvider = shouldStreamJsonForPreview(providerId, body);
-      const streamJsonForPreview = streamJsonProvider !== null;
+      const streamJsonForPreview = shouldStreamJsonForPreview(body);
       const clientComponentId = String(body.componentId).slice(0, 400);
       const componentId = clientComponentId.replace(/[^A-Za-z0-9-_]/g, '_').slice(0, 200) || 'component';
       const timestamp = Date.now();
       const generationId = `${componentId}-${timestamp}`;
 
-      const telemetryActive = isLocalRequest(c.req.raw) && isTelemetryEnabled();
       wasCancelled = false;
       timedOut = false;
       genFirstIterationAt = null;
       currentIterationFiles.clear();
-      const diffBefore = telemetryActive ? await getGitDiffTotals() : null;
-      const genSource: GenerationSource = GENERATION_SOURCE_VALUES.includes(
-        body.source as GenerationSource,
-      )
-        ? (body.source as GenerationSource)
-        : 'unknown';
-      const genBaseProps = {
-        provider: providerId,
-        model: safeModel(model),
-        iteration_count: typeof body.iterationCount === 'number' ? body.iterationCount : 0,
-        source: genSource,
-        skills: safeSkills(body.skillIds),
-        render_mode: body.htmlFolder ? 'html' : body.jsxFile ? 'jsx' : 'react',
-        effort:
-          (providerId === 'codex' ? body.codexReasoningEffort : body.effort) || 'default',
-      };
 
       ensureTempDir();
       currentChatLogPath = path.join(TEMP_DIR, `chat-${componentId}-${timestamp}.txt`);
@@ -768,16 +605,7 @@ export function generateRoutes() {
           effort: body.effort as 'low' | 'medium' | 'high' | 'max' | undefined,
           maxBudgetUsd: body.maxBudgetUsd,
           maxTurns: body.maxTurns,
-          ...(providerId === 'claude-code'
-            ? { claudeDetailedStdout: body.claudeDetailedStdout !== false }
-            : {}),
-          ...(providerId === 'codex'
-            ? {
-                codexSandbox: body.codexSandbox,
-                codexReasoningEffort: body.codexReasoningEffort,
-                codexDetailedStdout: body.codexDetailedStdout !== false,
-              }
-            : {}),
+          claudeDetailedStdout: body.claudeDetailedStdout !== false,
         }, process.cwd());
 
         if (currentProcess.pid) {
@@ -787,14 +615,6 @@ export function generateRoutes() {
         startFileWatcher(body.htmlFolder, body.jsxFile);
 
         startGenerationTimer();
-
-        const onTelemetryIteration = () => {
-          if (genFirstIterationAt === null) genFirstIterationAt = Date.now();
-        };
-        if (telemetryActive) {
-          generationEvents.on('iteration-added', onTelemetryIteration);
-          capture('generation_started', genBaseProps);
-        }
 
         let stderr = '';
         const stdoutLinesForErrors: string[] = [];
@@ -831,16 +651,10 @@ export function generateRoutes() {
           for (const part of parts) {
             if (part.trim()) stdoutLinesForErrors.push(part);
           }
-          const parsed = appendAssistantTextFromJsonlLines(
-            parts,
-            assistantPreview,
-            streamJsonProvider!,
-          );
+          const parsed = appendAssistantTextFromClaudeJsonlLines(parts, assistantPreview);
           if (!agentSessionId && parsed.sessionId) {
             agentSessionId = parsed.sessionId;
-            const sessionLabel =
-              streamJsonProvider === 'codex' ? 'Codex Thread ID' : 'Claude Session ID';
-            currentLogStream?.write(`\n${sessionLabel}: ${agentSessionId}\n`);
+            currentLogStream?.write(`\nClaude Session ID: ${agentSessionId}\n`);
           }
           if (parsed.textChanged) {
             scheduleAgentPreview();
@@ -860,16 +674,10 @@ export function generateRoutes() {
           clearGenerationTimer();
           if (streamJsonForPreview && stdoutLineBuf.trim().length > 0) {
             stdoutLinesForErrors.push(stdoutLineBuf);
-            const parsed = appendAssistantTextFromJsonlLines(
-              [stdoutLineBuf],
-              assistantPreview,
-              streamJsonProvider!,
-            );
+            const parsed = appendAssistantTextFromClaudeJsonlLines([stdoutLineBuf], assistantPreview);
             if (!agentSessionId && parsed.sessionId) {
               agentSessionId = parsed.sessionId;
-              const sessionLabel =
-                streamJsonProvider === 'codex' ? 'Codex Thread ID' : 'Claude Session ID';
-              currentLogStream?.write(`\n${sessionLabel}: ${agentSessionId}\n`);
+              currentLogStream?.write(`\nClaude Session ID: ${agentSessionId}\n`);
             }
             stdoutLineBuf = '';
           }
@@ -886,37 +694,11 @@ export function generateRoutes() {
           removeLockfile();
           stopFileWatcher();
           generationEvents.emit('done');
-          generationEvents.removeListener('iteration-added', onTelemetryIteration);
 
           isGenerating = false;
           currentProcess = null;
 
           if (code === 0) {
-            if (telemetryActive) {
-              const firstIterationAt = genFirstIterationAt;
-              const newFiles = new Set(currentIterationFiles);
-              void (async () => {
-                const delta = diffTotalsDelta(diffBefore, await getGitDiffTotals());
-                const fileTotals = readNewFileLineTotals(newFiles);
-                const diffProps = {
-                  lines_added: combineLineStat(delta.lines_added, fileTotals.lines),
-                  lines_removed: delta.lines_removed,
-                  files_changed: combineLineStat(delta.files_changed, fileTotals.files),
-                };
-                capture('generation_completed', {
-                  ...genBaseProps,
-                  duration_ms: Date.now() - timestamp,
-                  time_to_first_iteration_ms: firstIterationAt
-                    ? firstIterationAt - timestamp
-                    : null,
-                  iterations_detected: newFiles.size,
-                  ...diffProps,
-                });
-                if (genSource === 'adopt') {
-                  capture('code_adopted', { kind: 'iteration', ...diffProps });
-                }
-              })();
-            }
             resolveResponse(c.json({
               success: true,
               generationId,
@@ -925,32 +707,16 @@ export function generateRoutes() {
             }));
           } else {
             const streamError = streamJsonForPreview
-              ? extractStreamJsonError(stdoutLinesForErrors, streamJsonProvider!)
+              ? extractStreamJsonError(stdoutLinesForErrors)
               : null;
             const previewError = assistantPreview.value.trim();
             const errorMessage = formatAgentErrorMessage(
-              providerId,
               stderr,
               streamError,
               previewError,
               code,
               providerName,
             );
-            if (telemetryActive) {
-              const authPattern =
-                /not\s+logged\s+in|unauthorized|authentication|auth\s+required|invalid\s+api\s+key|login/i;
-              capture('generation_failed', {
-                ...genBaseProps,
-                duration_ms: Date.now() - timestamp,
-                error_category: wasCancelled
-                  ? 'cancelled'
-                  : timedOut
-                    ? 'timeout'
-                    : authPattern.test(stderr) || authPattern.test(streamError ?? '')
-                      ? 'auth_error'
-                      : 'exit_nonzero',
-              });
-            }
             resolveResponse(c.json({
               success: false,
               error: errorMessage,
@@ -963,16 +729,10 @@ export function generateRoutes() {
         currentProcess.on('error', (error) => {
           clearGenerationTimer();
           if (streamJsonForPreview && stdoutLineBuf.trim().length > 0) {
-            const parsed = appendAssistantTextFromJsonlLines(
-              [stdoutLineBuf],
-              assistantPreview,
-              streamJsonProvider!,
-            );
+            const parsed = appendAssistantTextFromClaudeJsonlLines([stdoutLineBuf], assistantPreview);
             if (!agentSessionId && parsed.sessionId) {
               agentSessionId = parsed.sessionId;
-              const sessionLabel =
-                streamJsonProvider === 'codex' ? 'Codex Thread ID' : 'Claude Session ID';
-              currentLogStream?.write(`\n${sessionLabel}: ${agentSessionId}\n`);
+              currentLogStream?.write(`\nClaude Session ID: ${agentSessionId}\n`);
             }
             stdoutLineBuf = '';
           }
@@ -993,17 +753,6 @@ export function generateRoutes() {
           removeLockfile();
           stopFileWatcher();
           generationEvents.emit('done');
-          generationEvents.removeListener('iteration-added', onTelemetryIteration);
-
-          if (telemetryActive) {
-            capture('generation_failed', {
-              ...genBaseProps,
-              duration_ms: Date.now() - timestamp,
-              error_category: error.message.includes('ENOENT')
-                ? 'cli_not_found'
-                : 'spawn_error',
-            });
-          }
 
           isGenerating = false;
           currentProcess = null;
@@ -1018,14 +767,6 @@ export function generateRoutes() {
         isGenerating = false;
         currentProcess = null;
 
-        if (telemetryActive) {
-          capture('generation_failed', {
-            ...genBaseProps,
-            duration_ms: Date.now() - timestamp,
-            error_category: 'spawn_error',
-          });
-        }
-
         const message = spawnError instanceof Error ? spawnError.message : `Failed to spawn ${providerName} agent`;
         resolveResponse(c.json({ success: false, error: message }, 500));
       }
@@ -1037,9 +778,6 @@ export function generateRoutes() {
       isGenerating = false;
       const message = error instanceof Error ? error.message : 'Unknown error in generate route';
       console.error('[Playground][generate] POST error:', error);
-      if (isLocalRequest(c.req.raw)) {
-        capture('error_occurred', { area: 'generate_route', category: 'route_exception' });
-      }
       resolveResponse(c.json({ success: false, error: message }, 500));
     }
 

@@ -13,7 +13,6 @@ import { discoveryAnalyzePrompt } from '../../prompts/discovery-analyze.prompt';
 import { fetchPropsSnapshot } from '../../lib/props-fetchers.server';
 import type { ProviderId } from '../../lib/providers';
 import { spawnAgent, getProviderNotFoundMessage, getProviderDisplayName } from '../../lib/providers';
-import { captureFromRequest } from '../../lib/telemetry/server';
 import { readJson } from '../lib/hono-helpers';
 
 const LOG_PREFIX = '[Playground][discover]';
@@ -184,7 +183,7 @@ export function discoverRoutes() {
     }
 
     let model: string | undefined;
-    let providerId: ProviderId = 'cursor';
+    let providerId: ProviderId = 'claude-code';
     const reqBody = await readJson<{ model?: string; provider?: ProviderId }>(c);
     model = reqBody?.model;
     if (reqBody?.provider) providerId = reqBody.provider;
@@ -213,28 +212,13 @@ export function discoverRoutes() {
     if (model) log(` Using model: ${model}`);
     log(` Using provider: ${providerName}`);
 
-    const startTime = Date.now();
     scanCancelled = false;
-
-    const recordDiscovery = (
-      outcome: 'success' | 'agent_error' | 'spawn_error' | 'manifest_missing' | 'cancelled',
-      entries?: unknown[],
-    ) => {
-      const list = Array.isArray(entries) ? (entries as { type?: string }[]) : [];
-      captureFromRequest(c.req.raw, 'discovery_run', {
-        duration_ms: Date.now() - startTime,
-        outcome,
-        components_found: list.filter((e) => e.type === 'component').length,
-        pages_found: list.filter((e) => e.type === 'page').length,
-      });
-    };
 
     return await new Promise<Response>((resolve) => {
     try {
       currentProcess = spawnAgent(providerId, {
         model,
-        ...(providerId === 'claude-code' ? { claudeDetailedStdout: false } : {}),
-        ...(providerId === 'codex' ? { codexDetailedStdout: false } : {}),
+        claudeDetailedStdout: false,
       }, process.cwd());
 
       if (currentProcess.pid) {
@@ -280,16 +264,13 @@ export function discoverRoutes() {
           if (data) {
             const entries = (data as { entries?: unknown[] }).entries;
             log(` Scan complete — ${Array.isArray(entries) ? entries.length : 0} entries discovered`);
-            recordDiscovery('success', entries);
             resolve(c.json({ success: true, status: 'complete', ...data }));
           } else {
             console.error(`${LOG_PREFIX} Agent completed but discovery.json was not created`);
-            recordDiscovery('manifest_missing');
             resolve(c.json({ success: false, error: 'Agent completed but discovery.json was not created.' }, 500));
           }
         } else {
           console.error(`${LOG_PREFIX} Agent failed — code=${code}, stderr: ${stderr.slice(0, 500)}`);
-          recordDiscovery(scanCancelled ? 'cancelled' : 'agent_error');
           resolve(c.json({ success: false, error: stderr || `${providerName} agent exited with code ${code}` }, 500));
         }
       });
@@ -306,7 +287,6 @@ export function discoverRoutes() {
           ? getProviderNotFoundMessage(providerId)
           : error.message;
 
-        recordDiscovery('spawn_error');
         resolve(c.json({ success: false, error: message }, 500));
       });
     } catch (spawnError) {
@@ -314,7 +294,6 @@ export function discoverRoutes() {
       removeLockfile();
       isScanning = false;
       currentProcess = null;
-      recordDiscovery('spawn_error');
       const message = spawnError instanceof Error ? spawnError.message : `Failed to spawn ${providerName} agent`;
       resolve(c.json({ success: false, error: message }, 500));
     }
@@ -370,7 +349,7 @@ export function discoverRoutes() {
     }
 
     const { id, name, type, model, parentId } = body;
-    const providerId: ProviderId = body.provider ?? 'cursor';
+    const providerId: ProviderId = body.provider ?? 'claude-code';
     const componentPath = body.path;
 
     analyzeLog(` POST — analyzing component "${name}" (id=${id}, type=${type})`);
@@ -423,8 +402,7 @@ export function discoverRoutes() {
     try {
       const agentProcess = spawnAgent(providerId, {
         model,
-        ...(providerId === 'claude-code' ? { claudeDetailedStdout: false } : {}),
-        ...(providerId === 'codex' ? { codexDetailedStdout: false } : {}),
+        claudeDetailedStdout: false,
       }, process.cwd());
 
       analyzeLog(` Agent process started — PID=${agentProcess.pid}`);

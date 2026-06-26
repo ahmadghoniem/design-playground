@@ -29,16 +29,13 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import { getProviderFields } from './lib/generation-body';
-import { requireCursorAuthIfNeeded } from './lib/require-cursor-auth';
-import { isCursorAuthError } from './lib/cursor-auth-client';
-import { showCursorAuthToast } from './lib/cursor-auth-toast';
+
 import { getProvider, DEFAULT_PROVIDER_ID } from './lib/providers/registry';
 import { loadCanvasState, saveCanvasState, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from './lib/canvas-persistence';
 import { useCanvasFlow } from './lib/canvas-flow';
 import { resolveAgentModel } from './lib/resolve-agent-model';
 import { getModelIconConfig } from './lib/model-icons';
 import type { ProviderId } from './lib/providers/types';
-import { captureClient } from './lib/telemetry/client';
 import PlaygroundCanvasDrawLayer from './components/canvas/PlaygroundCanvasDrawLayer';
 import { usePlaygroundDrawStore } from './lib/playground-draw-store';
 import { createNewStroke, type DrawPenKind, type DrawStroke } from './lib/draw-types';
@@ -273,8 +270,6 @@ function countBatchIterationNodes(nodes: Node[], info: GenerationInfo): number {
 const DEFAULT_SKILL_IDS = ['design-variations', 'frontend-design'] as const;
 let cachedDefaultSkillPrompt: string | null = null;
 
-// Telemetry: report the draw feature at most once per page load.
-let drawFeatureReported = false;
 
 async function loadDefaultSkillPrompt(): Promise<string | null> {
   if (cachedDefaultSkillPrompt !== null) return cachedDefaultSkillPrompt;
@@ -323,7 +318,6 @@ interface CanvasPresenceBubble {
 }
 
 function resolveCanvasBubbleDisplayName(model: string, provider: ProviderId): string {
-  if (provider === 'cursor') return model;
   const config = getProvider(provider);
   const modelLabel = model && model !== 'auto' ? model : 'default';
   return `${config.displayName} (${modelLabel})`;
@@ -364,7 +358,6 @@ function CanvasPresenceLayer({
             ? `Adopting - ${displayName}`
             : `${displayName} - ${bubble.status}`;
         const showAgentStreamTooltip =
-          (provider === 'claude-code' || provider === 'codex') &&
           (bubble.status === 'generating' ||
             (bubble.status === 'done' && Boolean(bubble.agentPreviewText?.trim())));
         return (
@@ -915,10 +908,6 @@ export default function PlaygroundCanvas({
     const onPointerUp = () => {
       if (!drawing || !currentStrokeId) return;
       if (points.length > 1) {
-        if (!drawFeatureReported) {
-          drawFeatureReported = true;
-          captureClient('feature_used', { feature: 'draw' });
-        }
       } else {
         const id = currentStrokeId;
         setCanvasDrawings((prev) => prev.filter((s) => s.id !== id));
@@ -1015,10 +1004,6 @@ export default function PlaygroundCanvas({
       startFlow = null;
       startScreen = null;
       setNodes((nds) => nds.map((n) => ({ ...n, selected: false })).concat(newNode));
-      if (!drawFeatureReported) {
-        drawFeatureReported = true;
-        captureClient('feature_used', { feature: 'draw' });
-      }
       setActiveTool('select');
     };
 
@@ -2070,11 +2055,7 @@ export default function PlaygroundCanvas({
         console.info('[Playground] Generation already in progress.', logPayload);
       } else {
         console.error('[Playground] Generation error:', errorMessage, logPayload);
-        if (isCursorAuthError(errorMessage)) {
-          showCursorAuthToast(errorMessage);
-        } else {
-          toast.error(errorMessage, { duration: 6000 });
-        }
+        toast.error(errorMessage, { duration: 6000 });
       }
       
       // Remove skeleton nodes
@@ -2123,7 +2104,7 @@ export default function PlaygroundCanvas({
       const isDragHtml = dragRenderMode === 'html' && !!dragHtmlFolder;
       const isDragJsx = dragRenderMode === 'jsx' && !!dragJsxFile;
 
-      if (!(await requireCursorAuthIfNeeded())) return;
+
 
       // Build the prompt
       let prompt: string;
@@ -2423,8 +2404,6 @@ export default function PlaygroundCanvas({
     ) {
       return;
     }
-
-    if (!(await requireCursorAuthIfNeeded())) return;
 
     // ── Edit Mode: modify file in-place, no iterations ──
     if (chatMode === 'edit' && payload.targetNodeId) {
@@ -4491,8 +4470,6 @@ export default function PlaygroundCanvas({
     const componentId = 'chat-new-page';
     const pf = getProviderFields();
     const toastId = `create-page-${Date.now()}`;
-
-    if (!(await requireCursorAuthIfNeeded())) return;
 
     toast.loading('Creating new page…', { id: toastId, duration: Infinity });
 

@@ -15,7 +15,7 @@
  *   ANTHROPIC_API_KEY   required (for the judge)
  *   EVAL_MODEL          model passed to the agent CLI (default: 'sonnet')
  *   EVAL_JUDGE_MODEL    judge model (default: 'claude-opus-4-5')
- *   EVAL_PROVIDER       'claude-code' (default) or 'cursor'
+ *   EVAL_PROVIDER       provider to use (default: 'claude-code')
  *   EVAL_TIMEOUT_MS     hard timeout for the agent run (default: 600000)
  */
 

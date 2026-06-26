@@ -1,10 +1,10 @@
 import type { ProviderId } from './providers/types';
 import { getProvider } from './providers/registry';
-import { migrateModelId, normalizeAutoModelId } from './model-catalog';
+import { migrateModelId } from './model-catalog';
 
 /**
- * Map client model selection to a value the active provider CLI accepts.
- * Cursor supports `auto`; Claude Code does not — omit or use a real model id.
+ * Map client model selection to a value the Claude Code CLI accepts.
+ * `auto` is not a valid Claude Code model id — fall back to the first default.
  */
 export function resolveAgentModel(
   providerId: ProviderId,
@@ -14,20 +14,8 @@ export function resolveAgentModel(
   const config = getProvider(providerId);
   const migrated = trimmed ? migrateModelId(providerId, trimmed) : trimmed;
 
-  if (providerId === 'claude-code') {
-    if (!migrated || migrated === 'auto') {
-      return config.defaultEnabledModels[0];
-    }
-    return migrated;
+  if (!migrated || migrated === 'auto') {
+    return config.defaultEnabledModels[0];
   }
-
-  if (providerId === 'codex') {
-    // Empty string = CLI default; omit `-m`.
-    if (!migrated || migrated === 'auto') return undefined;
-    return migrated;
-  }
-
-  // Cursor — `auto` is valid
-  if (!migrated) return 'auto';
-  return normalizeAutoModelId(migrated);
+  return migrated;
 }

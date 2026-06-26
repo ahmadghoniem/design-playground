@@ -12,22 +12,12 @@ import { getProviderFields } from './lib/generation-body';
 import { matchesAction } from './lib/keybindings';
 import {
   ADD_ALL_QUEUE_STORAGE_KEY,
-  ITERATION_PROMPT_COPIED_EVENT,
   OPEN_SKILLS_CATALOG_EVENT,
   SKILLS_CHANGED_EVENT,
   STORAGE_KEY,
 } from './lib/constants';
-import { captureClient, fetchTelemetryStatus } from './lib/telemetry/client';
-import { startActivityTracking } from './lib/telemetry/activity';
-import {
-  TELEMETRY_DOCS_URL,
-  TELEMETRY_NOTICE_SHOWN_KEY,
-  TELEMETRY_NOTICE_TOAST_MS,
-  TELEMETRY_SESSION_SENT_KEY,
-} from './lib/telemetry/constants';
 import { preloadAllComponents } from './registry';
 import { CanvasFlowProvider } from './lib/canvas-flow';
-import { requireCursorAuthForProvider } from './lib/require-cursor-auth';
 import { previewSchemeClass, usePreviewColorSchemeStore } from './lib/preview-color-scheme-store';
 
 export interface PendingChild {
@@ -160,52 +150,6 @@ export default function PlaygroundClient({
     return () => window.removeEventListener(OPEN_SKILLS_CATALOG_EVENT, handler);
   }, []);
 
-  // Anonymous dev telemetry: session start, notice toast, and time tracking.
-  // See TELEMETRY.md.
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
-
-    if (!sessionStorage.getItem(TELEMETRY_NOTICE_SHOWN_KEY)) {
-      void fetchTelemetryStatus().then((status) => {
-        if (!status?.enabled) return;
-        sessionStorage.setItem(TELEMETRY_NOTICE_SHOWN_KEY, '1');
-        toast('Anonymous telemetry is collected in dev.', {
-          description: (
-            <span>
-              No code, prompts, or files ever.{' '}
-              <a
-                href={TELEMETRY_DOCS_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:opacity-80"
-              >
-                Details
-              </a>
-            </span>
-          ),
-          duration: TELEMETRY_NOTICE_TOAST_MS,
-        });
-      });
-    }
-
-    if (!sessionStorage.getItem(TELEMETRY_SESSION_SENT_KEY)) {
-      sessionStorage.setItem(TELEMETRY_SESSION_SENT_KEY, '1');
-      captureClient('session_started', {});
-    }
-
-    const stopActivityTracking = startActivityTracking();
-
-    const onPromptCopied = () => {
-      captureClient('feature_used', { feature: 'prompt_copied' });
-    };
-    window.addEventListener(ITERATION_PROMPT_COPIED_EVENT, onPromptCopied);
-
-    return () => {
-      stopActivityTracking();
-      window.removeEventListener(ITERATION_PROMPT_COPIED_EVENT, onPromptCopied);
-    };
-  }, []);
-
   // Auto-scan on first visit
   useEffect(() => {
     if (hasScanTriggered.current) return;
@@ -218,9 +162,6 @@ export default function PlaygroundClient({
 
         if (data.status === 'not_scanned') {
           const providerFields = getProviderFields();
-          if (!(await requireCursorAuthForProvider(providerFields.provider))) {
-            return;
-          }
 
           const scanToastId = toast.loading('Scanning your project for components…', {
             duration: Infinity,
@@ -314,10 +255,6 @@ export default function PlaygroundClient({
     children: { id: string; name: string; path: string }[],
   ) => {
     if (children.length === 0) return;
-
-    if (!(await requireCursorAuthForProvider(getProviderFields().provider))) {
-      return;
-    }
 
     const initialPending: PendingChild[] = children.map((c) => ({
       id: c.id,
@@ -462,11 +399,6 @@ export default function PlaygroundClient({
         const { entries, currentIndex, successCount, failCount } = queue;
 
         if (currentIndex === 0) {
-          if (!(await requireCursorAuthForProvider(getProviderFields().provider))) {
-            sessionStorage.removeItem(ADD_ALL_QUEUE_STORAGE_KEY);
-            toast.dismiss('add-all-progress');
-            return;
-          }
         }
 
         if (currentIndex >= entries.length) {
@@ -585,10 +517,6 @@ export default function PlaygroundClient({
 
   // Add a component — runs at the PlaygroundClient level so it persists across modal open/close
   const handleAddComponent = useCallback(async (entry: DiscoveryEntry) => {
-    if (!(await requireCursorAuthForProvider(getProviderFields().provider))) {
-      return;
-    }
-
     setAddingIds((prev) => new Set(prev).add(entry.id));
 
     const toastId = toast.loading(`Setting up "${entry.name}"…`, {

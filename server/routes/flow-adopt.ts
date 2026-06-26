@@ -6,7 +6,6 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolvePlaygroundDir } from '../../lib/resolve-playground-dir';
 import { findFlowDescriptorById } from '../../lib/flows/registry';
-import { captureFromRequest } from '../../lib/telemetry/server';
 import { readJson } from '../lib/hono-helpers';
 
 const execFileP = promisify(execFile);
@@ -140,21 +139,6 @@ export function flowAdoptRoutes() {
         combinedDiff,
         'utf-8',
       );
-    }
-
-    if (combinedDiff.trim()) {
-      let linesAdded = 0;
-      let linesRemoved = 0;
-      for (const line of combinedDiff.split('\n')) {
-        if (line.startsWith('+') && !line.startsWith('+++')) linesAdded += 1;
-        else if (line.startsWith('-') && !line.startsWith('---')) linesRemoved += 1;
-      }
-      captureFromRequest(c.req.raw, 'code_adopted', {
-        kind: 'flow',
-        lines_added: linesAdded,
-        lines_removed: linesRemoved,
-        files_changed: perStageDiffs.length,
-      });
     }
 
     return c.json({

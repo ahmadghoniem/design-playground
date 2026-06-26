@@ -22,7 +22,6 @@ import type { PendingChild } from '../../PlaygroundClient';
 import ComponentErrorBoundary from '../../nodes/ComponentErrorBoundary';
 import DesignSystemModal from '../modals/DesignSystemModal';
 import { useModelSettingsStore } from '../../lib/model-settings-store';
-import { requireCursorAuthIfNeeded } from '../../lib/require-cursor-auth';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
 
@@ -459,7 +458,6 @@ export default function PlaygroundSidebar({ onCollapse, onOpenDiscovery, pending
 
   const regenerateDesignSystem = useCallback(async () => {
     if (isGeneratingDesignSystem) return;
-    if (!(await requireCursorAuthIfNeeded())) return;
     setIsGeneratingDesignSystem(true);
     try {
       const res = await fetch('/playground/api/design/generate-preview-showcase', {

@@ -17,8 +17,6 @@ import { impeccablePromptFromSegment } from '../../lib/impeccable-skill';
 import { useAvailableModels } from '../../nodes/shared/IterateDialogParts';
 import { useModelCycle } from '../../hooks/useModelCycle';
 import { useSkills } from '../../hooks/useSkills';
-import { captureClient } from '../../lib/telemetry/client';
-import { safeModel, safeSkills } from '../../lib/telemetry/schema';
 import { getModelIconConfig } from '../../lib/model-icons';
 import {
   CHAT_DEFAULT_COUNT,
@@ -372,16 +370,6 @@ export default function DockedChatBar({
     }
 
     const mode: 'edit' | 'explore' | 'raw' = canEditOrExplore ? chatMode : 'raw';
-
-    // Adoption metric (dev-only, content-free) — schema in lib/telemetry/schema.
-    captureClient('docked_chat_submit', {
-      provider: useModelSettingsStore.getState().activeProvider,
-      model: safeModel(model),
-      mode,
-      has_target: !!editTarget,
-      iteration_count: mode === 'explore' ? iterationCount : 1,
-      skills: safeSkills(skillIds),
-    });
 
     const payload: ChatSubmitPayload = {
       text,

@@ -145,9 +145,6 @@ export const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
 /** Key for persisting the add-all queue in sessionStorage */
 export const ADD_ALL_QUEUE_STORAGE_KEY = 'playground-add-all-queue';
 
-// Telemetry storage keys (notice ack, session dedupe) live with the rest of
-// the telemetry module — see ./telemetry/constants.ts and TELEMETRY.md.
-
 // ---------------------------------------------------------------------------
 // Timing Constants
 // ---------------------------------------------------------------------------
@@ -353,16 +350,6 @@ export interface ModelOption {
   value: string;
   label: string;
 }
-
-/**
- * Default enabled models for the Cursor provider.
- * Canonical source is `cursorProvider.defaultEnabledModels` — this re-export
- * is kept for backward compatibility with existing consumers.
- */
-export { cursorProvider } from './providers/cursor';
-import { cursorProvider } from './providers/cursor';
-export const DEFAULT_ENABLED_MODELS: string[] = cursorProvider.defaultEnabledModels;
-export const FALLBACK_MODELS: ModelOption[] = cursorProvider.fallbackModels;
 
 // ---------------------------------------------------------------------------
 // FitView Configurations

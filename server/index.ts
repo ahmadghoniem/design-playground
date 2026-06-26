@@ -30,10 +30,8 @@ import { oncanvasComponentsRoutes } from './routes/oncanvas-components';
 import { openInRoutes } from './routes/open-in';
 import { pagesRoutes } from './routes/pages';
 import { projectIdRoutes } from './routes/project-id';
-import { providersRoutes } from './routes/providers';
 import { screenshotRoutes } from './routes/screenshot';
 import { skillsRoutes } from './routes/skills';
-import { telemetryRoutes } from './routes/telemetry';
 
 /**
  * Build the Hono app exposing every ported playground API route. Each route
@@ -55,10 +53,8 @@ export function createPlaygroundRouter(): Hono {
   router.route('/', openInRoutes());
   router.route('/', pagesRoutes());
   router.route('/', projectIdRoutes());
-  router.route('/', providersRoutes());
   router.route('/', screenshotRoutes());
   router.route('/', skillsRoutes());
-  router.route('/', telemetryRoutes());
   return router;
 }
 

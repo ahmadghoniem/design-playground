@@ -18,7 +18,6 @@ import {
   getProviderNotFoundMessage,
 } from '../../lib/providers';
 import type { ProviderId } from '../../lib/providers';
-import { captureFromRequest } from '../../lib/telemetry/server';
 import { hashFrontMatter } from '../../lib/parse-design-md';
 import { readJson } from '../lib/hono-helpers';
 
@@ -402,7 +401,7 @@ export function designRoutes() {
   // design/generate-from-codebase (text/plain streaming response)
   app.post('/api/design/generate-from-codebase', async (c) => {
     const body = await readJson<{ provider?: ProviderId; model?: string; notes?: string }>(c);
-    const providerId: ProviderId = body?.provider ?? 'cursor';
+    const providerId: ProviderId = body?.provider ?? 'claude-code';
     const notes = body?.notes?.trim() || undefined;
 
     c.header('Content-Type', 'text/plain; charset=utf-8');
@@ -448,8 +447,7 @@ export function designRoutes() {
         providerId,
         {
           model: body?.model,
-          ...(providerId === 'claude-code' ? { claudeDetailedStdout: false } : {}),
-          ...(providerId === 'codex' ? { codexDetailedStdout: false } : {}),
+          claudeDetailedStdout: false,
         },
         process.cwd(),
       );
@@ -500,7 +498,6 @@ export function designRoutes() {
     const filePath = designMdPath();
 
     if (exitCode === 0 && wrote) {
-      captureFromRequest(c.req.raw, 'feature_used', { feature: 'design_system_generated' });
       log(`> Wrote ${path.relative(process.cwd(), filePath)} ✓`);
 
       log(`> Running lint to verify the result…`);
@@ -525,7 +522,7 @@ export function designRoutes() {
   // design/generate-preview-showcase (text/plain streaming response)
   app.post('/api/design/generate-preview-showcase', async (c) => {
     const body = await readJson<{ provider?: ProviderId; model?: string }>(c);
-    const providerId: ProviderId = body?.provider ?? 'cursor';
+    const providerId: ProviderId = body?.provider ?? 'claude-code';
 
     c.header('Content-Type', 'text/plain; charset=utf-8');
     c.header('Cache-Control', 'no-cache, no-transform');
@@ -563,8 +560,7 @@ export function designRoutes() {
         providerId,
         {
           model: body?.model,
-          ...(providerId === 'claude-code' ? { claudeDetailedStdout: false } : {}),
-          ...(providerId === 'codex' ? { codexDetailedStdout: false } : {}),
+          claudeDetailedStdout: false,
         },
         process.cwd(),
       );

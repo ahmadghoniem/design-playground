@@ -8,7 +8,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useRef,
   useState,
   type Dispatch,
@@ -26,40 +25,6 @@ import {
   type OnNodesChange,
 } from "@xyflow/react";
 import { loadCanvasState } from "./canvas-persistence";
-import { countNodeAdded, type CountableNodeType } from "./telemetry/activity";
-
-// Telemetry: aggregate counts of nodes added to the canvas ("frames generated"
-// in the time_summary event) — types and counts only, never node content.
-const COUNTABLE_NODE_TYPES: Record<string, CountableNodeType> = {
-  component: "component",
-  iteration: "iteration",
-  image: "image",
-  text: "text",
-  stage: "stage",
-  stageGroup: "stage",
-};
-
-/**
- * Counts nodes that newly appear in the flow state. The first render seeds the
- * seen-set without counting so hydration (localStorage) isn't reported as user
- * activity. Skeletons/ghosts are intentionally ignored.
- */
-function useNodeAddTelemetry(nodes: Node[]): void {
-  const seenIds = useRef<Set<string> | null>(null);
-  useEffect(() => {
-    if (seenIds.current === null) {
-      seenIds.current = new Set(nodes.map((n) => n.id));
-      return;
-    }
-    const seen = seenIds.current;
-    for (const node of nodes) {
-      if (seen.has(node.id)) continue;
-      seen.add(node.id);
-      const countable = node.type ? COUNTABLE_NODE_TYPES[node.type] : undefined;
-      if (countable) countNodeAdded(countable);
-    }
-  }, [nodes]);
-}
 
 export interface CanvasFlowState {
   nodes: Node[];
@@ -95,7 +60,6 @@ function SoloFlowProvider({ children, storageKey }: { children: ReactNode; stora
   const [initial] = useState(() => loadCanvasState(storageKey));
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initial?.nodes ?? []);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial?.edges ?? []);
-  useNodeAddTelemetry(nodes);
 
   // Snapshot-based history. Refs mirror the latest committed state so a snapshot
   // can be captured at the moment a mutation begins (before React re-renders).

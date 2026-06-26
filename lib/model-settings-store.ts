@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ProviderId, ClaudeCodeOptions, CodexOptions } from './providers/types';
-import { DEFAULT_CLAUDE_CODE_OPTIONS, DEFAULT_CODEX_OPTIONS } from './providers/types';
+import type { ProviderId, ClaudeCodeOptions } from './providers/types';
+import { DEFAULT_CLAUDE_CODE_OPTIONS } from './providers/types';
 import {
   getProvider,
   DEFAULT_PROVIDER_ID,
@@ -43,49 +43,33 @@ function makeDefaultProviderStates(): Record<ProviderId, PerProviderState> {
 // ---------------------------------------------------------------------------
 
 interface ModelSettingsState {
-  // Hydration tracking
   hasHydrated: boolean;
 
-  // Provider selection
   activeProvider: ProviderId;
   setActiveProvider: (id: ProviderId) => void;
 
-  // Per-provider model state
   providerState: Record<ProviderId, PerProviderState>;
 
-  // Convenience getters scoped to activeProvider
   readonly enabledModels: string[];
   readonly availableModels: ModelOption[];
 
-  // Loading state (shared — only one fetch at a time)
   isLoadingModels: boolean;
 
-  // Actions (operate on activeProvider)
   toggleModel: (value: string) => void;
   setEnabledModels: (values: string[]) => void;
   resetToAll: () => void;
   fetchModels: () => Promise<void>;
 
-  // Claude Code-specific options
   claudeCodeOptions: ClaudeCodeOptions;
   setClaudeCodeOptions: (opts: Partial<ClaudeCodeOptions>) => void;
-
-  // Codex-specific options
-  codexOptions: CodexOptions;
-  setCodexOptions: (opts: Partial<CodexOptions>) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 
-const STORE_KEY = 'playground-model-settings-v2';
+const STORE_KEY = 'playground-model-settings-v3';
 
-/**
- * Read activeProvider directly from localStorage so the initial state
- * is correct before Zustand persist hydrates. This avoids a brief
- * window where the default 'cursor' is visible / triggers side-effects.
- */
 function getPersistedProvider(): ProviderId {
   if (typeof window === 'undefined') return DEFAULT_PROVIDER_ID;
   try {
@@ -93,8 +77,6 @@ function getPersistedProvider(): ProviderId {
     if (raw) {
       const parsed = JSON.parse(raw);
       const id = parsed?.state?.activeProvider;
-      // Coerce to a currently-visible provider so a previously-persisted
-      // hidden provider (e.g. 'cursor') doesn't become an unselectable tab.
       if (id && getVisibleProviderIds().includes(id)) return id;
     }
   } catch {
@@ -112,7 +94,6 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
 
       setActiveProvider: (id: ProviderId) => {
         set({ activeProvider: id });
-        // Auto-fetch models for the new provider if not yet fetched
         const providerState = get().providerState[id];
         if (!providerState?.hasFetched) {
           get().fetchModels();
@@ -121,7 +102,6 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
 
       providerState: makeDefaultProviderStates(),
 
-      // Convenience getters
       get enabledModels() {
         const state = get();
         return state.providerState[state.activeProvider]?.enabledModels ?? [];
@@ -139,7 +119,7 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
           const current = ps.enabledModels;
           let next: string[];
           if (current.includes(value)) {
-            if (current.length <= 1) return state; // keep at least 1
+            if (current.length <= 1) return state;
             next = current.filter((v) => v !== value);
           } else {
             next = [...current, value];
@@ -203,7 +183,6 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
           }
         } catch (error) {
           console.error('[Models] Failed to fetch models:', error);
-          // Keep existing availableModels — mark as fetched to avoid retries
           set((state) => ({
             providerState: {
               ...state.providerState,
@@ -218,49 +197,20 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
         }
       },
 
-      // Claude Code options
       claudeCodeOptions: DEFAULT_CLAUDE_CODE_OPTIONS,
       setClaudeCodeOptions: (opts: Partial<ClaudeCodeOptions>) =>
         set((state) => ({
           claudeCodeOptions: { ...state.claudeCodeOptions, ...opts },
         })),
-
-      // Codex options
-      codexOptions: DEFAULT_CODEX_OPTIONS,
-      setCodexOptions: (opts: Partial<CodexOptions>) =>
-        set((state) => ({
-          codexOptions: { ...state.codexOptions, ...opts },
-        })),
     }),
     {
       name: STORE_KEY,
-      version: 3,
+      version: 1,
       onRehydrateStorage: () => () => {
         useModelSettingsStore.setState({ hasHydrated: true });
       },
-      migrate: (persisted: unknown, version: number) => {
+      migrate: (persisted: unknown, _version: number) => {
         const defaultStates = makeDefaultProviderStates();
-
-        // v0 → v1: migrate from flat shape to provider-scoped
-        if (version === 0 && persisted && typeof persisted === 'object') {
-          const old = persisted as {
-            enabledModels?: string[];
-            availableModels?: ModelOption[];
-          };
-          return {
-            activeProvider: DEFAULT_PROVIDER_ID,
-            providerState: {
-              ...defaultStates,
-              cursor: {
-                enabledModels: old.enabledModels ?? defaultStates.cursor.enabledModels,
-                availableModels: old.availableModels ?? defaultStates.cursor.availableModels,
-                hasFetched: false,
-              },
-            },
-            claudeCodeOptions: DEFAULT_CLAUDE_CODE_OPTIONS,
-            codexOptions: DEFAULT_CODEX_OPTIONS,
-          };
-        }
 
         if (persisted && typeof persisted === 'object') {
           const state = persisted as Partial<ModelSettingsState>;
@@ -268,12 +218,7 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
           for (const id of getAllProviderIds()) {
             if (!mergedProviderState[id]) {
               mergedProviderState[id] = defaultStates[id];
-            }
-          }
-
-          // v2 → v3: remap stale model slugs to current generation
-          if (version < 3) {
-            for (const id of getAllProviderIds()) {
+            } else {
               const config = getProvider(id);
               const ps = mergedProviderState[id];
               mergedProviderState[id] = {
@@ -293,7 +238,6 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
             ...state,
             providerState: mergedProviderState,
             claudeCodeOptions: state.claudeCodeOptions ?? DEFAULT_CLAUDE_CODE_OPTIONS,
-            codexOptions: state.codexOptions ?? DEFAULT_CODEX_OPTIONS,
           };
         }
 
@@ -303,7 +247,6 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
         activeProvider: state.activeProvider,
         providerState: state.providerState,
         claudeCodeOptions: state.claudeCodeOptions,
-        codexOptions: state.codexOptions,
       }),
     },
   ),
@@ -311,7 +254,6 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
 
 /**
  * Filters a list of models to only those enabled in settings.
- * Uses the active provider's enabled models.
  */
 export function filterEnabledModels(allModels: ModelOption[]): ModelOption[] {
   const state = useModelSettingsStore.getState();
