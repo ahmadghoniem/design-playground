@@ -3,14 +3,14 @@ export interface DrawPoint {
   y: number;
 }
 
-export type DrawPenKind = 'pen' | 'highlight';
+export type DrawPenKind = 'pen';
 
 export interface DrawStroke {
   id: string;
   points: DrawPoint[];
   color: string;
   width: number;
-  /** 0–1; omitted on legacy strokes defaults to 1 (or highlight preset). */
+  /** 0–1; defaults to 1 when omitted (legacy strokes). */
   opacity?: number;
   kind?: DrawPenKind;
 }
@@ -23,7 +23,6 @@ export const DRAW_PEN_PRESETS: Record<
   { color: string; width: number; opacity: number }
 > = {
   pen: { color: DEFAULT_DRAW_COLOR, width: DEFAULT_DRAW_WIDTH, opacity: 1 },
-  highlight: { color: '#facc15', width: 20, opacity: 0.42 },
 };
 
 export function createNewStroke(kind: DrawPenKind, firstPoint: DrawPoint): DrawStroke {
@@ -39,9 +38,7 @@ export function createNewStroke(kind: DrawPenKind, firstPoint: DrawPoint): DrawS
 }
 
 export function getStrokeOpacity(stroke: DrawStroke): number {
-  if (stroke.opacity != null) return stroke.opacity;
-  if (stroke.kind === 'highlight') return DRAW_PEN_PRESETS.highlight.opacity;
-  return 1;
+  return stroke.opacity ?? 1;
 }
 
 export function createStrokeId(): string {

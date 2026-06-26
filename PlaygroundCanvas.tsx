@@ -5355,7 +5355,7 @@ export default function PlaygroundCanvas({
     sidebarOpenedByButtonHoverRef.current = false;
   }, [onToggleSidebar]);
 
-  // Tool shortcuts: V select, P pen, H highlighter, Escape leaves draw/text
+  // Tool shortcuts: V select, P pen, Escape leaves draw/text
   useEffect(() => {
     const isTypingTarget = () => {
       const active = document.activeElement;
@@ -5377,11 +5377,6 @@ export default function PlaygroundCanvas({
       if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         toggleDrawPenKind('pen');
-        return;
-      }
-      if (e.key === 'h' || e.key === 'H') {
-        e.preventDefault();
-        toggleDrawPenKind('highlight');
         return;
       }
       const shapeShortcut: Record<string, ShapeKind> = { r: 'rect', o: 'ellipse', l: 'line' };
@@ -5522,7 +5517,7 @@ export default function PlaygroundCanvas({
           </svg>
         </button>
 
-        {/* Shape tools — pen, highlighter, rectangle, ellipse, line grouped into one flyout slot */}
+        {/* Shape tools — pen, rectangle, ellipse, line grouped into one flyout slot */}
         <ShapeToolGroup
           activeTool={activeTool}
           shapeKind={shapeKind}

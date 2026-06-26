@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { Highlighter, Pencil, Square, Circle, Slash, Shapes } from 'lucide-react';
+import { Pencil, Square, Circle, Slash, Shapes } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import type { ShapeKind } from '../../nodes/ShapeNode';
 import type { DrawPenKind } from '../../lib/draw-types';
@@ -17,7 +17,6 @@ interface ShapeToolGroupProps {
 
 const SUB_TOOLS = [
   { type: 'draw' as const, kind: 'pen' as DrawPenKind, Icon: Pencil, label: 'Pen', shortcut: 'P' },
-  { type: 'draw' as const, kind: 'highlight' as DrawPenKind, Icon: Highlighter, label: 'Highlighter', shortcut: 'H' },
   { type: 'shape' as const, kind: 'rect' as ShapeKind, Icon: Square, label: 'Rectangle', shortcut: 'R' },
   { type: 'shape' as const, kind: 'ellipse' as ShapeKind, Icon: Circle, label: 'Ellipse', shortcut: 'O' },
   { type: 'shape' as const, kind: 'line' as ShapeKind, Icon: Slash, label: 'Line / arrow', shortcut: 'L' },
@@ -106,19 +105,15 @@ export function ShapeToolGroup({
           {SUB_TOOLS.map((tool, i) => (
             <Fragment key={`${tool.type}-${tool.kind}`}>
               {/* Divider separating draw tools from shape tools */}
-              {i === 2 && <div className="h-px w-5 bg-stone-200 my-0.5" />}
+              {i === 1 && <div className="h-px w-5 bg-stone-200 my-0.5" />}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => activateSubTool(tool)}
                     className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
                       isSubToolActive(tool)
-                        ? tool.type === 'draw' && tool.kind === 'highlight'
-                          ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/80'
-                          : 'bg-stone-100 text-stone-900'
-                        : tool.type === 'draw' && tool.kind === 'highlight'
-                          ? 'text-amber-600 hover:bg-amber-50/60'
-                          : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
+                        ? 'bg-stone-100 text-stone-900'
+                        : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
                     }`}
                     aria-label={`${tool.label} (${tool.shortcut})`}
                   >
