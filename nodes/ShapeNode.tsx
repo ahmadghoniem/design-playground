@@ -150,8 +150,9 @@ function ShapeNodeInner({
           border: `${strokeWidth}px solid ${stroke}`,
           background: fill,
           borderRadius,
-          // Second offset border for the sketchy double-line look.
-          boxShadow: !isEllipse && rough ? `2px 2px 0 -1px ${stroke}33` : undefined,
+          // Softer offset "pencil" line for the sketchy double-stroke look —
+          // a touch more spread + lower alpha reads as hand-drawn, not a hard shadow.
+          boxShadow: !isEllipse && rough ? `1.5px 2.5px 0 -2px ${stroke}26` : undefined,
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
