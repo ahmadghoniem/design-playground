@@ -38,7 +38,13 @@ import {
 } from '../../lib/constants';
 import { useDragToIterate, clampGrid, type DragDelta, type CursorScreenPos, type DragIterateGrid } from '../../hooks/useDragToIterate';
 import DragSelectionOverlay from './DragSelectionOverlay';
-import { GHOST_NODE_PREFIX, type PendingDragGrid } from '../../lib/drag-ghost-grid';
+import {
+  GHOST_NODE_PREFIX,
+  type PendingDragGrid,
+  computeDragGridRaw,
+  flowPaddingFromScreen,
+  buildGhostBoundingNode,
+} from '../../lib/drag-ghost-grid';
 import { ModelPillDropdown, VariationCountDropdown } from './iterate-dialog/dropdowns';
 import { ArrowUpIcon } from './iterate-dialog/icons';
 import { useIterateDialogState } from './iterate-dialog/useIterateDialogState';
@@ -144,30 +150,21 @@ export default function IterateDialog({
     (grid: Pick<DragIterateGrid, 'rows' | 'cols'>, cellW: number, cellH: number) => {
       const info = getParentCellSize();
       if (!info) return;
-      const flowZero = screenToFlowPosition({ x: 0, y: 0 });
-      const flowPad = screenToFlowPosition({ x: DRAG_OVERLAY_PADDING_X, y: DRAG_OVERLAY_PADDING_Y });
-      const padX = flowPad.x - flowZero.x;
-      const padY = flowPad.y - flowZero.y;
+      const { padX, padY } = flowPaddingFromScreen(
+        screenToFlowPosition,
+        DRAG_OVERLAY_PADDING_X,
+        DRAG_OVERLAY_PADDING_Y,
+      );
       lastGhostGridRef.current = { rows: grid.rows, cols: grid.cols };
-      const ghostNode = {
-        id: `${GHOST_NODE_PREFIX}bounding`,
-        type: 'drag-ghost' as const,
-        position: {
-          x: info.parentNode.position.x - padX,
-          y: info.parentNode.position.y - padY,
-        },
-        data: {
-          cols: grid.cols,
-          rows: grid.rows,
-          cellWidth: cellW,
-          cellHeight: cellH,
-          padX,
-          padY,
-        },
-        draggable: false,
-        selectable: false,
-        connectable: false,
-      };
+      const ghostNode = buildGhostBoundingNode({
+        parentPosition: info.parentNode.position,
+        rows: grid.rows,
+        cols: grid.cols,
+        cellW,
+        cellH,
+        padX,
+        padY,
+      });
       setNodes(nds => [
         ...nds.filter(n => !n.id.startsWith(GHOST_NODE_PREFIX)),
         ghostNode,
@@ -494,32 +491,17 @@ export default function IterateDialog({
       if (!info || !dragStart) return null;
       const { cellW, cellH, parentNode } = info;
 
-      // The cursor's absolute screen position
-      const cursorScreenX = dragStart.x + delta.dx;
-      const cursorScreenY = dragStart.y + delta.dy;
-
-      // Parent node's top-left in screen space
-      const parentScreen = flowToScreenPosition({
-        x: parentNode.position.x,
-        y: parentNode.position.y,
-      });
-
-      // The overlay extent in screen pixels (from parent top-left to cursor)
-      const overlayW = cursorScreenX - parentScreen.x;
-      const overlayH = cursorScreenY - parentScreen.y;
-
-      // Convert the overlay extent to flow-space (zoom-aware)
-      const flowOrigin = screenToFlowPosition({ x: 0, y: 0 });
-      const flowExtent = screenToFlowPosition({ x: overlayW, y: overlayH });
-      const flowW = flowExtent.x - flowOrigin.x;
-      const flowH = flowExtent.y - flowOrigin.y;
-
-      // How many cells fit? The first cell is the original. A new ghost cell
-      // appears once the cursor crosses 50% of that cell's extent (+ gap).
-      const step = cellW + DRAG_GHOST_GAP;
-      const stepH = cellH + DRAG_GHOST_GAP;
-      const rawCols = 1 + Math.max(0, Math.floor((flowW - cellW + step * 0.5) / step));
-      const rawRows = 1 + Math.max(0, Math.floor((flowH - cellH + stepH * 0.5) / stepH));
+      const { rawCols, rawRows } = computeDragGridRaw(
+        { screenToFlowPosition, flowToScreenPosition },
+        {
+          delta,
+          dragStart,
+          parentPosition: parentNode.position,
+          cellW,
+          cellH,
+          gapPx: DRAG_GHOST_GAP,
+        },
+      );
 
       return { grid: clampGrid(rawCols, rawRows), cellW, cellH };
     },
