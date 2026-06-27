@@ -49,11 +49,6 @@ let currentChatLogPath: string | null = null;
 let currentLogStream: fs.WriteStream | null = null;
 let isGenerating = false;
 
-let wasCancelled = false;
-let timedOut = false;
-let genFirstIterationAt: number | null = null;
-const currentIterationFiles = new Set<string>();
-
 // ---------------------------------------------------------------------------
 // File-watching event emitter for progressive iteration detection
 // ---------------------------------------------------------------------------
@@ -109,26 +104,6 @@ function closeLogStream() {
     currentLogStream.end();
     currentLogStream = null;
   }
-}
-
-function readNewFileLineTotals(paths: Set<string>): { lines: number; files: number } {
-  let lines = 0;
-  let files = 0;
-  for (const filePath of paths) {
-    try {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      files += 1;
-      lines += content.split('\n').length;
-    } catch {
-      // moved/deleted mid-read — skip
-    }
-  }
-  return { lines, files };
-}
-
-function combineLineStat(deltaValue: number | null, extra: number): number | null {
-  if (deltaValue === null && extra === 0) return null;
-  return (deltaValue ?? 0) + extra;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,11 +168,6 @@ export function generateRoutes() {
       const timestamp = Date.now();
       const generationId = `${componentId}-${timestamp}`;
 
-      wasCancelled = false;
-      timedOut = false;
-      genFirstIterationAt = null;
-      currentIterationFiles.clear();
-
       ensureTempDir();
       currentChatLogPath = path.join(TEMP_DIR, `chat-${componentId}-${timestamp}.txt`);
 
@@ -240,14 +210,13 @@ export function generateRoutes() {
 
         startFileWatcher(
           () => generationEvents.emit('iteration-added'),
-          (filePath) => currentIterationFiles.add(filePath),
+          undefined,
           body.htmlFolder,
           body.jsxFile,
         );
 
         startGenerationTimer(() => {
           if (currentProcess && !currentProcess.killed) {
-            timedOut = true;
             currentLogStream?.write(`\n=== Generation timed out after ${GENERATION_TIMEOUT_MS / 60000} minutes at ${new Date().toISOString()} ===\n`);
             currentProcess.kill('SIGTERM');
             setTimeout(() => {
@@ -432,7 +401,6 @@ export function generateRoutes() {
     }
 
     try {
-      wasCancelled = true;
       currentProcess.kill('SIGTERM');
 
       setTimeout(() => {

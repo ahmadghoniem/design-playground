@@ -26,7 +26,7 @@ let jsxFileWatcher: fs.FSWatcher | null = null;
 
 export function startFileWatcher(
   onChange: () => void,
-  onIterationFile: (filePath: string) => void,
+  onIterationFile?: (filePath: string) => void,
   htmlPageFolder?: string,
   jsxFile?: string,
 ): void {
@@ -44,7 +44,7 @@ export function startFileWatcher(
       const watcher = fs.watch(iterationsDir, (_eventType, filename) => {
         if (filename === 'tree.json' || (filename && filename.endsWith('.tsx'))) {
           if (filename && filename.endsWith('.tsx')) {
-            onIterationFile(path.join(iterationsDir, filename));
+            onIterationFile?.(path.join(iterationsDir, filename));
           }
           emitIterationAdded();
         }
@@ -67,7 +67,7 @@ export function startFileWatcher(
         const norm = filename.replace(/\\/g, '/');
         if (!norm.endsWith('.html')) return;
         if (!/iteration-\d+/.test(norm)) return;
-        onIterationFile(path.join(htmlDir, norm));
+        onIterationFile?.(path.join(htmlDir, norm));
         if (htmlDebounceTimer) clearTimeout(htmlDebounceTimer);
         htmlDebounceTimer = setTimeout(() => {
           onChange();
@@ -106,7 +106,7 @@ export function startFileWatcher(
     try {
       jsxFileWatcher = fs.watch(canvasDir, (_eventType, filename) => {
         if (filename && CANVAS_ITERATION_FILENAME_PATTERN.test(filename)) {
-          onIterationFile(path.join(canvasDir, filename));
+          onIterationFile?.(path.join(canvasDir, filename));
           if (jsxDebounceTimer) clearTimeout(jsxDebounceTimer);
           jsxDebounceTimer = setTimeout(() => {
             onChange();
