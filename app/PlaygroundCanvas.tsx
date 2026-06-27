@@ -31,6 +31,7 @@ import { getProviderFields } from '../lib/generation-body';
 
 import { DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
 import { loadCanvasState, saveCanvasState, getCanvasStorageKey, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
+import { isInExpectedBatch, resolveIterationPosition, countBatchIterationNodes } from '../lib/iteration-scan';
 import { useCanvasFlow } from '../lib/canvas-flow';
 import { resolveAgentModel } from '../lib/resolve-agent-model';
 import type { ProviderId } from '../lib/providers/types';
@@ -187,63 +188,8 @@ function getMinimapNodeColor(node: Node): string {
 /** Poll interval while a generation is active (SSE fallback). */
 const GENERATION_POLL_INTERVAL_MS = 4000;
 
-function isInExpectedBatch(iterationNumber: number, info: GenerationInfo | null | undefined): boolean {
-  if (info?.startNumber == null || !info.iterationCount) return true;
-  const end = info.startNumber + info.iterationCount - 1;
-  return iterationNumber >= info.startNumber && iterationNumber <= end;
-}
-
-/** Map a file iteration number to its skeleton node id (slot = number - startNumber). */
-function getSkeletonIdForFileIteration(
-  info: GenerationInfo,
-  fileIterationNumber: number,
-  currentNodes: Node[],
-): string | undefined {
-  const start = info.startNumber ?? 1;
-  const slotIndex = fileIterationNumber - start;
-  if (slotIndex < 0 || slotIndex >= info.skeletonNodeIds.length) return undefined;
-  const skeletonId = info.skeletonNodeIds[slotIndex];
-  return currentNodes.some((n) => n.id === skeletonId) ? skeletonId : undefined;
-}
-
-function resolveIterationPosition(
-  info: GenerationInfo,
-  fileIterationNumber: number,
-  currentNodes: Node[],
-  skeletonsToRemove: string[],
-  sourceNode: Node | undefined,
-  fallbackPosition?: { x: number; y: number },
-): { x: number; y: number } {
-  const skeletonId = getSkeletonIdForFileIteration(info, fileIterationNumber, currentNodes);
-  if (skeletonId) {
-    const skeletonNode = currentNodes.find((n) => n.id === skeletonId);
-    if (skeletonNode) {
-      skeletonsToRemove.push(skeletonId);
-      return { ...skeletonNode.position };
-    }
-  }
-  if (sourceNode) {
-    const srcW =
-      sourceNode.measured?.width ??
-      (sourceNode.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH);
-    return {
-      x: sourceNode.position.x + srcW + ARRANGE_HORIZONTAL_GAP,
-      y: sourceNode.position.y,
-    };
-  }
-  return fallbackPosition ?? { x: 400, y: 200 };
-}
-
-function countBatchIterationNodes(nodes: Node[], info: GenerationInfo): number {
-  if (info.startNumber == null || !info.iterationCount) return 0;
-  const start = info.startNumber;
-  const end = start + info.iterationCount - 1;
-  return nodes.filter((n) => {
-    if (n.type !== 'iteration') return false;
-    const num = n.data.iterationNumber as number;
-    return num >= start && num <= end;
-  }).length;
-}
+// isInExpectedBatch, getSkeletonIdForFileIteration, resolveIterationPosition,
+// countBatchIterationNodes moved to ../lib/iteration-scan
 
 const DEFAULT_SKILL_IDS = ['design-variations', 'frontend-design'] as const;
 let cachedDefaultSkillPrompt: string | null = null;
