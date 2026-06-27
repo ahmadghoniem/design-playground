@@ -4,13 +4,7 @@ import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
-import {
-  TEMP_DIR_RELATIVE,
-  GENERATION_LOCKFILE_FILENAME,
-  HTML_TREE_DIR,
-  HTML_TREE_FILENAME,
-  CANVAS_ITERATION_FILENAME_PATTERN,
-} from '../../lib/constants';
+import { TEMP_DIR_RELATIVE } from '../../lib/constants';
 import type { ProviderId } from '../../lib/providers';
 import {
   spawnAgent,
@@ -20,13 +14,22 @@ import {
 } from '../../lib/providers';
 import { readDesignMd, buildSystemPromptAddon } from '../../lib/design-md-helpers';
 
-import {
-  resolvePlaygroundDirRelative,
-  resolveCanvasComponentsDir,
-  resolveIterationsDirs,
-} from '../../lib/resolve-playground-dir';
-import { syncPublicFrameGitignoreSafe } from '../../lib/sync-host-gitignore';
+import { resolvePlaygroundDirRelative } from '../../lib/resolve-playground-dir';
 import { readJson } from '../lib/hono-helpers';
+import {
+  writeLockfile,
+  removeLockfile,
+  getLockfileStatus,
+  cleanupOrphanedProcess,
+} from '../lib/generation-lockfile';
+import { startFileWatcher, stopFileWatcher } from '../lib/generation-file-watcher';
+import { startGenerationTimer, clearGenerationTimer, GENERATION_TIMEOUT_MS } from '../lib/generation-timer';
+import {
+  shouldStreamJsonForPreview,
+  appendAssistantTextFromClaudeJsonlLines,
+  extractStreamJsonError,
+  formatAgentErrorMessage,
+} from '../lib/claude-jsonl';
 
 /**
  * Playground generation API - Agent CLI Integration
@@ -39,17 +42,12 @@ import { readJson } from '../lib/hono-helpers';
  */
 
 const TEMP_DIR = path.join(process.cwd(), TEMP_DIR_RELATIVE);
-const LOCKFILE_PATH = path.join(TEMP_DIR, GENERATION_LOCKFILE_FILENAME);
-
-// Maximum generation duration (10 minutes)
-const GENERATION_TIMEOUT_MS = 10 * 60 * 1000;
 
 // Global state for managing the running generation
 let currentProcess: ChildProcess | null = null;
 let currentChatLogPath: string | null = null;
 let currentLogStream: fs.WriteStream | null = null;
 let isGenerating = false;
-let generationTimer: NodeJS.Timeout | null = null;
 
 let wasCancelled = false;
 let timedOut = false;
@@ -60,123 +58,6 @@ const currentIterationFiles = new Set<string>();
 // File-watching event emitter for progressive iteration detection
 // ---------------------------------------------------------------------------
 const generationEvents = new EventEmitter();
-const fileWatchers: fs.FSWatcher[] = [];
-let htmlFileWatcher: fs.FSWatcher | null = null;
-let htmlTreeWatcher: fs.FSWatcher | null = null;
-let jsxFileWatcher: fs.FSWatcher | null = null;
-
-function startFileWatcher(htmlPageFolder?: string, jsxFile?: string) {
-  stopFileWatcher();
-  let debounceTimer: NodeJS.Timeout | null = null;
-  const emitIterationAdded = () => {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      generationEvents.emit('iteration-added');
-    }, 500);
-  };
-
-  for (const iterationsDir of resolveIterationsDirs()) {
-    try {
-      const watcher = fs.watch(iterationsDir, (_eventType, filename) => {
-        if (filename === 'tree.json' || (filename && filename.endsWith('.tsx'))) {
-          if (filename && filename.endsWith('.tsx')) {
-            currentIterationFiles.add(path.join(iterationsDir, filename));
-          }
-          emitIterationAdded();
-        }
-      });
-      watcher.on('error', () => {
-        // iterations dir might not exist yet — ignore
-      });
-      fileWatchers.push(watcher);
-    } catch {
-      // iterations dir might not exist yet
-    }
-  }
-
-  if (htmlPageFolder) {
-    const htmlDir = path.join(process.cwd(), 'public', htmlPageFolder);
-    let htmlDebounceTimer: NodeJS.Timeout | null = null;
-    try {
-      htmlFileWatcher = fs.watch(htmlDir, { recursive: true }, (_eventType, filename) => {
-        if (!filename) return;
-        const norm = filename.replace(/\\/g, '/');
-        if (!norm.endsWith('.html')) return;
-        if (!/iteration-\d+/.test(norm)) return;
-        currentIterationFiles.add(path.join(htmlDir, norm));
-        if (htmlDebounceTimer) clearTimeout(htmlDebounceTimer);
-        htmlDebounceTimer = setTimeout(() => {
-          generationEvents.emit('iteration-added');
-        }, 500);
-      });
-      htmlFileWatcher.on('error', () => {
-        // dir might not exist yet — ignore
-      });
-    } catch {
-      // dir might not exist yet
-    }
-
-    const treeDir = path.join(process.cwd(), 'public', HTML_TREE_DIR);
-    let treeDebounceTimer: NodeJS.Timeout | null = null;
-    try {
-      htmlTreeWatcher = fs.watch(treeDir, (_eventType, filename) => {
-        if (!filename) return;
-        const base = path.basename(filename.replace(/\\/g, '/'));
-        if (base !== HTML_TREE_FILENAME) return;
-        if (treeDebounceTimer) clearTimeout(treeDebounceTimer);
-        treeDebounceTimer = setTimeout(() => {
-          generationEvents.emit('iteration-added');
-        }, 500);
-      });
-      htmlTreeWatcher.on('error', () => {
-        // .playground dir might not exist yet
-      });
-    } catch {
-      // tree dir might not exist yet
-    }
-  }
-
-  if (jsxFile) {
-    const canvasDir = resolveCanvasComponentsDir();
-    let jsxDebounceTimer: NodeJS.Timeout | null = null;
-    try {
-      jsxFileWatcher = fs.watch(canvasDir, (_eventType, filename) => {
-        if (filename && CANVAS_ITERATION_FILENAME_PATTERN.test(filename)) {
-          currentIterationFiles.add(path.join(canvasDir, filename));
-          if (jsxDebounceTimer) clearTimeout(jsxDebounceTimer);
-          jsxDebounceTimer = setTimeout(() => {
-            generationEvents.emit('iteration-added');
-          }, 500);
-        }
-      });
-      jsxFileWatcher.on('error', () => {
-        // dir might not exist yet — ignore
-      });
-    } catch {
-      // dir might not exist yet
-    }
-  }
-}
-
-function stopFileWatcher() {
-  for (const watcher of fileWatchers) {
-    watcher.close();
-  }
-  fileWatchers.length = 0;
-  if (htmlFileWatcher) {
-    htmlFileWatcher.close();
-    htmlFileWatcher = null;
-  }
-  if (htmlTreeWatcher) {
-    htmlTreeWatcher.close();
-    htmlTreeWatcher = null;
-  }
-  if (jsxFileWatcher) {
-    jsxFileWatcher.close();
-    jsxFileWatcher = null;
-  }
-  syncPublicFrameGitignoreSafe();
-}
 
 function ensureTempDir() {
   if (!fs.existsSync(TEMP_DIR)) {
@@ -184,101 +65,7 @@ function ensureTempDir() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Lockfile-based process recovery (survives HMR)
-// ---------------------------------------------------------------------------
-
-interface LockfileData {
-  pid: number;
-  componentId: string;
-  startTime: number;
-}
-
-interface LockfileStatus {
-  lockfilePresent: boolean;
-  lockPid: number | null;
-  lockPidAlive: boolean;
-}
-
-function writeLockfile(pid: number, componentId: string) {
-  ensureTempDir();
-  const data: LockfileData = { pid, componentId, startTime: Date.now() };
-  fs.writeFileSync(LOCKFILE_PATH, JSON.stringify(data), 'utf-8');
-}
-
-function removeLockfile() {
-  try {
-    if (fs.existsSync(LOCKFILE_PATH)) {
-      fs.unlinkSync(LOCKFILE_PATH);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-function cleanupOrphanedProcess() {
-  try {
-    if (!fs.existsSync(LOCKFILE_PATH)) return;
-
-    const raw = fs.readFileSync(LOCKFILE_PATH, 'utf-8');
-    const data: LockfileData = JSON.parse(raw);
-
-    try {
-      process.kill(data.pid, 0);
-      console.warn(`[Playground][generate] Killing orphaned generation process PID=${data.pid} (component: ${data.componentId})`);
-      process.kill(data.pid, 'SIGTERM');
-      setTimeout(() => {
-        try { process.kill(data.pid, 'SIGKILL'); } catch { /* already dead */ }
-      }, 2000);
-    } catch {
-      // Process is already dead, just clean up lockfile
-    }
-
-    removeLockfile();
-  } catch (e) {
-    console.error('[Playground][generate] Error cleaning up orphaned process:', e);
-    removeLockfile();
-  }
-}
-
 cleanupOrphanedProcess();
-
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function getLockfileStatus(): LockfileStatus {
-  if (!fs.existsSync(LOCKFILE_PATH)) {
-    return {
-      lockfilePresent: false,
-      lockPid: null,
-      lockPidAlive: false,
-    };
-  }
-
-  try {
-    const raw = fs.readFileSync(LOCKFILE_PATH, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<LockfileData>;
-    const pid = typeof parsed.pid === 'number' && Number.isFinite(parsed.pid) ? parsed.pid : null;
-    const alive = pid !== null ? isPidAlive(pid) : false;
-    return {
-      lockfilePresent: true,
-      lockPid: pid,
-      lockPidAlive: alive,
-    };
-  } catch {
-    return {
-      lockfilePresent: true,
-      lockPid: null,
-      lockPidAlive: false,
-    };
-  }
-}
 
 function getGenerationStatus() {
   const lock = getLockfileStatus();
@@ -322,167 +109,6 @@ function closeLogStream() {
     currentLogStream.end();
     currentLogStream = null;
   }
-}
-
-function clearGenerationTimer() {
-  if (generationTimer) {
-    clearTimeout(generationTimer);
-    generationTimer = null;
-  }
-}
-
-function startGenerationTimer() {
-  clearGenerationTimer();
-  generationTimer = setTimeout(() => {
-    if (currentProcess && !currentProcess.killed) {
-      timedOut = true;
-      currentLogStream?.write(`\n=== Generation timed out after ${GENERATION_TIMEOUT_MS / 60000} minutes at ${new Date().toISOString()} ===\n`);
-      currentProcess.kill('SIGTERM');
-      setTimeout(() => {
-        if (currentProcess && !currentProcess.killed) {
-          currentProcess.kill('SIGKILL');
-        }
-      }, 2000);
-    }
-  }, GENERATION_TIMEOUT_MS);
-}
-
-const AGENT_PREVIEW_MAX_CHARS = 14_000;
-const JSONL_PARSE_MAX_LINE_CHARS = 512_000;
-
-function shouldStreamJsonForPreview(
-  body: { claudeDetailedStdout?: boolean },
-): boolean {
-  return body.claudeDetailedStdout !== false;
-}
-
-const readJsonString = (value: unknown): string | null => {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const findSessionId = (value: unknown, depth = 0): string | null => {
-  if (depth > 4 || value == null) return null;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const nested = findSessionId(item, depth + 1);
-      if (nested) return nested;
-    }
-    return null;
-  }
-  if (typeof value !== 'object') return null;
-
-  const obj = value as Record<string, unknown>;
-  const direct =
-    readJsonString(obj.session_id) ??
-    readJsonString(obj.sessionId) ??
-    readJsonString(obj.conversation_id) ??
-    readJsonString(obj.conversationId) ??
-    readJsonString(obj.thread_id) ??
-    readJsonString(obj.threadId) ??
-    readJsonString(obj.chat_id) ??
-    readJsonString(obj.chatId);
-  if (direct) return direct;
-
-  const messageObj = obj.message;
-  if (messageObj && typeof messageObj === 'object' && !Array.isArray(messageObj)) {
-    const messageId = readJsonString((messageObj as Record<string, unknown>).id);
-    if (messageId) return messageId;
-  }
-
-  for (const nestedValue of Object.values(obj)) {
-    const nested = findSessionId(nestedValue, depth + 1);
-    if (nested) return nested;
-  }
-  return null;
-};
-
-function trimAssistantPreview(assistantPreview: { value: string }): void {
-  if (assistantPreview.value.length > AGENT_PREVIEW_MAX_CHARS) {
-    assistantPreview.value = assistantPreview.value.slice(-AGENT_PREVIEW_MAX_CHARS);
-  }
-}
-
-function appendAssistantTextFromClaudeJsonlLines(
-  lines: string[],
-  assistantPreview: { value: string },
-): { textChanged: boolean; sessionId: string | null } {
-  let changed = false;
-  let discoveredSessionId: string | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.length === 0 || !trimmed.startsWith('{')) continue;
-    if (trimmed.length > JSONL_PARSE_MAX_LINE_CHARS) continue;
-    try {
-      const obj = JSON.parse(trimmed) as {
-        type?: string;
-        event?: {
-          type?: string;
-          delta?: { type?: string; text?: string };
-        };
-      };
-      if (
-        obj.type === 'stream_event' &&
-        obj.event?.type === 'content_block_delta' &&
-        obj.event.delta?.type === 'text_delta' &&
-        typeof obj.event.delta.text === 'string'
-      ) {
-        assistantPreview.value += obj.event.delta.text;
-        changed = true;
-      }
-      if (!discoveredSessionId) {
-        discoveredSessionId = findSessionId(obj);
-      }
-    } catch {
-      /* ignore non-JSON or unexpected shape */
-    }
-  }
-  trimAssistantPreview(assistantPreview);
-  return { textChanged: changed, sessionId: discoveredSessionId };
-}
-
-function extractStreamJsonError(lines: string[]): string | null {
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const trimmed = lines[i]?.trim();
-    if (!trimmed?.startsWith('{')) continue;
-    try {
-      const obj = JSON.parse(trimmed) as {
-        type?: string;
-        is_error?: boolean;
-        result?: string;
-        error?: string | { message?: string };
-        message?: string | { content?: Array<{ type?: string; text?: string }> };
-      };
-
-      if (obj.type === 'result' && obj.is_error && typeof obj.result === 'string') {
-        return obj.result.trim() || null;
-      }
-      if (obj.type === 'assistant' && obj.error && obj.message && typeof obj.message === 'object' && Array.isArray(obj.message.content)) {
-        const text = obj.message.content
-          .filter((c) => c.type === 'text' && typeof c.text === 'string')
-          .map((c) => c.text)
-          .join('')
-          .trim();
-        if (text) return text;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  return null;
-}
-
-function formatAgentErrorMessage(
-  stderr: string,
-  streamError: string | null,
-  previewError: string,
-  exitCode: number | null,
-  providerName: string,
-): string {
-  const fallback = `${providerName} agent exited with code ${exitCode}`;
-  return stderr.trim() || streamError || previewError || fallback;
 }
 
 function readNewFileLineTotals(paths: Set<string>): { lines: number; files: number } {
@@ -612,9 +238,25 @@ export function generateRoutes() {
           writeLockfile(currentProcess.pid, componentId);
         }
 
-        startFileWatcher(body.htmlFolder, body.jsxFile);
+        startFileWatcher(
+          () => generationEvents.emit('iteration-added'),
+          (filePath) => currentIterationFiles.add(filePath),
+          body.htmlFolder,
+          body.jsxFile,
+        );
 
-        startGenerationTimer();
+        startGenerationTimer(() => {
+          if (currentProcess && !currentProcess.killed) {
+            timedOut = true;
+            currentLogStream?.write(`\n=== Generation timed out after ${GENERATION_TIMEOUT_MS / 60000} minutes at ${new Date().toISOString()} ===\n`);
+            currentProcess.kill('SIGTERM');
+            setTimeout(() => {
+              if (currentProcess && !currentProcess.killed) {
+                currentProcess.kill('SIGKILL');
+              }
+            }, 2000);
+          }
+        });
 
         let stderr = '';
         const stdoutLinesForErrors: string[] = [];
