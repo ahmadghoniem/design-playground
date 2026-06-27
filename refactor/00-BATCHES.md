@@ -82,7 +82,9 @@ Landed as two commits (Sonnet sub-agent; reviewed defect-free): `0587cb6 refacto
 
 ---
 
-## Batch G — Header + panels (11 + 16 + 17)
+## Batch G — Header + panels (11 + 16 + 17) ✅ DONE
+
+Landed as three commits (Sonnet sub-agents; reviewed defect-free): `d859db3 refactor(design-system-modal): split CLI hook + per-section files` (1604→305), `e77a831 refactor(sidebar): extract tree math, cards, discovery-sync; fix node focus` (868→467), `6802043 refactor(header): extract open-in/presence/project hooks, unify display-name` (756→352). Review confirmed: all imports resolve (untracked files need plain `grep`, not `git grep`); no section issues a `fetch` (Task 11); discovery buttons preserved (Task 16); display-name helper has exactly one definition with both header and canvas importing it (Task 17). **Bonus fix in 16:** `FOCUS_NODE_EVENT` was a dead CustomEvent with no listener — double-click "focus node" did nothing. Since the sidebar is inside `<ReactFlowProvider>`, replaced the event bridge with `hooks/useFocusNode.ts` → `useReactFlow().fitView({nodes:[{id}]})` (native API), restoring the feature; constant removed. **Flagged, NOT fixed (pre-existing, out of scope):** `../assets/cursor-icon.svg` is a dangling import (asset missing since `055acbd`), carried forward unchanged into `hooks/useOpenIn.ts` — candidate for a separate cleanup.
 
 **Tasks:** 11 (DesignSystemModal) + 16 (PlaygroundSidebar) + 17 (PlaygroundHeader).
 **Why grouped:** three independent chrome-surface deepenings with no interdependencies — a natural "deepen the shell UI" review. (This batch is three, not two; split into 11+16 then 17 if you prefer strictly two at a time.)
@@ -92,7 +94,9 @@ Landed as two commits (Sonnet sub-agent; reviewed defect-free): `0587cb6 refacto
 
 ---
 
-## Batch H — Server route (14)
+## Batch H — Server route (14) ✅ DONE
+
+Landed as `12d8eca refactor(server): extract lockfile/watcher/timer/jsonl from generate route` (897→539; Sonnet sub-agent, reviewed defect-free). Four pure/testable Node modules under `server/lib/`: `claude-jsonl.ts` (pure, zero relative imports), `generation-lockfile.ts`, `generation-file-watcher.ts`, `generation-timer.ts`. Review confirmed the SSE contract (`streamSSE`/`writeSSE`/`stream.onAbort`) and module-scope singletons (`generationEvents` EventEmitter, `currentProcess`, lockfile recovery on load) are byte-for-byte unchanged. No test runner exists in the repo, so the pure jsonl helpers were verified by reading rather than a new test file (the task allows this fallback).
 
 **Task:** 14 (deepen `generate.ts`). **Solo** — server-side, independent of all UI batches.
 **Position:** anywhere after Batch D (its lockfile/JSONL logic is untouched by the excision, but keeping it after D avoids interleaving server + flow edits). Can run in parallel with E–G in a separate session.
