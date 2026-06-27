@@ -58,7 +58,9 @@ Landed as `4ffffbe feat(canvas)!: remove signup-flow decompose feature`. Qwen 3.
 
 ---
 
-## Batch E — Chat input stack (13 + 18)
+## Batch E — Chat input stack (13 + 18) ✅ DONE
+
+Landed as two commits (Sonnet sub-agent; reviewed defect-free): `32c58eb refactor(inline-reference): split DOM engine + context` then `a0e484a refactor(chat): extract attachments + dock-proximity hooks`. Review confirmed both extraction gates empty, all relative imports re-depthed and resolving, public exports (`InlineReference`/handle/`OnSelectItemResult`) stable for the `DockedChatBar` consumer, and replace-not-layer (parents import, no duplicate defs). Parent shrinks: inline-reference 1100→873, DockedChatBar 843→694 (both above the task's soft LOC targets — the residue is irreducible contenteditable/React glue, not un-extracted seams).
 
 **Tasks:** 13 (deepen `inline-reference`) → 18 (deepen `DockedChatBar`).
 **Why grouped:** 18 **consumes** 13 — `DockedChatBar` imports `InlineReference`/`InlineReferenceHandle`. Deepening the engine then its main caller in one batch keeps the shared interface stable across the pair.
@@ -68,7 +70,9 @@ Landed as `4ffffbe feat(canvas)!: remove signup-flow decompose feature`. Qwen 3.
 
 ---
 
-## Batch F — Iteration surfaces (12 + 15)
+## Batch F — Iteration surfaces (12 + 15) ✅ DONE
+
+Landed as two commits (Sonnet sub-agent; reviewed defect-free): `0587cb6 refactor(iterate-dialog): extract dropdowns/icons/grid-math/state` then `aea0fb2 refactor(iteration-node): extract adoption + screenshot hooks`. Review confirmed both extraction gates empty, all imports resolve, submit payload + adoption API contract + `Name.iteration-N.tsx` scheme intact, and `IterateDialogParts.tsx` is a re-export shim covering all 5 consumer imports (replace-not-layer). The agent also removed a **pre-existing corrupt duplicate JSX tail** in `IterationNode.tsx` (a second `export default` with stray top-level markup) that had ridden into `4ffffbe` and went unbuilt since the package is local-dev-only — folded into the Task 15 commit and called out in its message. Parent shrinks: IterateDialog 1117→819, IterationNode 845→670 (both above soft targets — `handleRunWithCursor`/React-Flow-bound geometry couldn't be lifted without context; a future pass could add a `useIterateDialogSubmit` hook).
 
 **Tasks:** 12 (deepen `IterateDialog`) + 15 (deepen `IterationNode`).
 **Why grouped:** both are the node-iteration UI; they share the iteration payload/filename contract and are reviewed best side by side.
