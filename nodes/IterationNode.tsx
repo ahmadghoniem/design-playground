@@ -2,9 +2,7 @@
 
 import { memo, useState, useCallback, Suspense, useMemo, useRef, useEffect, type ComponentType } from 'react';
 import { useReactFlow, NodeResizeControl } from '@xyflow/react';
-import { toPng } from 'html-to-image';
 import { GitMerge, Trash2, Loader2, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import {
   AlertDialog,
@@ -16,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
-import { resolveRegistryItem, generateAdoptPrompt } from '../registry';
+import { resolveRegistryItem } from '../registry';
 import { getIterationComponent } from '../iterations';
 import { SizeButtons } from './shared/SizeButtons';
 import { NodeLabel, useInverseZoom } from './shared/NodeLabel';
@@ -28,29 +26,20 @@ import {
   GENERATION_ERROR_EVENT,
   EDIT_COMPLETE_EVENT,
   ITERATION_COLLAPSE_TOGGLE_EVENT,
-  ADOPTION_COMPLETE_EVENT,
-  ADOPTION_ERROR_EVENT,
-  FIT_COMPONENT_NODES_EVENT,
   SIZE_CONFIG,
   getDisplayDimensions,
   RESIZE_MIN_WIDTH,
   RESIZE_MIN_HEIGHT,
   type ComponentSize,
-  type GenerationStartPayload,
-  type GenerationCompletePayload,
-  type GenerationErrorPayload,
-  type AdoptionCompletePayload,
-  type AdoptionErrorPayload,
   JSX_COMPONENT_ADDED_EVENT,
 } from '../lib/constants';
-import { getProviderFields } from '../lib/generation-body';
-import { generateHtmlAdoptPrompt } from '../lib/html-prompts';
-import { generateJsxAdoptPrompt } from '../lib/jsx-prompts';
 import { useAsyncProps, useScrollCapture, useHtmlContent } from '../hooks/useNodeShared';
 import ComponentErrorBoundary from './ComponentErrorBoundary';
 import IterateDialog from './shared/IterateDialog';
 import { useInteractiveNodeStore, useIsInteractiveNode } from '../stores/interactive-node-store';
 import { useFrameHoverHint } from './shared/FrameHoverHint';
+import { useIterationAdoption } from '../hooks/useIterationAdoption';
+import { componentNameToRegistryId, iterationPageName as deriveIterationPageName } from '../lib/iteration-filename';
 
 interface IterationNodeProps {
   id: string;
@@ -87,14 +76,9 @@ interface IterationNodeProps {
 function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   const labelInvScale = useInverseZoom();
   const hidePlayButton = labelInvScale * 14 > 14 + 6;
-  const { deleteElements, updateNodeData, setNodes } = useReactFlow();
+  const { deleteElements, setNodes, updateNodeData } = useReactFlow();
 
   const [isDeleting, setIsDeleting] = useState(false);
-  const [adoptionStatus, setAdoptionStatus] = useState<'idle' | 'adopting' | 'adopted' | 'error'>(
-    () => data.adopted ? 'adopted' : 'idle',
-  );
-  const [showAdoptConfirm, setShowAdoptConfirm] = useState(false);
-  const [adoptThumbnail, setAdoptThumbnail] = useState<string | null>(null);
   const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [iframeKey, setIframeKey] = useState(() => Date.now());
@@ -179,8 +163,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   }, [isJsx, data.jsxFile, jsxLoadAttempt]);
 
   const registryId = useMemo(
-    () => (isHtml || isJsx) ? '' : (data.registryId
-      ?? data.componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')),
+    () => (isHtml || isJsx) ? '' : (data.registryId ?? componentNameToRegistryId(data.componentName)),
     [data.registryId, data.componentName, isHtml, isJsx],
   );
 
@@ -188,6 +171,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   const registryItem = useMemo(() => (isHtml || isJsx) ? null : resolveRegistryItem(registryId), [registryId, isHtml, isJsx]);
   const staticProps = useMemo(() => registryItem?.props || {}, [registryItem]);
   const effectiveProps = (resolvedProps ?? staticProps) as Record<string, unknown>;
+
   // Independent size — persisted in node data, initially from parent at creation time
   const [size, setSize] = useState<ComponentSize>(
     () => data.parentSize || resolveRegistryItem(registryId)?.size || ((isHtml || isJsx) ? 'laptop' : 'default'),
@@ -237,12 +221,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     setSize('default');
   }, []);
 
-  const handleResizeEnd = useCallback(() => {
-    setIsResizing(false);
-    setIsCustomResized(true);
-    updateNodeData(id, { customResized: true });
-  }, [id, updateNodeData]);
-
   const handleSizeChange = (newSize: ComponentSize) => {
     setSize(newSize);
     setIsCustomResized(false);
@@ -257,12 +235,23 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     );
   };
 
-  const config = SIZE_CONFIG[size];
-  const isPreset = size !== 'default';
-  const isFillMode = isResizing || isCustomResized;
-  const isLargeComponent = isPreset || isFillMode;
-  const displayDims = getDisplayDimensions(size);
-  const handleWheel = useScrollCapture(scrollContainerRef);
+  const handleResizeEndFull = useCallback(() => {
+    setIsResizing(false);
+    setIsCustomResized(true);
+    updateNodeData(id, { customResized: true });
+  }, [id, updateNodeData]);
+
+  // ---------------------------------------------------------------------------
+  // Adoption hook
+  // ---------------------------------------------------------------------------
+  const adoption = useIterationAdoption({
+    id,
+    registryId,
+    isHtml,
+    isJsx,
+    isGlobalGenerating,
+    data,
+  });
 
   const handleDelete = async () => {
     if (isDeleting) return;
@@ -299,159 +288,24 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     }
   };
 
-  // Capture thumbnail when adopt dialog opens
-  const openAdoptConfirm = useCallback(() => {
-    setShowAdoptConfirm(true);
-    setAdoptThumbnail(null);
-    // Capture a thumbnail of the iteration's rendered frame
-    const nodeEl = document.querySelector(`[data-id="${id}"]`);
-    const frameEl = nodeEl?.querySelector('[data-screenshot-target]');
-    if (frameEl instanceof HTMLElement) {
-      const rect = frameEl.getBoundingClientRect();
-      // Temporarily patch cssRules to avoid SecurityError from cross-origin sheets
-      const desc = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules');
-      const descRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'rules');
-      const safeGetter = function (this: CSSStyleSheet) {
-        try { return desc!.get!.call(this); } catch { return [] as unknown as CSSRuleList; }
-      };
-      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', { get: safeGetter, configurable: true });
-      Object.defineProperty(CSSStyleSheet.prototype, 'rules', { get: safeGetter, configurable: true });
-      const w = Math.ceil(rect.width);
-      const h = Math.ceil(rect.height);
-      toPng(frameEl, { pixelRatio: 1, width: w, height: h })
-        .catch(() => null as string | null)
-        .then(() => toPng(frameEl, { pixelRatio: 2, width: w, height: h }))
-        .then((url) => { if (url) setAdoptThumbnail(url); })
-        .catch(() => {})
-        .finally(() => {
-          if (desc) Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', desc);
-          if (descRules) Object.defineProperty(CSSStyleSheet.prototype, 'rules', descRules);
-        });
-    }
-  }, [id]);
+  const pageName = useMemo(
+    () => deriveIterationPageName({
+      componentName: data.componentName,
+      isJsx,
+      isHtml,
+      jsxFile: data.jsxFile,
+      htmlFolder: data.htmlFolder,
+    }),
+    [data.componentName, isHtml, isJsx, data.htmlFolder, data.jsxFile],
+  );
+  const iterationLabel = `${pageName} #${data.iterationNumber}`;
 
-  const handleAdoptConfirm = async () => {
-    setShowAdoptConfirm(false);
-    setAdoptionStatus('adopting');
-
-    const toastId = `adopt-${id}`;
-
-    // Generate the adopt prompt
-    let adoptPrompt: string;
-    if (isJsx && data.jsxFile) {
-      const baseFile = data.jsxFile.replace(/\.iteration-\d+\.tsx$/, '.tsx');
-      adoptPrompt = generateJsxAdoptPrompt(baseFile, data.jsxFile);
-    } else if (isHtml && data.htmlFolder && data.htmlIterationFolder) {
-      adoptPrompt = generateHtmlAdoptPrompt(data.htmlFolder, data.htmlIterationFolder);
-    } else {
-      adoptPrompt = generateAdoptPrompt(registryId, data.filename);
-    }
-
-    const componentId = isJsx ? `jsx:${data.componentName}` : isHtml ? `html:${data.htmlFolder}` : registryId;
-
-    // Dispatch start event (for presence bubbles — editMode prevents skeleton nodes)
-    window.dispatchEvent(
-      new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-        detail: {
-          componentId,
-          componentName: data.componentName,
-          parentNodeId: data.parentNodeId,
-          iterationCount: 0,
-          editMode: true,
-          adoptionMode: true,
-          ...(isHtml ? { renderMode: 'html' as const, htmlFolder: data.htmlFolder } : {}),
-          ...getProviderFields() as Pick<GenerationStartPayload, 'model' | 'provider'>,
-        },
-      }),
-    );
-
-    try {
-      const response = await fetch('/playground/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: adoptPrompt,
-          componentId: `adopt-${componentId}`,
-          source: 'adopt',
-          ...getProviderFields(),
-          ...(isHtml ? { htmlFolder: data.htmlFolder } : {}),
-        }),
-      });
-
-      const result = await response.json().catch(() => ({ success: false, error: 'Invalid response' }));
-
-      if (!response.ok || !result.success) {
-        const errorMsg = result?.error || 'Adoption failed';
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: { componentId, parentNodeId: data.parentNodeId, error: errorMsg },
-          }),
-        );
-        window.dispatchEvent(
-          new CustomEvent<AdoptionErrorPayload>(ADOPTION_ERROR_EVENT, {
-            detail: { iterationNodeId: id, componentId, parentNodeId: data.parentNodeId, error: errorMsg },
-          }),
-        );
-        toast.error(`Adoption failed: ${errorMsg}`, { id: toastId, duration: 6000 });
-        setAdoptionStatus('error');
-        setTimeout(() => setAdoptionStatus('idle'), 3000);
-      } else {
-        // Success — refresh the original component
-        if (isHtml) {
-          window.dispatchEvent(
-            new CustomEvent(EDIT_COMPLETE_EVENT, { detail: { nodeId: data.parentNodeId } }),
-          );
-        }
-        window.dispatchEvent(
-          new CustomEvent<GenerationCompletePayload>(GENERATION_COMPLETE_EVENT, {
-            detail: { componentId, parentNodeId: data.parentNodeId, output: result.output || '' },
-          }),
-        );
-        window.dispatchEvent(
-          new CustomEvent<AdoptionCompletePayload>(ADOPTION_COMPLETE_EVENT, {
-            detail: { iterationNodeId: id, componentId, parentNodeId: data.parentNodeId },
-          }),
-        );
-        toast.success('Variation adopted! The original component has been updated.', { id: toastId });
-        setAdoptionStatus('adopted');
-        updateNodeData(id, { adopted: true });
-        data.onAdopt?.(data.filename, data.componentName);
-
-        // Pan canvas to the original (parent) component so the user sees the update
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent(FIT_COMPONENT_NODES_EVENT, {
-              detail: { componentId },
-            }),
-          );
-        }, 600);
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Network error';
-      window.dispatchEvent(
-        new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-          detail: { componentId, parentNodeId: data.parentNodeId, error: errorMsg },
-        }),
-      );
-      window.dispatchEvent(
-        new CustomEvent<AdoptionErrorPayload>(ADOPTION_ERROR_EVENT, {
-          detail: { iterationNodeId: id, componentId, parentNodeId: data.parentNodeId, error: errorMsg },
-        }),
-      );
-      toast.error(`Adoption failed: ${errorMsg}`, { id: toastId, duration: 6000 });
-      setAdoptionStatus('error');
-      setTimeout(() => setAdoptionStatus('idle'), 3000);
-    }
-  };
-
-  // e.g. "PricingCard" -> "pricing-card", "landing", or "frame-5"
-  const iterationPageName = useMemo(() => {
-    if (isJsx) return data.jsxFile?.replace(/\.iteration-\d+\.tsx$/, '').replace('.tsx', '') || data.componentName;
-    if (isHtml) return data.htmlFolder || data.componentName;
-    const key = data.componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '');
-    return key;
-  }, [data.componentName, isHtml, isJsx, data.htmlFolder, data.jsxFile]);
-  const iterationLabel = `${iterationPageName} #${data.iterationNumber}`;
+  const config = SIZE_CONFIG[size];
+  const isPreset = size !== 'default';
+  const isFillMode = isResizing || isCustomResized;
+  const isLargeComponent = isPreset || isFillMode;
+  const displayDims = getDisplayDimensions(size);
+  const handleWheel = useScrollCapture(scrollContainerRef);
 
   // Resolved renderable component: JSX (from canvas-components) or React (from iterations registry)
   const RenderComponent = isJsx ? JsxComponent : IterationComponent;
@@ -471,7 +325,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         minWidth={RESIZE_MIN_WIDTH}
         minHeight={RESIZE_MIN_HEIGHT}
         onResizeStart={handleResizeStart}
-        onResizeEnd={handleResizeEnd}
+        onResizeEnd={handleResizeEndFull}
         style={{
           background: 'transparent',
           border: 'none',
@@ -538,16 +392,16 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
             </button>
           )}
           <NodeLabel className="text-stone-500 shrink-0">
-            <span className={selected ? 'text-[#0B99FF]' : 'text-stone-400'}>{iterationPageName}</span>
+            <span className={selected ? 'text-[#0B99FF]' : 'text-stone-400'}>{pageName}</span>
             <span className="mx-1 text-stone-300">|</span>
             <span className="text-stone-500">#{data.iterationNumber}</span>
           </NodeLabel>
-          {adoptionStatus === 'adopted' && (
+          {adoption.adoptionStatus === 'adopted' && (
             <span className="text-[9px] font-medium text-green-600 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5 leading-none select-none shrink-0">
               Adopted
             </span>
           )}
-          {adoptionStatus === 'adopting' && (
+          {adoption.adoptionStatus === 'adopting' && (
             <span className="flex items-center gap-1 text-[9px] text-stone-400 select-none shrink-0">
               <Loader2 className="w-2.5 h-2.5 animate-spin" />
               adopting
@@ -571,7 +425,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
           className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? '' : 'transition-all'} ${
-            adoptionStatus === 'adopted' ? 'ring-2 ring-green-400'
+            adoption.adoptionStatus === 'adopted' ? 'ring-2 ring-green-400'
               : selected ? `ring-2 ${isJsx ? 'ring-purple-400' : isHtml ? 'ring-orange-400' : 'ring-[#0B99FF]'}` : ''
           } ${isInteractive ? 'ring-offset-2' : ''} ${isFillMode ? 'w-full h-full' : ''}`}
           style={isJsx ? { contain: 'paint' } : undefined}
@@ -695,12 +549,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
               )}
             </div>
           )}
-          {/* Click-blocker for non-iframe (JSX/React) render modes — gates
-              link/button activity on a double-click, mirroring the iframe
-              overlay above. Already redundant for iframe cases (which keep
-              their own scoped overlay) but harmless. Element-select mode
-              disables this via `[data-iframe-overlay] { pointer-events:
-              none !important }` in playground-global.css. */}
+          {/* Click-blocker for non-iframe (JSX/React) render modes */}
           {!isInteractive && <div className="absolute inset-0" data-iframe-overlay />}
         </div>
 
@@ -708,134 +557,110 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
         {/* Right-side vertical action toolbar — always in DOM, invisible when not selected */}
         <div className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            {/* Iterate */}
-              <IterateDialog
-                componentId={isJsx ? `jsx:${data.componentName}` : isHtml ? `html:${data.htmlFolder}` : registryId}
-                componentName={data.componentName}
-                parentNodeId={id}
-                sourceFilename={data.filename}
-                isGlobalGenerating={isGlobalGenerating}
-                renderMode={data.renderMode}
-                htmlFolder={data.htmlFolder}
-                htmlIterationFolder={data.htmlIterationFolder}
-                jsxFile={data.jsxFile}
-              />
+          {/* Iterate */}
+          <IterateDialog
+            componentId={isJsx ? `jsx:${data.componentName}` : isHtml ? `html:${data.htmlFolder}` : registryId}
+            componentName={data.componentName}
+            parentNodeId={id}
+            sourceFilename={data.filename}
+            isGlobalGenerating={isGlobalGenerating}
+            renderMode={data.renderMode}
+            htmlFolder={data.htmlFolder}
+            htmlIterationFolder={data.htmlIterationFolder}
+            jsxFile={data.jsxFile}
+          />
 
-            {/* Use this (adopt) */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={openAdoptConfirm}
-                  disabled={adoptionStatus === 'adopting' || isGlobalGenerating}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
-                    adoptionStatus === 'adopted'
-                      ? 'bg-green-50 border-green-300 text-green-600'
-                      : adoptionStatus === 'error'
-                        ? 'bg-red-50 border-red-300 text-red-500'
-                        : 'bg-white border-stone-200 text-stone-400 hover:text-green-600 hover:border-green-300'
-                  }`}
-                  aria-label={
-                    adoptionStatus === 'adopting' ? 'Adopting...'
-                      : adoptionStatus === 'adopted' ? 'Adopted'
-                        : 'Adopt this variation'
-                  }
-                >
-                  {adoptionStatus === 'adopting' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <GitMerge className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>
-                  {adoptionStatus === 'adopting' ? 'Adopting variation...'
-                    : adoptionStatus === 'adopted' ? 'Adopted'
-                      : isGlobalGenerating ? 'Cannot adopt during generation'
-                        : 'Adopt this variation'}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Adopt confirmation dialog */}
-            <AlertDialog open={showAdoptConfirm} onOpenChange={setShowAdoptConfirm}>
-              <AlertDialogContent className="max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Adopt this variation?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {isHtml
-                      ? 'This will overwrite the original index.html with this variation. You can revert using git if needed.'
-                      : "This will replace the original component's UI with this variation's layout and styling. Props, hooks, and logic will be preserved."}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                {/* Iteration preview thumbnail */}
-                {adoptThumbnail ? (
-                  <div className="rounded-lg border border-stone-200 overflow-hidden bg-stone-50">
-                    <img
-                      src={adoptThumbnail}
-                      alt={`Preview of ${iterationLabel}`}
-                      className="w-full max-h-[240px] object-contain object-top"
-                    />
-                  </div>
+          {/* Use this (adopt) */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={adoption.openAdoptConfirm}
+                disabled={adoption.adoptionStatus === 'adopting' || isGlobalGenerating}
+                className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
+                  adoption.adoptionStatus === 'adopted'
+                    ? 'bg-green-50 border-green-300 text-green-600'
+                    : adoption.adoptionStatus === 'error'
+                      ? 'bg-red-50 border-red-300 text-red-500'
+                      : 'bg-white border-stone-200 text-stone-400 hover:text-green-600 hover:border-green-300'
+                }`}
+                aria-label={
+                  adoption.adoptionStatus === 'adopting' ? 'Adopting...'
+                    : adoption.adoptionStatus === 'adopted' ? 'Adopted'
+                      : 'Adopt this variation'
+                }
+              >
+                {adoption.adoptionStatus === 'adopting' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <div className="flex items-center justify-center h-24 rounded-lg border border-dashed border-stone-200 bg-stone-50">
-                    <span className="text-xs text-stone-400">Capturing preview…</span>
-                  </div>
+                  <GitMerge className="w-3.5 h-3.5" />
                 )}
-                <p className="text-xs text-stone-500 text-center -mt-1">
-                  {iterationLabel}
-                </p>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleAdoptConfirm}
-                    className="bg-green-600 text-white hover:bg-green-700"
-                  >
-                    Adopt
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>
+                {adoption.adoptionStatus === 'adopting' ? 'Adopting variation...'
+                  : adoption.adoptionStatus === 'adopted' ? 'Adopted'
+                    : isGlobalGenerating ? 'Cannot adopt during generation'
+                      : 'Adopt this variation'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
 
-            {/* Delete */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
-                  aria-label="Delete variation"
+          {/* Adopt confirmation dialog */}
+          <AlertDialog open={adoption.showAdoptConfirm} onOpenChange={adoption.setShowAdoptConfirm}>
+            <AlertDialogContent className="max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Adopt this variation?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {isHtml
+                    ? 'This will overwrite the original index.html with this variation. You can revert using git if needed.'
+                    : "This will replace the original component's UI with this variation's layout and styling. Props, hooks, and logic will be preserved."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {/* Iteration preview thumbnail */}
+              {adoption.adoptThumbnail ? (
+                <div className="rounded-lg border border-stone-200 overflow-hidden bg-stone-50">
+                  <img
+                    src={adoption.adoptThumbnail}
+                    alt={`Preview of ${iterationLabel}`}
+                    className="w-full max-h-[240px] object-contain object-top"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-24 rounded-lg border border-dashed border-stone-200 bg-stone-50">
+                  <span className="text-xs text-stone-400">Capturing preview…</span>
+                </div>
+              )}
+              <p className="text-xs text-stone-500 text-center -mt-1">
+                {iterationLabel}
+              </p>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={adoption.handleAdoptConfirm}
+                  className="bg-green-600 text-white hover:bg-green-700"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>Delete variation</p></TooltipContent>
-            </Tooltip>
-          </div>
-      </div>
+                  Adopt
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-    </div>
-  );
-}
-
-export default memo(IterationNode);
-         </AlertDialog>
-
-            {/* Delete */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
-                  aria-label="Delete variation"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>Delete variation</p></TooltipContent>
-            </Tooltip>
-          </div>
+          {/* Delete */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
+                aria-label="Delete variation"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right"><p>Delete variation</p></TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
     </div>
