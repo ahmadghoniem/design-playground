@@ -655,7 +655,7 @@ export interface ChatSubmitPayload {
   targetNodeId: string | null;
   targetComponentId: string | null;
   targetComponentName: string | null;
-  targetType: 'component' | 'iteration' | 'image' | 'text' | 'stage' | null;
+  targetType: 'component' | 'iteration' | 'image' | 'text' | null;
   sourceFilename?: string;
   iterationCount?: number;
   canvasPosition: { x: number; y: number };
