@@ -548,9 +548,6 @@ export interface JsxIterationInfo {
 // Canvas Events
 // ---------------------------------------------------------------------------
 
-/** Fired to focus/pan to a specific node on the canvas */
-export const FOCUS_NODE_EVENT = 'playground:focus-node';
-
 /** Fired to delete a frame and its canvas nodes */
 export const DELETE_FRAME_EVENT = 'playground:delete-frame';
 

@@ -2,379 +2,27 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, DragEvent, MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronDown, ChevronLeft, Plus, Palette, Loader2, RefreshCw, RotateCcw, Frame, FileCode, Component, Trash2 } from 'lucide-react';
-import { ProjectBoxIcon, PageDocumentIcon } from '../../ui/playground-nav-icons';
-import { registry, RegistryItem, RegistryLeafItem, isGroup, isLeaf } from '../../registry';
+import { ChevronRight, ChevronDown, ChevronLeft, Plus, Palette, Loader2, RefreshCw, RotateCcw, Frame, FileCode, Trash2 } from 'lucide-react';
+import { ProjectBoxIcon } from '../../ui/playground-nav-icons';
+import { registry, RegistryItem, isGroup, isLeaf } from '../../registry';
 import {
   DND_DATA_KEY,
   HTML_ID_PREFIX,
-  FOCUS_NODE_EVENT,
   JSX_ID_PREFIX,
   DELETE_FRAME_EVENT,
   CREATE_DESIGN_EVENT,
-  DESIGN_SYSTEM_SHOWCASE_ID,
-  DESIGN_SYSTEM_GENERATED_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  JSX_COMPONENT_ADDED_EVENT,
 } from '../../lib/constants';
-import type { HtmlPageInfo, JsxComponentInfo, ComponentSize } from '../../lib/constants';
 import type { PendingChild } from '../../app/PlaygroundClient';
-import ComponentErrorBoundary from '../../nodes/ComponentErrorBoundary';
 import DesignSystemModal from '../modals/DesignSystemModal';
 import { useModelSettingsStore } from '../../stores/model-settings-store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { toast } from 'sonner';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Build a map of parentId -> child leaf items from the registry tree. */
-function buildChildrenMap(items: RegistryItem[]): Map<string, RegistryLeafItem[]> {
-  const map = new Map<string, RegistryLeafItem[]>();
-  function collect(list: RegistryItem[]) {
-    for (const item of list) {
-      if (isLeaf(item) && item.parentId) {
-        const existing = map.get(item.parentId) || [];
-        existing.push(item);
-        map.set(item.parentId, existing);
-      } else if (isGroup(item)) {
-        collect(item.children);
-      }
-    }
-  }
-  collect(items);
-  return map;
-}
-
-/** Flatten all leaves under a group (including nested children with parentId). */
-function flattenLeaves(items: RegistryItem[]): RegistryLeafItem[] {
-  const out: RegistryLeafItem[] = [];
-  for (const item of items) {
-    if (isLeaf(item)) out.push(item);
-    else if (isGroup(item)) out.push(...flattenLeaves(item.children));
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// Component preview card — renders a live, scaled-down preview of the component
-// ---------------------------------------------------------------------------
-
-/** Pick a sensible viewport width for the preview based on the component's size hint. */
-function pickPreviewViewport(size: ComponentSize | undefined): { width: number; height: number } {
-  switch (size) {
-    case 'laptop': return { width: 1470, height: 832 };
-    case 'tablet': return { width: 768, height: 1024 };
-    case 'mobile': return { width: 393, height: 852 };
-    case 'default':
-    default:       return { width: 720, height: 480 };
-  }
-}
-
-interface ComponentPreviewCardProps {
-  item: RegistryLeafItem;
-  onPageContextMenu?: (e: MouseEvent, payload: PageContextPayload) => void;
-}
-
-function ComponentPreviewCard({ item, onPageContextMenu }: ComponentPreviewCardProps) {
-  const PreviewComponent = item.Component;
-  const props = (item.props ?? {}) as Record<string, unknown>;
-  const viewport = pickPreviewViewport(item.size);
-
-  // Measure the card's actual rendered width so we can compute an accurate
-  // scale factor — keeps previews sharp when the sidebar gets resized.
-  const previewRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.12);
-
-  useEffect(() => {
-    const el = previewRef.current;
-    if (!el) return;
-    const update = () => {
-      const w = el.clientWidth;
-      if (w > 0) setScale(w / viewport.width);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [viewport.width]);
-
-  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData(DND_DATA_KEY, item.id);
-    e.dataTransfer.setData('text/plain', '');
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const isPage = /^src\/app\/[^/]+\/page\.tsx$/.test(item.sourcePath);
-  const slug = isPage ? slugFromSourcePath(item.sourcePath) : null;
-
-  return (
-    <div
-      draggable
-      onDragStart={handleDragStart}
-      onDoubleClick={() => focusNodeOnCanvas(item.id)}
-      onContextMenu={isPage && slug && onPageContextMenu ? (e) => onPageContextMenu(e, { id: item.id, label: item.label, slug }) : undefined}
-      className="group cursor-grab active:cursor-grabbing select-none"
-      title={`Drag ${item.label} onto canvas`}
-    >
-      {/* Preview thumbnail — fixed height, component scaled to fit the width.
-          Tall components get cropped at the bottom (like a real thumbnail). */}
-      <div
-        ref={previewRef}
-        className="relative w-full h-[96px] overflow-hidden bg-stone-50 rounded-xl border border-stone-200/70 group-hover:border-stone-300 group-hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all pointer-events-none"
-      >
-        <div
-          className="app-theme bg-background absolute top-0 left-0 origin-top-left"
-          style={{
-            width: viewport.width,
-            height: viewport.height,
-            transform: `scale(${scale})`,
-          }}
-        >
-          <ComponentErrorBoundary componentName={item.label}>
-            <PreviewComponent {...props} />
-          </ComponentErrorBoundary>
-        </div>
-      </div>
-
-      {/* Label — sits OUTSIDE the card, below it, as muted text */}
-      <div className="mt-1.5 px-0.5 text-[11px] font-medium text-stone-700 truncate">
-        {item.label}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Design system preview card — draggable thumbnail of the generated showcase
-// ---------------------------------------------------------------------------
-
-function DesignSystemPreviewCard({ html }: { html: string }) {
-  const previewRef = useRef<HTMLDivElement>(null);
-  // The showcase is generated at full desktop width; scale to fit the card.
-  const VIEWPORT_WIDTH = 1280;
-  const VIEWPORT_HEIGHT = 1600;
-  const [scale, setScale] = useState(0.18);
-
-  useEffect(() => {
-    const el = previewRef.current;
-    if (!el) return;
-    const update = () => {
-      const w = el.clientWidth;
-      if (w > 0) setScale(w / VIEWPORT_WIDTH);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData(DND_DATA_KEY, DESIGN_SYSTEM_SHOWCASE_ID);
-    e.dataTransfer.setData('text/plain', '');
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  return (
-    <div
-      draggable
-      onDragStart={handleDragStart}
-      className="group cursor-grab active:cursor-grabbing select-none"
-      title="Drag onto canvas"
-    >
-      <div
-        ref={previewRef}
-        className="relative w-full h-[140px] overflow-hidden bg-stone-50 rounded-xl border border-stone-200/70 group-hover:border-stone-300 group-hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all pointer-events-none"
-      >
-        <div
-          className="absolute top-0 left-0 origin-top-left"
-          style={{
-            width: VIEWPORT_WIDTH,
-            height: VIEWPORT_HEIGHT,
-            transform: `scale(${scale})`,
-          }}
-        >
-          <iframe
-            srcDoc={html}
-            sandbox="allow-same-origin"
-            title="Design system preview"
-            className="w-full h-full border-0 pointer-events-none"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tree node
-// ---------------------------------------------------------------------------
-
-interface PageContextPayload {
-  id: string;
-  label: string;
-  slug: string;
-}
-
-interface TreeNodeProps {
-  item: RegistryItem;
-  depth?: number;
-  childrenMap: Map<string, RegistryLeafItem[]>;
-  pendingChildren: Map<string, PendingChild[]>;
-  parentGroupId?: string;
-  onPageContextMenu?: (e: MouseEvent, payload: PageContextPayload) => void;
-}
-
-function focusNodeOnCanvas(componentId: string) {
-  window.dispatchEvent(new CustomEvent(FOCUS_NODE_EVENT, { detail: { componentId } }));
-}
-
-function slugFromSourcePath(sourcePath: string): string | null {
-  const match = sourcePath.match(/^src\/app\/([^/]+)\/page\.tsx$/);
-  return match ? match[1] : null;
-}
-
-function TreeNode({ item, depth = 0, childrenMap, pendingChildren, parentGroupId, onPageContextMenu }: TreeNodeProps) {
-  const [expanded, setExpanded] = useState(true);
-
-  const handleDragStart = (e: DragEvent<HTMLDivElement>, componentId: string) => {
-    e.dataTransfer.setData(DND_DATA_KEY, componentId);
-    e.dataTransfer.setData('text/plain', '');
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  if (isGroup(item)) {
-    const sortedChildren = item.id === 'pages'
-      ? [...item.children].sort((a, b) => a.label.localeCompare(b.label))
-      : item.children;
-    return (
-      <div>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 w-full px-2 py-2 text-left text-[11px] font-medium text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-2xl transition-colors"
-          style={{ paddingLeft: `${depth * 10 + 8}px` }}
-        >
-          {expanded ? (
-            <ChevronDown className="w-3.5 h-3.5 shrink-0" />
-          ) : (
-            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-          )}
-          <span className="uppercase tracking-[0.08em] text-[10px]">{item.label}</span>
-        </button>
-        {expanded && (
-          <div>
-            {sortedChildren.map((child) => (
-              <TreeNode
-                key={child.id}
-                item={child}
-                depth={depth + 1}
-                childrenMap={childrenMap}
-                pendingChildren={pendingChildren}
-                parentGroupId={item.id}
-                onPageContextMenu={onPageContextMenu}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (isLeaf(item)) {
-    const registryChildren = childrenMap.get(item.id) || [];
-    const pending = pendingChildren.get(item.id) || [];
-    // Filter out pending items that already exist as registry children (done analyzing)
-    const registryChildIds = new Set(registryChildren.map((c) => c.id));
-    const activePending = pending.filter((p) => p.status !== 'done' && !registryChildIds.has(p.id));
-    const hasChildren = registryChildren.length > 0 || activePending.length > 0;
-
-    const isPageEntry = parentGroupId === 'pages' || /^src\/app\/[^/]+\/page\.tsx$/.test(item.sourcePath);
-
-    if (hasChildren) {
-      return (
-        <div>
-          {/* Parent item — both expandable and draggable */}
-          <div
-            className="flex items-center gap-1 px-2 py-1.5 text-[13px] text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-2xl transition-colors group select-none"
-            style={{ paddingLeft: `${depth * 10 + 8}px` }}
-          >
-            <div
-              draggable
-              onDragStart={(e) => handleDragStart(e, item.id)}
-              onDoubleClick={() => focusNodeOnCanvas(item.id)}
-              className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
-            >
-              {isPageEntry ? (
-                <PageDocumentIcon className="shrink-0 text-stone-500" size={14} />
-              ) : (
-                <Component className="w-3.5 h-3.5 shrink-0" />
-              )}
-              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{item.label}</span>
-              <button
-              onClick={() => setExpanded(!expanded)}
-              className="shrink-0 p-0 text-stone-400 hover:text-stone-600"
-            >
-              {expanded ? (
-                <ChevronDown className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5" />
-              )}
-            </button>
-            </div>
-          </div>
-          {expanded && (
-            <div>
-              {/* Already-analyzed child components */}
-              {registryChildren.map((child) => (
-                <TreeNode key={child.id} item={child} depth={depth + 1} childrenMap={childrenMap} pendingChildren={pendingChildren} />
-              ))}
-              {/* Pending child components — greyed out with spinner */}
-              {activePending.map((child) => (
-                <div
-                  key={child.id}
-                  className="flex items-center gap-1.5 px-2 py-1.5 text-[13px] text-stone-400 opacity-50 cursor-default select-none rounded-2xl"
-                  title={`Adding ${child.name}…`}
-                  style={{ paddingLeft: `${(depth + 1) * 10 + 8}px` }}
-                >
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-300 shrink-0" />
-                  <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{child.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Normal leaf — no children
-    const isPage = parentGroupId === 'pages';
-    const slug = isPage ? slugFromSourcePath(item.sourcePath) : null;
-    return (
-      <div
-        draggable
-        onDragStart={(e) => handleDragStart(e, item.id)}
-        onDoubleClick={() => focusNodeOnCanvas(item.id)}
-        onContextMenu={isPage && slug && onPageContextMenu ? (e) => onPageContextMenu(e, { id: item.id, label: item.label, slug }) : undefined}
-        className="flex items-center gap-1.5 px-2 py-1.5 text-[13px] text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-2xl cursor-grab active:cursor-grabbing transition-colors group select-none"
-        style={{ paddingLeft: `${depth * 10 + 8}px` }}
-      >
-        {isPage ? (
-          <PageDocumentIcon className="shrink-0 text-stone-500" size={14} />
-        ) : (
-          <Component className="w-3.5 h-3.5 shrink-0" />
-        )}
-        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{item.label}</span>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Main sidebar
-// ---------------------------------------------------------------------------
+import { buildChildrenMap, flattenLeaves } from '../../lib/registry-tree';
+import { useFocusNode } from '../../hooks/useFocusNode';
+import { useSidebarDiscoverySync } from './sidebar/useSidebarDiscoverySync';
+import ComponentPreviewCard from './sidebar/ComponentPreviewCard';
+import DesignSystemPreviewCard from './sidebar/DesignSystemPreviewCard';
+import TreeNode, { type PageContextPayload } from './sidebar/TreeNode';
 
 interface PlaygroundSidebarProps {
   onCollapse: () => void;
@@ -384,18 +32,24 @@ interface PlaygroundSidebarProps {
 
 export default function PlaygroundSidebar({ onCollapse, onOpenDiscovery, pendingChildren }: PlaygroundSidebarProps) {
   const [search, setSearch] = useState('');
-  const [htmlPages, setHtmlPages] = useState<HtmlPageInfo[]>([]);
-  const [jsxComponents, setJsxComponents] = useState<JsxComponentInfo[]>([]);
   const [htmlExpanded, setHtmlExpanded] = useState(true);
-  const [isRefreshingHtml, setIsRefreshingHtml] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
-  const [designSystemHtml, setDesignSystemHtml] = useState<string | null>(null);
   const [designSystemExpanded, setDesignSystemExpanded] = useState(true);
   const [isGeneratingDesignSystem, setIsGeneratingDesignSystem] = useState(false);
   const activeProvider = useModelSettingsStore((s) => s.activeProvider);
   const enabledModels = useModelSettingsStore(
     (s) => s.providerState[s.activeProvider]?.enabledModels ?? [],
   );
+  const { focusNode } = useFocusNode();
+
+  const {
+    htmlPages,
+    jsxComponents,
+    isRefreshingHtml,
+    fetchHtmlPages,
+    designSystemHtml,
+    fetchDesignSystem,
+  } = useSidebarDiscoverySync();
 
   const childrenMap = useMemo(() => buildChildrenMap(registry), []);
 
@@ -404,57 +58,6 @@ export default function PlaygroundSidebar({ onCollapse, onOpenDiscovery, pending
   const isGroupExpanded = (id: string) => groupExpanded[id] !== false;
   const toggleGroup = (id: string) =>
     setGroupExpanded((prev) => ({ ...prev, [id]: prev[id] === false ? true : false }));
-
-  // Fetch HTML pages and JSX components on mount
-  const fetchHtmlPages = useCallback(async () => {
-    try {
-      setIsRefreshingHtml(true);
-      const [htmlRes, jsxRes] = await Promise.all([
-        fetch('/playground/api/html-pages'),
-        fetch('/playground/api/oncanvas-components'),
-      ]);
-      if (htmlRes.ok) {
-        const data = await htmlRes.json();
-        setHtmlPages(data.pages || []);
-      }
-      if (jsxRes.ok) {
-        const data = await jsxRes.json();
-        setJsxComponents(data.components || []);
-      }
-    } catch { /* ignore */ }
-    finally { setIsRefreshingHtml(false); }
-  }, []);
-
-  useEffect(() => { fetchHtmlPages(); }, [fetchHtmlPages]);
-
-  useEffect(() => {
-    const refresh = () => { void fetchHtmlPages(); };
-    window.addEventListener('playground:html-pages-updated', refresh);
-    window.addEventListener(GENERATION_COMPLETE_EVENT, refresh as EventListener);
-    window.addEventListener(JSX_COMPONENT_ADDED_EVENT, refresh as EventListener);
-    return () => {
-      window.removeEventListener('playground:html-pages-updated', refresh);
-      window.removeEventListener(GENERATION_COMPLETE_EVENT, refresh as EventListener);
-      window.removeEventListener(JSX_COMPONENT_ADDED_EVENT, refresh as EventListener);
-    };
-  }, [fetchHtmlPages]);
-
-  const fetchDesignSystem = useCallback(async () => {
-    try {
-      const res = await fetch('/playground/api/design/preview-showcase', { cache: 'no-store' });
-      if (!res.ok) return;
-      const data = await res.json() as { exists: boolean; html: string | null };
-      setDesignSystemHtml(data.exists && data.html ? data.html : null);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => { fetchDesignSystem(); }, [fetchDesignSystem]);
-
-  useEffect(() => {
-    const handler = () => { fetchDesignSystem(); };
-    window.addEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
-    return () => window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
-  }, [fetchDesignSystem]);
 
   const regenerateDesignSystem = useCallback(async () => {
     if (isGeneratingDesignSystem) return;
@@ -477,7 +80,6 @@ export default function PlaygroundSidebar({ onCollapse, onOpenDiscovery, pending
         }
       }
       await fetchDesignSystem();
-      window.dispatchEvent(new CustomEvent(DESIGN_SYSTEM_GENERATED_EVENT));
       toast.success('Design system regenerated');
     } catch (error) {
       toast.error(`Regeneration failed: ${(error as Error).message}`);
@@ -603,9 +205,6 @@ export default function PlaygroundSidebar({ onCollapse, onOpenDiscovery, pending
   const filteredFrames = search.trim()
     ? allFrames.filter(f => f.label.toLowerCase().includes(search.toLowerCase()))
     : allFrames;
-
-  // Keep backward compat for the empty-state check
-  const filteredHtmlPages = filteredFrames;
 
   return (
     <aside className="w-[280px] h-full bg-white rounded-2xl border border-pg-border flex flex-col overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -734,7 +333,7 @@ export default function PlaygroundSidebar({ onCollapse, onOpenDiscovery, pending
                 key={frame.id}
                 draggable
                 onDragStart={(e) => handleDragStartHtml(e, frame.id)}
-                onDoubleClick={() => focusNodeOnCanvas(frame.id)}
+                onDoubleClick={() => focusNode(frame.id)}
                 onContextMenu={(e) => handleFrameContextMenu(e, frame)}
                 className="flex items-center gap-1.5 px-2 py-1.5 text-[13px] text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-sm cursor-grab active:cursor-grabbing transition-colors group select-none"
                 style={{ paddingLeft: '18px' }}
