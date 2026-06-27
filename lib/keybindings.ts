@@ -3,7 +3,7 @@
 // Types, defaults, matchers, and utilities for user-customizable shortcuts.
 // ============================================================================
 
-import { useKeybindingStore } from './keybinding-store';
+import { useKeybindingStore } from '../stores/keybinding-store';
 
 // ---------------------------------------------------------------------------
 // Types
