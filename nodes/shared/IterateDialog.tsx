@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Check, Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { generateIterationPrompt, generateIterationFromIterationPrompt } from '../../registry';
@@ -12,14 +12,9 @@ import {
   InlineReference,
   InlineReferenceInput,
   InlineReferenceContent,
-  type Segment,
-  type InlineReferenceHandle,
 } from '../../ui/inline-reference';
-import type { PlaygroundSkill } from '../../skills';
 import { ImpeccableSkillPicker } from '../../ui/impeccable-skill-picker';
 import { ImpeccableDemoteMenu } from '../../ui/impeccable-demote-menu';
-import { useImpeccableSkillPicker } from '../../hooks/useImpeccableSkillPicker';
-import { impeccablePromptFromSegment } from '../../lib/impeccable-skill';
 import { matchesAction } from '../../lib/keybindings';
 import { getProviderFields } from '../../lib/generation-body';
 import {
@@ -28,9 +23,6 @@ import {
   GENERATION_ERROR_EVENT,
   ITERATION_PROMPT_COPIED_EVENT,
   COPIED_FEEDBACK_DURATION,
-  ITERATION_COUNT_OPTIONS,
-  OPEN_SKILLS_CATALOG_EVENT,
-  SKILLS_CHANGED_EVENT,
   HTML_ID_PREFIX,
   JSX_ID_PREFIX,
   DRAG_GHOST_GAP,
@@ -40,191 +32,16 @@ import {
   DEFAULT_COMPONENT_NODE_HEIGHT,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_HEIGHT,
-  DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-  type ModelOption,
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
 } from '../../lib/constants';
-import {
-  useAvailableModels,
-  loadSelectedModel,
-  saveSelectedModel,
-} from './IterateDialogParts';
 import { useDragToIterate, clampGrid, type DragDelta, type CursorScreenPos, type DragIterateGrid } from '../../hooks/useDragToIterate';
 import DragSelectionOverlay from './DragSelectionOverlay';
-import { getModelIconConfig } from '../../lib/model-icons';
-import { useModelSettingsStore } from '../../stores/model-settings-store';
-
-// Ghost node ID prefix to identify and clean up drag-ghost nodes
-const GHOST_NODE_PREFIX = 'drag-ghost-';
-
-type PendingDragGrid = {
-  count: number;
-  rows: number;
-  cols: number;
-};
-
-function VariationStackIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 20 20" aria-hidden>
-      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M15.6 3.396H4.25c-.314 0-.568.283-.568.633v12.665c0 .35.254.633.568.633H15.6c.314 0 .568-.284.568-.633V4.029c0-.35-.254-.633-.567-.633ZM6.8 10.361h6.25M9.925 7.236v6.25" />
-      <path stroke="currentColor" strokeLinecap="round" d="M17.747 5.02v10.682M19.312 6.019v8.685" />
-    </svg>
-  );
-}
-
-function ArrowUpIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-      <path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ModelPillDropdown({
-  model,
-  onChange,
-  models,
-  isLoading,
-}: {
-  model: string;
-  onChange: (model: string) => void;
-  models: ModelOption[];
-  isLoading?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const activeProvider = useModelSettingsStore((s) => s.activeProvider);
-  const currentLabel = models.find(m => m.value === model)?.label || model || 'Default';
-  const currentConfig = getModelIconConfig(model, activeProvider);
-
-  return (
-    <div ref={dropdownRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="inline-flex h-9 max-w-[220px] items-center gap-2 rounded-full bg-stone-100/80 pl-2 pr-3 text-[15px] font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-800"
-        aria-label="Select model"
-      >
-        <span
-          className="size-6 flex-shrink-0 rounded-full bg-center bg-no-repeat"
-          style={{
-            backgroundColor: currentConfig.bg,
-            backgroundImage: `url(${currentConfig.src})`,
-            backgroundSize: '72%',
-          }}
-        />
-        <span className="truncate">
-          {isLoading ? 'Loading...' : currentLabel}
-        </span>
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 max-h-64 w-64 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-1.5 shadow-[0_18px_50px_-22px_rgba(0,0,0,0.35)]">
-          {models.map((option) => {
-            const config = getModelIconConfig(option.value, activeProvider);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-stone-700 transition-colors hover:bg-stone-100 ${
-                  model === option.value ? 'bg-stone-50' : ''
-                }`}
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="size-6 flex-shrink-0 rounded-full bg-center bg-no-repeat"
-                    style={{
-                      backgroundColor: config.bg,
-                      backgroundImage: `url(${config.src})`,
-                      backgroundSize: '72%',
-                    }}
-                  />
-                  <span className="truncate">{option.label}</span>
-                </span>
-                {model === option.value && <Check className="size-3.5 flex-shrink-0 text-stone-500" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VariationCountDropdown({
-  count,
-  onChange,
-}: {
-  count: number;
-  onChange: (count: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={dropdownRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stone-200/70 bg-stone-50/90 px-2.5 text-[14px] font-semibold text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
-        aria-label="Select variation count"
-      >
-        <VariationStackIcon />
-        <span>{count}x</span>
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full right-0 z-50 mb-2 w-24 rounded-2xl border border-stone-200 bg-white p-1.5 shadow-[0_18px_50px_-22px_rgba(0,0,0,0.35)]">
-          {(ITERATION_COUNT_OPTIONS as readonly number[]).map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => {
-                onChange(option);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:bg-stone-100 ${
-                count === option ? 'bg-stone-50' : ''
-              }`}
-            >
-              <span>{option}x</span>
-              {count === option && <Check className="size-3.5 text-stone-500" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import { GHOST_NODE_PREFIX, type PendingDragGrid } from '../../lib/drag-ghost-grid';
+import { ModelPillDropdown, VariationCountDropdown } from './iterate-dialog/dropdowns';
+import { ArrowUpIcon } from './iterate-dialog/icons';
+import { useIterateDialogState } from './iterate-dialog/useIterateDialogState';
 
 // ---------------------------------------------------------------------------
 // IterateDialog — inline popover panel
@@ -261,24 +78,29 @@ export default function IterateDialog({
   const isJsxMode = renderMode === 'jsx' || (!renderMode && componentId.startsWith(JSX_ID_PREFIX));
   const [open, setOpen] = useState(false);
   const [, setCopied] = useState(false);
-  const [iterationCount, setIterationCount] = useState(4);
   const [pendingDragGrid, setPendingDragGrid] = useState<PendingDragGrid | null>(null);
   const [depth] = useState<'shell' | '1-level' | 'all'>('shell');
-  const [selectedModel, setSelectedModel] = useState(() => loadSelectedModel());
-  const [segments, setSegments] = useState<Segment[]>([]);
-  const [skills, setSkills] = useState<PlaygroundSkill[]>([]);
-  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
 
   const [startNumber, setStartNumber] = useState<number | null>(null);
   const [isFetchingMax, setIsFetchingMax] = useState(false);
 
   const isFromIteration = !!sourceFilename;
   const panelRef = useRef<HTMLDivElement>(null);
-  const inlineRefContainerRef = useRef<HTMLDivElement>(null);
-  const inlineRefHandle = useRef<InlineReferenceHandle | null>(null);
-  const previousIterationCountBeforeDragRef = useRef(iterationCount);
 
+  // All form state (model, count, segments, skills, impeccable) lives in the hook
   const {
+    selectedModel,
+    handleModelChange,
+    models,
+    isLoadingModels,
+    iterationCount,
+    setIterationCount,
+    previousIterationCountBeforeDragRef,
+    segments,
+    setSegments,
+    isLoadingSkills,
+    customInstructionsText,
+    skillPrompt,
     impeccableSubMenuOpen,
     setImpeccableSubMenuOpen,
     demoteState,
@@ -288,15 +110,11 @@ export default function IterateDialog({
     handleImpeccableCommandCleared,
     closeDemoteMenu,
     resetImpeccablePicker,
-  } = useImpeccableSkillPicker(skills);
+    inlineRefHandle,
+    inlineRefContainerRef,
+  } = useIterateDialogState(open);
 
-  const { models, isLoading: isLoadingModels } = useAvailableModels();
   const { getNode, setNodes, flowToScreenPosition, screenToFlowPosition } = useReactFlow();
-
-  const handleModelChange = useCallback((model: string) => {
-    setSelectedModel(model);
-    saveSelectedModel(model);
-  }, []);
 
   // Track the last ghost grid to avoid re-rendering when only cursor moves (drag preview)
   const lastGhostGridRef = useRef<{ rows: number; cols: number } | null>(null);
@@ -366,120 +184,7 @@ export default function IterateDialog({
     setOpen(false);
     setPendingDragGrid(null);
     resetImpeccablePicker();
-  }, [pendingDragGrid, removeGhostNodes, resetImpeccablePicker]);
-
-  // When the provider changes, auto-select the first enabled model if the
-  // current selection isn't valid for the new provider.
-  useEffect(() => {
-    if (models.length > 0 && !models.some(m => m.value === selectedModel)) {
-      handleModelChange(models[0].value);
-    }
-  }, [models, selectedModel, handleModelChange]);
-
-  // Load available skills when the dialog opens (once) and whenever skills change
-  const refetchSkills = useCallback(async () => {
-    setIsLoadingSkills(true);
-    try {
-      const response = await fetch('/playground/api/skills');
-      if (!response.ok) return;
-      const data = (await response.json()) as { skills?: PlaygroundSkill[] };
-      if (Array.isArray(data.skills)) {
-        setSkills(data.skills);
-      }
-    } catch {
-      // ignore – inline reference will just have no skill items
-    } finally {
-      setIsLoadingSkills(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!open || skills.length > 0) return;
-    refetchSkills();
-  }, [open, skills.length, refetchSkills]);
-
-  useEffect(() => {
-    const handler = () => {
-      refetchSkills();
-    };
-    window.addEventListener(SKILLS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(SKILLS_CHANGED_EVENT, handler);
-  }, [refetchSkills]);
-
-  const skillsById = useMemo(() => {
-    const map = new Map<string, PlaygroundSkill>();
-    for (const skill of skills) {
-      map.set(skill.id, skill);
-    }
-    return map;
-  }, [skills]);
-
-  const getDefaultSkillPrompt = useCallback(
-    (skillMap: Map<string, PlaygroundSkill>): string | undefined => {
-      if (skillMap.size === 0) return undefined;
-      const DEFAULT_SKILL_IDS = ['design-variations', 'frontend-design'] as const;
-      const parts: string[] = [];
-      for (const id of DEFAULT_SKILL_IDS) {
-        const skill = skillMap.get(id);
-        const sp = skill?.skillPath?.trim();
-        if (sp) parts.push(sp);
-      }
-      if (!parts.length) return undefined;
-      return parts.join('\n\n');
-    },
-    [],
-  );
-
-  // Derive freeform instructions + skill prompt from inline reference segments
-  const { customInstructionsText, skillPrompt } = useMemo(() => {
-    const hasSegments = !!segments && segments.length > 0;
-
-    const textParts: string[] = [];
-    const skillSections: string[] = [];
-
-    if (hasSegments) {
-      for (const segment of segments) {
-        if (segment.type === 'text') {
-          const trimmed = segment.value.trim();
-          if (trimmed) {
-            textParts.push(trimmed);
-          }
-        } else if (segment.type === 'reference') {
-          const impeccablePrompt = impeccablePromptFromSegment(
-            segment,
-            skillsById.get('impeccable')?.skillPath,
-          );
-          if (impeccablePrompt) {
-            skillSections.push(impeccablePrompt);
-          } else {
-            const skill = skillsById.get(segment.value);
-            const p = skill?.skillPath?.trim();
-            if (p) skillSections.push(p);
-          }
-        }
-      }
-    }
-
-    let customInstructionsText =
-      textParts.join('\n').trim() || undefined;
-
-    let skillPromptText =
-      skillSections.join('\n\n').trim() || undefined;
-
-    // When the inline reference area is empty (no text, no explicit skills),
-    // automatically apply the default design skills.
-    if (!hasSegments && !skillPromptText) {
-      skillPromptText = getDefaultSkillPrompt(skillsById);
-    }
-
-    // When the inline reference is completely empty, also add a default
-    // instruction line at the end of the prompt.
-    if (!hasSegments && !customInstructionsText) {
-      customInstructionsText = DEFAULT_EMPTY_ITERATION_INSTRUCTIONS;
-    }
-
-    return { customInstructionsText, skillPrompt: skillPromptText };
-  }, [segments, skillsById, getDefaultSkillPrompt]);
+  }, [pendingDragGrid, removeGhostNodes, resetImpeccablePicker, setIterationCount, previousIterationCountBeforeDragRef]);
 
   // Fetch max iteration number when panel opens
   useEffect(() => {
@@ -780,13 +485,9 @@ export default function IterateDialog({
   const canRun = !isGlobalGenerating && parentNodeId && (!isFromIteration || (startNumber !== null && !isFetchingMax));
 
   // ---------------------------------------------------------------------------
-  // Drag-to-iterate: ghost node management (continued)
+  // Drag-to-iterate: ghost node management
   // ---------------------------------------------------------------------------
 
-  // Compute grid dimensions based on the overlay extent: from the parent
-  // node's top-left corner to the current cursor position, both converted
-  // to flow-space. This ensures rows and columns appear at the same
-  // threshold — only when the cursor crosses a full cell boundary.
   const computeGridFromScreenDelta = useCallback(
     (delta: DragDelta, dragStart: { x: number; y: number } | null) => {
       const info = getParentCellSize();
@@ -870,6 +571,8 @@ export default function IterateDialog({
       computeGridFromScreenDelta,
       placeGhostForGrid,
       iterationCount,
+      previousIterationCountBeforeDragRef,
+      setIterationCount,
     ],
   );
 
@@ -897,7 +600,6 @@ export default function IterateDialog({
   });
 
   // Compute parent node's screen-space top-left for the selection overlay origin.
-  // Offset by a small padding so the overlay visually encompasses the original node.
   const overlayOrigin = useMemo(() => {
     if (!isDragging || !dragStartScreen) return null;
     const parentNode = getNode(parentNodeId);
