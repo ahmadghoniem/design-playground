@@ -33,7 +33,8 @@ export type Segment = TextSegment | ReferenceSegment
 export const ZERO_WIDTH_SPACE = "​"
 export const PILL_ATTR = "data-inline-ref"
 export const PILL_TRIGGER_ATTR = "data-inline-ref-trigger"
-export const PILL_VALUE_ATTR = "data-inline-ref-value"
+/** Internal-only: not part of the module's public surface. */
+const PILL_VALUE_ATTR = "data-inline-ref-value"
 export const PILL_LABEL_ATTR = "data-inline-ref-label"
 export const PILL_DATA_ATTR = "data-inline-ref-data"
 export const PILL_IMPECCABLE_CMD_ATTR = "data-impeccable-command"

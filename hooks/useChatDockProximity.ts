@@ -12,8 +12,6 @@ export interface UseChatDockProximityOptions {
    * cursor proximity. The proximity hook will not collapse it.
    */
   heldOpen: boolean;
-  /** Callback invoked when the bar should gain focus after expanding. */
-  onExpand?: () => void;
 }
 
 export interface UseChatDockProximityResult {
