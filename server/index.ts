@@ -20,7 +20,6 @@ import { bodyLimit } from 'hono/body-limit';
 
 import { designRoutes } from './routes/design';
 import { discoverRoutes } from './routes/discover';
-import { flowAdoptRoutes } from './routes/flow-adopt';
 import { generateRoutes } from './routes/generate';
 import { htmlPagesRoutes } from './routes/html-pages';
 import { imagesRoutes } from './routes/images';
@@ -43,7 +42,6 @@ export function createPlaygroundRouter(): Hono {
 
   router.route('/', designRoutes());
   router.route('/', discoverRoutes());
-  router.route('/', flowAdoptRoutes());
   router.route('/', generateRoutes());
   router.route('/', htmlPagesRoutes());
   router.route('/', imagesRoutes());

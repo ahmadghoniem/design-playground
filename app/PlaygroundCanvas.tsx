@@ -48,18 +48,6 @@ import IterationNode from '../nodes/IterationNode';
 import SkeletonIterationNode from '../nodes/SkeletonIterationNode';
 import DragGhostNode from '../nodes/DragGhostNode';
 import ImageNode from '../nodes/ImageNode';
-import StageNode, {
-  STAGE_NODE_DEFAULT_HEIGHT,
-  STAGE_NODE_FRAME_WIDTH,
-  STAGE_NODE_HEADER_HEIGHT,
-} from '../nodes/StageNode';
-import StageGroupNode from '../nodes/StageGroupNode';
-import { findFlowDescriptorForComponent } from '../lib/flows/registry';
-import { useFlowMocksStore } from '../stores/flow-mocks-store';
-import { MockDataPanel } from '../components/MockDataPanel';
-import { FlowSimulator } from '../components/FlowSimulator';
-import { FlowAdoptModal } from '../components/FlowAdoptModal';
-import type { StageNodeData } from '../lib/flows/types';
 import { hitTestStrokes } from '../lib/draw-hit-test';
 import TextNode from '../nodes/TextNode';
 import ShapeNode, { type ShapeKind } from '../nodes/ShapeNode';
@@ -106,7 +94,6 @@ import {
   ARRANGE_START_X,
   ARRANGE_START_Y,
   ARRANGE_HORIZONTAL_GAP,
-  STAGE_GROUP_PADDING,
   ARRANGE_BENTO_TILE_GAP_X,
   ARRANGE_BENTO_TILE_GAP_Y,
   ARRANGE_BENTO_CLUSTER_MAX_WIDTH,
@@ -152,8 +139,6 @@ import {
   CHAT_DEFAULT_DEPTH,
   ENABLE_FREEFORM_CHAT,
   canSubmitReferenceOnlyChat,
-  FLOW_DECOMPOSE_EVENT,
-  type FlowDecomposePayload,
   type StylingMode,
   type GenerationStartPayload,
   type GenerationCompletePayload,
@@ -186,8 +171,6 @@ const nodeTypes = {
   text: TextNode,
   shape: ShapeNode,
   frame: FrameNode,
-  stage: StageNode,
-  stageGroup: StageGroupNode,
 };
 
 /** Minimap dot color by node type — keeps the overview readable at a glance. */
@@ -199,8 +182,6 @@ const MINIMAP_NODE_COLORS: Record<string, string> = {
   text: '#d6d3d1',
   shape: '#fbbf24',
   frame: '#c4b5fd',
-  stage: '#94a3b8',
-  stageGroup: '#cbd5e1',
 };
 function getMinimapNodeColor(node: Node): string {
   return (node.type && MINIMAP_NODE_COLORS[node.type]) || '#d6d3d1';
@@ -5034,161 +5015,6 @@ export default function PlaygroundCanvas({
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Flow decompose: parent component → per-stage StageNodes + edges
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const handleDecompose = (e: Event) => {
-      const detail = (e as CustomEvent<FlowDecomposePayload>).detail;
-      if (!detail) return;
-      const descriptor = findFlowDescriptorForComponent(detail.componentId);
-      if (!descriptor) return;
-
-      const flowId = `flow_${detail.parentNodeId}_${descriptor.id}`;
-
-      const existing = useFlowMocksStore.getState().flows[flowId];
-      if (existing) {
-        toast.message('Already decomposed', {
-          description: 'This component has already been split into stages.',
-        });
-        return;
-      }
-
-      const parentNode = nodesRef.current.find((n) => n.id === detail.parentNodeId);
-      const parentWidth =
-        parentNode?.measured?.width ?? DEFAULT_COMPONENT_NODE_WIDTH;
-      const stageY = detail.anchor.y;
-      const startX = detail.anchor.x + parentWidth + ARRANGE_HORIZONTAL_GAP;
-      const stepX = STAGE_NODE_FRAME_WIDTH + ARRANGE_HORIZONTAL_GAP;
-
-      const stageNodeIds: Record<string, string> = {};
-      const newNodes: Node[] = [];
-      const newEdges: Edge[] = [];
-
-      const stageCount = descriptor.stages.length;
-      const clusterWidth =
-        stageCount > 0
-          ? stageCount * STAGE_NODE_FRAME_WIDTH + (stageCount - 1) * ARRANGE_HORIZONTAL_GAP
-          : 0;
-      const clusterHeight = STAGE_NODE_DEFAULT_HEIGHT + STAGE_NODE_HEADER_HEIGHT;
-      const groupNodeId = `stage_group_${flowId}`;
-      newNodes.push({
-        id: groupNodeId,
-        type: 'stageGroup',
-        position: {
-          x: startX - STAGE_GROUP_PADDING,
-          y: stageY - STAGE_GROUP_PADDING,
-        },
-        data: { flowId } as unknown as Record<string, unknown>,
-        style: {
-          width: clusterWidth + STAGE_GROUP_PADDING * 2,
-          height: clusterHeight + STAGE_GROUP_PADDING * 2,
-        },
-        draggable: false,
-        selectable: false,
-        focusable: false,
-        zIndex: -1,
-      });
-
-      descriptor.stages.forEach((stage, idx) => {
-        const stageNodeId = `stage_${flowId}_${stage.id}`;
-        stageNodeIds[stage.id] = stageNodeId;
-        const data: StageNodeData = {
-          flowId,
-          descriptorId: descriptor.id,
-          stageId: stage.id,
-          componentId: stage.componentId,
-          label: stage.label,
-          synthetic: stage.synthetic,
-        };
-        newNodes.push({
-          id: stageNodeId,
-          type: 'stage',
-          position: {
-            x: startX + idx * stepX,
-            y: stageY,
-          },
-          data: data as unknown as Record<string, unknown>,
-        });
-      });
-
-      const firstStageId = stageNodeIds[descriptor.stages[0].id];
-      if (firstStageId) {
-        newEdges.push({
-          id: `edge_${detail.parentNodeId}_${firstStageId}`,
-          source: detail.parentNodeId,
-          target: firstStageId,
-          type: 'smoothstep',
-          animated: false,
-          style: { stroke: '#A855F7', strokeWidth: 1.5 },
-        });
-      }
-
-      descriptor.defaultEdges.forEach(({ from, to }) => {
-        const source = stageNodeIds[from];
-        const target = stageNodeIds[to];
-        if (!source || !target) return;
-        newEdges.push({
-          id: `edge_${source}_${target}`,
-          source,
-          target,
-          type: 'smoothstep',
-          animated: false,
-          style: { stroke: '#A855F7', strokeWidth: 1.5 },
-        });
-      });
-
-      setNodes((nds) => [...nds, ...newNodes]);
-      setEdges((eds) => [...eds, ...newEdges]);
-
-      useFlowMocksStore
-        .getState()
-        .addFlow(flowId, descriptor.id, stageNodeIds, descriptor.seedMocks);
-
-      toast.success('Decomposed into stages', {
-        description: `${descriptor.stages.length} stages added to canvas.`,
-      });
-
-      const fitNodeIds = [detail.parentNodeId, ...newNodes.map((n) => n.id)];
-      setTimeout(() => {
-        fitView({
-          nodes: fitNodeIds.map((id) => ({ id })),
-          duration: 400,
-          padding: 0.15,
-        });
-      }, ARRANGE_FITVIEW_DELAY);
-    };
-
-    window.addEventListener(FLOW_DECOMPOSE_EVENT, handleDecompose as EventListener);
-    return () => {
-      window.removeEventListener(FLOW_DECOMPOSE_EVENT, handleDecompose as EventListener);
-    };
-  }, [setNodes, setEdges, fitView]);
-
-  // ---------------------------------------------------------------------------
-  // Stage group cleanup: drop the dotted backdrop when its stages are all gone
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const liveFlowIds = new Set<string>();
-    for (const n of nodes) {
-      if (n.type === 'stage') {
-        const flowId = (n.data as { flowId?: string } | undefined)?.flowId;
-        if (flowId) liveFlowIds.add(flowId);
-      }
-    }
-    const orphanedGroupIds = nodes
-      .filter((n) => {
-        if (n.type !== 'stageGroup') return false;
-        const flowId = (n.data as { flowId?: string } | undefined)?.flowId;
-        return !flowId || !liveFlowIds.has(flowId);
-      })
-      .map((n) => n.id);
-    if (orphanedGroupIds.length > 0) {
-      const orphanSet = new Set(orphanedGroupIds);
-      setNodes((nds) => nds.filter((n) => !orphanSet.has(n.id)));
-    }
-  }, [nodes, setNodes]);
-
-  // ---------------------------------------------------------------------------
   // Compute hasChildren + isCollapsed for iteration nodes and filter visible
   // ---------------------------------------------------------------------------
   const { visibleNodes, visibleEdges } = useMemo(() => {
@@ -5833,11 +5659,11 @@ export default function PlaygroundCanvas({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Flow-mode UI: mock data editor + simulator modal + adopt diff modal */}
-      <MockDataPanel />
-      <FlowSimulator />
-      <FlowAdoptModal />
+
     </div>
     </TooltipProvider>
+  );
+}
+ </TooltipProvider>
   );
 }

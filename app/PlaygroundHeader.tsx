@@ -5,15 +5,8 @@ import { createPortal } from 'react-dom';
 import { Eraser, RefreshCw, X, SlidersVertical, Keyboard, ChevronDown, Copy, Wrench, Sun, Moon, Monitor } from 'lucide-react';
 import { useDevModeStore } from '../stores/dev-mode-store';
 import { usePreviewColorSchemeStore } from '../stores/preview-color-scheme-store';
-import { useFlowMocksStore } from '../stores/flow-mocks-store';
-import {
-  FLOW_PLAY_EVENT,
-  FLOW_COMBINE_EVENT,
-  FLOW_ADOPT_EVENT,
-  type FlowPlayPayload,
-  type FlowAdoptPayload,
-} from '../lib/constants';
-import { Play, Combine, Upload } from 'lucide-react';
+
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { getModelIconConfig } from '../lib/model-icons';
 import { getProvider, DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
@@ -122,19 +115,6 @@ export default function PlaygroundHeader({
   const toggleDevMode = useDevModeStore((s) => s.toggle);
   const previewScheme = usePreviewColorSchemeStore((s) => s.scheme);
   const cyclePreviewScheme = usePreviewColorSchemeStore((s) => s.cycle);
-  const flows = useFlowMocksStore((s) => s.flows);
-  const flowIds = Object.keys(flows);
-  const activeFlowId = flowIds[flowIds.length - 1] ?? null;
-  const hasCanonicalChoices =
-    !!activeFlowId &&
-    Object.keys(flows[activeFlowId]?.canonicalIterationByStage ?? {}).length > 0;
-
-  const fireFlowEvent = useCallback(
-    (name: string, payload: FlowPlayPayload | FlowAdoptPayload) => {
-      window.dispatchEvent(new CustomEvent(name, { detail: payload }));
-    },
-    [],
-  );
   const [presenceBubbles, setPresenceBubbles] = useState<PresenceBubble[]>([]);
   const [projectContext, setProjectContext] = useState<ProjectContext>({
     projectName: 'project',
@@ -521,76 +501,6 @@ export default function PlaygroundHeader({
               <p>Model settings</p>
             </TooltipContent>
           </Tooltip>
-
-          {activeFlowId && (
-            <>
-              <div className="w-px h-5 bg-stone-200 mx-1" />
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() =>
-                      fireFlowEvent(FLOW_PLAY_EVENT, { flowId: activeFlowId })
-                    }
-                    className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-100/60 transition-colors"
-                    aria-label="Play flow"
-                  >
-                    <Play className="w-[18px] h-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Play flow with mock data</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() =>
-                      fireFlowEvent(FLOW_COMBINE_EVENT, {
-                        flowId: activeFlowId,
-                        useCanonical: true,
-                      })
-                    }
-                    disabled={!hasCanonicalChoices}
-                    className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-100/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Combine canonical variants"
-                  >
-                    <Combine className="w-[18px] h-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>
-                    {hasCanonicalChoices
-                      ? 'Combine canonical variants into a stitched preview'
-                      : 'Pick a canonical variant per stage first'}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() =>
-                      fireFlowEvent(FLOW_ADOPT_EVENT, { flowId: activeFlowId })
-                    }
-                    disabled={!hasCanonicalChoices}
-                    className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-100/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Adopt to /signup"
-                  >
-                    <Upload className="w-[18px] h-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>
-                    {hasCanonicalChoices
-                      ? 'Generate a diff against the original source'
-                      : 'Pick a canonical variant per stage first'}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </>
-          )}
 
           {devMode && (
             <>
