@@ -105,7 +105,11 @@ Landed as `12d8eca refactor(server): extract lockfile/watcher/timer/jsonl from g
 
 ---
 
-## Batch I — Canvas god-module (10)
+## Batch I — Canvas god-module (10) 🟡 PARTIAL (3 of ~9 seams)
+
+Three verified seams landed (Sonnet sub-agent, one commit each; 5664→5482 LOC): `8cfdfd7` extract `CanvasPresenceLayer` → `components/canvas/CanvasPresenceLayer.tsx`; `72f2042` finish `lib/canvas-persistence` (`getCanvasStorageKey`, dedupe the storage-key ternary); `f639bf4` extract the pure scan helpers (`isInExpectedBatch`, `getSkeletonIdForFileIteration`, `resolveIterationPosition`, `countBatchIterationNodes`) → `lib/iteration-scan.ts`. The agent **correctly stopped** at the entangled stateful seams — paste (`canvas-paste`), chat-submit, drag-to-iterate consolidation, and generation-lifecycle all reach into parent refs (`nodeIdCounterRef`, `getNodeId()`, `setNodes`/`screenToFlowPosition` closures); per the brief's "if a seam needs to mutate a parent ref, the seam is wrong — skip it", they were left for a future pass that first untangles the shared-ref wiring. **Deferred React Flow modernizations** (kept out of the parity refactor): `getNodesBounds()` for the manual frame-bounds `Math.min/max`, and `updateNode`/`updateNodeData` for `setNodes(map)` — see [[reactflow-port-pattern]].
+
+**Post-refactor dead-code audit (batches E–H, 4 parallel agents):** Batch G clean; fixes committed — `4589146 chore(server): remove dead stat/cancellation state` (dead `readNewFileLineTotals`/`combineLineStat` + 4 write-only vars; watcher `onIterationFile` made optional) and `1541818 chore(ui): remove dead code` (4 zero-consumer legacy dropdowns from iterate-dialog/parts.tsx, the never-wired `useChatDockProximity.onExpand`, de-export `PILL_VALUE_ATTR`). **Known issue left as-is (owner decision):** `hooks/useOpenIn.ts` imports `../assets/cursor-icon.svg` which is missing since `055acbd` — `'cursor'` is the default Open-in target, so it needs a real asset/decision, flagged not fixed.
 
 **Task:** 10 (deepen `PlaygroundCanvas.tsx`). **Solo, last, largest.**
 **Position:** **last.** It depends on Batch D (09) and benefits from B (06 moved its path) and F (12's payload). Doing it last means the most surrounding code is already settled.
