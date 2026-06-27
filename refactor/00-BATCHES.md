@@ -46,7 +46,10 @@ Landed as `0caf51f refactor(stores): move zustand stores out of lib into stores/
 
 ---
 
-## Batch D — Excise the signup-Flow feature (09)
+## Batch D — Excise the signup-Flow feature (09) ✅ DONE
+
+Landed as `4ffffbe feat(canvas)!: remove signup-flow decompose feature`. Qwen 3.7 Max did the deletes + the easy integration points (constants, server, header) but **stopped before the hard surgical cleanups** (the decompose handler in PlaygroundCanvas, the Decompose chip in ComponentNode, the canonical-stage UI in IterationNode), leaving three files importing deleted modules. A Sonnet sub-agent finished those three files, fixed a garbled tail Qwen left in ComponentNode, and auto-committed; review confirmed both gates zero, React Flow untouched, no orphaned locals/imports.
+
 
 **Task:** 09 (remove the whole signup-Flow demo). **Solo** and **high-risk**.
 **Position:** **before all deepening batches.** It deletes integration points inside `PlaygroundCanvas`, `IterationNode`, `PlaygroundHeader`, `ComponentNode`, `constants` — so doing it first means Batches E–H deepen *less* code, and tasks 10/15/17 (which list 09 as a pre-req) are unblocked.
