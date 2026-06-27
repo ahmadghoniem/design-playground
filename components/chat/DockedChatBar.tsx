@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   InlineReference,
@@ -37,6 +37,9 @@ import {
   IterationCountDragger,
   SendArrowIcon,
 } from '../../ui/chat-bits';
+import { ImageRefIcon, NodeRefIcon } from './chat-icons';
+import { useChatAttachments } from '../../hooks/useChatAttachments';
+import { useChatDockProximity } from '../../hooks/useChatDockProximity';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -54,39 +57,12 @@ interface DockedChatBarProps {
 }
 
 // ---------------------------------------------------------------------------
-// Small node-reference glyphs for the chat's reference chips
-// ---------------------------------------------------------------------------
-
-function ImageRefIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-      <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1" />
-      <path d="M2 11l3-3 2 2 3-3 4 4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function NodeRefIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-      <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M5 6h6M5 8h4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // DockedChatBar — the always-on, bottom-center chat composer (the only chat
 // surface). It is docked at the bottom-center of the screen, collapsed to a
 // slim pill when idle and expanded on focus. It drives the submit→generate
 // pipeline (ChatSubmitPayload → onSubmit): raw freeform generation with nothing
 // selected, or Edit/Explore against the current canvas selection.
 // ---------------------------------------------------------------------------
-
-// Cursor-proximity thresholds (px) for the minimise/expand hysteresis.
-const NEAR_PX = 44;
-const FAR_PX = 120;
 
 export default function DockedChatBar({
   isGenerating,
@@ -98,7 +74,6 @@ export default function DockedChatBar({
   onRemoveNode,
   onClearNodes,
 }: DockedChatBarProps) {
-  const [expanded, setExpanded] = useState(false);
   const [segments, setSegments] = useState<Segment[]>([]);
   const skills = useSkills();
   const [chatMode, setChatMode] = useState<'edit' | 'explore'>('edit');
@@ -107,14 +82,6 @@ export default function DockedChatBar({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inlineRefContainerRef = useRef<HTMLDivElement | null>(null);
   const inlineRefHandle = useRef<InlineReferenceHandle | null>(null);
-  // Proximity state-machine refs (read by the global mousemove listener so it
-  // never closes over stale state or re-subscribes).
-  const expandedRef = useRef(false);
-  const dismissedRef = useRef(false); // Esc suppresses re-expand until cursor leaves
-  const dwellTimerRef = useRef<number | null>(null);
-  const rectRef = useRef<DOMRect | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
   const { models, isLoading: isLoadingModels } = useAvailableModels();
@@ -148,7 +115,21 @@ export default function DockedChatBar({
   }, []);
 
   // -------------------------------------------------------------------------
-  // Derived selection / mode state
+  // Attachment state (edit target, reference nodes, selection flags)
+  // -------------------------------------------------------------------------
+
+  const {
+    editTarget,
+    referenceNodes,
+    hasSelection,
+    canEditOrExplore,
+    hasAnyPill,
+    buildElementSelectionsPayload,
+    buildReferenceNodesPayload,
+  } = useChatAttachments({ selectedElements, selectedNodes });
+
+  // -------------------------------------------------------------------------
+  // Derived content / mode state
   // -------------------------------------------------------------------------
 
   const hasContent = useMemo(
@@ -159,36 +140,14 @@ export default function DockedChatBar({
     [segments],
   );
 
-  // The edit/explore target is the FIRST selected node that is a valid target
-  // (a React/HTML/JSX component or iteration — not an embed/image/text). The
-  // rest of the selection becomes reference context.
-  const editTarget = useMemo<SelectedNodeContext | null>(() => {
-    const candidates = (selectedNodes ?? []).filter(
-      (n) => (n.type === 'component' || n.type === 'iteration') && n.renderMode !== 'embed',
-    );
-    return candidates[0] ?? null;
-  }, [selectedNodes]);
-
-  const referenceNodes = useMemo(
-    () => (selectedNodes ?? []).filter((n) => n.nodeId !== editTarget?.nodeId),
-    [selectedNodes, editTarget],
-  );
-
-  const hasSelection =
-    !!editTarget || (selectedElements?.length ?? 0) > 0 || (selectedNodes?.length ?? 0) > 0;
-
   // Visible-expanded state: proximity drives `expanded`; typing or a selection
   // also keeps the bar open. Render uses this so it never minimises mid-use.
-  const shouldExpand = expanded || hasContent || hasSelection;
+  const heldOpen = hasContent || hasSelection;
 
-  // Edit/Explore only make sense against an editable target or an element
-  // selection; a selection of only embed/image/text nodes runs as raw (with the
-  // nodes attached as references), so the toggle is hidden in that case.
-  const canEditOrExplore = !!editTarget || (selectedElements?.length ?? 0) > 0;
   const isFreeformMode = !hasSelection && ENABLE_FREEFORM_CHAT;
   const effectiveChatMode: 'edit' | 'explore' | 'raw' =
     canEditOrExplore ? chatMode : (isFreeformMode ? 'raw' : 'explore');
-  const showModeToggle = shouldExpand && canEditOrExplore;
+  const showModeToggle = canEditOrExplore;
   const canReferenceOnlySubmit =
     !editTarget &&
     referenceNodes.length > 0 &&
@@ -199,111 +158,27 @@ export default function DockedChatBar({
       canEditOrExplore ||
       (ENABLE_FREEFORM_CHAT && !editTarget && !canEditOrExplore) ||
       canReferenceOnlySubmit);
-  const hasAnyPill =
-    !!editTarget || (selectedElements?.length ?? 0) > 0 || referenceNodes.length > 0;
-  const showPillsRow = shouldExpand && hasAnyPill;
+  const showPillsRow = hasAnyPill;
 
   // -------------------------------------------------------------------------
-  // Minimise (orange bubble) ⇄ expand (composer)
-  //
-  // Resting state is a small orange bubble. The bar expands when the cursor
-  // comes near it, or while it's "held" open (focused / has text / has a canvas
-  // selection), and minimises again once the cursor leaves and none of those
-  // hold.
+  // Proximity (mouse only — desktop)
   // -------------------------------------------------------------------------
 
-  const clearDwell = useCallback(() => {
-    if (dwellTimerRef.current != null) {
-      clearTimeout(dwellTimerRef.current);
-      dwellTimerRef.current = null;
-    }
-  }, []);
+  const { expanded, setExpanded, dismissedRef, clearDwell } = useChatDockProximity({
+    rootRef,
+    heldOpen,
+  });
+
+  const shouldExpandFinal = expanded || heldOpen;
+  const showModeToggleFinal = shouldExpandFinal && showModeToggle;
+  const showPillsRowFinal = shouldExpandFinal && showPillsRow;
 
   const openAndFocus = useCallback(() => {
     dismissedRef.current = false;
     clearDwell();
     setExpanded(true);
     requestAnimationFrame(() => getInputEl()?.focus());
-  }, [clearDwell, getInputEl]);
-
-  // Mirror `expanded` into a ref for the closure-captured mousemove listener.
-  useEffect(() => {
-    expandedRef.current = expanded;
-  }, [expanded]);
-
-  // Cache the bar's rect so the hot mousemove path doesn't force a layout read
-  // every move. It only changes when the bar resizes (expand/collapse), hides,
-  // or the window resizes.
-  useEffect(() => {
-    const update = () => {
-      rectRef.current = rootRef.current?.getBoundingClientRect() ?? null;
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, [shouldExpand]);
-
-  // Proximity (mouse only — desktop). rAF-coalesced; reads the cached rect.
-  // Expanding requires a brief dwell so brushing past the bottom doesn't pop it
-  // open; collapsing past FAR is immediate. After an explicit Esc dismiss it
-  // stays minimised until the cursor leaves the halo, then re-arms. Text /
-  // selection keep it open independently via `shouldExpand`.
-  useEffect(() => {
-    const process = () => {
-      rafRef.current = null;
-      const pt = lastPointRef.current;
-      const rect = rectRef.current;
-      if (!pt || !rect) {
-        clearDwell();
-        return;
-      }
-      const dx = Math.max(rect.left - pt.x, 0, pt.x - rect.right);
-      const dy = Math.max(rect.top - pt.y, 0, pt.y - rect.bottom);
-      const dist = Math.hypot(dx, dy);
-
-      if (rootRef.current?.contains(document.activeElement)) {
-        dismissedRef.current = false;
-        clearDwell();
-        setExpanded(true);
-        return;
-      }
-
-      if (expandedRef.current) {
-        if (dist > FAR_PX) {
-          clearDwell();
-          setExpanded(false);
-        }
-        return;
-      }
-
-      // Minimised.
-      if (dismissedRef.current) {
-        if (dist > FAR_PX) dismissedRef.current = false;
-        clearDwell();
-        return;
-      }
-      if (dist <= NEAR_PX) {
-        if (dwellTimerRef.current == null) {
-          dwellTimerRef.current = window.setTimeout(() => {
-            dwellTimerRef.current = null;
-            if (!dismissedRef.current) setExpanded(true);
-          }, 150);
-        }
-      } else {
-        clearDwell();
-      }
-    };
-    const onMove = (e: MouseEvent) => {
-      lastPointRef.current = { x: e.clientX, y: e.clientY };
-      if (rafRef.current == null) rafRef.current = requestAnimationFrame(process);
-    };
-    window.addEventListener('mousemove', onMove);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      clearDwell();
-    };
-  }, [clearDwell]);
+  }, [clearDwell, getInputEl, dismissedRef, setExpanded]);
 
   const pickerOpen = useCallback(
     () =>
@@ -391,33 +266,8 @@ export default function DockedChatBar({
       htmlIterationFolder: editTarget?.htmlIterationFolder,
       jsxFile: editTarget?.jsxFile,
       embedUrl: editTarget?.embedUrl,
-      elementSelections:
-        selectedElements && selectedElements.length > 0
-          ? selectedElements.map((sel) => ({
-              tagName: sel.context.tagName,
-              displayName: sel.context.displayName,
-              textContent: sel.context.textContent,
-              cssSelector: sel.context.cssSelector,
-              htmlSource: sel.context.htmlSource,
-              ancestorComponents: sel.context.ancestorComponents,
-              nodeId: sel.nodeId,
-              componentName: sel.componentName,
-            }))
-          : undefined,
-      referenceNodes:
-        referenceNodes.length > 0
-          ? referenceNodes.map((node) => ({
-              nodeId: node.nodeId,
-              componentId: node.componentId,
-              componentName: node.componentName,
-              type: node.type,
-              sourceFilename: node.sourceFilename,
-              ...(node.renderMode === 'embed' && node.embedUrl ? { embedUrl: node.embedUrl } : {}),
-              ...(node.type === 'image'
-                ? { imagePath: node.imagePath, imageUrl: node.imageUrl }
-                : {}),
-            }))
-          : undefined,
+      elementSelections: buildElementSelectionsPayload(),
+      referenceNodes: buildReferenceNodesPayload(),
     };
 
     // Clear input + blur; the proximity/held state governs whether the bar
@@ -440,9 +290,10 @@ export default function DockedChatBar({
     model,
     editTarget,
     referenceNodes,
-    selectedElements,
     iterationCount,
     computeCanvasPosition,
+    buildElementSelectionsPayload,
+    buildReferenceNodesPayload,
     getInputEl,
     onClearElements,
     onClearNodes,
@@ -497,7 +348,7 @@ export default function DockedChatBar({
         return;
       }
     },
-    [pickerOpen, getInputEl, cycleModel, handleSubmit, clearDwell],
+    [pickerOpen, getInputEl, cycleModel, handleSubmit, clearDwell, dismissedRef, setExpanded],
   );
 
   // -------------------------------------------------------------------------
@@ -559,7 +410,7 @@ export default function DockedChatBar({
       className="fixed bottom-6 left-1/2 z-[9998] flex -translate-x-1/2 flex-col items-center"
       style={{ pointerEvents: 'none' }}
     >
-      {!shouldExpand ? (
+      {!shouldExpandFinal ? (
         <button
           type="button"
           aria-label="Open chat"
@@ -573,7 +424,7 @@ export default function DockedChatBar({
         style={{ width: 'min(520px, calc(100vw - 32px))', pointerEvents: 'auto' }}
       >
         {/* Floating model bubble — top-left */}
-        {shouldExpand && (
+        {shouldExpandFinal && (
           <div
             className="absolute left-1.5 flex items-center gap-1.5"
             style={{ bottom: 'calc(100% + 10px)' }}
@@ -603,7 +454,7 @@ export default function DockedChatBar({
         )}
 
         {/* Floating Edit / Explore cluster — top-right, only with a selection */}
-        {showModeToggle && (
+        {showModeToggleFinal && (
           <div
             className="absolute right-1.5 inline-flex items-center gap-0.5 rounded-full border border-stone-200/70 bg-white/95 px-0.5 py-0.5 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] backdrop-blur"
             style={{ bottom: 'calc(100% + 10px)' }}
@@ -652,7 +503,7 @@ export default function DockedChatBar({
         <div
           className="docked-chat-pill"
           data-generating={isGenerating || undefined}
-          style={{ borderRadius: showPillsRow ? 22 : 9999 }}
+          style={{ borderRadius: showPillsRowFinal ? 22 : 9999 }}
         >
           {isGenerating && <span className="docked-chat-pill__glow" aria-hidden />}
 
@@ -670,7 +521,7 @@ export default function DockedChatBar({
             }}
           >
             {/* Selection pills row */}
-            {showPillsRow && (
+            {showPillsRowFinal && (
               <div className="flex flex-wrap items-center gap-1 px-3.5 pt-2.5">
                 {/* Target chip (only when no element selection) */}
                 {editTarget && (!selectedElements || selectedElements.length === 0) && (
