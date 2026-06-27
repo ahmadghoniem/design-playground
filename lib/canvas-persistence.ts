@@ -46,6 +46,15 @@ export interface CanvasState {
   canvasDrawings?: DrawStroke[];
 }
 
+/**
+ * Scope canvas persistence to a project. localStorage is keyed by origin
+ * (http://localhost:<port>), so without this two projects that reuse a port would
+ * read back each other's frames. Falls back to the unscoped key when no id is given.
+ */
+export function getCanvasStorageKey(projectId?: string): string {
+  return projectId ? `${STORAGE_KEY}:${projectId}` : STORAGE_KEY;
+}
+
 /** Map an iteration node to its dedup key (html path, jsx file, or react filename). */
 export function getIterationKeyFromNode(n: Node): string | null {
   if (n.type !== 'iteration') return null;

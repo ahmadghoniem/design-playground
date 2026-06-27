@@ -30,7 +30,7 @@ import {
 import { getProviderFields } from '../lib/generation-body';
 
 import { DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
-import { loadCanvasState, saveCanvasState, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
+import { loadCanvasState, saveCanvasState, getCanvasStorageKey, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
 import { useCanvasFlow } from '../lib/canvas-flow';
 import { resolveAgentModel } from '../lib/resolve-agent-model';
 import type { ProviderId } from '../lib/providers/types';
@@ -85,7 +85,6 @@ import {
   DRAG_ITERATE_EVENT,
   DRAG_ITERATE_UNDO_DURATION_MS,
   DRAG_ITERATE_TOAST_DURATION_MS,
-  STORAGE_KEY,
 
   POLL_INTERVAL,
   POLL_DURATION,
@@ -313,10 +312,7 @@ export default function PlaygroundCanvas({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const sidebarOpenedByButtonHoverRef = useRef(false);
-  // Scope canvas persistence to this project. localStorage is keyed by origin
-  // (http://localhost:<port>), so without this two projects that reuse a port would
-  // read back each other's frames. Falls back to the unscoped key when no id is given.
-  const storageKey = projectId ? `${STORAGE_KEY}:${projectId}` : STORAGE_KEY;
+  const storageKey = getCanvasStorageKey(projectId);
   const initialState = loadCanvasState(storageKey);
   const initialKnownIterations = initialState?.knownIterations
     ? pruneKnownIterations(initialState.knownIterations, initialState.nodes || [])
