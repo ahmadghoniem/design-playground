@@ -30,11 +30,12 @@ import {
 } from '../ui/alert-dialog';
 import { getProviderFields } from '../lib/generation-body';
 
-import { getProvider, DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
+import { DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
 import { loadCanvasState, saveCanvasState, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
 import { useCanvasFlow } from '../lib/canvas-flow';
 import { resolveAgentModel } from '../lib/resolve-agent-model';
 import { getModelIconConfig } from '../lib/model-icons';
+import { resolveBubbleDisplayName as resolveCanvasBubbleDisplayName } from '../lib/presence-display-name';
 import type { ProviderId } from '../lib/providers/types';
 import PlaygroundCanvasDrawLayer from '../components/canvas/PlaygroundCanvasDrawLayer';
 import { usePlaygroundDrawStore } from '../stores/playground-draw-store';
@@ -296,12 +297,6 @@ interface CanvasPresenceBubble {
   nodeOffset?: { x: number; y: number } | null;
   type?: 'iterate' | 'edit' | 'adopt';
   agentPreviewText?: string;
-}
-
-function resolveCanvasBubbleDisplayName(model: string, provider: ProviderId): string {
-  const config = getProvider(provider);
-  const modelLabel = model && model !== 'auto' ? model : 'default';
-  return `${config.displayName} (${modelLabel})`;
 }
 
 /**
