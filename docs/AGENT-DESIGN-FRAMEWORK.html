@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Teaching Agents Product Design — Vercel's framework vs. design-playground</title>
+<style>
+  :root {
+    --ink: #1a1d24;
+    --ink-soft: #4a4f5c;
+    --ink-faint: #767c8a;
+    --line: #e6e3dc;
+    --line-soft: #efece5;
+    --paper: #fbfaf7;
+    --card: #ffffff;
+    --accent: #3b54d6;
+    --accent-soft: #eef0fd;
+    --gloss: #0d7a5f;
+    --gloss-bg: #effaf4;
+    --gloss-line: #cdeede;
+    --warn: #b4541a;
+    --warn-bg: #fdf3ec;
+    --code-bg: #f4f2ec;
+    --good: #1f7a4d;
+    --bad: #b23b3b;
+    --partial: #b07d12;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ---- masthead ---- */
+  header.masthead {
+    padding: 64px 0 36px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .eyebrow {
+    font-size: 12.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 650;
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin: 0 0 18px;
+    font-weight: 720;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 62ch;
+    text-wrap: pretty;
+  }
+  .standfirst a { color: var(--accent); }
+
+  /* ---- the plain-language key ---- */
+  .key {
+    margin: 30px 0 8px;
+    background: var(--gloss-bg);
+    border: 1px solid var(--gloss-line);
+    border-radius: 14px;
+    padding: 20px 22px 8px;
+  }
+  .key h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--gloss); margin: 0 0 4px; border: 0; padding: 0;
+  }
+  .key p.sub { margin: 0 0 14px; font-size: 14.5px; color: var(--ink-soft); }
+  .key dl { margin: 0; display: grid; grid-template-columns: 1fr; gap: 2px; }
+  .key dt {
+    font-weight: 660; color: var(--ink); margin-top: 12px; font-size: 15.5px;
+  }
+  .key dd { margin: 2px 0 0; color: var(--ink-soft); font-size: 15px; }
+
+  /* ---- structure ---- */
+  section { padding: 14px 0; }
+  h2 {
+    font-size: 24px; letter-spacing: -0.01em; font-weight: 700;
+    margin: 44px 0 6px; padding-top: 22px; border-top: 1px solid var(--line-soft);
+    text-wrap: balance;
+  }
+  h2 .num {
+    display: inline-block; min-width: 1.6em; color: var(--accent);
+    font-variant-numeric: tabular-nums; font-weight: 700;
+  }
+  h2.no-rule { border-top: 0; padding-top: 0; }
+  h3 { font-size: 18.5px; font-weight: 680; margin: 30px 0 6px; letter-spacing: -0.005em; }
+  p { margin: 12px 0; max-width: 70ch; }
+  strong { font-weight: 670; color: var(--ink); }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--code-bg);
+    padding: 1.5px 5px;
+    border-radius: 5px;
+    color: #2c3550;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 18px 0;
+  }
+  pre code { background: none; padding: 0; color: #333a4d; }
+
+  /* ---- inline plain-language gloss ---- */
+  .gloss {
+    display: inline;
+    color: var(--gloss);
+    background: var(--gloss-bg);
+    border-bottom: 1px solid var(--gloss-line);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 0.92em;
+    font-style: italic;
+  }
+  .gloss::before { content: "↳ "; opacity: 0.6; font-style: normal; }
+
+  /* ---- callouts ---- */
+  .callout {
+    border-radius: 14px; padding: 20px 22px; margin: 22px 0;
+    border: 1px solid var(--line);
+  }
+  .callout .label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
+    font-weight: 660; margin: 0 0 8px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.reframe { background: var(--accent-soft); border-color: #d4d9f7; }
+  .callout.reframe .label { color: var(--accent); }
+  .callout.reframe .big {
+    font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--ink);
+    letter-spacing: -0.01em; margin: 0;
+  }
+  .callout.warn { background: var(--warn-bg); border-color: #f1ddca; }
+  .callout.warn .label { color: var(--warn); }
+  .callout.gap { background: var(--card); border-left: 4px solid var(--accent); }
+  .callout.gap .steal {
+    margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line);
+    font-size: 15.5px;
+  }
+  .callout.gap .steal b { color: var(--accent); }
+
+  /* ---- tables ---- */
+  .table-scroll { overflow-x: auto; margin: 20px 0; border-radius: 12px; border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; background: var(--card); }
+  th, td { text-align: left; padding: 11px 14px; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+  th { background: #f6f4ee; font-weight: 660; font-size: 12.5px; letter-spacing: 0.02em; color: var(--ink-soft); text-transform: uppercase; }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: 0.84em; }
+  .yes { color: var(--good); font-weight: 640; }
+  .no  { color: var(--bad);  font-weight: 640; }
+  .mid { color: var(--partial); font-weight: 640; }
+
+  ul, ol { max-width: 70ch; padding-left: 22px; }
+  li { margin: 7px 0; }
+  li::marker { color: var(--ink-faint); }
+
+  .source { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink-faint); }
+  .source a { color: var(--ink-faint); }
+
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 18px 80px; }
+    header.masthead { padding: 40px 0 28px; }
+  }
+
+  /* ============================================================
+     PRINT / PDF — one section per page
+     ============================================================ */
+  @page {
+    size: A4 portrait;
+    margin: 14mm 15mm;
+  }
+  @media print {
+    :root { /* keep the palette but flatten a touch for ink */
+      --paper: #ffffff;
+    }
+    html, body {
+      background: #ffffff;
+      font-size: 10.5pt;
+      line-height: 1.5;
+    }
+    /* force backgrounds/colours to render in the PDF */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .wrap { max-width: none; margin: 0; padding: 0; }
+
+    /* page 1 = masthead + plain-language key */
+    header.masthead { padding: 0 0 18px; }
+    .key { margin: 18px 0 0; break-inside: avoid; }
+
+    /* every numbered section starts a fresh page */
+    section { break-before: page; padding: 0; }
+    /* section 0 keeps its own first content page right after the key */
+
+    h2 {
+      margin: 0 0 4px; padding-top: 0; border-top: 0;
+      font-size: 17pt; break-after: avoid;
+    }
+    h2.no-rule { margin-top: 0; }
+    h3 { margin: 14px 0 4px; font-size: 12pt; break-after: avoid; }
+    p { margin: 7px 0; max-width: none; }
+    ul, ol { max-width: none; }
+
+    /* never split these awkwardly across a page boundary */
+    .callout, .table-scroll, table, pre, tr, img, li { break-inside: avoid; }
+    .table-scroll { overflow: visible; }
+    table { font-size: 9pt; }
+    th, td { padding: 6px 9px; }
+    pre { font-size: 8.5pt; padding: 10px 12px; }
+
+    /* tighten the big callouts so a section fits its page */
+    .callout { padding: 12px 14px; margin: 12px 0; }
+    .callout.reframe .big { font-size: 14pt; }
+    .key dt { margin-top: 7px; font-size: 10.5pt; }
+    .key dd { font-size: 10pt; }
+
+    a { color: inherit; text-decoration: none; }
+    .standfirst a, .source a { color: inherit; }
+    .source { break-before: page; margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Reading doc · Vercel framework ↔ this repo</p>
+    <h1>Teaching agents product design: Vercel's method vs. our&nbsp;design-playground</h1>
+    <p class="standfirst">
+      A plain-language map of Vercel's
+      <a href="https://vercel.com/blog/teaching-agents-product-design-at-vercel">"Teaching agents product design"</a>
+      onto this codebase — what it is, how it differs from how we already do things,
+      where it fits, where it doesn't, and the few pieces actually worth stealing.
+      Jargon is glossed inline in <span style="color:var(--gloss)">green</span> the first time it appears.
+    </p>
+  </header>
+
+  <!-- PLAIN LANGUAGE KEY -->
+  <div class="key">
+    <h2>Plain-language key</h2>
+    <p class="sub">Six terms do most of the heavy lifting. Here they are in one place so the rest reads cleanly.</p>
+    <dl>
+      <dt>Converge / convergence</dt>
+      <dd>Narrowing many options down to the one right answer, and then making everyone stick to it. (Vercel's goal.)</dd>
+
+      <dt>Diverge / divergence</dt>
+      <dd>Fanning out into many deliberately different options so a human can compare and pick. (Our playground's goal.)</dd>
+
+      <dt>Skill</dt>
+      <dd>A markdown instruction file (<code>SKILL.md</code>) that teaches the AI a way of thinking — taste, rules, a design system. We already have seven of these.</dd>
+
+      <dt>Linter</dt>
+      <dd>An automated rule-checker that scans code and flags mechanical violations (e.g. "this radius is wrong"). It checks <em>facts</em>, not <em>taste</em>.</dd>
+
+      <dt>Reachable state</dt>
+      <dd>Every situation a UI can actually end up in: loading, empty, error, disabled, mobile-width — not just the one perfect "everything-loaded" screenshot.</dd>
+
+      <dt>Eval (with an LLM judge)</dt>
+      <dd>A test for AI output: run the prompt, then have a <em>second</em> AI score the result against a rubric. "Holdouts" are hidden test cases the AI hasn't seen, used to check it actually learned the rule instead of memorizing.</dd>
+    </dl>
+  </div>
+
+  <!-- 0 -->
+  <section>
+    <h2 class="no-rule" style="margin-top:36px;"><span class="num">0</span>The one idea that reframes everything</h2>
+    <div class="callout reframe">
+      <p class="label">The reframe</p>
+      <p class="big">Vercel built a convergence engine. We built a divergence engine. They are near-opposites — and that single fact explains every difference below.</p>
+    </div>
+    <ul>
+      <li><strong>Vercel's <code>product-design</code> skill</strong> exists to make every AI agent land on the <em>one</em> accepted decision ("destructive actions are labelled Verb&nbsp;+&nbsp;Noun", "never stack two modals") and apply it consistently across a real shipping product.</li>
+      <li><strong>Our playground</strong> exists to do the opposite: produce four deliberately <em>different</em> takes on a component, lay them on a canvas, and let a solo builder choose. Our own skill says it outright — <em>"Diverge first, converge later… expand the design space, not find the best version"</em> (<code>skills/design-variations/SKILL.md</code>).</li>
+    </ul>
+    <p>So you can't drop Vercel's framework in as-is — it would fight what the product is for. But several of its <em>mechanisms</em> plug straight into gaps we genuinely have. The rest of this doc keeps the parts that fit separate from the parts that don't.</p>
+  </section>
+
+  <!-- 1 -->
+  <section>
+    <h2><span class="num">1</span>The two mindsets, side by side</h2>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th></th><th>design-playground (today)</th><th>Vercel product-design</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Goal</strong></td><td>Widen the set of options</td><td>Collapse to the agreed option</td></tr>
+        <tr><td><strong>Output</strong></td><td>Several variations on a canvas; human picks</td><td>One coherent change; agent decides</td></tr>
+        <tr><td><strong>Where "taste" lives</strong></td><td>The model + <strong>opt-in</strong> skill files</td><td>Repo's official guidance + linters</td></tr>
+        <tr><td><strong>Memory of decisions</strong></td><td><span class="no">None</span> — the pick is discarded once chosen</td><td>Decisions are saved files + worked examples</td></tr>
+        <tr><td><strong>Quality gate</strong></td><td>Mechanical checklist (does it build?)</td><td>Judgment rubric + automated rule-checks</td></tr>
+        <tr><td><strong>Feedback loop</strong></td><td>Re-run with a different prompt</td><td>Weekly: evidence → human → new rule/guide</td></tr>
+        <tr><td><strong>Lifecycle</strong></td><td>Throwaway, local-dev only</td><td>Durable, ships to production</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>The mismatch in the middle three rows is the opportunity: we have an excellent way to <em>spread out</em> options and <strong>no memory at all</strong> of which one won or why.</p>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2><span class="num">2</span>How our method actually works (grounded in the code)</h2>
+    <p>Every generation is built from three layers.</p>
+
+    <h3>a) Prompt builders — <code>prompts/*.prompt.ts</code></h3>
+    <p>One template per kind of job: <code>iteration</code>, <code>iteration-from-iteration</code>, <code>element-iteration</code>, <code>jsx-iteration</code>, <code>edit</code>, <code>adopt</code>, <code>create-page</code>, <code>html-iteration</code>, <code>freeform-reference</code>. Each assembles the same shape: an optional skill block → request details (component, path, how many, how deep) → instructions → hard requirements → a "be creative" block → a quality checklist.</p>
+
+    <h3>b) The quality checklist — the only enforced gate</h3>
+    <p>Defined in <code>prompts/shared-sections.ts</code> (<code>getQualityChecklist</code>). The catch: it is <strong>entirely mechanical</strong> <span class="gloss">i.e. it only checks the code compiles and is wired up — never whether the design is any good</span>:</p>
+    <pre><code>- [ ] Props interface unchanged from original
+- [ ] All imports resolve, no TypeScript errors
+- [ ] Metadata comment with @iteration / @parent
+- [ ] File named PascalCase.iteration-{n}.tsx
+- [ ] Registered in iterations/index.ts + tree.json
+- [ ] Styling mode honored (theme tokens vs inline CSS)</code></pre>
+    <p>Every line answers <em>"did it build and register?"</em>. <strong>Not one</strong> asks <em>"is this a good product decision?"</em> — that judgment is handed entirely to the model and to whichever skills the user switched on.</p>
+
+    <h3>c) Skills — <code>skills/&lt;name&gt;/SKILL.md</code></h3>
+    <p>Injected into the prompt by <code>formatSkillSection</code>, but <strong>only when the user selects them</strong>. These carry all the actual design opinion:</p>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Skill</th><th>What it encodes</th><th>Vercel equivalent</th></tr></thead>
+      <tbody>
+        <tr><td><code>frontend-design</code></td><td>Distinctiveness; anti-"templated default"; type &amp; motion</td><td>judgment reference</td></tr>
+        <tr><td><code>make-interfaces-feel-better</code></td><td><strong>16 concrete, checkable polish rules</strong> (concentric radius, <code>scale(0.96)</code> on press, tabular numbers, 40×40px hit areas, never <code>transition: all</code>)</td><td><strong>this is a linter written as prose</strong></td></tr>
+        <tr><td><code>ux-variation-designer</code></td><td>Structural / interaction divergence, not just colour swaps</td><td>"start with the job"</td></tr>
+        <tr><td><code>design-variations</code></td><td>8 axes to rotate through so variations differ for real</td><td>(no equivalent — divergence is ours)</td></tr>
+        <tr><td><code>nothing-design</code></td><td>A whole design system as a skill (tokens, 3-layer hierarchy, anti-patterns)</td><td>the repo's official design system</td></tr>
+        <tr><td><code>stick-to-design-system</code> / <code>no-bound-explore</code></td><td>Styling-mode limits (tokens-only vs. free inline CSS)</td><td>lint rule: don't override system colours</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>d) Evals — <code>evals/</code></h3>
+    <p>A strong pattern, but <strong>narrow</strong>: it only tests <code>discovery.prompt.ts</code> (the scan that finds components), nothing about generation. It runs the real prompt through the real <code>spawnAgent('claude-code')</code>, then combines two checks:</p>
+    <ul>
+      <li><strong>Deterministic structural checks</strong> (<code>structural-checks.ts</code>) — machine-verifiable facts: kebab-case ids, that file paths exist on disk, skip-rule violations, a banned-words list for descriptions.</li>
+      <li><strong>An LLM judge</strong> (<code>judge.prompt.ts</code>) — a second AI scores the output 1–5 across six dimensions and suggests concrete wording fixes, measured against a ground-truth file inventory.</li>
+    </ul>
+    <p>It even recommends running the same prompt on <code>haiku</code>, <code>sonnet</code>, and <code>opus</code> to expose fragility <span class="gloss">a prompt that only works on the smartest model is under-specified</span>. This is <em>exactly</em> Vercel's eval philosophy — just aimed at one prompt instead of the whole product.</p>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2><span class="num">3</span>Vercel's framework, in plain terms</h2>
+    <p>Three pillars, held together by a set of always-on principles.</p>
+
+    <h3>The three pillars</h3>
+    <ol>
+      <li><strong>An agent skill (the judgment layer).</strong> Guidance that's <em>looked up based on what you're working on</em> <span class="gloss">"routed by surface": a modal pulls the modal rules, a settings form pulls the form rules — nothing is duplicated</span>. It includes <code>references/</code> (guidance per screen-type) and <code>exemplars/</code> — saved real pull requests <em>with the reasoning written down</em>.</li>
+      <li><strong>Linters (the deterministic layer).</strong> Hard rules with stable names like <code>rule/destructive-names-action</code>, each explaining <em>why</em> plus a fix, some auto-applying. Their line: <em>"Code can count two or three static options, so a linter can recommend radio buttons"</em> — i.e. let machines handle the countable stuff.</li>
+      <li><strong>A review loop (the learning layer).</strong> Weekly, in three deliberately separate phases: <strong>collect</strong> evidence → <strong>group &amp; sanity-check</strong> it → <strong>a human decides</strong> whether it becomes guidance, a lint rule, an example, an eval, or nothing. <em>"Automation ends with the review packet. A human decides."</em></li>
+    </ol>
+
+    <h3>The always-on principles (their "operating contract")</h3>
+    <p>Eight rules the agent never drops: start with the job, not the pixels · define the outcome before the output · use evidence, not taste · separate facts from decisions · treat shipped code as evidence, not automatic precedent · make the smallest coherent change · decide before decorating · <strong>design every reachable state</strong>. Plus: <em>verify the rendered screen, not just the source code.</em></p>
+
+    <h3>Request modes (scope guards)</h3>
+    <p>Five categories that stop an agent from quietly doing more than asked — pick the narrowest one the verb supports: <strong>Shape</strong> (frame the problem, don't edit) · <strong>Implement</strong> (decide, then make the minimal change) · <strong>Review</strong> (report findings, don't edit) · <strong>Copy</strong> (wording only) · <strong>Harden</strong> (fix resilience / responsive / accessibility without changing the direction).</p>
+
+    <div class="callout">
+      <p class="label">The phrasing most worth stealing</p>
+      <p>Prefer <strong>observable decisions</strong> over <strong>vague adjectives</strong>. "Destructive actions use Verb&nbsp;+&nbsp;Noun" can be checked; "Buttons should be clear" cannot. Their decision template is just: <code>Decision / Rationale / Evidence / Exceptions / Good example / Bad example / Open decisions</code>.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2><span class="num">4</span>Concept-by-concept: what we have, what we don't</h2>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Vercel concept</th><th>Status here</th><th>Where it lives / would live</th></tr></thead>
+      <tbody>
+        <tr><td>Agent skill (judgment)</td><td><span class="yes">✓ have it</span> — but opt-in &amp; taste-based</td><td><code>skills/*/SKILL.md</code></td></tr>
+        <tr><td>Looked up per screen-type</td><td><span class="no">✗</span> skills are global, not per-surface</td><td>could route in <code>shared-sections.ts</code></td></tr>
+        <tr><td>Linters (real, deterministic)</td><td><span class="mid">~ partial</span> — exist as <em>prose</em>, not code</td><td><code>make-interfaces-feel-better</code>; styling-mode limits</td></tr>
+        <tr><td>Mechanical checklist</td><td><span class="yes">✓ strong</span> — but build-only</td><td><code>getQualityChecklist()</code></td></tr>
+        <tr><td>Request modes (scope guards)</td><td><span class="mid">~ implicit</span></td><td>the job <em>kinds</em>: iterate≈Shape, edit≈Implement, element-iteration≈Harden, adopt≈Implement</td></tr>
+        <tr><td>Design every reachable state</td><td><span class="no">✗ missing</span> — we only make the happy path</td><td>—</td></tr>
+        <tr><td>Evals (judge + structural + holdouts)</td><td><span class="mid">~ discovery only</span></td><td><code>evals/</code> — could extend to generation</td></tr>
+        <tr><td>Saved examples + decision docs</td><td><span class="no">✗ missing entirely</span></td><td>—</td></tr>
+        <tr><td>Review / evidence loop</td><td><span class="no">✗ missing</span> — the canvas pick is discarded</td><td>—</td></tr>
+        <tr><td>Observable &gt; adjectives</td><td><span class="no">✗</span> skills lean on adjectives (fine for divergence)</td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2><span class="num">5</span>The three real gaps (highest leverage first)</h2>
+
+    <div class="callout gap">
+      <p class="label" style="color:var(--accent)">Gap 1 — we throw away the signal of which option won</p>
+      <p>When the builder drags iteration-3 off the canvas and keeps it, <strong>nothing records that choice or the reason for it</strong>. That pick is the single richest design signal in the whole app — and it evaporates. Vercel's entire review loop exists to capture precisely this.</p>
+      <p class="steal"><b>Steal:</b> an <strong>"Accept / Promote"</strong> action on an iteration node that writes a small decision file (<code>docs/decisions/{component}-{n}.md</code>) using Vercel's template — what changed, why this one won, a screenshot. Over time these become worked examples that get fed <em>back into</em> the iteration prompt ("here's what this builder has accepted before"), turning a forgetful tool into one that learns the builder's taste. Highest-value, most on-brand add.</p>
+    </div>
+
+    <div class="callout gap">
+      <p class="label" style="color:var(--accent)">Gap 2 — we never design the states that aren't the happy path</p>
+      <p>Every iteration prompt says "make variations" of the component <em>as it is</em>. None ask for the loading, empty, error, disabled, or mobile-width versions. "Design every reachable state" is the cheapest quality upgrade on the table.</p>
+      <p class="steal"><b>Steal:</b> a <strong>state axis</strong> (like the divergence axes in <code>design-variations</code>) or a dedicated <strong>Harden mode</strong> that, instead of restyling, fills in the missing reachable states of the selected component. Reuses all the existing spawn/iteration plumbing.</p>
+    </div>
+
+    <div class="callout gap">
+      <p class="label" style="color:var(--accent)">Gap 3 — our best linter is trapped in prose</p>
+      <p><code>make-interfaces-feel-better</code> is really 16 machine-checkable rules (concentric radius, exactly <code>scale(0.96)</code>, no <code>transition: all</code>, tabular numbers, 40×40px hit areas). Today they only apply if the user opts the skill in, and nothing verifies them after generation.</p>
+      <p class="steal"><b>Steal:</b> promote the checkable subset into actual post-generation checks — <code>evals/structural-checks.ts</code> already proves we can statically read generated <code>.tsx</code>. Run them over each new <code>iterations/*.tsx</code> and surface violations as badges on the canvas node. Keep the genuinely subjective rules ("spend your boldness in one place") as judgment in the skill. That split — facts to the checker, taste to the skill — <em>is</em> Vercel's lint/skill division.</p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2><span class="num">6</span>Where Vercel's framework does <em>not</em> fit</h2>
+    <div class="callout warn">
+      <p class="label">Don't force these</p>
+      <ul style="margin:0;">
+        <li><strong>"Evidence not taste" / the decision-authority ranking.</strong> Vercel optimises <em>toward consensus</em>; we deliberately optimise <em>toward surprise</em> (our skill literally asks for "at least one direction that feels uncomfortable"). Importing this wholesale would neuter the divergence skills.</li>
+        <li><strong>Guidance looked up per screen-type.</strong> That assumes a stable shipping product with recurring screens. The host app is that — but the playground is a <em>lens over</em> the host, not the owner of its design decisions. That routing belongs in the host.</li>
+        <li><strong>The weekly human review meeting.</strong> We're single-player, local-dev, throwaway. The lightweight version (Gap 1's per-accept decision file) is the right size; a weekly review packet is not.</li>
+        <li><strong>"Observable over adjectives" for the creative skills.</strong> There, adjectives are a <em>feature</em> — they widen the space. Keep them. Apply the "observable" discipline only to the quality <em>gate</em>, never the creative prompt.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2><span class="num">7</span>A phased way to try it</h2>
+    <ol>
+      <li><strong>Cheap &amp; on-brand:</strong> add the <strong>state axis / Harden mode</strong> (Gap 2). Pure prompt work, reuses existing job kinds.</li>
+      <li><strong>The keystone:</strong> add <strong>Accept → decision file + saved example</strong> (Gap 1), then feed accepted examples back into <code>iteration.prompt.ts</code> via a new <code>formatExemplarsSection</code>. This is the convergence-memory the app completely lacks.</li>
+      <li><strong>Hardening:</strong> lift the checkable <code>make-interfaces-feel-better</code> rules into a <code>lib/</code> static checker reusing the <code>structural-checks.ts</code> pattern; show violations as canvas badges (Gap 3).</li>
+      <li><strong>Confidence:</strong> extend the <code>evals/</code> harness from discovery to <strong>generation</strong> — score a before→after of a component against a quality rubric, with <strong>holdouts</strong> to confirm a skill generalises instead of memorising.</li>
+    </ol>
+    <p>The throughline: keep the divergence engine exactly as it is, and bolt on the <strong>convergence memory</strong> that Vercel's framework is fundamentally about — scaled down to a solo, local, throwaway tool.</p>
+  </section>
+
+  <p class="source">
+    Source: Vercel, "Teaching agents product design at Vercel." Cross-referenced against
+    <code>prompts/</code>, <code>skills/</code>, <code>evals/</code>, and <code>prompts/shared-sections.ts</code>
+    in this repo. Companion to <code>docs/AGENT-DESIGN-FRAMEWORK.md</code>.
+  </p>
+
+</div>
+</body>
+</html>
