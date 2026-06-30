@@ -31,7 +31,7 @@ import { getProviderFields } from '../lib/generation-body';
 
 import { DEFAULT_PROVIDER_ID } from '../lib/providers/registry';
 import { loadCanvasState, saveCanvasState, getCanvasStorageKey, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
-import { isInExpectedBatch, resolveIterationPosition, countBatchIterationNodes } from '../lib/iteration-scan';
+import { countBatchIterationNodes } from '../lib/iteration-scan';
 import { useCanvasFlow } from '../lib/canvas-flow';
 import { resolveAgentModel } from '../lib/resolve-agent-model';
 import type { ProviderId } from '../lib/providers/types';
@@ -41,6 +41,7 @@ import { usePlaygroundDrawStore } from '../stores/playground-draw-store';
 import { type DrawPenKind, type DrawStroke } from '../lib/draw-types';
 import { useCanvasDrawTool } from '../hooks/useCanvasDrawTool';
 import { useGenerationCoordination } from '../hooks/useGenerationCoordination';
+import { useIterationScan } from '../hooks/useIterationScan';
 import { LayoutGrid, Frame } from 'lucide-react';
 import { ShapeToolGroup } from '../components/canvas/ShapeToolGroup';
 import { PageDocumentIcon, ProjectBoxIcon } from '../ui/playground-nav-icons';
@@ -88,9 +89,6 @@ import {
   DRAG_ITERATE_EVENT,
   DRAG_ITERATE_UNDO_DURATION_MS,
   DRAG_ITERATE_TOAST_DURATION_MS,
-
-  POLL_INTERVAL,
-  POLL_DURATION,
 
   ARRANGE_START_X,
   ARRANGE_START_Y,
@@ -188,10 +186,8 @@ function getMinimapNodeColor(node: Node): string {
   return (node.type && MINIMAP_NODE_COLORS[node.type]) || '#d6d3d1';
 }
 
-/** Poll interval while a generation is active (SSE fallback). */
-const GENERATION_POLL_INTERVAL_MS = 4000;
+/** Poll interval while a generation is active (SSE fallback) — lives in useIterationScan. */
 
-// isInExpectedBatch, getSkeletonIdForFileIteration, resolveIterationPosition,
 // countBatchIterationNodes moved to ../lib/iteration-scan
 
 const DEFAULT_SKILL_IDS = ['design-variations', 'frontend-design'] as const;
@@ -271,17 +267,11 @@ export default function PlaygroundCanvas({
     new Set(initialState?.collapsedNodeIds || []),
   );
   const collapsedNodeIdsRef = useRef<Set<string>>(new Set(initialState?.collapsedNodeIds || []));
-  const [isScanning, setIsScanning] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
-  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const generationEventSourceRef = useRef<EventSource | null>(null);
   
   // Node ID counter as a ref (survives re-renders, initialized from localStorage)
   const nodeIdCounterRef = useRef<number>(initialState?.nodeIdCounter || 0);
   const getNodeId = useCallback(() => `node_${++nodeIdCounterRef.current}`, []);
-  
-  const generationPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Keep collapsed ref in sync
   useEffect(() => {
@@ -724,494 +714,17 @@ export default function PlaygroundCanvas({
     // No-op: IterationNode handles everything via events + API calls
   }, []);
 
-  // Stop polling - defined first so it can be referenced
-  const stopPolling = useCallback(() => {
-    setIsPolling(false);
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-      pollTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Reset the poll timeout (extends watching duration)
-  const resetPollTimeout = useCallback(() => {
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-    }
-    pollTimeoutRef.current = setTimeout(() => {
-      stopPolling();
-    }, POLL_DURATION);
-  }, [stopPolling]);
-
-  // Scan for iterations (single check) -- tree-aware: connects to parent iteration or component
-  // During active generation, progressively replaces skeleton nodes with real iteration nodes.
-  const scanForIterations = useCallback(async (
-    resetTimeoutOnFind = false,
-    scanContext?: GenerationInfo | null,
-  ) => {
-    if (!coord.tryAcquireScanLock()) {
-      coord.markScanQueued(scanContext);
-      return;
-    }
-    setIsScanning(true);
-    try {
-      const info = scanContext !== undefined ? scanContext : coord.getGenerationInfo();
-      const canvasIterationKeys = getIterationKeysOnCanvas(coord.getNodes());
-
-      // ------------------------------------------------------------------
-      // HTML iteration scanning (when active generation is for HTML)
-      // ------------------------------------------------------------------
-      if (info?.renderMode === 'html' && info.htmlFolder) {
-        const htmlFolder = info.htmlFolder;
-        try {
-          const htmlResponse = await fetch('/playground/api/html-pages');
-          if (htmlResponse.ok) {
-            const { pages } = await htmlResponse.json() as { pages: { folder: string; iterations: { folder: string; number: number }[] }[] };
-            const page = pages.find((p: { folder: string }) => p.folder === htmlFolder);
-            if (page) {
-              const currentNodes = coord.getNodes();
-              const existingHtmlKeys = canvasIterationKeys;
-
-              let newHtmlIterations = page.iterations.filter(
-                (iter: { folder: string; number: number }) =>
-                  !existingHtmlKeys.has(`${htmlFolder}/${iter.folder}`),
-              );
-              if (info.startNumber != null && info.iterationCount) {
-                newHtmlIterations = newHtmlIterations.filter((iter) =>
-                  isInExpectedBatch(iter.number, info),
-                );
-              }
-
-              if (newHtmlIterations.length > 0) {
-                const skeletonsToRemove: string[] = [];
-                const newNodes: Node[] = [];
-                const newEdges: Edge[] = [];
-                const newKnownFilenames: string[] = [];
-
-                newHtmlIterations.sort((a: { number: number }, b: { number: number }) => a.number - b.number);
-
-                for (const iter of newHtmlIterations) {
-                  const sourceNodeId = info.parentNodeId
-                    ? (currentNodes.find(n => n.id === info.parentNodeId)?.id || undefined)
-                    : undefined;
-                  const sourceNode = sourceNodeId
-                    ? (currentNodes.find(n => n.id === sourceNodeId) || newNodes.find(n => n.id === sourceNodeId))
-                    : undefined;
-
-                  const position = resolveIterationPosition(
-                    info,
-                    iter.number,
-                    currentNodes,
-                    skeletonsToRemove,
-                    sourceNode,
-                    info.skeletonPositions?.[0],
-                  );
-
-                  const nodeId = getNodeId();
-                  const parentSize = (sourceNode?.data?.size as string | undefined) as import('./lib/constants').ComponentSize | undefined;
-
-                  newNodes.push({
-                    id: nodeId,
-                    type: 'iteration',
-                    position,
-                    data: {
-                      componentName: htmlFolder,
-                      iterationNumber: iter.number,
-                      filename: `${htmlFolder}/iteration-${iter.number}`,
-                      description: '',
-                      parentNodeId: sourceNodeId || undefined,
-                      parentSize,
-                      renderMode: 'html',
-                      htmlFolder,
-                      htmlIterationFolder: iter.folder,
-                      onDelete: handleIterationDelete,
-                      onAdopt: handleIterationAdopt,
-                    },
-                  });
-
-                  if (sourceNodeId) {
-                    newEdges.push({
-                      id: `edge_${sourceNodeId}_${nodeId}`,
-                      source: sourceNodeId,
-                      target: nodeId,
-                      type: 'smoothstep',
-                      animated: false,
-                      style: ITERATION_EDGE_STYLE,
-                    });
-                  }
-
-                  newKnownFilenames.push(`${htmlFolder}/${iter.folder}`);
-                }
-
-                if (newNodes.length > 0) {
-                  const skeletonSet = new Set(skeletonsToRemove);
-                  setNodes(nds => [
-                    ...nds.filter(n => !skeletonSet.has(n.id)),
-                    ...newNodes,
-                  ]);
-                  setEdges(eds => [
-                    ...eds.filter(e => !skeletonSet.has(e.target)),
-                    ...newEdges,
-                  ]);
-                  coord.appendKnownIterations(newKnownFilenames);
-                  if (resetTimeoutOnFind) resetPollTimeout();
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error scanning HTML iterations:', error);
-        }
-        // For HTML generations, skip the React iteration scan
-        return;
-      }
-
-      // ------------------------------------------------------------------
-      // JSX on-canvas iteration scanning (canvas-components/frame-*.iteration-*.tsx)
-      // ------------------------------------------------------------------
-      if (info?.renderMode === 'jsx' && info.jsxFile) {
-        const baseFilename = info.jsxFile.replace(/\.iteration-\d+\.tsx$/, '.tsx');
-        try {
-          const jsxResponse = await fetch('/playground/api/oncanvas-components');
-          if (jsxResponse.ok) {
-            const { components } = await jsxResponse.json() as { components: JsxComponentInfo[] };
-            const comp = components.find(c => c.filename === baseFilename);
-            if (comp && comp.iterations.length > 0) {
-              const currentNodes = coord.getNodes();
-              const existingJsxKeys = canvasIterationKeys;
-
-              let newJsxIterations = comp.iterations.filter(
-                (it) => !existingJsxKeys.has(it.filename),
-              );
-              if (info.startNumber != null && info.iterationCount) {
-                newJsxIterations = newJsxIterations.filter((it) =>
-                  isInExpectedBatch(it.iterationNumber, info),
-                );
-              }
-
-              if (newJsxIterations.length > 0) {
-                const skeletonsToRemove: string[] = [];
-                const newNodes: Node[] = [];
-                const newEdges: Edge[] = [];
-                const newKnownFilenames: string[] = [];
-
-                newJsxIterations.sort((a, b) => a.iterationNumber - b.iterationNumber);
-
-                for (const it of newJsxIterations) {
-                  const sourceNodeId = info.parentNodeId
-                    ? (currentNodes.find(n => n.id === info.parentNodeId)?.id || undefined)
-                    : undefined;
-                  const sourceNode = sourceNodeId
-                    ? (currentNodes.find(n => n.id === sourceNodeId) || newNodes.find(n => n.id === sourceNodeId))
-                    : undefined;
-
-                  const position = resolveIterationPosition(
-                    info,
-                    it.iterationNumber,
-                    currentNodes,
-                    skeletonsToRemove,
-                    sourceNode,
-                    info.skeletonPositions?.[0],
-                  );
-
-                  const nodeId = getNodeId();
-                  const parentSize = (sourceNode?.data?.size as string | undefined) as import('./lib/constants').ComponentSize | undefined;
-                  const registryId =
-                    (sourceNode?.data?.componentId as string | undefined) ??
-                    `${JSX_ID_PREFIX}${comp.label}`;
-
-                  newNodes.push({
-                    id: nodeId,
-                    type: 'iteration',
-                    position,
-                    data: {
-                      componentName: comp.label,
-                      iterationNumber: it.iterationNumber,
-                      filename: it.filename,
-                      description: '',
-                      parentNodeId: sourceNodeId || undefined,
-                      parentSize,
-                      registryId,
-                      renderMode: 'jsx',
-                      jsxFile: it.filename,
-                      onDelete: handleIterationDelete,
-                      onAdopt: handleIterationAdopt,
-                    },
-                  });
-
-                  if (sourceNodeId) {
-                    newEdges.push({
-                      id: `edge_${sourceNodeId}_${nodeId}`,
-                      source: sourceNodeId,
-                      target: nodeId,
-                      type: 'smoothstep',
-                      animated: false,
-                      style: ITERATION_EDGE_STYLE,
-                    });
-                  }
-
-                  newKnownFilenames.push(it.filename);
-                }
-
-                if (newNodes.length > 0) {
-                  const skeletonSet = new Set(skeletonsToRemove);
-                  setNodes(nds => [
-                    ...nds.filter(n => !skeletonSet.has(n.id)),
-                    ...newNodes,
-                  ]);
-                  setEdges(eds => [
-                    ...eds.filter(e => !skeletonSet.has(e.target)),
-                    ...newEdges,
-                  ]);
-                  coord.appendKnownIterations(newKnownFilenames);
-                  if (resetTimeoutOnFind) resetPollTimeout();
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error scanning JSX iterations:', error);
-        }
-        return;
-      }
-
-      // ------------------------------------------------------------------
-      // React iteration scanning
-      // ------------------------------------------------------------------
-      const response = await fetch('/playground/api/iterations');
-      if (!response.ok) {
-        console.error('[Playground] Failed to fetch iterations:', response.status);
-        return;
-      }
-
-      const { iterations } = await response.json() as { iterations: IterationFile[] };
-
-      const currentNodes = coord.getNodes();
-      const existingFilenames = getIterationKeysOnCanvas(currentNodes);
-
-      let newIterations = iterations.filter(
-        (iter: IterationFile) => !existingFilenames.has(iter.filename),
-      );
-      if (info?.startNumber != null && info.iterationCount) {
-        const cleanName = info.componentName.replace(/\s+/g, '');
-        newIterations = newIterations.filter(
-          (iter) =>
-            iter.componentName === cleanName && isInExpectedBatch(iter.iterationNumber, info),
-        );
-      }
-
-      if (newIterations.length === 0) {
-        return;
-      }
-
-      const skeletonsToRemove: string[] = [];
-
-      // Create nodes and edges for new iterations (tree-aware)
-      const newNodes: Node[] = [];
-      const newEdges: Edge[] = [];
-      const newKnownFilenames: string[] = [];
-
-      // We may need to look up newly added nodes too (for chaining within one scan)
-      const pendingNodesByFilename = new Map<string, string>(); // filename -> nodeId
-
-      // Sort new iterations by number so they map to skeleton positions in order
-      newIterations.sort((a, b) => a.iterationNumber - b.iterationNumber);
-
-      for (const iter of newIterations) {
-        let sourceNodeId: string | undefined;
-
-        // Tree-aware: if sourceIteration exists, connect to the parent iteration node
-        if (iter.sourceIteration) {
-          // First check existing nodes
-          const sourceIterNode = findIterationNodeByFilename(iter.sourceIteration);
-          if (sourceIterNode) {
-            sourceNodeId = sourceIterNode.id;
-          } else {
-            // Check if it was just added in this batch
-            sourceNodeId = pendingNodesByFilename.get(iter.sourceIteration);
-          }
-        }
-
-        // Fallback: connect to the component node
-        if (!sourceNodeId) {
-          const parentNode = findParentNode(iter.componentName, iter.parentId);
-          if (parentNode) {
-            sourceNodeId = parentNode.id;
-          }
-        }
-
-        // Position: during active generation, use the next skeleton's position;
-        // otherwise fall back to source node offset or default.
-        const sourceNode = sourceNodeId
-          ? (coord.getNodes().find(n => n.id === sourceNodeId) || newNodes.find(n => n.id === sourceNodeId))
-          : undefined;
-
-        let position: { x: number; y: number };
-
-        if (info && info.skeletonNodeIds.length > 0) {
-          position = resolveIterationPosition(
-            info,
-            iter.iterationNumber,
-            currentNodes,
-            skeletonsToRemove,
-            sourceNode,
-            info.skeletonPositions?.[0],
-          );
-        } else if (sourceNode) {
-          const srcW = sourceNode.measured?.width ?? (sourceNode.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH);
-          position = { x: sourceNode.position.x + srcW + ARRANGE_HORIZONTAL_GAP, y: sourceNode.position.y };
-        } else {
-          // Orphan iteration (e.g. freeform generation) — use skeleton position if available
-          const skeletonPos = info?.skeletonPositions?.[0];
-          position = skeletonPos ?? { x: 400, y: 200 };
-        }
-
-        const nodeId = getNodeId();
-        pendingNodesByFilename.set(iter.filename, nodeId);
-
-        const parentSize = (sourceNode?.data?.size as string | undefined) as import('./lib/constants').ComponentSize | undefined;
-
-        // Inherit the registry ID from the parent node so we never have to
-        // guess it from the component name in the iteration file comment.
-        // ComponentNode stores it as `componentId`; IterationNode stores it as `registryId`.
-        const inheritedRegistryId =
-          (sourceNode?.data?.componentId as string | undefined) ??
-          (sourceNode?.data?.registryId as string | undefined);
-
-        newNodes.push({
-          id: nodeId,
-          type: 'iteration',
-          position,
-          data: {
-            componentName: iter.componentName,
-            iterationNumber: iter.iterationNumber,
-            filename: iter.filename,
-            description: iter.description,
-            parentNodeId: sourceNodeId || undefined,
-            parentSize,
-            registryId: inheritedRegistryId,
-            onDelete: handleIterationDelete,
-            onAdopt: handleIterationAdopt,
-          },
-        });
-
-        // Only create edges when there's a valid source node
-        if (sourceNodeId) {
-          newEdges.push({
-            id: `edge_${sourceNodeId}_${nodeId}`,
-            source: sourceNodeId,
-            target: nodeId,
-            type: 'smoothstep',
-            animated: false,
-            style: ITERATION_EDGE_STYLE,
-          });
-        }
-
-        newKnownFilenames.push(iter.filename);
-      }
-
-      if (newNodes.length > 0) {
-        const skeletonSet = new Set(skeletonsToRemove);
-        // Add new real nodes and remove replaced skeletons in a single update
-        setNodes(nds => [
-          ...nds.filter(n => !skeletonSet.has(n.id)),
-          ...newNodes,
-        ]);
-        setEdges(eds => [
-          ...eds.filter(e => !skeletonSet.has(e.target)),
-          ...newEdges,
-        ]);
-        coord.appendKnownIterations(newKnownFilenames);
-
-        if (resetTimeoutOnFind) {
-          resetPollTimeout();
-        }
-      }
-    } catch (error) {
-      console.error('Error scanning iterations:', error);
-    } finally {
-      setIsScanning(false);
-      const { queued, override } = coord.releaseScanLock();
-      if (queued) {
-        scanForIterations(resetTimeoutOnFind, override);
-      }
-    }
-  }, [findParentNode, findIterationNodeByFilename, getNodeId, handleIterationDelete, handleIterationAdopt, setNodes, setEdges, resetPollTimeout]);
-
-  // Start temporary polling (after prompt copy)
-  const startPolling = useCallback(() => {
-    if (isPolling) return;
-    
-    setIsPolling(true);
-    
-    // Poll immediately
-    scanForIterations(true);
-    
-    // Set up interval - pass true to reset timeout on find
-    pollIntervalRef.current = setInterval(() => {
-      scanForIterations(true);
-    }, POLL_INTERVAL);
-    
-    // Stop polling after duration
-    pollTimeoutRef.current = setTimeout(() => {
-      stopPolling();
-    }, POLL_DURATION);
-  }, [isPolling, scanForIterations, stopPolling]);
-
-  // Listen for prompt copied event to start polling
-  useEffect(() => {
-    const handlePromptCopied = () => {
-      startPolling();
-    };
-
-    const handleFetchRequest = () => {
-      // Manual fetch - scan immediately and reset timeout if polling
-      scanForIterations(true);
-    };
-
-    window.addEventListener(ITERATION_PROMPT_COPIED_EVENT, handlePromptCopied);
-    window.addEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
-    return () => {
-      window.removeEventListener(ITERATION_PROMPT_COPIED_EVENT, handlePromptCopied);
-      window.removeEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
-      stopPolling();
-    };
-  }, [startPolling, stopPolling, scanForIterations]);
-
-  // Initial scan on mount (once)
-  useEffect(() => {
-    scanForIterations(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps = run once on mount
-
-  // Poll for iterations while generation is active (SSE fallback)
-  useEffect(() => {
-    if (!isGenerating) {
-      if (generationPollIntervalRef.current) {
-        clearInterval(generationPollIntervalRef.current);
-        generationPollIntervalRef.current = null;
-      }
-      return;
-    }
-
-    generationPollIntervalRef.current = setInterval(() => {
-      const ctx = coord.getGenerationInfo();
-      if (ctx) {
-        scanForIterations(false, ctx);
-      }
-    }, GENERATION_POLL_INTERVAL_MS);
-
-    return () => {
-      if (generationPollIntervalRef.current) {
-        clearInterval(generationPollIntervalRef.current);
-        generationPollIntervalRef.current = null;
-      }
-    };
-  }, [isGenerating, scanForIterations]);
+  const { scanForIterations } = useIterationScan({
+    coord,
+    isGenerating,
+    setNodes,
+    setEdges,
+    getNodeId,
+    findParentNode,
+    findIterationNodeByFilename,
+    handleIterationDelete,
+    handleIterationAdopt,
+  });
 
   // SSE helpers for progressive iteration detection during generation.
   // The server watches tree.json via fs.watch and pushes events when it changes.
