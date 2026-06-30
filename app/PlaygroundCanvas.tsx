@@ -158,8 +158,9 @@ import { useNodeSelection } from '../hooks/useNodeSelection';
 import { useInteractiveNodeStore } from '../stores/interactive-node-store';
 import { useDynamicBackground } from '../hooks/useDynamicBackground';
 import { toast } from 'sonner';
-import { wrapHtmlFragment, parsePastedHttpUrl } from '../lib/html-utils';
-import { looksLikeJsx, wrapJsxComponent } from '../lib/jsx-utils';
+import { wrapHtmlFragment } from '../lib/html-utils';
+import { wrapJsxComponent } from '../lib/jsx-utils';
+import { classifyClipboard, nextFrameNumber } from '../lib/canvas-paste';
 
 const nodeTypes = {
   component: ComponentNode,
@@ -3787,87 +3788,86 @@ export default function PlaygroundCanvas({
         return;
       }
 
-      const items = e.clipboardData?.items;
-      if (!items) return;
+      // Pure classification decides which node a paste becomes; this handler
+      // owns the I/O (upload, frame-file writes, node insertion) each drives.
+      const intent = classifyClipboard(e.clipboardData ?? null);
+      if (intent.kind === 'none') return;
+      e.preventDefault();
+
+      // Drop the new node at the current viewport centre (computed lazily so
+      // image/JSX/HTML pastes place correctly after their awaited round-trip).
+      const centerPosition = () => {
+        const wrapperBounds = wrapper.getBoundingClientRect();
+        return screenToFlowPosition({
+          x: wrapperBounds.left + wrapperBounds.width / 2,
+          y: wrapperBounds.top + wrapperBounds.height / 2,
+        });
+      };
 
       // --- Image paste (takes priority) ---
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
-          const file = items[i].getAsFile();
-          if (!file) continue;
-          e.preventDefault();
-          const reader = new FileReader();
-          reader.onload = async () => {
-            const base64 = reader.result as string;
-            try {
-              const res = await fetch('/playground/api/images', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  imageBase64: base64,
-                  originalName: file.name || `pasted-image.${file.type.split('/')[1] || 'png'}`,
-                }),
-              });
-              const data = await res.json();
-              if (data.success) {
-                const wrapperBounds = wrapper.getBoundingClientRect();
-                const position = screenToFlowPosition({
-                  x: wrapperBounds.left + wrapperBounds.width / 2,
-                  y: wrapperBounds.top + wrapperBounds.height / 2,
-                });
-                const newNode: Node = {
-                  id: getNodeId(),
-                  type: 'image',
-                  position,
-                  style: { width: 300, height: 250 },
-                  data: {
-                    imagePath: data.path,
-                    imageUrl: data.url,
-                    filename: data.filename,
-                    originalName: file.name || 'Pasted Image',
-                  },
-                };
-                setNodes((nds) => nds.concat(newNode));
-              }
-            } catch (err) {
-              console.error('[Playground] Image paste upload failed:', err);
+      if (intent.kind === 'image') {
+        const file = intent.file;
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result as string;
+          try {
+            const res = await fetch('/playground/api/images', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                imageBase64: base64,
+                originalName: file.name || `pasted-image.${file.type.split('/')[1] || 'png'}`,
+              }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              const position = centerPosition();
+              const newNode: Node = {
+                id: getNodeId(),
+                type: 'image',
+                position,
+                style: { width: 300, height: 250 },
+                data: {
+                  imagePath: data.path,
+                  imageUrl: data.url,
+                  filename: data.filename,
+                  originalName: file.name || 'Pasted Image',
+                },
+              };
+              setNodes((nds) => nds.concat(newNode));
             }
-          };
-          reader.readAsDataURL(file);
-          return;
-        }
+          } catch (err) {
+            console.error('[Playground] Image paste upload failed:', err);
+          }
+        };
+        reader.readAsDataURL(file);
+        return;
       }
 
       // --- JSX paste (checked before HTML since JSX also contains HTML tags) ---
-      const rawPlain = (e.clipboardData?.getData('text/plain') || '').trim();
-      if (rawPlain && looksLikeJsx(rawPlain)) {
-        e.preventDefault();
+      if (intent.kind === 'jsx') {
         try {
           // Determine next frame number by scanning existing JSX components and HTML pages
-          let frameNumber = 1;
           const [jsxRes, htmlRes] = await Promise.all([
             fetch('/playground/api/oncanvas-components').catch(() => null),
             fetch('/playground/api/html-pages').catch(() => null),
           ]);
+          const jsxFilenames: string[] = [];
+          const htmlFolders: string[] = [];
           if (jsxRes?.ok) {
             const { components } = await jsxRes.json() as { components: { filename: string }[] };
-            for (const comp of components) {
-              const match = comp.filename.match(/^frame-(\d+)\.tsx$/);
-              if (match) frameNumber = Math.max(frameNumber, parseInt(match[1], 10) + 1);
-            }
+            for (const comp of components) jsxFilenames.push(comp.filename);
           }
           if (htmlRes?.ok) {
             const { pages } = await htmlRes.json() as { pages: { folder: string }[] };
-            for (const page of pages) {
-              const match = page.folder.match(/^frame-(\d+)$/);
-              if (match) frameNumber = Math.max(frameNumber, parseInt(match[1], 10) + 1);
-            }
+            for (const page of pages) htmlFolders.push(page.folder);
           }
+          const frameNumber = nextFrameNumber(jsxFilenames, htmlFolders);
 
           const frameName = `frame-${frameNumber}`;
           const componentName = `Frame${frameNumber}`;
           const filename = `${frameName}.tsx`;
-          const wrappedJsx = wrapJsxComponent(rawPlain, componentName);
+          const wrappedJsx = wrapJsxComponent(intent.source, componentName);
 
           const res = await fetch('/playground/api/oncanvas-components', {
             method: 'PUT',
@@ -3882,12 +3882,7 @@ export default function PlaygroundCanvas({
             return;
           }
 
-          const wrapperBounds = wrapper.getBoundingClientRect();
-          const position = screenToFlowPosition({
-            x: wrapperBounds.left + wrapperBounds.width / 2,
-            y: wrapperBounds.top + wrapperBounds.height / 2,
-          });
-
+          const position = centerPosition();
           const newNode: Node = {
             id: getNodeId(),
             type: 'component',
@@ -3920,15 +3915,8 @@ export default function PlaygroundCanvas({
       }
 
       // --- Single-line URL paste → remote iframe embed (no file on disk) ---
-      const plainOneLine = rawPlain.replace(/\r\n/g, '\n').trim();
-      const pastedHttpUrl = plainOneLine && !plainOneLine.includes('\n') ? parsePastedHttpUrl(plainOneLine) : null;
-      if (pastedHttpUrl) {
-        e.preventDefault();
-        const wrapperBounds = wrapper.getBoundingClientRect();
-        const position = screenToFlowPosition({
-          x: wrapperBounds.left + wrapperBounds.width / 2,
-          y: wrapperBounds.top + wrapperBounds.height / 2,
-        });
+      if (intent.kind === 'url') {
+        const position = centerPosition();
         const embedComponentId = `url-embed:${crypto.randomUUID()}`;
         const newNode: Node = {
           id: getNodeId(),
@@ -3938,7 +3926,7 @@ export default function PlaygroundCanvas({
           data: {
             componentId: embedComponentId,
             renderMode: 'embed' as const,
-            embedUrl: pastedHttpUrl,
+            embedUrl: intent.url,
           },
         };
         setNodes((nds) => nds.concat(newNode));
@@ -3946,43 +3934,26 @@ export default function PlaygroundCanvas({
       }
 
       // --- HTML paste ---
-      const rawHtml = (e.clipboardData?.getData('text/html') || '').trim();
-      const looksLikeHtmlContent = (s: string) => /<[a-z][\s\S]*>/i.test(s);
-
-      let pastedHtml: string | null = null;
-      if (rawHtml && looksLikeHtmlContent(rawHtml)) {
-        pastedHtml = rawHtml;
-      } else if (rawPlain && looksLikeHtmlContent(rawPlain)) {
-        pastedHtml = rawPlain;
-      }
-      if (!pastedHtml) return;
-
-      e.preventDefault();
-
       try {
         // Determine next frame number by scanning existing HTML pages and JSX components
-        let frameNumber = 1;
         const [htmlRes2, jsxRes2] = await Promise.all([
           fetch('/playground/api/html-pages').catch(() => null),
           fetch('/playground/api/oncanvas-components').catch(() => null),
         ]);
+        const jsxFilenames: string[] = [];
+        const htmlFolders: string[] = [];
         if (htmlRes2?.ok) {
           const { pages } = await htmlRes2.json() as { pages: { folder: string }[] };
-          for (const page of pages) {
-            const match = page.folder.match(/^frame-(\d+)$/);
-            if (match) frameNumber = Math.max(frameNumber, parseInt(match[1], 10) + 1);
-          }
+          for (const page of pages) htmlFolders.push(page.folder);
         }
         if (jsxRes2?.ok) {
           const { components } = await jsxRes2.json() as { components: { filename: string }[] };
-          for (const comp of components) {
-            const match = comp.filename.match(/^frame-(\d+)\.tsx$/);
-            if (match) frameNumber = Math.max(frameNumber, parseInt(match[1], 10) + 1);
-          }
+          for (const comp of components) jsxFilenames.push(comp.filename);
         }
+        const frameNumber = nextFrameNumber(jsxFilenames, htmlFolders);
 
         const frameName = `frame-${frameNumber}`;
-        const wrappedHtml = wrapHtmlFragment(pastedHtml);
+        const wrappedHtml = wrapHtmlFragment(intent.html);
 
         const res = await fetch('/playground/api/html-pages', {
           method: 'PUT',
@@ -3997,12 +3968,7 @@ export default function PlaygroundCanvas({
           return;
         }
 
-        const wrapperBounds = wrapper.getBoundingClientRect();
-        const position = screenToFlowPosition({
-          x: wrapperBounds.left + wrapperBounds.width / 2,
-          y: wrapperBounds.top + wrapperBounds.height / 2,
-        });
-
+        const position = centerPosition();
         const pageId = data.page.id as string;
         const folder = data.page.folder as string;
 
