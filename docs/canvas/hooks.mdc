@@ -1,22 +1,44 @@
 ---
-globs: ["src/app/playground/hooks/**"]
-description: "Playground hooks: useModelCycle, useDragToIterate, useElementSelection, useNodeSelection, and more"
+globs: ["src/app/playground/hooks/**", "hooks/**"]
+description: "Playground hooks: canvas I/O, generation, selection, and tool hooks"
 ---
 
 # Playground Hooks
 
-All hooks are in `src/app/playground/hooks/`.
+All hooks live in `hooks/` (embedded at `src/app/playground/hooks/` in the host).
 
 ## Hook Reference
 
 | Hook | Purpose | Used By |
 |------|---------|---------|
-| `useModelCycle.ts` | Owns the docked chat bar's model selection — persists the chosen model and cycles to the next with a flip animation | `DockedChatBar.tsx` |
-| `useDragToIterate.ts` | Drag-to-iterate interaction — dragging one node onto another triggers iteration | `PlaygroundCanvas.tsx` |
-| `useDynamicBackground.ts` | Dynamic canvas background effects | `PlaygroundCanvas.tsx` |
-| `useElementSelection.ts` | Alt+click DOM element selection inside component iframes for targeted iteration | `ComponentNode.tsx`, `IterationNode.tsx` |
-| `useNodeSelection.ts` | React Flow node selection state management | `PlaygroundCanvas.tsx` |
-| `useNodeShared.ts` | Shared state and logic across node types (used by both ComponentNode and IterationNode) | `nodes/*.tsx` |
+| `useGenerationCoordination.ts` | Owns generation/scan coordination refs behind typed accessors | Generation scan, lifecycle, chat, drag-drop |
+| `useIterationScan.ts` | Iteration file scan, prompt-copy poll, SSE fallback poll; returns `stopPolling` | `PlaygroundCanvas.tsx` |
+| `useGenerationLifecycle.ts` | Timer, reconcile, SSE, resume-after-reload, START/COMPLETE/ERROR | `PlaygroundCanvas.tsx` |
+| `useChatSubmit.ts` | Chat submit + generation queue drain | `PlaygroundCanvas.tsx` |
+| `useDragToIterate.ts` | Drag-to-iterate + `useDragIterateEventHandler` | `PlaygroundCanvas.tsx` |
+| `useCanvasKeyboard.ts` | Consolidated canvas keyboard shortcuts | `PlaygroundCanvas.tsx` |
+| `useCanvasDrawTool.ts` | Freehand ink + drag-to-draw shapes | `PlaygroundCanvas.tsx` |
+| `useCanvasAutoArrange.ts` | Bento auto-arrange event shell | `PlaygroundCanvas.tsx` |
+| `useCanvasPaste.ts` | Clipboard paste I/O (image/JSX/URL/HTML) | `PlaygroundCanvas.tsx` |
+| `useCanvasDragDrop.ts` | Sidebar DnD + file drop + iteration attach | `PlaygroundCanvas.tsx` |
+| `useCanvasPresenceBubbles.ts` | Canvas presence bubble state + pan/fit listeners | `PlaygroundCanvas.tsx` |
+| `useCanvasPersistence.ts` | localStorage save + beforeunload viewport | `PlaygroundCanvas.tsx` |
+| `useCanvasNodeDelete.ts` | Delete dialog + cascade/reparent API | `PlaygroundCanvas.tsx` |
+| `useCanvasFrameOps.ts` | Group/ungroup, z-order, helper-line drag | `PlaygroundCanvas.tsx` |
+| `useModelCycle.ts` | Docked chat model selection + flip animation | `DockedChatBar.tsx` |
+| `useDynamicBackground.ts` | Dynamic canvas background dot sizing | `PlaygroundCanvas.tsx` |
+| `useElementSelection.ts` | Alt+click DOM element selection in iframes | `ComponentNode.tsx`, `IterationNode.tsx` |
+| `useNodeSelection.ts` | React Flow node selection for chat context | `PlaygroundCanvas.tsx` |
+| `useNodeShared.ts` | Shared state across node types | `nodes/*.tsx` |
+
+## Pure lib companions (Batch J)
+
+| Module | Purpose |
+|--------|---------|
+| `lib/canvas-auto-arrange.ts` | Bento cluster layout + collision resolution |
+| `lib/canvas-visibility.ts` | Collapse filter + `hasChildren`/`isCollapsed` annotation |
+| `lib/iteration-scan.ts` | Iteration positioning + parent lookup helpers |
+| `lib/canvas-paste.ts` | Clipboard classification (`classifyClipboard`) |
 
 ## Related Docs
 

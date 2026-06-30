@@ -60,6 +60,78 @@ export function resolveIterationPosition(
   return fallbackPosition ?? { x: 400, y: 200 };
 }
 
+/** Find the source component node for a generated iteration (reads from provided nodes). */
+export function findParentNode(
+  nodes: Node[],
+  componentName: string,
+  parentId?: string,
+): Node | undefined {
+  const possibleIds = [
+    componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, ''),
+    componentName.toLowerCase(),
+    `${componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}-expanded`,
+    `${componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}-minimal`,
+  ];
+
+  if (parentId) {
+    possibleIds.push(parentId);
+  }
+
+  return nodes.find((node) => {
+    if (node.type !== 'component') return false;
+    const componentId = node.data.componentId as string | undefined;
+    if (!componentId) return false;
+    return possibleIds.some((id) => componentId === id || componentId.includes(id));
+  });
+}
+
+/** Find an iteration node by its filename (for tree-aware connections). */
+export function findIterationNodeByFilename(nodes: Node[], filename: string): Node | undefined {
+  return nodes.find(
+    (n) => n.type === 'iteration' && (n.data.filename as string) === filename,
+  );
+}
+
+/** Calculate the position for a new iteration node relative to its parent. */
+export function calculateIterationPosition(
+  nodes: Node[],
+  parentNode: Node,
+  iterationNumber: number,
+  _totalIterations: number,
+): { x: number; y: number } {
+  const parentX = parentNode.position.x;
+  const parentY = parentNode.position.y;
+  const parentW =
+    parentNode.measured?.width ??
+    (parentNode.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH);
+
+  const existingChildren = nodes.filter(
+    (n) =>
+      (n.type === 'iteration' || n.type === 'skeleton') &&
+      n.data.parentNodeId === parentNode.id,
+  );
+
+  let startX: number;
+  if (existingChildren.length > 0) {
+    const rightmostEdge = Math.max(
+      ...existingChildren.map((n) => {
+        const w = n.measured?.width ?? DEFAULT_ITERATION_NODE_WIDTH;
+        return n.position.x + w;
+      }),
+    );
+    startX = rightmostEdge + ARRANGE_HORIZONTAL_GAP;
+  } else {
+    startX = parentX + parentW + ARRANGE_HORIZONTAL_GAP;
+  }
+
+  const stepW = parentW + ARRANGE_HORIZONTAL_GAP;
+
+  return {
+    x: startX + (iterationNumber - 1) * stepW,
+    y: parentY,
+  };
+}
+
 export function countBatchIterationNodes(nodes: Node[], info: GenerationInfo): number {
   if (info.startNumber == null || !info.iterationCount) return 0;
   const start = info.startNumber;

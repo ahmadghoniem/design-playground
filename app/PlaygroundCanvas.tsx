@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useCallback, useMemo, useRef, useEffect, useState, DragEvent, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -17,33 +17,31 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { TooltipProvider } from '../ui/tooltip';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui/alert-dialog';
 import { getProviderFields } from '../lib/generation-body';
-import { loadCanvasState, saveCanvasState, getCanvasStorageKey, getIterationKeyFromNode, getIterationKeysOnCanvas, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
+import { loadCanvasState, getCanvasStorageKey, getIterationKeyFromNode, pruneKnownIterations, type GenerationInfo } from '../lib/canvas-persistence';
 import { useCanvasFlow } from '../lib/canvas-flow';
 import PlaygroundCanvasDrawLayer from '../components/canvas/PlaygroundCanvasDrawLayer';
-import CanvasPresenceLayer, { type CanvasPresenceBubble } from '../components/canvas/CanvasPresenceLayer';
+import PlaygroundCanvasToolbar from '../components/canvas/PlaygroundCanvasToolbar';
+import PlaygroundCanvasDialogs from '../components/canvas/PlaygroundCanvasDialogs';
+import CanvasPresenceLayer from '../components/canvas/CanvasPresenceLayer';
 import { usePlaygroundDrawStore } from '../stores/playground-draw-store';
 import { type DrawPenKind, type DrawStroke } from '../lib/draw-types';
 import { useCanvasDrawTool } from '../hooks/useCanvasDrawTool';
+import { useCanvasPersistence } from '../hooks/useCanvasPersistence';
+import { useCanvasPresenceBubbles } from '../hooks/useCanvasPresenceBubbles';
+import { useCanvasDragDrop } from '../hooks/useCanvasDragDrop';
+import { useCanvasPaste } from '../hooks/useCanvasPaste';
 import { useGenerationCoordination } from '../hooks/useGenerationCoordination';
 import { useGenerationLifecycle } from '../hooks/useGenerationLifecycle';
 import { useIterationScan } from '../hooks/useIterationScan';
 import { useChatSubmit } from '../hooks/useChatSubmit';
 import { useCanvasKeyboard } from '../hooks/useCanvasKeyboard';
+import { useCanvasFrameOps } from '../hooks/useCanvasFrameOps';
+import { useCanvasNodeDelete } from '../hooks/useCanvasNodeDelete';
+import { useCanvasAutoArrange } from '../hooks/useCanvasAutoArrange';
 import { useDragIterateEventHandler } from '../hooks/useDragToIterate';
 import { LayoutGrid, Frame } from 'lucide-react';
-import { ShapeToolGroup } from '../components/canvas/ShapeToolGroup';
-import { PageDocumentIcon, ProjectBoxIcon } from '../ui/playground-nav-icons';
+import { PageDocumentIcon } from '../ui/playground-nav-icons';
 
 import ComponentNode from '../nodes/ComponentNode';
 import IterationNode from '../nodes/IterationNode';
@@ -54,7 +52,7 @@ import { hitTestStrokes } from '../lib/draw-hit-test';
 import TextNode from '../nodes/TextNode';
 import ShapeNode, { type ShapeKind } from '../nodes/ShapeNode';
 import FrameNode from '../nodes/FrameNode';
-import HelperLines, { type HelperLineState } from '../nodes/shared/HelperLines';
+import HelperLines from '../nodes/shared/HelperLines';
 import {
   formatSkillSection,
   getStylingConstraint,
@@ -66,61 +64,17 @@ import {
   GENERATION_START_EVENT,
   GENERATION_COMPLETE_EVENT,
   GENERATION_ERROR_EVENT,
-  GENERATION_QUEUED_EVENT,
-  GENERATION_AGENT_PREVIEW_EVENT,
-  PLAYGROUND_AUTO_ARRANGE_EVENT,
   CREATE_DESIGN_EVENT,
-  DRAG_ITERATE_UNDO_DURATION_MS,
-  DRAG_ITERATE_TOAST_DURATION_MS,
-
-  ARRANGE_START_X,
-  ARRANGE_START_Y,
-  ARRANGE_HORIZONTAL_GAP,
-  ARRANGE_BENTO_TILE_GAP_X,
-  ARRANGE_BENTO_TILE_GAP_Y,
-  ARRANGE_BENTO_CLUSTER_MAX_WIDTH,
-  ARRANGE_BENTO_CLUSTER_GAP_X,
-  ARRANGE_BENTO_CLUSTER_GAP_Y,
-  ARRANGE_BENTO_CLUSTER_ROW_MAX_WIDTH,
-  ARRANGE_LABEL_PADDING_X_BASE,
-  ARRANGE_LABEL_PADDING_Y_BASE,
-  ARRANGE_COLLISION_MIN_SEPARATION,
-  ARRANGE_COLLISION_MAX_PASSES,
-  NODE_LABEL_SCALE_THRESHOLD,
-  NODE_LABEL_MAX_INV_SCALE,
-  DEFAULT_ITERATION_NODE_WIDTH,
-  DEFAULT_ITERATION_NODE_HEIGHT,
-  DEFAULT_COMPONENT_NODE_WIDTH,
-  DEFAULT_COMPONENT_NODE_HEIGHT,
-  ITERATION_EDGE_STYLE,
-  SKELETON_EDGE_STYLE,
-  FITVIEW_AFTER_ARRANGE,
-  ARRANGE_FITVIEW_DELAY,
-  POST_GENERATION_ARRANGE_DELAY,
-  SKELETON_ARRANGE_DELAY,
   CANVAS_BACKGROUND_COLOR,
   BACKGROUND_COLOR,
-  DND_DATA_KEY,
-  HTML_ID_PREFIX,
-  JSX_ID_PREFIX,
-  DESIGN_SYSTEM_SHOWCASE_ID,
-  JSX_COMPONENT_ADDED_EVENT,
   CANVAS_MAX_ZOOM,
   CANVAS_MIN_ZOOM,
   ITERATION_COLLAPSE_TOGGLE_EVENT,
   PLAYGROUND_CLEAR_EVENT,
-  PAN_TO_POSITION_EVENT,
-  FIT_COMPONENT_NODES_EVENT,
-  PRESENCE_BUBBLE_DISMISS_EVENT,
-  DRAG_GHOST_GAP,
   DEFAULT_STYLING_MODE,
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
-  type GenerationQueuedPayload,
-  type GenerationAgentPreviewPayload,
-  type PresenceBubbleDismissPayload,
-  type JsxComponentInfo,
 } from '../lib/constants';
 import DockedChatBar from '../components/chat/DockedChatBar';
 import ElementHighlight from '../components/canvas/ElementHighlight';
@@ -129,9 +83,7 @@ import { useNodeSelection } from '../hooks/useNodeSelection';
 import { useInteractiveNodeStore } from '../stores/interactive-node-store';
 import { useDynamicBackground } from '../hooks/useDynamicBackground';
 import { toast } from 'sonner';
-import { wrapHtmlFragment } from '../lib/html-utils';
-import { wrapJsxComponent } from '../lib/jsx-utils';
-import { classifyClipboard, nextFrameNumber } from '../lib/canvas-paste';
+import { computeVisibleNodes } from '../lib/canvas-visibility';
 
 const nodeTypes = {
   component: ComponentNode,
@@ -238,7 +190,6 @@ export default function PlaygroundCanvas({
   // snapping only engages while the user holds Control/⌘ (see the effect below).
   // Plus transient Figma-style alignment guides shown while dragging.
   const [snapEnabled, setSnapEnabled] = useState(false);
-  const [helperLines, setHelperLines] = useState<HelperLineState>({});
   const SNAP_GRID = 16;
 
   // Engage snap-to-grid only while Control (or ⌘) is held; release — or losing
@@ -272,9 +223,6 @@ export default function PlaygroundCanvas({
   const setDrawPenKind = usePlaygroundDrawStore((s) => s.setDrawPenKind);
   const strokeSelection = usePlaygroundDrawStore((s) => s.strokeSelection);
 
-  // Delete cascade/reparent dialog
-  const [deleteDialogNode, setDeleteDialogNode] = useState<Node | null>(null);
-  
   // Clear canvas confirmation dialog
   const [showClearDialog, setShowClearDialog] = useState(false);
   
@@ -300,12 +248,35 @@ export default function PlaygroundCanvas({
     generationInfo,
   } = coord;
   const { screenToFlowPosition, fitView, setCenter, getViewport } = useReactFlow();
-  const [canvasPresenceBubbles, setCanvasPresenceBubbles] = useState<CanvasPresenceBubble[]>([]);
-  const canvasPresenceBubblesRef = useRef<CanvasPresenceBubble[]>([]);
 
-  useEffect(() => {
-    canvasPresenceBubblesRef.current = canvasPresenceBubbles;
-  }, [canvasPresenceBubbles]);
+  const {
+    handleZOrder,
+    handleGroupSelection,
+    handleUngroupFrame,
+    onNodeDrag,
+    clearHelperLines,
+    helperLines,
+  } = useCanvasFrameOps({ coord, setNodes, contextMenu, getNodeId });
+
+  const {
+    onNodesDelete,
+    deleteDialogNode,
+    setDeleteDialogNode,
+    handleDeleteWithMode,
+  } = useCanvasNodeDelete({
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    setKnownIterations,
+    setCollapsedNodeIds,
+  });
+
+  const {
+    canvasPresenceBubbles,
+    getCanvasPresenceBubblePosition,
+    handleCanvasPresenceBubbleClick,
+  } = useCanvasPresenceBubbles({ coord, setCenter, fitView });
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -380,39 +351,19 @@ export default function PlaygroundCanvas({
     return () => wrapper.removeEventListener('pointerdown', onPointerDown, true);
   }, [activeTool, screenToFlowPosition, getViewport, setStrokeSelection]);
 
-  // Save to localStorage whenever nodes or edges change.
-  useEffect(() => {
-    saveCanvasState(
-      storageKey,
-      nodes,
-      edges,
-      nodeIdCounterRef.current,
-      knownIterations,
-      Array.from(collapsedNodeIds),
-      coord.getGenerationInfo(),
-      getViewport(),
-      canvasDrawingsRef.current,
-    );
-  }, [nodes, edges, knownIterations, collapsedNodeIds, canvasDrawings, getViewport, storageKey]);
-
-  // Save viewport on page unload (captures pan/zoom changes that don't trigger node updates)
-  useEffect(() => {
-    const handler = () => {
-      saveCanvasState(
-        storageKey,
-        coord.getNodes(),
-        edges,
-        nodeIdCounterRef.current,
-        coord.getKnownIterations(),
-        Array.from(collapsedNodeIdsRef.current),
-        coord.getGenerationInfo(),
-        getViewport(),
-        canvasDrawingsRef.current,
-      );
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [edges, getViewport, storageKey]);
+  useCanvasPersistence({
+    storageKey,
+    nodes,
+    edges,
+    coord,
+    knownIterations,
+    collapsedNodeIds,
+    collapsedNodeIdsRef,
+    canvasDrawings,
+    canvasDrawingsRef,
+    nodeIdCounterRef,
+    getViewport,
+  });
 
   // Pointer-driven freehand ink + drag-to-draw shapes live behind one seam.
   useCanvasDrawTool({
@@ -425,73 +376,6 @@ export default function PlaygroundCanvas({
     setNodes,
     setActiveTool,
   });
-
-  // Find parent node for a given component (reads from ref to avoid stale closure)
-  const findParentNode = useCallback((componentName: string, parentId?: string): Node | undefined => {
-    // Convert component name to possible registry IDs
-    const possibleIds = [
-      componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, ''),
-      componentName.toLowerCase(),
-      `${componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}-expanded`,
-      `${componentName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}-minimal`,
-    ];
-    
-    // Add parentId if provided
-    if (parentId) {
-      possibleIds.push(parentId);
-    }
-
-    return coord.getNodes().find(node => {
-      if (node.type !== 'component') return false;
-      const componentId = node.data.componentId as string | undefined;
-      if (!componentId) return false;
-      // Check exact match first, then includes
-      return possibleIds.some(id => componentId === id || componentId.includes(id));
-    });
-  }, []);
-
-  // Find an iteration node by its filename (for tree-aware connections)
-  const findIterationNodeByFilename = useCallback((filename: string): Node | undefined => {
-    return coord.getNodes().find(
-      (n) => (n.type === 'iteration') && (n.data.filename as string) === filename,
-    );
-  }, []);
-
-  // Calculate position for iteration node
-  const calculateIterationPosition = useCallback((parentNode: Node, iterationNumber: number, _totalIterations: number): { x: number; y: number } => {
-    const parentX = parentNode.position.x;
-    const parentY = parentNode.position.y;
-    const parentW = parentNode.measured?.width ?? (parentNode.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH);
-
-    // Find existing child nodes (iterations + skeletons) of this parent
-    const existingChildren = coord.getNodes().filter(
-      n =>
-        (n.type === 'iteration' || n.type === 'skeleton') &&
-        n.data.parentNodeId === parentNode.id
-    );
-
-    // Place to the right of the parent, or after the rightmost existing child
-    let startX: number;
-    if (existingChildren.length > 0) {
-      const rightmostEdge = Math.max(
-        ...existingChildren.map(n => {
-          const w = n.measured?.width ?? DEFAULT_ITERATION_NODE_WIDTH;
-          return n.position.x + w;
-        })
-      );
-      startX = rightmostEdge + ARRANGE_HORIZONTAL_GAP;
-    } else {
-      startX = parentX + parentW + ARRANGE_HORIZONTAL_GAP;
-    }
-
-    // Use actual parent width + gap so large nodes don't overlap
-    const stepW = parentW + ARRANGE_HORIZONTAL_GAP;
-
-    return {
-      x: startX + (iterationNumber - 1) * stepW,
-      y: parentY,
-    };
-  }, []);
 
   // Handle iteration deletion callback
   const handleIterationDelete = useCallback((filename: string) => {
@@ -511,8 +395,6 @@ export default function PlaygroundCanvas({
     setNodes,
     setEdges,
     getNodeId,
-    findParentNode,
-    findIterationNodeByFilename,
     handleIterationDelete,
     handleIterationAdopt,
   });
@@ -525,7 +407,6 @@ export default function PlaygroundCanvas({
     setEdges,
     getNodeId,
     scanForIterations,
-    calculateIterationPosition,
     resumeGenerationInfo: initialState?.generationInfo,
   });
 
@@ -546,577 +427,22 @@ export default function PlaygroundCanvas({
     scanForIterations,
   });
 
-  // Fullscreen fitView behavior is no longer used; nodes open in a new tab instead
-
-  // Canvas copy of generation presence bubbles (anchored to flowPosition).
-  // This mirrors the header indicators so users can see where they dropped chat.
-  useEffect(() => {
-    const nextBubbleId = (componentId: string, suffix: string) =>
-      `${componentId}-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-
-    const getNodeAnchor = (
-      targetNodeId: string | null | undefined,
-      flowPosition: { x: number; y: number } | null | undefined,
-    ) => {
-      if (!targetNodeId) return { targetNodeId: null, nodeOffset: null };
-      const targetNode = coord.getNodes().find((node) => node.id === targetNodeId);
-      if (!targetNode || !flowPosition) return { targetNodeId, nodeOffset: null };
-      return {
-        targetNodeId,
-        nodeOffset: {
-          x: flowPosition.x - targetNode.position.x,
-          y: flowPosition.y - targetNode.position.y,
-        },
-      };
-    };
-
-    const handleQueued = (e: Event) => {
-      const detail = (e as CustomEvent<GenerationQueuedPayload>).detail;
-      const anchor = getNodeAnchor(detail.targetNodeId, detail.flowPosition);
-      setCanvasPresenceBubbles((prev) => [
-        ...prev,
-        {
-          id: nextBubbleId(detail.componentId, 'queued'),
-          componentId: detail.componentId,
-          model: detail.model || 'auto',
-          provider: detail.provider,
-          status: 'queued',
-          flowPosition: detail.flowPosition ?? null,
-          targetNodeId: anchor.targetNodeId,
-          nodeOffset: anchor.nodeOffset,
-        },
-      ]);
-    };
-
-    const handleStart = (e: Event) => {
-      const detail = (e as CustomEvent<GenerationStartPayload>).detail;
-      const bubbleType = detail.adoptionMode ? 'adopt' as const : detail.editMode ? 'edit' as const : 'iterate' as const;
-      const targetNodeId = detail.targetNodeId ?? (detail.editMode ? detail.parentNodeId : null);
-      const anchor = getNodeAnchor(targetNodeId, detail.flowPosition ?? null);
-      setCanvasPresenceBubbles((prev) => {
-        const queuedIdx = prev.findIndex(
-          (bubble) => bubble.componentId === detail.componentId && bubble.status === 'queued',
-        );
-        if (queuedIdx !== -1) {
-          return prev.map((bubble, idx) =>
-            idx === queuedIdx
-              ? {
-                  ...bubble,
-                  status: 'generating' as const,
-                  model: detail.model || bubble.model,
-                  provider: detail.provider ?? bubble.provider,
-                  flowPosition: detail.flowPosition ?? bubble.flowPosition,
-                  targetNodeId: anchor.targetNodeId ?? bubble.targetNodeId ?? null,
-                  nodeOffset: anchor.nodeOffset ?? bubble.nodeOffset ?? null,
-                  type: bubbleType,
-                  agentPreviewText: undefined,
-                }
-              : bubble,
-          );
-        }
-
-        return [
-          ...prev,
-          {
-            id: nextBubbleId(detail.componentId, 'generating'),
-            componentId: detail.componentId,
-            model: detail.model || 'auto',
-            provider: detail.provider,
-            status: 'generating',
-            flowPosition: detail.flowPosition ?? null,
-            targetNodeId: anchor.targetNodeId,
-            nodeOffset: anchor.nodeOffset,
-            type: bubbleType,
-            agentPreviewText: undefined,
-          },
-        ];
-      });
-    };
-
-    const handleComplete = (e: Event) => {
-      const detail = (e as CustomEvent<GenerationCompletePayload>).detail;
-      setCanvasPresenceBubbles((prev) =>
-        prev.map((bubble) =>
-          bubble.componentId === detail.componentId && bubble.status === 'generating'
-            ? { ...bubble, status: 'done' as const }
-            : bubble,
-        ),
-      );
-    };
-
-    const handleError = (e: Event) => {
-      const detail = (e as CustomEvent<GenerationErrorPayload>).detail;
-      setCanvasPresenceBubbles((prev) =>
-        prev.filter(
-          (bubble) =>
-            !(
-              bubble.componentId === detail.componentId &&
-              (bubble.status === 'queued' || bubble.status === 'generating')
-            ),
-        ),
-      );
-    };
-
-    const handleAgentPreview = (e: Event) => {
-      const detail = (e as CustomEvent<GenerationAgentPreviewPayload>).detail;
-      setCanvasPresenceBubbles((prev) =>
-        prev.map((bubble) =>
-          bubble.componentId === detail.componentId &&
-          (bubble.status === 'generating' || bubble.status === 'done')
-            ? { ...bubble, agentPreviewText: detail.text }
-            : bubble,
-        ),
-      );
-    };
-
-    const handleDismiss = (e: Event) => {
-      const detail = (e as CustomEvent<PresenceBubbleDismissPayload>).detail;
-      if (!detail?.componentId) return;
-      setCanvasPresenceBubbles((prev) =>
-        prev.filter((bubble) => bubble.componentId !== detail.componentId),
-      );
-    };
-
-    window.addEventListener(GENERATION_QUEUED_EVENT, handleQueued);
-    window.addEventListener(GENERATION_START_EVENT, handleStart);
-    window.addEventListener(GENERATION_COMPLETE_EVENT, handleComplete);
-    window.addEventListener(GENERATION_ERROR_EVENT, handleError);
-    window.addEventListener(GENERATION_AGENT_PREVIEW_EVENT, handleAgentPreview);
-    window.addEventListener(PRESENCE_BUBBLE_DISMISS_EVENT, handleDismiss);
-    return () => {
-      window.removeEventListener(GENERATION_QUEUED_EVENT, handleQueued);
-      window.removeEventListener(GENERATION_START_EVENT, handleStart);
-      window.removeEventListener(GENERATION_COMPLETE_EVENT, handleComplete);
-      window.removeEventListener(GENERATION_ERROR_EVENT, handleError);
-      window.removeEventListener(GENERATION_AGENT_PREVIEW_EVENT, handleAgentPreview);
-      window.removeEventListener(PRESENCE_BUBBLE_DISMISS_EVENT, handleDismiss);
-    };
-  }, []);
-
-  const getCanvasPresenceBubblePosition = useCallback((
-    bubble: CanvasPresenceBubble,
-    sourceNodes: Node[] = coord.getNodes(),
-  ): { x: number; y: number } | null => {
-    if (bubble.targetNodeId) {
-      const targetNode = sourceNodes.find((node) => node.id === bubble.targetNodeId);
-      if (targetNode) {
-        const fallbackOffset = {
-          x: (targetNode.measured?.width ?? DEFAULT_COMPONENT_NODE_WIDTH) / 2,
-          y: Math.min(48, (targetNode.measured?.height ?? DEFAULT_COMPONENT_NODE_HEIGHT) / 3),
-        };
-        const offset = bubble.nodeOffset ?? (
-          bubble.flowPosition
-            ? {
-                x: bubble.flowPosition.x - targetNode.position.x,
-                y: bubble.flowPosition.y - targetNode.position.y,
-              }
-            : fallbackOffset
-        );
-        return {
-          x: targetNode.position.x + offset.x,
-          y: targetNode.position.y + offset.y,
-        };
-      }
-    }
-    return bubble.flowPosition;
-  }, []);
-
-  const handleCanvasPresenceBubbleClick = useCallback((bubble: CanvasPresenceBubble) => {
-    const currentPosition = getCanvasPresenceBubblePosition(bubble);
-    if (currentPosition) {
-      setCenter(currentPosition.x, currentPosition.y, { duration: 400, zoom: 1 });
-    } else if (bubble.componentId) {
-      window.dispatchEvent(
-        new CustomEvent(FIT_COMPONENT_NODES_EVENT, { detail: { componentId: bubble.componentId } }),
-      );
-    }
-    // Don't dismiss while the generation is still running or queued — only navigate to it.
-    if (bubble.status === 'generating' || bubble.status === 'queued') return;
-    window.dispatchEvent(
-      new CustomEvent<PresenceBubbleDismissPayload>(PRESENCE_BUBBLE_DISMISS_EVENT, {
-        detail: {
-          componentId: bubble.componentId,
-          flowPosition: currentPosition ?? bubble.flowPosition,
-          targetNodeId: bubble.targetNodeId ?? null,
-        },
-      }),
-    );
-  }, [getCanvasPresenceBubblePosition, setCenter]);
-
-  // Pan-to-position event listener (for presence bubble clicks)
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ x?: number; y?: number; componentId?: string; targetNodeId?: string | null }>).detail;
-      const anchoredBubble = detail?.componentId
-        ? canvasPresenceBubblesRef.current.find((bubble) => bubble.componentId === detail.componentId)
-        : null;
-      if (anchoredBubble) {
-        const currentPosition = getCanvasPresenceBubblePosition(anchoredBubble);
-        if (currentPosition) {
-          setCenter(currentPosition.x, currentPosition.y, { duration: 400, zoom: 1 });
-          return;
-        }
-      }
-      if (detail?.targetNodeId) {
-        const targetNode = coord.getNodes().find((node) => node.id === detail.targetNodeId);
-        if (targetNode) {
-          const width = targetNode.measured?.width ?? DEFAULT_COMPONENT_NODE_WIDTH;
-          const height = targetNode.measured?.height ?? DEFAULT_COMPONENT_NODE_HEIGHT;
-          setCenter(targetNode.position.x + width / 2, targetNode.position.y + height / 2, { duration: 400, zoom: 1 });
-          return;
-        }
-      }
-      if (detail?.x != null && detail?.y != null) {
-        setCenter(detail.x, detail.y, { duration: 400, zoom: 1 });
-      }
-    };
-    window.addEventListener(PAN_TO_POSITION_EVENT, handler);
-    return () => window.removeEventListener(PAN_TO_POSITION_EVENT, handler);
-  }, [getCanvasPresenceBubblePosition, setCenter]);
-
-  // Fit viewport around all nodes for a given component (presence bubble click)
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { componentId } = (e as CustomEvent<{ componentId: string }>).detail;
-      if (!componentId) return;
-
-      // Find the parent component node and all its iteration/skeleton children
-      const parentNode = coord.getNodes().find(
-        n => n.type === 'component' && (n.data.componentId as string)?.includes(componentId),
-      );
-      const childNodes = coord.getNodes().filter(
-        n => (n.type === 'iteration' || n.type === 'skeleton') &&
-          parentNode && n.data.parentNodeId === parentNode.id,
-      );
-
-      const nodeIds = [
-        ...(parentNode ? [parentNode.id] : []),
-        ...childNodes.map(n => n.id),
-      ];
-
-      if (nodeIds.length > 0) {
-        fitView({ nodes: nodeIds.map(id => ({ id })), duration: 400, padding: 0.15 });
-      }
-    };
-    window.addEventListener(FIT_COMPONENT_NODES_EVENT, handler);
-    return () => window.removeEventListener(FIT_COMPONENT_NODES_EVENT, handler);
-  }, [fitView]);
+  // Fit viewport around all nodes for a given component — handled in useCanvasPresenceBubbles.
 
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
     [setEdges]
   );
 
-  const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const onDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-
-      // Check for image file drops
-      const files = event.dataTransfer.files;
-      if (files.length > 0) {
-        const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
-        if (imageFiles.length > 0) {
-          const position = screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          });
-          imageFiles.forEach((file, idx) => {
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const base64 = reader.result as string;
-              try {
-                const res = await fetch('/playground/api/images', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ imageBase64: base64, originalName: file.name }),
-                });
-                const data = await res.json();
-                if (data.success) {
-                  const newNode: Node = {
-                    id: getNodeId(),
-                    type: 'image',
-                    position: { x: position.x + idx * 320, y: position.y },
-                    style: { width: 300, height: 250 },
-                    data: {
-                      imagePath: data.path,
-                      imageUrl: data.url,
-                      filename: data.filename,
-                      originalName: file.name,
-                    },
-                  };
-                  setNodes((nds) => nds.concat(newNode));
-                }
-              } catch (err) {
-                console.error('[Playground] Image upload failed:', err);
-              }
-            };
-            reader.readAsDataURL(file);
-          });
-          return;
-        }
-
-        // Check for HTML file drops
-        const htmlFiles = Array.from(files).filter((f) =>
-          /\.(html?|htm)$/i.test(f.name)
-        );
-        if (htmlFiles.length > 0) {
-          const position = screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          });
-
-          (async () => {
-            // Determine next frame number
-            let frameNumber = 1;
-            const [htmlRes, jsxRes] = await Promise.all([
-              fetch('/playground/api/html-pages').catch(() => null),
-              fetch('/playground/api/oncanvas-components').catch(() => null),
-            ]);
-            if (htmlRes?.ok) {
-              const { pages } = await htmlRes.json() as { pages: { folder: string }[] };
-              for (const page of pages) {
-                const match = page.folder.match(/^frame-(\d+)$/);
-                if (match) frameNumber = Math.max(frameNumber, parseInt(match[1], 10) + 1);
-              }
-            }
-            if (jsxRes?.ok) {
-              const { components } = await jsxRes.json() as { components: { filename: string }[] };
-              for (const comp of components) {
-                const match = comp.filename.match(/^frame-(\d+)\.tsx$/);
-                if (match) frameNumber = Math.max(frameNumber, parseInt(match[1], 10) + 1);
-              }
-            }
-
-            for (let idx = 0; idx < htmlFiles.length; idx++) {
-              const file = htmlFiles[idx];
-              try {
-                const text = await file.text();
-                const wrappedHtml = wrapHtmlFragment(text);
-                const frameName = `frame-${frameNumber + idx}`;
-
-                const res = await fetch('/playground/api/html-pages', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ name: frameName, content: wrappedHtml }),
-                });
-                const data = await res.json();
-
-                if (!res.ok) {
-                  console.error('[Playground] HTML file drop failed:', data.error);
-                  toast.error(data.error || 'Failed to create frame from dropped HTML');
-                  continue;
-                }
-
-                const pageId = data.page.id as string;
-                const folder = data.page.folder as string;
-
-                const newNode: Node = {
-                  id: getNodeId(),
-                  type: 'component',
-                  position: { x: position.x + idx * 320, y: position.y },
-                  data: {
-                    componentId: pageId,
-                    renderMode: 'html' as const,
-                    htmlFolder: folder,
-                  },
-                };
-                setNodes((nds) => nds.concat(newNode));
-              } catch (err) {
-                console.error('[Playground] HTML file drop failed:', err);
-                toast.error('Failed to create frame from dropped HTML');
-              }
-            }
-          })();
-          return;
-        }
-      }
-
-      const componentId = event.dataTransfer.getData(DND_DATA_KEY);
-      if (!componentId) return;
-
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      const isHtml = componentId.startsWith(HTML_ID_PREFIX);
-      const isJsxFrame = componentId.startsWith(JSX_ID_PREFIX);
-      const isDesignSystem = componentId === DESIGN_SYSTEM_SHOWCASE_ID;
-      const parentNodeId = getNodeId();
-      const newNode: Node = {
-        id: parentNodeId,
-        type: 'component',
-        position,
-        data: {
-          componentId,
-          ...(isHtml ? {
-            renderMode: 'html' as const,
-            htmlFolder: componentId.slice(HTML_ID_PREFIX.length),
-          } : {}),
-          ...(isDesignSystem ? {
-            renderMode: 'design-system' as const,
-          } : {}),
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-
-      // After dropping a frame or registry component, also bring any of its
-      // iterations that are not already on the canvas, attached to this newly placed parent.
-      if (isHtml || isJsxFrame || !isDesignSystem) {
-        (async () => {
-          try {
-            const currentNodes = coord.getNodes();
-            const parentW = DEFAULT_COMPONENT_NODE_WIDTH;
-            const stepW = ((isHtml || isJsxFrame) ? (isHtml ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH) : DEFAULT_ITERATION_NODE_WIDTH) + ARRANGE_HORIZONTAL_GAP;
-            const baseX = position.x + parentW + ARRANGE_HORIZONTAL_GAP;
-            const newNodes: Node[] = [];
-            const newEdges: Edge[] = [];
-            const newKnownFilenames: string[] = [];
-
-            if (isHtml) {
-              const htmlFolder = componentId.slice(HTML_ID_PREFIX.length);
-              const res = await fetch('/playground/api/html-pages');
-              if (!res.ok) return;
-              const { pages } = await res.json() as { pages: { folder: string; iterations: { folder: string; number: number }[] }[] };
-              const page = pages.find(p => p.folder === htmlFolder);
-              if (!page || page.iterations.length === 0) return;
-
-              const existingKeys = getIterationKeysOnCanvas(currentNodes);
-
-              const missing = page.iterations
-                .filter(it => !existingKeys.has(`${htmlFolder}/${it.folder}`))
-                .sort((a, b) => a.number - b.number);
-
-              missing.forEach((iter, idx) => {
-                const nodeId = getNodeId();
-                newNodes.push({
-                  id: nodeId,
-                  type: 'iteration',
-                  position: { x: baseX + idx * stepW, y: position.y },
-                  data: {
-                    componentName: htmlFolder,
-                    iterationNumber: iter.number,
-                    filename: `${htmlFolder}/iteration-${iter.number}`,
-                    description: '',
-                    parentNodeId,
-                    renderMode: 'html',
-                    htmlFolder,
-                    htmlIterationFolder: iter.folder,
-                    onDelete: handleIterationDelete,
-                    onAdopt: handleIterationAdopt,
-                  },
-                });
-                newEdges.push({
-                  id: `edge_${parentNodeId}_${nodeId}`,
-                  source: parentNodeId,
-                  target: nodeId,
-                  type: 'smoothstep',
-                  animated: false,
-                  style: ITERATION_EDGE_STYLE,
-                });
-                newKnownFilenames.push(`${htmlFolder}/${iter.folder}`);
-              });
-            } else if (isJsxFrame) {
-              const baseFilename = `${componentId.slice(JSX_ID_PREFIX.length)}.tsx`;
-              const res = await fetch('/playground/api/oncanvas-components');
-              if (!res.ok) return;
-              const { components } = await res.json() as { components: JsxComponentInfo[] };
-              const comp = components.find(c => c.filename === baseFilename);
-              if (!comp || comp.iterations.length === 0) return;
-
-              const existingKeys = getIterationKeysOnCanvas(currentNodes);
-
-              const missing = comp.iterations
-                .filter(it => !existingKeys.has(it.filename))
-                .sort((a, b) => a.iterationNumber - b.iterationNumber);
-
-              missing.forEach((it, idx) => {
-                const nodeId = getNodeId();
-                newNodes.push({
-                  id: nodeId,
-                  type: 'iteration',
-                  position: { x: baseX + idx * stepW, y: position.y },
-                  data: {
-                    componentName: comp.label,
-                    iterationNumber: it.iterationNumber,
-                    filename: it.filename,
-                    description: '',
-                    parentNodeId,
-                    renderMode: 'jsx',
-                    jsxFile: it.filename,
-                    onDelete: handleIterationDelete,
-                    onAdopt: handleIterationAdopt,
-                  },
-                });
-                newEdges.push({
-                  id: `edge_${parentNodeId}_${nodeId}`,
-                  source: parentNodeId,
-                  target: nodeId,
-                  type: 'smoothstep',
-                  animated: false,
-                  style: ITERATION_EDGE_STYLE,
-                });
-                newKnownFilenames.push(it.filename);
-              });
-            } else {
-              const res = await fetch('/playground/api/iterations');
-              if (!res.ok) return;
-              const { iterations } = await res.json() as { iterations: IterationFile[] };
-
-              const existingKeys = getIterationKeysOnCanvas(currentNodes);
-              const missing = iterations
-                .filter((it) => it.parentId === componentId)
-                .filter((it) => !existingKeys.has(it.filename))
-                .sort((a, b) => a.iterationNumber - b.iterationNumber);
-
-              missing.forEach((it, idx) => {
-                const nodeId = getNodeId();
-                newNodes.push({
-                  id: nodeId,
-                  type: 'iteration',
-                  position: { x: baseX + idx * stepW, y: position.y },
-                  data: {
-                    componentName: it.componentName,
-                    iterationNumber: it.iterationNumber,
-                    filename: it.filename,
-                    description: it.description,
-                    parentNodeId,
-                    registryId: componentId,
-                    onDelete: handleIterationDelete,
-                    onAdopt: handleIterationAdopt,
-                  },
-                });
-                newEdges.push({
-                  id: `edge_${parentNodeId}_${nodeId}`,
-                  source: parentNodeId,
-                  target: nodeId,
-                  type: 'smoothstep',
-                  animated: false,
-                  style: ITERATION_EDGE_STYLE,
-                });
-                newKnownFilenames.push(it.filename);
-              });
-            }
-
-            if (newNodes.length > 0) {
-              setNodes(nds => [...nds, ...newNodes]);
-              setEdges(eds => [...eds, ...newEdges]);
-              coord.appendKnownIterations(newKnownFilenames);
-            }
-          } catch (err) {
-            console.error('[Playground] Failed to load iterations for dropped frame:', err);
-          }
-        })();
-      }
-    },
-    [screenToFlowPosition, setNodes, setEdges, getNodeId, handleIterationDelete, handleIterationAdopt]
-  );
+  const { onDragOver, onDrop } = useCanvasDragDrop({
+    coord,
+    screenToFlowPosition,
+    getNodeId,
+    setNodes,
+    setEdges,
+    handleIterationDelete,
+    handleIterationAdopt,
+  });
 
   const handlePaneClick = useCallback((event: React.MouseEvent) => {
     setContextMenu(null);
@@ -1153,192 +479,6 @@ export default function PlaygroundCanvas({
     setNodes((nds) => nds.map((n) => (n.id === node.id ? { ...n, selected: true } : n)));
     setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
   }, [setNodes]);
-
-  // Re-stack selected nodes (or the right-clicked node) along the z-axis.
-  const handleZOrder = useCallback((op: 'front' | 'back' | 'forward' | 'backward') => {
-    setNodes((nds) => {
-      const targetIds = new Set<string>();
-      for (const n of nds) if (n.selected) targetIds.add(n.id);
-      if (targetIds.size === 0 && contextMenu?.nodeId) targetIds.add(contextMenu.nodeId);
-      if (targetIds.size === 0) return nds;
-
-      const z = (n: Node) => n.zIndex ?? 0;
-      const others = nds.filter((n) => !targetIds.has(n.id));
-      const targets = nds.filter((n) => targetIds.has(n.id));
-
-      if (op === 'front') {
-        const max = nds.reduce((m, n) => Math.max(m, z(n)), 0);
-        const next = max + 1;
-        return nds.map((n) => (targetIds.has(n.id) ? { ...n, zIndex: next } : n));
-      }
-      if (op === 'back') {
-        const min = nds.reduce((m, n) => Math.min(m, z(n)), 0);
-        const next = min - 1;
-        return nds.map((n) => (targetIds.has(n.id) ? { ...n, zIndex: next } : n));
-      }
-      // one-step: swap zIndex with the nearest non-selected neighbor.
-      const dir: 1 | -1 = op === 'forward' ? 1 : -1;
-      const targetZs = targets.map(z);
-      const refZ = dir === 1 ? Math.max(...targetZs) : Math.min(...targetZs);
-      const candidates = others
-        .map(z)
-        .filter((zz) => (dir === 1 ? zz > refZ : zz < refZ))
-        .sort((a, b) => (dir === 1 ? a - b : b - a));
-      if (candidates.length === 0) {
-        // already at the extreme — bump past it so a subsequent action still has effect.
-        const next = refZ + dir;
-        return nds.map((n) => (targetIds.has(n.id) ? { ...n, zIndex: next } : n));
-      }
-      const swapZ = candidates[0];
-      const next = dir === 1 ? swapZ + 1 : swapZ - 1;
-      return nds.map((n) => (targetIds.has(n.id) ? { ...n, zIndex: next } : n));
-    });
-  }, [setNodes, contextMenu]);
-
-  // ---------------------------------------------------------------------------
-  // Figma-style frames: Group wraps the current selection in a `frame` node and
-  // re-parents the children (parentId + extent:'parent'); Ungroup reverses it.
-  // ---------------------------------------------------------------------------
-  const nodeDim = (n: Node): { w: number; h: number } => ({
-    w: n.measured?.width ?? (n.width as number | undefined) ?? DEFAULT_COMPONENT_NODE_WIDTH,
-    h: n.measured?.height ?? (n.height as number | undefined) ?? DEFAULT_COMPONENT_NODE_HEIGHT,
-  });
-
-  const handleGroupSelection = useCallback(() => {
-    const FRAME_PADDING = 28;
-    setNodes((nds) => {
-      // Only group top-level, non-frame nodes (avoid nested-frame complexity).
-      const selected = nds.filter(
-        (n) => n.selected && !n.parentId && n.type !== 'frame' && n.type !== 'skeleton',
-      );
-      if (selected.length < 1) return nds;
-
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-      for (const n of selected) {
-        const { w, h } = nodeDim(n);
-        minX = Math.min(minX, n.position.x);
-        minY = Math.min(minY, n.position.y);
-        maxX = Math.max(maxX, n.position.x + w);
-        maxY = Math.max(maxY, n.position.y + h);
-      }
-
-      const frameX = minX - FRAME_PADDING;
-      const frameY = minY - FRAME_PADDING;
-      const frameId = getNodeId();
-      const minZ = nds.reduce((m, n) => Math.min(m, n.zIndex ?? 0), 0);
-
-      const frameNode: Node = {
-        id: frameId,
-        type: 'frame',
-        position: { x: frameX, y: frameY },
-        width: maxX - minX + FRAME_PADDING * 2,
-        height: maxY - minY + FRAME_PADDING * 2,
-        zIndex: minZ - 1,
-        selected: true,
-        data: { label: 'Group' },
-      };
-
-      const selectedIds = new Set(selected.map((n) => n.id));
-      // Parent must precede its children in the array, so place the frame first,
-      // then the reparented children, then everything else untouched.
-      const updatedChildren = selected.map((n) => ({
-        ...n,
-        parentId: frameId,
-        extent: 'parent' as const,
-        position: { x: n.position.x - frameX, y: n.position.y - frameY },
-        selected: false,
-      }));
-      const rest = nds.filter((n) => !selectedIds.has(n.id));
-      return [...rest, frameNode, ...updatedChildren];
-    });
-  }, [setNodes, getNodeId]);
-
-  const handleUngroupFrame = useCallback(
-    (frameIdArg?: string) => {
-      setNodes((nds) => {
-        const frame =
-          (frameIdArg && nds.find((n) => n.id === frameIdArg && n.type === 'frame')) ||
-          nds.find((n) => n.type === 'frame' && n.selected);
-        if (!frame) return nds;
-
-        const fx = frame.position.x;
-        const fy = frame.position.y;
-        return nds
-          .filter((n) => n.id !== frame.id)
-          .map((n) =>
-            n.parentId === frame.id
-              ? {
-                  ...n,
-                  parentId: undefined,
-                  extent: undefined,
-                  position: { x: n.position.x + fx, y: n.position.y + fy },
-                  selected: true,
-                }
-              : n,
-          );
-      });
-    },
-    [setNodes],
-  );
-
-  // Alignment guides: while dragging a top-level node, surface pink guides when
-  // an edge or center lines up with another node within a small flow-space
-  // threshold. Cleared on drag stop. (Child nodes use parent-relative coords, so
-  // we skip them rather than draw misplaced guides.)
-  const onNodeDrag = useCallback(
-    (_e: MouseEvent, node: Node) => {
-      if (node.parentId) {
-        setHelperLines({});
-        return;
-      }
-      const threshold = 6;
-      const { w, h } = nodeDim(node);
-      const left = node.position.x;
-      const right = left + w;
-      const cx = left + w / 2;
-      const top = node.position.y;
-      const bottom = top + h;
-      const cy = top + h / 2;
-
-      let vertical: number | undefined;
-      let horizontal: number | undefined;
-      let bestV = threshold;
-      let bestH = threshold;
-
-      for (const o of coord.getNodes()) {
-        if (o.id === node.id || o.parentId || o.type === 'skeleton') continue;
-        const { w: ow, h: oh } = nodeDim(o);
-        const oLeft = o.position.x;
-        const oRight = oLeft + ow;
-        const ocx = oLeft + ow / 2;
-        const oTop = o.position.y;
-        const oBottom = oTop + oh;
-        const ocy = oTop + oh / 2;
-
-        const vPairs: [number, number][] = [
-          [left, oLeft], [right, oRight], [cx, ocx], [left, oRight], [right, oLeft], [cx, oLeft], [cx, oRight],
-        ];
-        for (const [a, b] of vPairs) {
-          const d = Math.abs(a - b);
-          if (d < bestV) { bestV = d; vertical = b; }
-        }
-        const hPairs: [number, number][] = [
-          [top, oTop], [bottom, oBottom], [cy, ocy], [top, oBottom], [bottom, oTop], [cy, oTop], [cy, oBottom],
-        ];
-        for (const [a, b] of hPairs) {
-          const d = Math.abs(a - b);
-          if (d < bestH) { bestH = d; horizontal = b; }
-        }
-      }
-      setHelperLines({ vertical, horizontal });
-    },
-    [],
-  );
-
-  const clearHelperLines = useCallback(() => setHelperLines({}), []);
 
   // Close context menu on any click outside
   useEffect(() => {
@@ -1438,227 +578,12 @@ export default function PlaygroundCanvas({
     return () => wrapper.removeEventListener('wheel', handleWheel);
   }, []);
 
-  // Paste images or HTML from clipboard onto the canvas
-  useEffect(() => {
-    const wrapper = reactFlowWrapper.current;
-    if (!wrapper) return;
-
-    const handlePaste = async (e: ClipboardEvent) => {
-      // Don't intercept pastes into text inputs
-      const active = document.activeElement;
-      if (
-        active &&
-        (active.tagName === 'INPUT' ||
-          active.tagName === 'TEXTAREA' ||
-          (active as HTMLElement).isContentEditable)
-      ) {
-        return;
-      }
-
-      // Pure classification decides which node a paste becomes; this handler
-      // owns the I/O (upload, frame-file writes, node insertion) each drives.
-      const intent = classifyClipboard(e.clipboardData ?? null);
-      if (intent.kind === 'none') return;
-      e.preventDefault();
-
-      // Drop the new node at the current viewport centre (computed lazily so
-      // image/JSX/HTML pastes place correctly after their awaited round-trip).
-      const centerPosition = () => {
-        const wrapperBounds = wrapper.getBoundingClientRect();
-        return screenToFlowPosition({
-          x: wrapperBounds.left + wrapperBounds.width / 2,
-          y: wrapperBounds.top + wrapperBounds.height / 2,
-        });
-      };
-
-      // --- Image paste (takes priority) ---
-      if (intent.kind === 'image') {
-        const file = intent.file;
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = reader.result as string;
-          try {
-            const res = await fetch('/playground/api/images', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                imageBase64: base64,
-                originalName: file.name || `pasted-image.${file.type.split('/')[1] || 'png'}`,
-              }),
-            });
-            const data = await res.json();
-            if (data.success) {
-              const position = centerPosition();
-              const newNode: Node = {
-                id: getNodeId(),
-                type: 'image',
-                position,
-                style: { width: 300, height: 250 },
-                data: {
-                  imagePath: data.path,
-                  imageUrl: data.url,
-                  filename: data.filename,
-                  originalName: file.name || 'Pasted Image',
-                },
-              };
-              setNodes((nds) => nds.concat(newNode));
-            }
-          } catch (err) {
-            console.error('[Playground] Image paste upload failed:', err);
-          }
-        };
-        reader.readAsDataURL(file);
-        return;
-      }
-
-      // --- JSX paste (checked before HTML since JSX also contains HTML tags) ---
-      if (intent.kind === 'jsx') {
-        try {
-          // Determine next frame number by scanning existing JSX components and HTML pages
-          const [jsxRes, htmlRes] = await Promise.all([
-            fetch('/playground/api/oncanvas-components').catch(() => null),
-            fetch('/playground/api/html-pages').catch(() => null),
-          ]);
-          const jsxFilenames: string[] = [];
-          const htmlFolders: string[] = [];
-          if (jsxRes?.ok) {
-            const { components } = await jsxRes.json() as { components: { filename: string }[] };
-            for (const comp of components) jsxFilenames.push(comp.filename);
-          }
-          if (htmlRes?.ok) {
-            const { pages } = await htmlRes.json() as { pages: { folder: string }[] };
-            for (const page of pages) htmlFolders.push(page.folder);
-          }
-          const frameNumber = nextFrameNumber(jsxFilenames, htmlFolders);
-
-          const frameName = `frame-${frameNumber}`;
-          const componentName = `Frame${frameNumber}`;
-          const filename = `${frameName}.tsx`;
-          const wrappedJsx = wrapJsxComponent(intent.source, componentName);
-
-          const res = await fetch('/playground/api/oncanvas-components', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename, content: wrappedJsx }),
-          });
-          const data = await res.json();
-
-          if (!res.ok) {
-            console.error('[Playground] JSX paste failed:', data.error);
-            toast.error(data.error || 'Failed to create frame from pasted JSX');
-            return;
-          }
-
-          const position = centerPosition();
-          const newNode: Node = {
-            id: getNodeId(),
-            type: 'component',
-            position,
-            data: {
-              componentId: `${JSX_ID_PREFIX}${frameName}`,
-              renderMode: 'jsx' as const,
-              jsxFile: filename,
-            },
-          };
-          setNodes((nds) => nds.concat(newNode));
-
-          // Delay event dispatch to give the bundler (HMR) time to recompile
-          // the updated barrel index after the new file is written to disk.
-          // Retry a few times in case the first attempt is too early.
-          const dispatchWithRetry = (attempts: number, delay: number) => {
-            setTimeout(() => {
-              window.dispatchEvent(new Event(JSX_COMPONENT_ADDED_EVENT));
-              if (attempts > 1) {
-                dispatchWithRetry(attempts - 1, delay * 2);
-              }
-            }, delay);
-          };
-          dispatchWithRetry(3, 500);
-        } catch (err) {
-          console.error('[Playground] JSX paste failed:', err);
-          toast.error('Failed to create frame from pasted JSX');
-        }
-        return;
-      }
-
-      // --- Single-line URL paste → remote iframe embed (no file on disk) ---
-      if (intent.kind === 'url') {
-        const position = centerPosition();
-        const embedComponentId = `url-embed:${crypto.randomUUID()}`;
-        const newNode: Node = {
-          id: getNodeId(),
-          type: 'component',
-          position,
-          style: { width: DEFAULT_COMPONENT_NODE_WIDTH, height: DEFAULT_COMPONENT_NODE_HEIGHT },
-          data: {
-            componentId: embedComponentId,
-            renderMode: 'embed' as const,
-            embedUrl: intent.url,
-          },
-        };
-        setNodes((nds) => nds.concat(newNode));
-        return;
-      }
-
-      // --- HTML paste ---
-      try {
-        // Determine next frame number by scanning existing HTML pages and JSX components
-        const [htmlRes2, jsxRes2] = await Promise.all([
-          fetch('/playground/api/html-pages').catch(() => null),
-          fetch('/playground/api/oncanvas-components').catch(() => null),
-        ]);
-        const jsxFilenames: string[] = [];
-        const htmlFolders: string[] = [];
-        if (htmlRes2?.ok) {
-          const { pages } = await htmlRes2.json() as { pages: { folder: string }[] };
-          for (const page of pages) htmlFolders.push(page.folder);
-        }
-        if (jsxRes2?.ok) {
-          const { components } = await jsxRes2.json() as { components: { filename: string }[] };
-          for (const comp of components) jsxFilenames.push(comp.filename);
-        }
-        const frameNumber = nextFrameNumber(jsxFilenames, htmlFolders);
-
-        const frameName = `frame-${frameNumber}`;
-        const wrappedHtml = wrapHtmlFragment(intent.html);
-
-        const res = await fetch('/playground/api/html-pages', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: frameName, content: wrappedHtml }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          console.error('[Playground] HTML paste failed:', data.error);
-          toast.error(data.error || 'Failed to create frame from pasted HTML');
-          return;
-        }
-
-        const position = centerPosition();
-        const pageId = data.page.id as string;
-        const folder = data.page.folder as string;
-
-        const newNode: Node = {
-          id: getNodeId(),
-          type: 'component',
-          position,
-          data: {
-            componentId: pageId,
-            renderMode: 'html' as const,
-            htmlFolder: folder,
-          },
-        };
-        setNodes((nds) => nds.concat(newNode));
-      } catch (err) {
-        console.error('[Playground] HTML paste failed:', err);
-        toast.error('Failed to create frame from pasted HTML');
-      }
-    };
-
-    wrapper.addEventListener('paste', handlePaste);
-    return () => wrapper.removeEventListener('paste', handlePaste);
-  }, [screenToFlowPosition, getNodeId, setNodes]);
+  useCanvasPaste({
+    reactFlowWrapper,
+    screenToFlowPosition,
+    getNodeId,
+    setNodes,
+  });
 
   // Create HTML page from context menu using incremental Untitled-N naming.
   const getNextUntitledDesignName = useCallback(async (): Promise<string> => {
@@ -1816,474 +741,14 @@ export default function PlaygroundCanvas({
     }
   }, [newPageDescription]);
 
-  // Handle node deletion - check for children first
-  const onNodesDelete = useCallback(async (deletedNodes: Node[]) => {
-    if (usePlaygroundDrawStore.getState().strokeSelection) return;
-
-    for (const node of deletedNodes) {
-      if (node.type === 'image' && node.data.filename) {
-        try {
-          await fetch('/playground/api/images', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: node.data.filename }),
-          });
-        } catch (error) {
-          console.error('Error deleting image file:', error);
-        }
-      } else if (node.type === 'iteration' && node.data.filename) {
-        // Check if this node has children
-        const childEdges = edges.filter(e => e.source === node.id);
-        if (childEdges.length > 0) {
-          // Has children -- show cascade/reparent dialog instead of deleting immediately
-          setDeleteDialogNode(node);
-          return; // Don't delete yet, wait for dialog action
-        }
-
-        // No children -- simple delete
-        try {
-          await fetch('/playground/api/iterations', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: node.data.filename }),
-          });
-          setKnownIterations(prev => prev.filter(f => f !== node.data.filename));
-        } catch (error) {
-          console.error('Error deleting iteration file:', error);
-        }
-      }
-    }
-  }, [edges]);
-
-  // Handle cascade or reparent deletion
-  const handleDeleteWithMode = useCallback(async (mode: 'cascade' | 'reparent') => {
-    const node = deleteDialogNode;
-    if (!node || !node.data.filename) return;
-
-    try {
-      const resp = await fetch('/playground/api/iterations', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: node.data.filename, mode }),
-      });
-
-      if (!resp.ok) {
-        console.error('[Playground] Delete failed:', resp.status);
-        setDeleteDialogNode(null);
-        return;
-      }
-
-      const { deletedFiles } = (await resp.json()) as { deletedFiles: string[] };
-
-      if (mode === 'cascade') {
-        // Remove the node and all descendants from canvas
-        const deletedSet = new Set(deletedFiles);
-
-        // Find all node IDs to remove (match by filename)
-        const nodeIdsToRemove = new Set<string>();
-        nodes.forEach(n => {
-          if (n.id === node.id) nodeIdsToRemove.add(n.id);
-          if (n.data.filename && deletedSet.has(n.data.filename as string)) {
-            nodeIdsToRemove.add(n.id);
-          }
-        });
-
-        setNodes(nds => nds.filter(n => !nodeIdsToRemove.has(n.id)));
-        setEdges(eds => eds.filter(e => !nodeIdsToRemove.has(e.source) && !nodeIdsToRemove.has(e.target)));
-        setKnownIterations(prev => prev.filter(f => !deletedSet.has(f)));
-        
-        // Clean up collapsed state
-        setCollapsedNodeIds(prev => {
-          const next = new Set(prev);
-          nodeIdsToRemove.forEach(id => next.delete(id));
-          return next;
-        });
-      } else {
-        // Reparent: reconnect children to the deleted node's parent
-        const parentEdge = edges.find(e => e.target === node.id);
-        const parentId = parentEdge?.source;
-
-        // Get child node IDs
-        const childEdges = edges.filter(e => e.source === node.id);
-        const childNodeIds = childEdges.map(e => e.target);
-
-        // Remove the deleted node
-        setNodes(nds => nds.filter(n => n.id !== node.id));
-
-        // Remove all edges to/from deleted node, and add new edges from parent to children
-        setEdges(eds => {
-          const filtered = eds.filter(e => e.source !== node.id && e.target !== node.id);
-          if (parentId) {
-            const newEdges = childNodeIds.map(childId => ({
-              id: `edge_${parentId}_${childId}`,
-              source: parentId,
-              target: childId,
-              type: 'smoothstep',
-              animated: false,
-              style: ITERATION_EDGE_STYLE,
-            }));
-            return [...filtered, ...newEdges];
-          }
-          return filtered;
-        });
-
-        setKnownIterations(prev => prev.filter(f => f !== node.data.filename));
-        
-        // Clean up collapsed state for deleted node
-        setCollapsedNodeIds(prev => {
-          const next = new Set(prev);
-          next.delete(node.id);
-          return next;
-        });
-      }
-    } catch (error) {
-      console.error('[Playground] Delete error:', error);
-    } finally {
-      setDeleteDialogNode(null);
-    }
-  }, [deleteDialogNode, nodes, edges, setNodes, setEdges]);
-
-  // ---------------------------------------------------------------------------
-  // Auto-arrange: bento cluster layout
-  // Each component and all of its visible descendants are laid out as a local bento cluster.
-  // Component clusters are then packed left-to-right in rows with spacing between clusters.
-  // ---------------------------------------------------------------------------
-  const autoArrangeNodes = useCallback((andFitView: boolean = false) => {
-    const componentNodes = nodes.filter(n => n.type === 'component');
-
-    const START_X = ARRANGE_START_X;
-    const START_Y = ARRANGE_START_Y;
-    const TILE_GAP_X = ARRANGE_BENTO_TILE_GAP_X;
-    const TILE_GAP_Y = ARRANGE_BENTO_TILE_GAP_Y;
-    const CLUSTER_MAX_WIDTH = ARRANGE_BENTO_CLUSTER_MAX_WIDTH;
-    const CLUSTER_GAP_X = ARRANGE_BENTO_CLUSTER_GAP_X;
-    const CLUSTER_GAP_Y = ARRANGE_BENTO_CLUSTER_GAP_Y;
-    const CLUSTER_ROW_MAX_WIDTH = ARRANGE_BENTO_CLUSTER_ROW_MAX_WIDTH;
-    const COLLISION_MIN_SEPARATION = ARRANGE_COLLISION_MIN_SEPARATION;
-    const COLLISION_MAX_PASSES = ARRANGE_COLLISION_MAX_PASSES;
-    const LABEL_PADDING_X_BASE = ARRANGE_LABEL_PADDING_X_BASE;
-    const LABEL_PADDING_Y_BASE = ARRANGE_LABEL_PADDING_Y_BASE;
-    const zoom = Math.max(getViewport().zoom, 0.0001);
-
-    // Helper to get node dimensions
-    const getNodeSize = (node: Node): { width: number; height: number } => {
-      const measured = node.measured;
-      if (measured?.width && measured?.height) {
-        return { width: measured.width, height: measured.height };
-      }
-      if (node.type === 'iteration' || node.type === 'skeleton') {
-        return { width: DEFAULT_ITERATION_NODE_WIDTH, height: DEFAULT_ITERATION_NODE_HEIGHT };
-      }
-      return { width: DEFAULT_COMPONENT_NODE_WIDTH, height: DEFAULT_COMPONENT_NODE_HEIGHT };
-    };
-    const getEffectiveNodeFootprint = (node: Node): { width: number; height: number } => {
-      const base = getNodeSize(node);
-      const inverseLabelScale = Math.min(
-        NODE_LABEL_MAX_INV_SCALE,
-        Math.max(1, NODE_LABEL_SCALE_THRESHOLD / zoom),
-      );
-      const zoomGrowth = Math.max(0, inverseLabelScale - 1);
-      const extraX = LABEL_PADDING_X_BASE * zoomGrowth;
-      const extraY = LABEL_PADDING_Y_BASE * zoomGrowth;
-      return {
-        width: base.width + extraX,
-        height: base.height + extraY,
-      };
-    };
-
-    const nodeOrder = new Map<string, number>();
-    nodes.forEach((node, index) => nodeOrder.set(node.id, index));
-    const sortByStableNodeOrder = (a: string, b: string) =>
-      (nodeOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (nodeOrder.get(b) ?? Number.MAX_SAFE_INTEGER);
-
-    // Build adjacency list from edges (parent -> children)
-    const childrenMap = new Map<string, string[]>();
-    edges.forEach(edge => {
-      const existing = childrenMap.get(edge.source) || [];
-      existing.push(edge.target);
-      childrenMap.set(edge.source, existing);
-    });
-    childrenMap.forEach((children, parentId) => {
-      childrenMap.set(parentId, children.sort(sortByStableNodeOrder));
-    });
-
-    // Build visibility map based on collapsed state
-    const collapsed = collapsedNodeIdsRef.current;
-    const hiddenNodeIds = new Set<string>();
-    const markDescendantsHidden = (parentId: string) => {
-      const children = childrenMap.get(parentId) || [];
-      for (const childId of children) {
-        hiddenNodeIds.add(childId);
-        markDescendantsHidden(childId);
-      }
-    };
-    collapsed.forEach(nodeId => markDescendantsHidden(nodeId));
-
-    const nodeMap = new Map<string, Node>();
-    nodes.forEach(n => nodeMap.set(n.id, n));
-
-    const collectVisibleClusterNodeIds = (rootNodeId: string): string[] => {
-      const collected: string[] = [];
-      const visited = new Set<string>();
-      const queue: string[] = [rootNodeId];
-
-      while (queue.length > 0) {
-        const currentId = queue.shift()!;
-        if (visited.has(currentId) || hiddenNodeIds.has(currentId)) continue;
-        const currentNode = nodeMap.get(currentId);
-        if (!currentNode) continue;
-
-        visited.add(currentId);
-        collected.push(currentId);
-        const children = (childrenMap.get(currentId) || []).filter(childId => !hiddenNodeIds.has(childId));
-        queue.push(...children);
-      }
-
-      return collected;
-    };
-
-    const getDepthByNodeId = (rootNodeId: string, clusterNodeIds: Set<string>): Map<string, number> => {
-      const depthByNodeId = new Map<string, number>();
-      const queue: Array<{ nodeId: string; depth: number }> = [{ nodeId: rootNodeId, depth: 0 }];
-
-      while (queue.length > 0) {
-        const { nodeId, depth } = queue.shift()!;
-        if (depthByNodeId.has(nodeId) || !clusterNodeIds.has(nodeId)) continue;
-
-        depthByNodeId.set(nodeId, depth);
-        const children = (childrenMap.get(nodeId) || []).filter(childId => clusterNodeIds.has(childId));
-        children.forEach(childId => queue.push({ nodeId: childId, depth: depth + 1 }));
-      }
-
-      return depthByNodeId;
-    };
-
-    const layoutClusterBento = (
-      rootNodeId: string,
-      clusterNodeIds: string[],
-      anchorRootAtTopLeft: boolean,
-    ): {
-      positions: Map<string, { x: number; y: number }>;
-      width: number;
-      height: number;
-    } => {
-      const localPositions = new Map<string, { x: number; y: number }>();
-      if (clusterNodeIds.length === 0) {
-        return { positions: localPositions, width: 0, height: 0 };
-      }
-
-      const nodeIdSet = new Set(clusterNodeIds);
-      const depthByNodeId = getDepthByNodeId(rootNodeId, nodeIdSet);
-
-      const orderedTiles = clusterNodeIds
-        .filter(nodeId => !anchorRootAtTopLeft || nodeId !== rootNodeId)
-        .sort((a, b) => {
-          const depthDelta = (depthByNodeId.get(a) ?? Number.MAX_SAFE_INTEGER) -
-            (depthByNodeId.get(b) ?? Number.MAX_SAFE_INTEGER);
-          if (depthDelta !== 0) return depthDelta;
-          return sortByStableNodeOrder(a, b);
-        });
-
-      let cursorX = 0;
-      let cursorY = 0;
-      let rowHeight = 0;
-      let maxRight = 0;
-      let maxBottom = 0;
-
-      const placeTile = (nodeId: string, x: number, y: number) => {
-        const node = nodeMap.get(nodeId);
-        if (!node) return;
-        const size = getEffectiveNodeFootprint(node);
-        localPositions.set(nodeId, { x, y });
-        maxRight = Math.max(maxRight, x + size.width);
-        maxBottom = Math.max(maxBottom, y + size.height);
-      };
-
-      if (anchorRootAtTopLeft && nodeIdSet.has(rootNodeId)) {
-        const rootNode = nodeMap.get(rootNodeId);
-        if (rootNode) {
-          const rootSize = getEffectiveNodeFootprint(rootNode);
-          placeTile(rootNodeId, 0, 0);
-          cursorX = rootSize.width + TILE_GAP_X;
-          rowHeight = rootSize.height;
-        }
-      }
-
-      orderedTiles.forEach(tileNodeId => {
-        const tileNode = nodeMap.get(tileNodeId);
-        if (!tileNode) return;
-
-        const tileSize = getEffectiveNodeFootprint(tileNode);
-        const wouldOverflow = cursorX > 0 && cursorX + tileSize.width > CLUSTER_MAX_WIDTH;
-        if (wouldOverflow) {
-          cursorY += rowHeight + TILE_GAP_Y;
-          cursorX = 0;
-          rowHeight = 0;
-        }
-
-        placeTile(tileNodeId, cursorX, cursorY);
-        rowHeight = Math.max(rowHeight, tileSize.height);
-        cursorX += tileSize.width + TILE_GAP_X;
-      });
-
-      return {
-        positions: localPositions,
-        width: maxRight,
-        height: maxBottom,
-      };
-    };
-
-    const clusterLayouts: Array<{
-      clusterId: string;
-      positions: Map<string, { x: number; y: number }>;
-      width: number;
-      height: number;
-    }> = [];
-    const assignedNodeIds = new Set<string>();
-
-    componentNodes.forEach(componentNode => {
-      const clusterNodeIds = collectVisibleClusterNodeIds(componentNode.id)
-        .filter(nodeId => !assignedNodeIds.has(nodeId));
-      if (clusterNodeIds.length === 0) return;
-
-      clusterNodeIds.forEach(nodeId => assignedNodeIds.add(nodeId));
-      const layout = layoutClusterBento(componentNode.id, clusterNodeIds, true);
-      clusterLayouts.push({
-        clusterId: componentNode.id,
-        positions: layout.positions,
-        width: layout.width,
-        height: layout.height,
-      });
-    });
-
-    // Keep non-hidden, non-component leftovers in a fallback bento cluster.
-    const orphanNodeIds = nodes
-      .map(node => node.id)
-      .filter(nodeId => !hiddenNodeIds.has(nodeId) && !assignedNodeIds.has(nodeId));
-    if (orphanNodeIds.length > 0) {
-      orphanNodeIds.forEach(nodeId => assignedNodeIds.add(nodeId));
-      const layout = layoutClusterBento(orphanNodeIds[0], orphanNodeIds, false);
-      clusterLayouts.push({
-        clusterId: '__orphans__',
-        positions: layout.positions,
-        width: layout.width,
-        height: layout.height,
-      });
-    }
-
-    const clusterOrigins = new Map<string, { x: number; y: number }>();
-    let clusterCursorX = START_X;
-    let clusterCursorY = START_Y;
-    let currentRowHeight = 0;
-    const maxClusterRowRight = START_X + CLUSTER_ROW_MAX_WIDTH;
-
-    clusterLayouts.forEach(clusterLayout => {
-      const shouldWrapRow = clusterCursorX > START_X &&
-        clusterCursorX + clusterLayout.width > maxClusterRowRight;
-      if (shouldWrapRow) {
-        clusterCursorX = START_X;
-        clusterCursorY += currentRowHeight + CLUSTER_GAP_Y;
-        currentRowHeight = 0;
-      }
-
-      clusterOrigins.set(clusterLayout.clusterId, { x: clusterCursorX, y: clusterCursorY });
-      clusterCursorX += clusterLayout.width + CLUSTER_GAP_X;
-      currentRowHeight = Math.max(currentRowHeight, clusterLayout.height);
-    });
-
-    const positionMap = new Map<string, { x: number; y: number }>();
-    clusterLayouts.forEach(clusterLayout => {
-      const origin = clusterOrigins.get(clusterLayout.clusterId);
-      if (!origin) return;
-
-      clusterLayout.positions.forEach((localPosition, nodeId) => {
-        positionMap.set(nodeId, {
-          x: origin.x + localPosition.x,
-          y: origin.y + localPosition.y,
-        });
-      });
-    });
-
-    const effectiveSizeByNodeId = new Map<string, { width: number; height: number }>();
-    positionMap.forEach((_, nodeId) => {
-      const node = nodeMap.get(nodeId);
-      if (!node) return;
-      effectiveSizeByNodeId.set(nodeId, getEffectiveNodeFootprint(node));
-    });
-    const positionedNodeIds = Array.from(positionMap.keys()).sort(sortByStableNodeOrder);
-    const hasOverlap = (
-      aPos: { x: number; y: number },
-      aSize: { width: number; height: number },
-      bPos: { x: number; y: number },
-      bSize: { width: number; height: number },
-    ) => {
-      const aRight = aPos.x + aSize.width + COLLISION_MIN_SEPARATION;
-      const aBottom = aPos.y + aSize.height + COLLISION_MIN_SEPARATION;
-      const bRight = bPos.x + bSize.width + COLLISION_MIN_SEPARATION;
-      const bBottom = bPos.y + bSize.height + COLLISION_MIN_SEPARATION;
-      return aPos.x < bRight && aRight > bPos.x && aPos.y < bBottom && aBottom > bPos.y;
-    };
-    const resolveCollisions = () => {
-      for (let pass = 0; pass < COLLISION_MAX_PASSES; pass += 1) {
-        let movedAny = false;
-        for (let i = 0; i < positionedNodeIds.length; i += 1) {
-          const leftNodeId = positionedNodeIds[i];
-          const leftPos = positionMap.get(leftNodeId);
-          const leftSize = effectiveSizeByNodeId.get(leftNodeId);
-          if (!leftPos || !leftSize) continue;
-          for (let j = i + 1; j < positionedNodeIds.length; j += 1) {
-            const rightNodeId = positionedNodeIds[j];
-            const rightPos = positionMap.get(rightNodeId);
-            const rightSize = effectiveSizeByNodeId.get(rightNodeId);
-            if (!rightPos || !rightSize) continue;
-            if (!hasOverlap(leftPos, leftSize, rightPos, rightSize)) continue;
-
-            const pushX = (leftPos.x + leftSize.width + COLLISION_MIN_SEPARATION) - rightPos.x;
-            const pushY = (leftPos.y + leftSize.height + COLLISION_MIN_SEPARATION) - rightPos.y;
-            if (pushX <= 0 || pushY <= 0) continue;
-
-            if (pushX <= pushY) {
-              positionMap.set(rightNodeId, { x: rightPos.x + pushX, y: rightPos.y });
-            } else {
-              positionMap.set(rightNodeId, { x: rightPos.x, y: rightPos.y + pushY });
-            }
-            movedAny = true;
-          }
-        }
-        if (!movedAny) break;
-      }
-    };
-    resolveCollisions();
-
-    // Apply positions
-    setNodes(currentNodes =>
-      currentNodes.map(node => {
-        const newPosition = positionMap.get(node.id);
-        if (newPosition) {
-          return { ...node, position: newPosition };
-        }
-        return node;
-      }),
-    );
-
-    if (andFitView) {
-      setTimeout(() => {
-        fitView(FITVIEW_AFTER_ARRANGE);
-      }, ARRANGE_FITVIEW_DELAY);
-    }
-  }, [nodes, edges, setNodes, fitView, getViewport]);
-
-  // Handle auto-arrange event (triggered after skeleton nodes are added)
-  useEffect(() => {
-    const handleAutoArrange = (e: CustomEvent<{ fitView: boolean }>) => {
-      autoArrangeNodes(e.detail.fitView);
-    };
-
-    window.addEventListener(PLAYGROUND_AUTO_ARRANGE_EVENT, handleAutoArrange as EventListener);
-    return () => {
-      window.removeEventListener(PLAYGROUND_AUTO_ARRANGE_EVENT, handleAutoArrange as EventListener);
-    };
-  }, [autoArrangeNodes]);
+  const { autoArrangeNodes } = useCanvasAutoArrange({
+    nodes,
+    edges,
+    collapsedNodeIdsRef,
+    setNodes,
+    fitView,
+    getViewport,
+  });
 
   // ---------------------------------------------------------------------------
   // Collapse/expand toggle event
@@ -2320,44 +785,10 @@ export default function PlaygroundCanvas({
   // ---------------------------------------------------------------------------
   // Compute hasChildren + isCollapsed for iteration nodes and filter visible
   // ---------------------------------------------------------------------------
-  const { visibleNodes, visibleEdges } = useMemo(() => {
-    // Build adjacency from current edges
-    const childrenMap = new Map<string, string[]>();
-    edges.forEach(edge => {
-      const existing = childrenMap.get(edge.source) || [];
-      existing.push(edge.target);
-      childrenMap.set(edge.source, existing);
-    });
-
-    // Determine hidden nodes (descendants of collapsed nodes)
-    const hiddenSet = new Set<string>();
-    const markDescendantsHidden = (parentId: string) => {
-      const children = childrenMap.get(parentId) || [];
-      for (const childId of children) {
-        hiddenSet.add(childId);
-        markDescendantsHidden(childId);
-      }
-    };
-    collapsedNodeIds.forEach(nodeId => markDescendantsHidden(nodeId));
-
-    // Annotate iteration nodes with hasChildren + isCollapsed
-    const annotatedNodes = nodes
-      .filter(n => !hiddenSet.has(n.id))
-      .map(n => {
-        if (n.type === 'iteration') {
-          const children = childrenMap.get(n.id) || [];
-          const hasChildren = children.length > 0;
-          const isCollapsed = collapsedNodeIds.has(n.id);
-          if (hasChildren !== n.data.hasChildren || isCollapsed !== n.data.isCollapsed) {
-            return { ...n, data: { ...n.data, hasChildren, isCollapsed } };
-          }
-        }
-        return n;
-      });
-
-    const vEdges = edges.filter(e => !hiddenSet.has(e.target) && !hiddenSet.has(e.source));
-    return { visibleNodes: annotatedNodes, visibleEdges: vEdges };
-  }, [nodes, edges, collapsedNodeIds]);
+  const { visibleNodes, visibleEdges } = useMemo(
+    () => computeVisibleNodes(nodes, edges, collapsedNodeIds),
+    [nodes, edges, collapsedNodeIds],
+  );
 
   // Clear all nodes and edges, and delete all iteration files from disk
   const confirmClearAllNodes = useCallback(async () => {
@@ -2587,80 +1018,19 @@ export default function PlaygroundCanvas({
         onChange={handleImageFileSelect}
       />
 
-      {/* Match PlaygroundClient: left-6 (1.5rem); vertically centered */}
-      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 bg-white rounded-2xl border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-2">
-        {/* Sidebar toggle (hexagon) — hover instantly shows panel */}
-        <button
-          onClick={handleSidebarButtonClick}
-          onMouseEnter={handleSidebarButtonMouseEnter}
-          onMouseLeave={onHideSidebar}
-          className={`group flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-            sidebarVisible ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-          }`}
-          aria-label={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
-          title="Toggle sidebar"
-        >
-          <ProjectBoxIcon />
-        </button>
-
-        <div className="h-px w-5 bg-stone-200 my-0.5" />
-
-        {/* Select / Cursor (default) */}
-        <button
-          onClick={() => setActiveTool('select')}
-          className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-            activeTool === 'select' ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-          }`}
-          aria-label="Select tool"
-          title="Select (V)"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 3l14 9-7 1-4 7z" />
-          </svg>
-        </button>
-
-        {/* Shape tools — pen, rectangle, ellipse, line grouped into one flyout slot */}
-        <ShapeToolGroup
-          activeTool={activeTool}
-          shapeKind={shapeKind}
-          drawPenKind={drawPenKind}
-          setActiveTool={setActiveTool}
-          setShapeKind={setShapeKind}
-          setDrawPenKind={setDrawPenKind}
-        />
-
-        {/* Text tool */}
-        <button
-          onClick={() => setActiveTool((prev) => (prev === 'text' ? 'select' : 'text'))}
-          className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-            activeTool === 'text' ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-          }`}
-          aria-label="Text tool"
-          title="Text (T)"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="4 7 4 4 20 4 20 7" />
-            <line x1="9" y1="20" x2="15" y2="20" />
-            <line x1="12" y1="4" x2="12" y2="20" />
-          </svg>
-        </button>
-
-        {/* Snap-to-grid is now modal (hold Control/⌘ while dragging) — no toolbar toggle. */}
-
-        {/* Image upload */}
-        <button
-          onClick={() => imageInputRef.current?.click()}
-          className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
-          aria-label="Upload image"
-          title="Image"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
-          </svg>
-        </button>
-      </div>
+      <PlaygroundCanvasToolbar
+        sidebarVisible={sidebarVisible}
+        onSidebarButtonClick={handleSidebarButtonClick}
+        onSidebarButtonMouseEnter={handleSidebarButtonMouseEnter}
+        onHideSidebar={onHideSidebar}
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
+        shapeKind={shapeKind}
+        setShapeKind={setShapeKind}
+        drawPenKind={drawPenKind}
+        setDrawPenKind={setDrawPenKind}
+        imageInputRef={imageInputRef}
+      />
 
       {/* Element selection highlights */}
       <ElementHighlight
@@ -2683,26 +1053,23 @@ export default function PlaygroundCanvas({
         onClearNodes={nodeSelection.clearNodeSelection}
       />
 
-      {/* Clear canvas confirmation dialog */}
-      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear everything?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove all components and variations from the canvas and permanently delete all generated variation files. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmClearAllNodes}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-            >
-              Clear canvas
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <PlaygroundCanvasDialogs
+        showClearDialog={showClearDialog}
+        setShowClearDialog={setShowClearDialog}
+        confirmClearAllNodes={confirmClearAllNodes}
+        deleteDialogNode={deleteDialogNode}
+        setDeleteDialogNode={setDeleteDialogNode}
+        handleDeleteWithMode={handleDeleteWithMode}
+        createPageDialog={createPageDialog}
+        setCreatePageDialog={setCreatePageDialog}
+        newPageDescription={newPageDescription}
+        setNewPageDescription={setNewPageDescription}
+        createPageError={createPageError}
+        setCreatePageError={setCreatePageError}
+        creatingPage={creatingPage}
+        newPageInputRef={newPageInputRef}
+        handleCreatePage={handleCreatePage}
+      />
 
       {/* Right-click context menu */}
       {contextMenu && (
@@ -2850,91 +1217,6 @@ export default function PlaygroundCanvas({
           )}
         </div>
       )}
-
-      {/* Create new page dialog */}
-      {createPageDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-start"
-          onClick={() => {
-            if (creatingPage) return;
-            setCreatePageDialog(null);
-            setNewPageDescription('');
-            setCreatePageError('');
-          }}
-        >
-          <div
-            className="bg-white rounded-2xl border border-stone-200 shadow-xl p-4 w-[360px] animate-in fade-in-0 zoom-in-95 duration-150"
-            style={{ position: 'fixed', left: createPageDialog.screenX, top: createPageDialog.screenY }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-[13px] font-semibold text-stone-800 mb-1">New Page</h3>
-            <p className="text-[11px] text-stone-500 mb-3">Describe the page. The AI will pick a slug, scaffold it, and register it in the Pages section.</p>
-            <textarea
-              ref={newPageInputRef}
-              rows={4}
-              placeholder="A landing page for our pricing plans, with a 3-tier comparison table…"
-              value={newPageDescription}
-              onChange={(e) => { setNewPageDescription(e.target.value); setCreatePageError(''); }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleCreatePage(); }
-                if (e.key === 'Escape' && !creatingPage) { setCreatePageDialog(null); setNewPageDescription(''); setCreatePageError(''); }
-              }}
-              disabled={creatingPage}
-              className="w-full px-3 py-2 text-[13px] bg-stone-50 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-colors resize-none disabled:opacity-50"
-            />
-            {createPageError && (
-              <p className="text-[11px] text-red-500 mt-1.5">{createPageError}</p>
-            )}
-            <div className="flex justify-between items-center gap-2 mt-3">
-              <span className="text-[10px] text-stone-400">⌘↵ to submit</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setCreatePageDialog(null); setNewPageDescription(''); setCreatePageError(''); }}
-                  disabled={creatingPage}
-                  className="px-3 py-1.5 text-[12px] text-stone-500 hover:text-stone-700 rounded-xl hover:bg-stone-100 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreatePage}
-                  disabled={!newPageDescription.trim() || creatingPage}
-                  className="px-3 py-1.5 text-[12px] bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {creatingPage ? 'Creating…' : 'Create'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete iteration with children - cascade / reparent dialog */}
-      <AlertDialog open={!!deleteDialogNode} onOpenChange={(open) => { if (!open) setDeleteDialogNode(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete variation with children?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteDialogNode?.data.filename as string}</strong> has child variations. What would you like to do?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => handleDeleteWithMode('reparent')}
-              className="bg-blue-600 hover:bg-blue-700 focus:ring-blue-600"
-            >
-              Keep children
-            </AlertDialogAction>
-            <AlertDialogAction
-              onClick={() => handleDeleteWithMode('cascade')}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-            >
-              Delete all
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
 
     </div>
     </TooltipProvider>

@@ -4,7 +4,12 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import type { Edge, Node } from '@xyflow/react';
 import type { GenerationInfo } from '../lib/canvas-persistence';
 import { getIterationKeysOnCanvas } from '../lib/canvas-persistence';
-import { isInExpectedBatch, resolveIterationPosition } from '../lib/iteration-scan';
+import {
+  isInExpectedBatch,
+  resolveIterationPosition,
+  findParentNode,
+  findIterationNodeByFilename,
+} from '../lib/iteration-scan';
 import type { GenerationCoordination } from './useGenerationCoordination';
 import {
   ITERATION_PROMPT_COPIED_EVENT,
@@ -38,8 +43,6 @@ export interface UseIterationScanParams {
   setNodes: Dispatch<SetStateAction<Node[]>>;
   setEdges: Dispatch<SetStateAction<Edge[]>>;
   getNodeId: () => string;
-  findParentNode: (componentName: string, parentId?: string) => Node | undefined;
-  findIterationNodeByFilename: (filename: string) => Node | undefined;
   handleIterationDelete: (filename: string) => void;
   handleIterationAdopt: (filename: string, componentName: string) => void;
 }
@@ -59,8 +62,6 @@ export function useIterationScan({
   setNodes,
   setEdges,
   getNodeId,
-  findParentNode,
-  findIterationNodeByFilename,
   handleIterationDelete,
   handleIterationAdopt,
 }: UseIterationScanParams): UseIterationScanResult {
@@ -358,7 +359,7 @@ export function useIterationScan({
           let sourceNodeId: string | undefined;
 
           if (iter.sourceIteration) {
-            const sourceIterNode = findIterationNodeByFilename(iter.sourceIteration);
+            const sourceIterNode = findIterationNodeByFilename(coord.getNodes(), iter.sourceIteration);
             if (sourceIterNode) {
               sourceNodeId = sourceIterNode.id;
             } else {
@@ -367,7 +368,7 @@ export function useIterationScan({
           }
 
           if (!sourceNodeId) {
-            const parentNode = findParentNode(iter.componentName, iter.parentId);
+            const parentNode = findParentNode(coord.getNodes(), iter.componentName, iter.parentId);
             if (parentNode) {
               sourceNodeId = parentNode.id;
             }
@@ -471,8 +472,6 @@ export function useIterationScan({
     },
     [
       coord,
-      findParentNode,
-      findIterationNodeByFilename,
       getNodeId,
       handleIterationDelete,
       handleIterationAdopt,

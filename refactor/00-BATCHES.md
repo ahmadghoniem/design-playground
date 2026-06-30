@@ -124,7 +124,21 @@ Landed as `12d8eca refactor(server): extract lockfile/watcher/timer/jsonl from g
 
 **Post-refactor dead-code audit (batches E–H):** `4589146`, `1541818`. **Known issue left as-is:** `hooks/useOpenIn.ts` dangling `cursor-icon.svg` import.
 
-**Task:** 10 (deepen `PlaygroundCanvas.tsx`). **Solo, last, largest.**
+**Phase 3 — Batch J canvas simplification (~2943→~1128 LOC, 2026-06-30):** Continued the assembler direction — pure `lib/` extractions first, then I/O hooks, then conservative shell split:
+
+| Commit | Seam |
+|--------|------|
+| `063e757` | **J0 P0** — export `stopPolling` from `useIterationScan` (clear-canvas regression from Batch I) |
+| (this batch) | **J0** — iteration lookup helpers → `lib/iteration-scan.ts`; `computeVisibleNodes` → `lib/canvas-visibility.ts` |
+| (this batch) | **J1** — `lib/canvas-auto-arrange.ts` + `hooks/useCanvasAutoArrange.ts` |
+| (this batch) | **J2** — `hooks/useCanvasPaste.ts`, `hooks/useCanvasDragDrop.ts` |
+| (this batch) | **J3** — `hooks/useCanvasPresenceBubbles.ts`, `hooks/useCanvasPersistence.ts` |
+| (this batch) | **J4** — `hooks/useCanvasNodeDelete.ts`, `hooks/useCanvasFrameOps.ts` |
+| (this batch) | **J5** — `components/canvas/PlaygroundCanvasToolbar.tsx`, `PlaygroundCanvasDialogs.tsx` |
+
+`PlaygroundCanvas.tsx` is now ~1128 LOC: hook composition + React Flow inline + context menu. Paste/drag-drop/presence/persistence/node-delete/frame-ops/auto-arrange live in `hooks/`; layout math in `lib/canvas-auto-arrange.ts`, `lib/canvas-visibility.ts`, extended `lib/iteration-scan.ts`.
+
+**Batch I status:** DONE (extended by Batch J). **Task 10 assembler target:** largely met (~1128 LOC; context menu + create-page flow remain in parent by design).
 **Gate:** each seam committed separately; parent shrinks per extraction (replace, don't layer).
 
 ---

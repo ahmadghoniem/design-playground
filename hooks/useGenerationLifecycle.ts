@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Edge, Node } from '@xyflow/react';
 import type { GenerationInfo } from '../lib/canvas-persistence';
-import { countBatchIterationNodes } from '../lib/iteration-scan';
+import { countBatchIterationNodes, calculateIterationPosition } from '../lib/iteration-scan';
 import type { GenerationCoordination } from './useGenerationCoordination';
 import {
   GENERATION_START_EVENT,
@@ -36,11 +36,6 @@ export interface UseGenerationLifecycleParams {
     resetTimeoutOnFind?: boolean,
     scanContext?: GenerationInfo | null,
   ) => Promise<void>;
-  calculateIterationPosition: (
-    parentNode: Node,
-    iterationNumber: number,
-    totalIterations: number,
-  ) => { x: number; y: number };
   resumeGenerationInfo?: GenerationInfo | null;
 }
 
@@ -52,7 +47,6 @@ export function useGenerationLifecycle({
   setEdges,
   getNodeId,
   scanForIterations,
-  calculateIterationPosition,
   resumeGenerationInfo,
 }: UseGenerationLifecycleParams): void {
   const generationEventSourceRef = useRef<EventSource | null>(null);
@@ -423,7 +417,7 @@ export function useGenerationLifecycle({
           y = gridOriginY + row * (cellH + gap);
         } else {
           // Dialog flow: place iterations to the right of the parent
-          const pos = calculateIterationPosition(parentNode, i, iterationCount);
+          const pos = calculateIterationPosition(coord.getNodes(), parentNode, i, iterationCount);
           x = pos.x;
           y = pos.y;
         }
