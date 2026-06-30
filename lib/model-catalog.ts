@@ -54,6 +54,11 @@ export const LEGACY_MODEL_ALIASES: Record<string, string> = {
   ...CLAUDE_LEGACY_ALIASES,
 };
 
+/** Treat an empty model id as the Cursor "auto" model. */
+export function normalizeAutoModelId(model: string): string {
+  return model === '' ? 'auto' : model;
+}
+
 /**
  * Map a possibly-stale model id to its current equivalent.
  * Returns the input unchanged when no migration applies.
