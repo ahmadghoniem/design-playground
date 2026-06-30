@@ -49,6 +49,8 @@ export interface UseIterationScanResult {
     resetTimeoutOnFind?: boolean,
     scanContext?: GenerationInfo | null,
   ) => Promise<void>;
+  /** Stop any active prompt-copy polling loop (used by clear-canvas). */
+  stopPolling: () => void;
 }
 
 export function useIterationScan({
@@ -542,5 +544,5 @@ export function useIterationScan({
     };
   }, [isGenerating, scanForIterations, coord]);
 
-  return { scanForIterations };
+  return { scanForIterations, stopPolling };
 }

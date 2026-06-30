@@ -505,7 +505,7 @@ export default function PlaygroundCanvas({
     // No-op: IterationNode handles everything via events + API calls
   }, []);
 
-  const { scanForIterations } = useIterationScan({
+  const { scanForIterations, stopPolling } = useIterationScan({
     coord,
     isGenerating,
     setNodes,
