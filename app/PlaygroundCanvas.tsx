@@ -40,6 +40,7 @@ import CanvasPresenceLayer, { type CanvasPresenceBubble } from '../components/ca
 import { usePlaygroundDrawStore } from '../stores/playground-draw-store';
 import { type DrawPenKind, type DrawStroke } from '../lib/draw-types';
 import { useCanvasDrawTool } from '../hooks/useCanvasDrawTool';
+import { useGenerationCoordination } from '../hooks/useGenerationCoordination';
 import { LayoutGrid, Frame } from 'lucide-react';
 import { ShapeToolGroup } from '../components/canvas/ShapeToolGroup';
 import { PageDocumentIcon, ProjectBoxIcon } from '../ui/playground-nav-icons';
@@ -271,8 +272,6 @@ export default function PlaygroundCanvas({
   );
   const collapsedNodeIdsRef = useRef<Set<string>>(new Set(initialState?.collapsedNodeIds || []));
   const [isScanning, setIsScanning] = useState(false);
-  const scanLockRef = useRef(false);
-  const scanQueuedRef = useRef(false);
   const [isPolling, setIsPolling] = useState(false);
   const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -282,10 +281,6 @@ export default function PlaygroundCanvas({
   const nodeIdCounterRef = useRef<number>(initialState?.nodeIdCounter || 0);
   const getNodeId = useCallback(() => `node_${++nodeIdCounterRef.current}`, []);
   
-  // Refs to always have current values inside polling callbacks (avoids stale closures)
-  const nodesRef = useRef<Node[]>(initialState?.nodes || []);
-  const knownIterationsRef = useRef<string[]>(initialKnownIterations);
-  const scanContextOverrideRef = useRef<GenerationInfo | null | undefined>(undefined);
   const generationPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Keep collapsed ref in sync
@@ -350,23 +345,8 @@ export default function PlaygroundCanvas({
   // Clear canvas confirmation dialog
   const [showClearDialog, setShowClearDialog] = useState(false);
   
-  // Generation state
-  const [isGenerating, setIsGenerating] = useState(false);
-  const isGeneratingRef = useRef(false);
-  const [generationInfo, setGenerationInfo] = useState<GenerationInfo | null>(null);
-  const generationInfoRef = useRef<GenerationInfo | null>(null);
-  const generationStartedAtMsRef = useRef(0);
-  const inactiveStatusStreakRef = useRef(0);
   const [lastGenerationDuration, setLastGenerationDuration] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState<string>('0m:00s');
-  
-  // Keep refs in sync with state
-  useEffect(() => {
-    isGeneratingRef.current = isGenerating;
-  }, [isGenerating]);
-  useEffect(() => {
-    generationInfoRef.current = generationInfo;
-  }, [generationInfo]);
   
   if (initialState && !initialized.current) {
     nodeIdCounterRef.current = initialState.nodeIdCounter;
@@ -383,6 +363,13 @@ export default function PlaygroundCanvas({
     undo,
     redo,
   } = useCanvasFlow();
+  const coord = useGenerationCoordination({ nodes, knownIterations, setKnownIterations });
+  const {
+    isGenerating,
+    generationInfo,
+    setIsGenerating,
+    setGenerationInfo,
+  } = coord;
   const { screenToFlowPosition, fitView, setCenter, getViewport } = useReactFlow();
   const [canvasPresenceBubbles, setCanvasPresenceBubbles] = useState<CanvasPresenceBubble[]>([]);
   const canvasPresenceBubblesRef = useRef<CanvasPresenceBubble[]>([]);
@@ -396,7 +383,7 @@ export default function PlaygroundCanvas({
       const removedIterationKeys: string[] = [];
       for (const change of changes) {
         if (change.type === 'remove') {
-          const node = nodesRef.current.find((n) => n.id === change.id);
+          const node = coord.getNodes().find((n) => n.id === change.id);
           if (node?.type === 'iteration') {
             const key = getIterationKeyFromNode(node);
             if (key) removedIterationKeys.push(key);
@@ -404,10 +391,7 @@ export default function PlaygroundCanvas({
         }
       }
       if (removedIterationKeys.length > 0) {
-        knownIterationsRef.current = knownIterationsRef.current.filter(
-          (k) => !removedIterationKeys.includes(k),
-        );
-        setKnownIterations((prev) => prev.filter((k) => !removedIterationKeys.includes(k)));
+        coord.removeKnownIterations(removedIterationKeys);
       }
 
       if (usePlaygroundDrawStore.getState().strokeSelection) {
@@ -444,13 +428,12 @@ export default function PlaygroundCanvas({
 
     // Safety: auto-clean skeleton nodes after 10 minutes if generation hangs
     const safetyTimeout = setTimeout(() => {
-      const info = generationInfoRef.current;
+      const info = coord.getGenerationInfo();
       if (info) {
         setNodes(nds => nds.filter(n => !info.skeletonNodeIds.includes(n.id)));
         setEdges(eds => eds.filter(e => !info.skeletonNodeIds.some(sid => e.target === sid)));
       }
-      setIsGenerating(false);
-      setGenerationInfo(null);
+      coord.clearGenerationEager();
 
     }, 10 * 60 * 1000);
 
@@ -487,23 +470,24 @@ export default function PlaygroundCanvas({
 
         const generationActive = data.generationActive ?? data.isGenerating;
         if (generationActive) {
-          inactiveStatusStreakRef.current = 0;
-        } else if (generationInfoRef.current) {
+          coord.resetInactiveStreak();
+        } else if (coord.getGenerationInfo()) {
           const now = Date.now();
-          const generationStartedAt = generationStartedAtMsRef.current || generationInfoRef.current.startTime;
+          const generationStartedAt =
+            coord.getGenerationStartedAt() || coord.getGenerationInfo()!.startTime;
           const stillInStartupGrace = now - generationStartedAt < STARTUP_GRACE_MS;
           if (!stillInStartupGrace) {
-            inactiveStatusStreakRef.current += 1;
+            coord.bumpInactiveStreak();
           }
         }
 
         // If backend confirms generation is inactive for consecutive polls,
         // force-complete to clear any lingering skeletons.
         if (
-          inactiveStatusStreakRef.current >= REQUIRED_INACTIVE_POLLS &&
-          generationInfoRef.current
+          coord.getInactiveStreak() >= REQUIRED_INACTIVE_POLLS &&
+          coord.getGenerationInfo()
         ) {
-          const info = generationInfoRef.current;
+          const info = coord.getGenerationInfo()!;
           window.dispatchEvent(
             new CustomEvent<GenerationCompletePayload>(GENERATION_COMPLETE_EVENT, {
               detail: {
@@ -513,7 +497,7 @@ export default function PlaygroundCanvas({
               },
             }),
           );
-          inactiveStatusStreakRef.current = 0;
+          coord.resetInactiveStreak();
           return;
         }
       } catch {
@@ -532,15 +516,6 @@ export default function PlaygroundCanvas({
       cancelled = true;
     };
   }, [isGenerating]);
-
-  // Keep refs in sync with state (for use inside polling/interval callbacks)
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
-  
-  useEffect(() => {
-    knownIterationsRef.current = knownIterations;
-  }, [knownIterations]);
 
   useEffect(() => {
     canvasDrawingsRef.current = canvasDrawings;
@@ -633,7 +608,7 @@ export default function PlaygroundCanvas({
       nodeIdCounterRef.current,
       knownIterations,
       Array.from(collapsedNodeIds),
-      generationInfoRef.current,
+      coord.getGenerationInfo(),
       getViewport(),
       canvasDrawingsRef.current,
     );
@@ -644,12 +619,12 @@ export default function PlaygroundCanvas({
     const handler = () => {
       saveCanvasState(
         storageKey,
-        nodesRef.current,
+        coord.getNodes(),
         edges,
         nodeIdCounterRef.current,
-        knownIterationsRef.current,
+        coord.getKnownIterations(),
         Array.from(collapsedNodeIdsRef.current),
-        generationInfoRef.current,
+        coord.getGenerationInfo(),
         getViewport(),
         canvasDrawingsRef.current,
       );
@@ -685,7 +660,7 @@ export default function PlaygroundCanvas({
       possibleIds.push(parentId);
     }
 
-    return nodesRef.current.find(node => {
+    return coord.getNodes().find(node => {
       if (node.type !== 'component') return false;
       const componentId = node.data.componentId as string | undefined;
       if (!componentId) return false;
@@ -696,7 +671,7 @@ export default function PlaygroundCanvas({
 
   // Find an iteration node by its filename (for tree-aware connections)
   const findIterationNodeByFilename = useCallback((filename: string): Node | undefined => {
-    return nodesRef.current.find(
+    return coord.getNodes().find(
       (n) => (n.type === 'iteration') && (n.data.filename as string) === filename,
     );
   }, []);
@@ -708,7 +683,7 @@ export default function PlaygroundCanvas({
     const parentW = parentNode.measured?.width ?? (parentNode.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH);
 
     // Find existing child nodes (iterations + skeletons) of this parent
-    const existingChildren = nodesRef.current.filter(
+    const existingChildren = coord.getNodes().filter(
       n =>
         (n.type === 'iteration' || n.type === 'skeleton') &&
         n.data.parentNodeId === parentNode.id
@@ -778,18 +753,14 @@ export default function PlaygroundCanvas({
     resetTimeoutOnFind = false,
     scanContext?: GenerationInfo | null,
   ) => {
-    if (scanLockRef.current) {
-      scanQueuedRef.current = true;
-      if (scanContext !== undefined) {
-        scanContextOverrideRef.current = scanContext;
-      }
+    if (!coord.tryAcquireScanLock()) {
+      coord.markScanQueued(scanContext);
       return;
     }
-    scanLockRef.current = true;
     setIsScanning(true);
     try {
-      const info = scanContext !== undefined ? scanContext : generationInfoRef.current;
-      const canvasIterationKeys = getIterationKeysOnCanvas(nodesRef.current);
+      const info = scanContext !== undefined ? scanContext : coord.getGenerationInfo();
+      const canvasIterationKeys = getIterationKeysOnCanvas(coord.getNodes());
 
       // ------------------------------------------------------------------
       // HTML iteration scanning (when active generation is for HTML)
@@ -802,7 +773,7 @@ export default function PlaygroundCanvas({
             const { pages } = await htmlResponse.json() as { pages: { folder: string; iterations: { folder: string; number: number }[] }[] };
             const page = pages.find((p: { folder: string }) => p.folder === htmlFolder);
             if (page) {
-              const currentNodes = nodesRef.current;
+              const currentNodes = coord.getNodes();
               const existingHtmlKeys = canvasIterationKeys;
 
               let newHtmlIterations = page.iterations.filter(
@@ -886,8 +857,7 @@ export default function PlaygroundCanvas({
                     ...eds.filter(e => !skeletonSet.has(e.target)),
                     ...newEdges,
                   ]);
-                  knownIterationsRef.current = [...knownIterationsRef.current, ...newKnownFilenames];
-                  setKnownIterations(prev => [...prev, ...newKnownFilenames]);
+                  coord.appendKnownIterations(newKnownFilenames);
                   if (resetTimeoutOnFind) resetPollTimeout();
                 }
               }
@@ -911,7 +881,7 @@ export default function PlaygroundCanvas({
             const { components } = await jsxResponse.json() as { components: JsxComponentInfo[] };
             const comp = components.find(c => c.filename === baseFilename);
             if (comp && comp.iterations.length > 0) {
-              const currentNodes = nodesRef.current;
+              const currentNodes = coord.getNodes();
               const existingJsxKeys = canvasIterationKeys;
 
               let newJsxIterations = comp.iterations.filter(
@@ -997,8 +967,7 @@ export default function PlaygroundCanvas({
                     ...eds.filter(e => !skeletonSet.has(e.target)),
                     ...newEdges,
                   ]);
-                  knownIterationsRef.current = [...knownIterationsRef.current, ...newKnownFilenames];
-                  setKnownIterations(prev => [...prev, ...newKnownFilenames]);
+                  coord.appendKnownIterations(newKnownFilenames);
                   if (resetTimeoutOnFind) resetPollTimeout();
                 }
               }
@@ -1021,7 +990,7 @@ export default function PlaygroundCanvas({
 
       const { iterations } = await response.json() as { iterations: IterationFile[] };
 
-      const currentNodes = nodesRef.current;
+      const currentNodes = coord.getNodes();
       const existingFilenames = getIterationKeysOnCanvas(currentNodes);
 
       let newIterations = iterations.filter(
@@ -1078,7 +1047,7 @@ export default function PlaygroundCanvas({
         // Position: during active generation, use the next skeleton's position;
         // otherwise fall back to source node offset or default.
         const sourceNode = sourceNodeId
-          ? (nodesRef.current.find(n => n.id === sourceNodeId) || newNodes.find(n => n.id === sourceNodeId))
+          ? (coord.getNodes().find(n => n.id === sourceNodeId) || newNodes.find(n => n.id === sourceNodeId))
           : undefined;
 
         let position: { x: number; y: number };
@@ -1156,8 +1125,7 @@ export default function PlaygroundCanvas({
           ...eds.filter(e => !skeletonSet.has(e.target)),
           ...newEdges,
         ]);
-        knownIterationsRef.current = [...knownIterationsRef.current, ...newKnownFilenames];
-        setKnownIterations(prev => [...prev, ...newKnownFilenames]);
+        coord.appendKnownIterations(newKnownFilenames);
 
         if (resetTimeoutOnFind) {
           resetPollTimeout();
@@ -1166,13 +1134,10 @@ export default function PlaygroundCanvas({
     } catch (error) {
       console.error('Error scanning iterations:', error);
     } finally {
-      scanLockRef.current = false;
       setIsScanning(false);
-      if (scanQueuedRef.current) {
-        scanQueuedRef.current = false;
-        const queuedContext = scanContextOverrideRef.current;
-        scanContextOverrideRef.current = undefined;
-        scanForIterations(resetTimeoutOnFind, queuedContext);
+      const { queued, override } = coord.releaseScanLock();
+      if (queued) {
+        scanForIterations(resetTimeoutOnFind, override);
       }
     }
   }, [findParentNode, findIterationNodeByFilename, getNodeId, handleIterationDelete, handleIterationAdopt, setNodes, setEdges, resetPollTimeout]);
@@ -1234,7 +1199,7 @@ export default function PlaygroundCanvas({
     }
 
     generationPollIntervalRef.current = setInterval(() => {
-      const ctx = generationInfoRef.current;
+      const ctx = coord.getGenerationInfo();
       if (ctx) {
         scanForIterations(false, ctx);
       }
@@ -1257,7 +1222,7 @@ export default function PlaygroundCanvas({
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'iteration-added') {
-          const ctx = generationInfoRef.current;
+          const ctx = coord.getGenerationInfo();
           scanForIterations(false, ctx ?? undefined);
         } else if (data.type === 'agent-preview' && data.componentId != null) {
           window.dispatchEvent(
@@ -1295,15 +1260,14 @@ export default function PlaygroundCanvas({
     if (!persisted) return;
 
     // Verify skeletons actually exist in the loaded nodes
-    const currentSkeletons = nodesRef.current.filter(
+    const currentSkeletons = coord.getNodes().filter(
       n => n.type === 'skeleton' && persisted.skeletonNodeIds.includes(n.id),
     );
     if (currentSkeletons.length === 0) return;
 
     // Restore generation state
-    generationInfoRef.current = persisted;
-    setIsGenerating(true);
-    setGenerationInfo(persisted);
+    coord.setGenerationInfoEager(persisted);
+    coord.setIsGeneratingEager(true);
 
     // Reconnect SSE and kick off an immediate scan to pick up any
     // iterations that landed while the page was reloading
@@ -1388,14 +1352,13 @@ export default function PlaygroundCanvas({
         editMode: isEditMode,
         startNumber: genStartNumber,
       } = e.detail;
-      generationStartedAtMsRef.current = Date.now();
-      inactiveStatusStreakRef.current = 0;
+      coord.setGenerationStartedAt(Date.now());
+      coord.resetInactiveStreak();
 
       // Edit mode: presence bubble is handled via the event, but no skeletons
       if (isEditMode) {
-        setIsGenerating(true);
-        isGeneratingRef.current = true;
-        generationInfoRef.current = {
+        coord.setIsGeneratingEager(true);
+        coord.setGenerationInfoEager({
           componentId,
           componentName,
           parentNodeId: '',
@@ -1405,8 +1368,7 @@ export default function PlaygroundCanvas({
           renderMode: genRenderMode,
           htmlFolder: genHtmlFolder,
           jsxFile: genJsxFile,
-        };
-        setGenerationInfo(generationInfoRef.current);
+        });
         // Subscribe to SSE for agent-preview (Claude stream-json) — same as iterate/freeform
         startGenerationEventSource();
         return;
@@ -1445,9 +1407,8 @@ export default function PlaygroundCanvas({
           jsxFile: genJsxFile,
           startNumber: genStartNumber ?? 1,
         };
-        generationInfoRef.current = newInfo;
-        setIsGenerating(true);
-        setGenerationInfo(newInfo);
+        coord.setGenerationInfoEager(newInfo);
+        coord.setIsGeneratingEager(true);
 
 
         // Subscribe to server-sent events for progressive iteration detection
@@ -1456,7 +1417,7 @@ export default function PlaygroundCanvas({
       }
 
       // Find the parent node (use ref for current nodes)
-      const parentNode = nodesRef.current.find(n => n.id === parentNodeId);
+      const parentNode = coord.getNodes().find(n => n.id === parentNodeId);
       if (!parentNode) {
         console.error('[Playground] Parent node not found:', parentNodeId);
         return;
@@ -1513,7 +1474,7 @@ export default function PlaygroundCanvas({
       }
 
       // Resolve overlaps with existing canvas nodes (excludes parent which is above)
-      const existingNodes = nodesRef.current.filter(n => n.id !== parentNodeId);
+      const existingNodes = coord.getNodes().filter(n => n.id !== parentNodeId);
       resolveOverlaps(candidateRects, existingNodes);
 
       for (let i = 0; i < iterationCount; i++) {
@@ -1570,10 +1531,9 @@ export default function PlaygroundCanvas({
         jsxFile: genJsxFile,
         startNumber: genStartNumber ?? 1,
       };
-      generationInfoRef.current = newInfo;
-      setIsGenerating(true);
+      coord.setGenerationInfoEager(newInfo);
+      coord.setIsGeneratingEager(true);
       setLastGenerationDuration(null);
-      setGenerationInfo(newInfo);
 
       // Subscribe to server-sent events for progressive iteration detection
       startGenerationEventSource();
@@ -1582,7 +1542,7 @@ export default function PlaygroundCanvas({
     const handleGenerationComplete = (): void => {
       stopGenerationEventSource();
 
-      const info = generationInfoRef.current;
+      const info = coord.getGenerationInfo();
       const savedScanContext = info ? { ...info } : null;
 
       if (info?.startTime) {
@@ -1597,10 +1557,10 @@ export default function PlaygroundCanvas({
       const savedPositions = info?.skeletonPositions ?? info?.gridPositions;
       const savedParentNodeId = info?.parentNodeId;
 
-      inactiveStatusStreakRef.current = 0;
+      coord.resetInactiveStreak();
 
       setTimeout(async () => {
-        const nodesBefore = new Set(nodesRef.current.map((n) => n.id));
+        const nodesBefore = new Set(coord.getNodes().map((n) => n.id));
         if (savedScanContext) {
           await scanForIterations(false, savedScanContext);
         } else {
@@ -1608,7 +1568,7 @@ export default function PlaygroundCanvas({
         }
 
         if (savedScanContext && savedScanContext.iterationCount > 0 && savedScanContext.startNumber != null) {
-          const created = countBatchIterationNodes(nodesRef.current, savedScanContext);
+          const created = countBatchIterationNodes(coord.getNodes(), savedScanContext);
           const expected = savedScanContext.iterationCount;
           if (created < expected) {
             toast.warning(
@@ -1621,7 +1581,7 @@ export default function PlaygroundCanvas({
           const replacedSkeletonIds = new Set<string>();
           for (let slot = 0; slot < savedScanContext.skeletonNodeIds.length; slot++) {
             const iterNum = start + slot;
-            const hasNode = nodesRef.current.some(
+            const hasNode = coord.getNodes().some(
               (n) => n.type === 'iteration' && (n.data.iterationNumber as number) === iterNum,
             );
             if (hasNode) {
@@ -1651,13 +1611,11 @@ export default function PlaygroundCanvas({
           );
         }
 
-        generationInfoRef.current = null;
-        setIsGenerating(false);
-        setGenerationInfo(null);
+        coord.clearGenerationEager();
 
         if (savedPositions && savedParentNodeId) {
           setTimeout(() => {
-            const newNodes = nodesRef.current.filter(
+            const newNodes = coord.getNodes().filter(
               (n) => !nodesBefore.has(n.id) && n.type === 'iteration',
             );
             if (newNodes.length > 0) {
@@ -1698,7 +1656,7 @@ export default function PlaygroundCanvas({
       };
 
       // Use ref to get latest generation info to distinguish dialog vs drag-to-iterate flows.
-      const info = generationInfoRef.current;
+      const info = coord.getGenerationInfo();
       const isDragFlow = !!info?.gridPositions;
 
       if (errorMessage === 'Cancelled by user') {
@@ -1717,11 +1675,8 @@ export default function PlaygroundCanvas({
       }
 
       // Reset generation state — eagerly sync ref
-      generationInfoRef.current = null;
-      inactiveStatusStreakRef.current = 0;
-
-      setIsGenerating(false);
-      setGenerationInfo(null);
+      coord.clearGenerationEager();
+      coord.resetInactiveStreak();
     };
 
     window.addEventListener(GENERATION_START_EVENT, handleGenerationStart as EventListener);
@@ -2006,7 +1961,7 @@ export default function PlaygroundCanvas({
 
   const handleChatSubmit = useCallback(async (payload: ChatSubmitPayload) => {
     // If generation already in progress, queue it
-    if (isGeneratingRef.current) {
+    if (coord.getIsGenerating()) {
       generationQueueRef.current.push(payload);
       const queuePf = getProviderFields();
       const queueProvider = (queuePf.provider ?? DEFAULT_PROVIDER_ID) as ProviderId;
@@ -2101,7 +2056,7 @@ export default function PlaygroundCanvas({
           const refNodesWithScreenshots = await Promise.all(
             refNodes.map(async (node) => {
               if (node.type === 'text') {
-                const textNode = nodesRef.current.find((n) => n.id === node.nodeId);
+                const textNode = coord.getNodes().find((n) => n.id === node.nodeId);
                 return { ...node, textContent: (textNode?.data as Record<string, unknown>)?.text as string || '', screenshotPath: undefined, sourcePath: undefined };
               }
               if (node.type === 'image') {
@@ -2249,7 +2204,7 @@ export default function PlaygroundCanvas({
           refNodes.map(async (node) => {
             // Text nodes pass their content directly — no screenshot needed
             if (node.type === 'text') {
-              const textNode = nodesRef.current.find((n) => n.id === node.nodeId);
+              const textNode = coord.getNodes().find((n) => n.id === node.nodeId);
               return {
                 ...node,
                 textContent: (textNode?.data as Record<string, unknown>)?.text as string || '',
@@ -2536,7 +2491,7 @@ export default function PlaygroundCanvas({
       if (payload.referenceNodes?.length) {
         for (const ref of payload.referenceNodes) {
           if (ref.type !== 'text') continue;
-          const textNode = nodesRef.current.find((n) => n.id === ref.nodeId);
+          const textNode = coord.getNodes().find((n) => n.id === ref.nodeId);
           const noteText = (textNode?.data as Record<string, unknown>)?.text;
           if (typeof noteText === 'string' && noteText.trim()) {
             planText = noteText;
@@ -2740,10 +2695,8 @@ export default function PlaygroundCanvas({
       } finally {
         // State cleanup and queue draining handled by GENERATION_COMPLETE/ERROR event handlers
         // Only clear state here as a safety net if events didn't fire (e.g. network error before dispatch)
-        if (generationInfoRef.current?.componentId === freeformComponentId) {
-          generationInfoRef.current = null;
-          setIsGenerating(false);
-          setGenerationInfo(null);
+        if (coord.getGenerationInfo()?.componentId === freeformComponentId) {
+          coord.clearGenerationEager();
         }
       }
     }
@@ -2782,7 +2735,7 @@ export default function PlaygroundCanvas({
       flowPosition: { x: number; y: number } | null | undefined,
     ) => {
       if (!targetNodeId) return { targetNodeId: null, nodeOffset: null };
-      const targetNode = nodesRef.current.find((node) => node.id === targetNodeId);
+      const targetNode = coord.getNodes().find((node) => node.id === targetNodeId);
       if (!targetNode || !flowPosition) return { targetNodeId, nodeOffset: null };
       return {
         targetNodeId,
@@ -2918,7 +2871,7 @@ export default function PlaygroundCanvas({
 
   const getCanvasPresenceBubblePosition = useCallback((
     bubble: CanvasPresenceBubble,
-    sourceNodes: Node[] = nodesRef.current,
+    sourceNodes: Node[] = coord.getNodes(),
   ): { x: number; y: number } | null => {
     if (bubble.targetNodeId) {
       const targetNode = sourceNodes.find((node) => node.id === bubble.targetNodeId);
@@ -2981,7 +2934,7 @@ export default function PlaygroundCanvas({
         }
       }
       if (detail?.targetNodeId) {
-        const targetNode = nodesRef.current.find((node) => node.id === detail.targetNodeId);
+        const targetNode = coord.getNodes().find((node) => node.id === detail.targetNodeId);
         if (targetNode) {
           const width = targetNode.measured?.width ?? DEFAULT_COMPONENT_NODE_WIDTH;
           const height = targetNode.measured?.height ?? DEFAULT_COMPONENT_NODE_HEIGHT;
@@ -3004,10 +2957,10 @@ export default function PlaygroundCanvas({
       if (!componentId) return;
 
       // Find the parent component node and all its iteration/skeleton children
-      const parentNode = nodesRef.current.find(
+      const parentNode = coord.getNodes().find(
         n => n.type === 'component' && (n.data.componentId as string)?.includes(componentId),
       );
-      const childNodes = nodesRef.current.filter(
+      const childNodes = coord.getNodes().filter(
         n => (n.type === 'iteration' || n.type === 'skeleton') &&
           parentNode && n.data.parentNodeId === parentNode.id,
       );
@@ -3194,7 +3147,7 @@ export default function PlaygroundCanvas({
       if (isHtml || isJsxFrame || !isDesignSystem) {
         (async () => {
           try {
-            const currentNodes = nodesRef.current;
+            const currentNodes = coord.getNodes();
             const parentW = DEFAULT_COMPONENT_NODE_WIDTH;
             const stepW = ((isHtml || isJsxFrame) ? (isHtml ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH) : DEFAULT_ITERATION_NODE_WIDTH) + ARRANGE_HORIZONTAL_GAP;
             const baseX = position.x + parentW + ARRANGE_HORIZONTAL_GAP;
@@ -3330,8 +3283,7 @@ export default function PlaygroundCanvas({
             if (newNodes.length > 0) {
               setNodes(nds => [...nds, ...newNodes]);
               setEdges(eds => [...eds, ...newEdges]);
-              knownIterationsRef.current = [...knownIterationsRef.current, ...newKnownFilenames];
-              setKnownIterations(prev => [...prev, ...newKnownFilenames]);
+              coord.appendKnownIterations(newKnownFilenames);
             }
           } catch (err) {
             console.error('[Playground] Failed to load iterations for dropped frame:', err);
@@ -3532,7 +3484,7 @@ export default function PlaygroundCanvas({
       let bestV = threshold;
       let bestH = threshold;
 
-      for (const o of nodesRef.current) {
+      for (const o of coord.getNodes()) {
         if (o.id === node.id || o.parentId || o.type === 'skeleton') continue;
         const { w: ow, h: oh } = nodeDim(o);
         const oLeft = o.position.x;
@@ -3642,7 +3594,7 @@ export default function PlaygroundCanvas({
   // Gather the current selection, pulling in the children of any selected frame
   // so a group copies as a unit. Skeletons/ghosts are never copyable.
   const collectCopyableSelection = useCallback((): Node[] => {
-    const all = nodesRef.current;
+    const all = coord.getNodes();
     const selected = all.filter(
       (n) => n.selected && n.type !== 'skeleton' && n.type !== 'drag-ghost',
     );
