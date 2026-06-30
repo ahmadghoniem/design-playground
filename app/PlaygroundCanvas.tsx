@@ -39,6 +39,7 @@ import { useGenerationCoordination } from '../hooks/useGenerationCoordination';
 import { useGenerationLifecycle } from '../hooks/useGenerationLifecycle';
 import { useIterationScan } from '../hooks/useIterationScan';
 import { useChatSubmit } from '../hooks/useChatSubmit';
+import { useCanvasKeyboard } from '../hooks/useCanvasKeyboard';
 import { useDragIterateEventHandler } from '../hooks/useDragToIterate';
 import { LayoutGrid, Frame } from 'lucide-react';
 import { ShapeToolGroup } from '../components/canvas/ShapeToolGroup';
@@ -54,7 +55,6 @@ import TextNode from '../nodes/TextNode';
 import ShapeNode, { type ShapeKind } from '../nodes/ShapeNode';
 import FrameNode from '../nodes/FrameNode';
 import HelperLines, { type HelperLineState } from '../nodes/shared/HelperLines';
-import { matchesAction } from '../lib/keybindings';
 import {
   formatSkillSection,
   getStylingConstraint,
@@ -345,42 +345,6 @@ export default function PlaygroundCanvas({
   }, [activeTool, setDrawToolActive, setStrokeSelectEnabled, setStrokeSelection]);
 
   const CANVAS_DRAW_EXTENT = 8000;
-  const clearAllStrokeSelection = usePlaygroundDrawStore((s) => s.clearAllStrokeSelection);
-
-  // Delete selected pen stroke(s) with Backspace / Delete
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-      const active = document.activeElement;
-      if (active) {
-        const tag = active.tagName.toLowerCase();
-        if (tag === 'input' || tag === 'textarea') return;
-        if ((active as HTMLElement).isContentEditable) return;
-        if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return;
-      }
-      const store = usePlaygroundDrawStore.getState();
-      const sel = store.strokeSelection;
-      const multi = store.multiStrokeSelection;
-
-      if (multi.size > 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        setCanvasDrawings((prev) => prev.filter((s) => !multi.has(s.id)));
-        clearAllStrokeSelection();
-        return;
-      }
-
-      if (!sel) return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      setCanvasDrawings((prev) => prev.filter((s) => s.id !== sel.strokeId));
-      clearAllStrokeSelection();
-    };
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
-  }, [setNodes, clearAllStrokeSelection]);
 
   // Select canvas ink strokes in select mode (complements path hit targets)
   useEffect(() => {
@@ -1384,68 +1348,6 @@ export default function PlaygroundCanvas({
     return () => window.removeEventListener('click', close);
   }, [contextMenu]);
 
-  // "T" shortcut — toggle text-placement tool mode
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!matchesAction(e, 'canvas.add-text')) return;
-      const active = document.activeElement;
-      if (active) {
-        const tag = active.tagName.toLowerCase();
-        if (tag === 'input' || tag === 'textarea') return;
-        if ((active as HTMLElement).isContentEditable) return;
-        if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return;
-      }
-      e.preventDefault();
-      setActiveTool((prev) => (prev === 'text' ? 'select' : 'text'));
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  // Z-order shortcuts: Cmd/Ctrl + ] / [ (with Shift for front/back).
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      let op: 'front' | 'back' | 'forward' | 'backward' | null = null;
-      if (matchesAction(e, 'canvas.bring-to-front')) op = 'front';
-      else if (matchesAction(e, 'canvas.send-to-back')) op = 'back';
-      else if (matchesAction(e, 'canvas.bring-forward')) op = 'forward';
-      else if (matchesAction(e, 'canvas.send-backward')) op = 'backward';
-      if (!op) return;
-      const active = document.activeElement;
-      if (active) {
-        const tag = active.tagName.toLowerCase();
-        if (tag === 'input' || tag === 'textarea') return;
-        if ((active as HTMLElement).isContentEditable) return;
-        if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return;
-      }
-      e.preventDefault();
-      handleZOrder(op);
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleZOrder]);
-
-  // Group / Ungroup shortcuts: Cmd/Ctrl+G and Cmd/Ctrl+Shift+G.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const isGroup = matchesAction(e, 'canvas.group');
-      const isUngroup = matchesAction(e, 'canvas.ungroup');
-      if (!isGroup && !isUngroup) return;
-      const active = document.activeElement;
-      if (active) {
-        const tag = active.tagName.toLowerCase();
-        if (tag === 'input' || tag === 'textarea') return;
-        if ((active as HTMLElement).isContentEditable) return;
-        if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return;
-      }
-      e.preventDefault();
-      if (isUngroup) handleUngroupFrame();
-      else handleGroupSelection();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleGroupSelection, handleUngroupFrame]);
-
   // ---------------------------------------------------------------------------
   // Clipboard: copy / paste / duplicate of canvas nodes (single-player).
   // ---------------------------------------------------------------------------
@@ -1516,53 +1418,6 @@ export default function PlaygroundCanvas({
     setNodes((nds) => nds.map((n) => ({ ...n, selected: false })).concat(clones));
     return true;
   }, [collectCopyableSelection, cloneNodes, setNodes]);
-
-  // Undo / redo / duplicate / copy / paste shortcuts.
-  useEffect(() => {
-    const isTyping = () => {
-      const active = document.activeElement;
-      if (!active) return false;
-      const tag = active.tagName.toLowerCase();
-      if (tag === 'input' || tag === 'textarea') return true;
-      if ((active as HTMLElement).isContentEditable) return true;
-      if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return true;
-      return false;
-    };
-
-    const handler = (e: KeyboardEvent) => {
-      if (isTyping()) return;
-      const meta = e.metaKey || e.ctrlKey;
-      if (!meta) return;
-      const key = e.key.toLowerCase();
-
-      if (matchesAction(e, 'canvas.redo') || (key === 'y' && meta)) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      if (matchesAction(e, 'canvas.undo')) {
-        e.preventDefault();
-        undo();
-        return;
-      }
-      if (matchesAction(e, 'canvas.duplicate')) {
-        e.preventDefault();
-        handleDuplicateNodes();
-        return;
-      }
-      if (key === 'c' && !e.shiftKey) {
-        // Only intercept when a node is selected; otherwise leave native copy alone.
-        if (handleCopyNodes()) e.preventDefault();
-        return;
-      }
-      if (key === 'v' && !e.shiftKey) {
-        if (handlePasteNodes()) e.preventDefault();
-        return;
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo, handleDuplicateNodes, handleCopyNodes, handlePasteNodes]);
 
   // Suppress browser history swipe (macOS trackpad two-finger swipe-back/forward).
   // React's onWheel is passive — preventDefault() is a no-op there — so we
@@ -2619,6 +2474,23 @@ export default function PlaygroundCanvas({
     [activeTool, drawPenKind, setDrawPenKind],
   );
 
+  useCanvasKeyboard({
+    setActiveTool,
+    activeTool,
+    shapeKind,
+    setShapeKind,
+    toggleDrawPenKind,
+    setCanvasDrawings,
+    handleZOrder,
+    handleGroupSelection,
+    handleUngroupFrame,
+    undo,
+    redo,
+    handleDuplicateNodes,
+    handleCopyNodes,
+    handlePasteNodes,
+  });
+
   const handleSidebarButtonMouseEnter = useCallback(() => {
     sidebarOpenedByButtonHoverRef.current = !sidebarVisible;
     onShowSidebar();
@@ -2628,50 +2500,6 @@ export default function PlaygroundCanvas({
     onToggleSidebar(sidebarOpenedByButtonHoverRef.current);
     sidebarOpenedByButtonHoverRef.current = false;
   }, [onToggleSidebar]);
-
-  // Tool shortcuts: V select, P pen, Escape leaves draw/text
-  useEffect(() => {
-    const isTypingTarget = () => {
-      const active = document.activeElement;
-      if (!active) return false;
-      const tag = active.tagName.toLowerCase();
-      if (tag === 'input' || tag === 'textarea') return true;
-      if ((active as HTMLElement).isContentEditable) return true;
-      if (active.closest('[role="dialog"]') || active.closest('[data-radix-popper-content-wrapper]')) return true;
-      return false;
-    };
-
-    const handler = (e: KeyboardEvent) => {
-      if (isTypingTarget()) return;
-
-      if (e.key === 'v' || e.key === 'V') {
-        setActiveTool('select');
-        return;
-      }
-      if (e.key === 'p' || e.key === 'P') {
-        e.preventDefault();
-        toggleDrawPenKind('pen');
-        return;
-      }
-      const shapeShortcut: Record<string, ShapeKind> = { r: 'rect', o: 'ellipse', l: 'line' };
-      const shapeForKey = shapeShortcut[e.key.toLowerCase()];
-      if (shapeForKey) {
-        e.preventDefault();
-        if (activeTool === 'shape' && shapeKind === shapeForKey) {
-          setActiveTool('select');
-        } else {
-          setShapeKind(shapeForKey);
-          setActiveTool('shape');
-        }
-        return;
-      }
-      if (activeTool !== 'select' && e.key === 'Escape') {
-        setActiveTool('select');
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [activeTool, shapeKind, toggleDrawPenKind]);
 
   return (
     <TooltipProvider>
