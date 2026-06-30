@@ -22,6 +22,30 @@ const log = (...args: unknown[]) => { if (DEBUG) console.log(LOG_PREFIX, ...args
 const ANALYZE_LOG_PREFIX = '[Playground][analyze]';
 const analyzeLog = (...args: unknown[]) => { if (DEBUG) console.log(ANALYZE_LOG_PREFIX, ...args); };
 
+// Hard cap on a discovery scan so an unreachable API fails fast instead of
+// hanging for minutes on CLI retry/backoff. Override with DISCOVERY_TIMEOUT_MS.
+const DISCOVERY_TIMEOUT_MS = Number(process.env.DISCOVERY_TIMEOUT_MS) || 180_000;
+
+/**
+ * Build a user-facing error from a failed agent run. The provider CLI often
+ * prints its real failure (e.g. "API Error: Unable to connect to API
+ * (ConnectionRefused)") to stdout, not stderr — so fall back to stdout, and
+ * add a hint when the signature points at a base-URL/proxy misconfiguration.
+ */
+function buildAgentErrorMessage(
+  providerName: string,
+  code: number | null,
+  stdout: string,
+  stderr: string,
+): string {
+  const detail = (stderr.trim() || stdout.trim()).slice(0, 800);
+  const base = detail || `${providerName} agent exited with code ${code}`;
+  if (/ConnectionRefused|ECONNREFUSED|Unable to connect/i.test(base)) {
+    return `${base}\n\nThe ${providerName} CLI could not reach the API. This is usually a stale ANTHROPIC_BASE_URL or HTTP(S)_PROXY in the environment the dev server was started from, pointing at a gateway that isn't running. Check it in the terminal you ran the dev server from.`;
+  }
+  return base;
+}
+
 // ---------------------------------------------------------------------------
 // Path resolution
 // ---------------------------------------------------------------------------
@@ -214,6 +238,8 @@ export function discoverRoutes() {
 
     scanCancelled = false;
 
+    const startTime = Date.now();
+
     return await new Promise<Response>((resolve) => {
     try {
       currentProcess = spawnAgent(providerId, {
@@ -251,13 +277,35 @@ export function discoverRoutes() {
       currentProcess.stdin?.end();
       log(` Prompt written to stdin and closed`);
 
+      // Fail-fast backstop: kill a scan that exceeds the timeout so an
+      // unreachable API surfaces an error in seconds-to-minutes, not a silent hang.
+      let timedOut = false;
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        console.error(`${LOG_PREFIX} Scan exceeded ${DISCOVERY_TIMEOUT_MS}ms — killing PID=${currentProcess?.pid}`);
+        currentProcess?.kill('SIGTERM');
+        setTimeout(() => {
+          if (currentProcess && !currentProcess.killed) currentProcess.kill('SIGKILL');
+        }, 2000);
+      }, DISCOVERY_TIMEOUT_MS);
+
       currentProcess.on('close', (code) => {
+        clearTimeout(timeout);
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         log(` Agent exited — code=${code}, elapsed=${elapsed}s, stdout=${stdout.length} chars, stderr=${stderr.length} chars`);
 
         removeLockfile();
         isScanning = false;
         currentProcess = null;
+
+        if (timedOut) {
+          const detail = (stderr.trim() || stdout.trim()).slice(0, 800);
+          resolve(c.json({
+            success: false,
+            error: `Discovery scan timed out after ${(DISCOVERY_TIMEOUT_MS / 1000).toFixed(0)}s and was aborted. This usually means the ${providerName} CLI could not reach the API (check ANTHROPIC_BASE_URL / proxy in the dev-server environment).${detail ? `\n\nLast output: ${detail}` : ''}`,
+          }, 504));
+          return;
+        }
 
         if (code === 0) {
           const data = readDiscoveryJson();
@@ -270,12 +318,13 @@ export function discoverRoutes() {
             resolve(c.json({ success: false, error: 'Agent completed but discovery.json was not created.' }, 500));
           }
         } else {
-          console.error(`${LOG_PREFIX} Agent failed — code=${code}, stderr: ${stderr.slice(0, 500)}`);
-          resolve(c.json({ success: false, error: stderr || `${providerName} agent exited with code ${code}` }, 500));
+          console.error(`${LOG_PREFIX} Agent failed — code=${code}, stdout: ${stdout.slice(0, 500)} stderr: ${stderr.slice(0, 500)}`);
+          resolve(c.json({ success: false, error: buildAgentErrorMessage(providerName, code, stdout, stderr) }, 500));
         }
       });
 
       currentProcess.on('error', (error) => {
+        clearTimeout(timeout);
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.error(`${LOG_PREFIX} Agent process error after ${elapsed}s:`, error.message);
 
