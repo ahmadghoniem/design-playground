@@ -129,12 +129,7 @@ Landed as `12d8eca refactor(server): extract lockfile/watcher/timer/jsonl from g
 | Commit | Seam |
 |--------|------|
 | `063e757` | **J0 P0** — export `stopPolling` from `useIterationScan` (clear-canvas regression from Batch I) |
-| (this batch) | **J0** — iteration lookup helpers → `lib/iteration-scan.ts`; `computeVisibleNodes` → `lib/canvas-visibility.ts` |
-| (this batch) | **J1** — `lib/canvas-auto-arrange.ts` + `hooks/useCanvasAutoArrange.ts` |
-| (this batch) | **J2** — `hooks/useCanvasPaste.ts`, `hooks/useCanvasDragDrop.ts` |
-| (this batch) | **J3** — `hooks/useCanvasPresenceBubbles.ts`, `hooks/useCanvasPersistence.ts` |
-| (this batch) | **J4** — `hooks/useCanvasNodeDelete.ts`, `hooks/useCanvasFrameOps.ts` |
-| (this batch) | **J5** — `components/canvas/PlaygroundCanvasToolbar.tsx`, `PlaygroundCanvasDialogs.tsx` |
+| `c748c14` | **J0–J5** — iteration helpers + visibility lib; auto-arrange; paste/drag-drop; presence/persistence; node-delete/frame-ops; toolbar/dialogs shell split |
 
 `PlaygroundCanvas.tsx` is now ~1128 LOC: hook composition + React Flow inline + context menu. Paste/drag-drop/presence/persistence/node-delete/frame-ops/auto-arrange live in `hooks/`; layout math in `lib/canvas-auto-arrange.ts`, `lib/canvas-visibility.ts`, extended `lib/iteration-scan.ts`.
 
