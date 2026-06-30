@@ -42,6 +42,8 @@ import { useCanvasDrawTool } from '../hooks/useCanvasDrawTool';
 import { useGenerationCoordination } from '../hooks/useGenerationCoordination';
 import { useGenerationLifecycle } from '../hooks/useGenerationLifecycle';
 import { useIterationScan } from '../hooks/useIterationScan';
+import { useChatSubmit } from '../hooks/useChatSubmit';
+import { useDragIterateEventHandler } from '../hooks/useDragToIterate';
 import { LayoutGrid, Frame } from 'lucide-react';
 import { ShapeToolGroup } from '../components/canvas/ShapeToolGroup';
 import { PageDocumentIcon, ProjectBoxIcon } from '../ui/playground-nav-icons';
@@ -77,6 +79,7 @@ import { createPagePrompt, RESERVED_TOP_LEVEL_SLUGS } from '../prompts/create-pa
 import { generateHtmlIterationPrompt, generateHtmlIterationFromIterationPrompt } from '../lib/html-prompts';
 import { generateJsxIterationPrompt, generateJsxIterationFromIterationPrompt } from '../lib/jsx-prompts';
 import { captureAndSaveScreenshot, getScreenshotFilename } from '../lib/captureAndSaveScreenshot';
+import { loadDefaultSkillPrompt } from '../lib/load-default-skill-prompt';
 import { loadSelectedModel } from '../nodes/shared/IterateDialogParts';
 import {
   GENERATION_START_EVENT,
@@ -86,7 +89,6 @@ import {
   GENERATION_AGENT_PREVIEW_EVENT,
   PLAYGROUND_AUTO_ARRANGE_EVENT,
   CREATE_DESIGN_EVENT,
-  DRAG_ITERATE_EVENT,
   DRAG_ITERATE_UNDO_DURATION_MS,
   DRAG_ITERATE_TOAST_DURATION_MS,
 
@@ -145,11 +147,9 @@ import {
   type GenerationQueuedPayload,
   type GenerationAgentPreviewPayload,
   type PresenceBubbleDismissPayload,
-  type DragIteratePayload,
   type ChatSubmitPayload,
   type JsxComponentInfo,
 } from '../lib/constants';
-import type { PlaygroundSkill } from '../skills';
 import DockedChatBar from '../components/chat/DockedChatBar';
 import ElementHighlight from '../components/canvas/ElementHighlight';
 import { useElementSelection } from '../hooks/useElementSelection';
@@ -189,34 +189,6 @@ function getMinimapNodeColor(node: Node): string {
 /** Poll interval while a generation is active (SSE fallback) — lives in useIterationScan. */
 
 // countBatchIterationNodes moved to ../lib/iteration-scan
-
-const DEFAULT_SKILL_IDS = ['design-variations', 'frontend-design'] as const;
-let cachedDefaultSkillPrompt: string | null = null;
-
-
-async function loadDefaultSkillPrompt(): Promise<string | null> {
-  if (cachedDefaultSkillPrompt !== null) return cachedDefaultSkillPrompt;
-  try {
-    const response = await fetch('/playground/api/skills');
-    if (!response.ok) {
-      cachedDefaultSkillPrompt = '';
-      return cachedDefaultSkillPrompt;
-    }
-    const data = (await response.json()) as { skills?: PlaygroundSkill[] };
-    const skills = data.skills || [];
-    const parts: string[] = [];
-    for (const id of DEFAULT_SKILL_IDS) {
-      const skill = skills.find((s) => s.id === id);
-      const sp = skill?.skillPath?.trim();
-      if (sp) parts.push(sp);
-    }
-    cachedDefaultSkillPrompt = parts.length ? parts.join('\n\n') : '';
-    return cachedDefaultSkillPrompt;
-  } catch {
-    cachedDefaultSkillPrompt = '';
-    return cachedDefaultSkillPrompt;
-  }
-}
 
 interface IterationFile {
   filename: string;
@@ -626,262 +598,7 @@ export default function PlaygroundCanvas({
   // ---------------------------------------------------------------------------
   // Drag-to-iterate handler
   // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const handleDragIterate = async (e: CustomEvent<DragIteratePayload>) => {
-      const {
-        componentId,
-        componentName,
-        parentNodeId,
-        iterationCount,
-        model,
-        sourceFilename,
-        renderMode: dragRenderMode,
-        htmlFolder: dragHtmlFolder,
-        jsxFile: dragJsxFile,
-      } = e.detail;
-      const isDragHtml = dragRenderMode === 'html' && !!dragHtmlFolder;
-      const isDragJsx = dragRenderMode === 'jsx' && !!dragJsxFile;
-
-
-
-      // Build the prompt
-      let prompt: string;
-      const defaultSkillPrompt = await loadDefaultSkillPrompt();
-
-      // Fetch next available iteration number
-      let startNumber = 1;
-      try {
-        if (isDragHtml) {
-          const response = await fetch('/playground/api/html-pages');
-          if (response.ok) {
-            const { pages } = await response.json();
-            const page = pages.find((p: { folder: string }) => p.folder === dragHtmlFolder);
-            const maxNumber = page?.iterations.reduce(
-              (max: number, i: { number: number }) => Math.max(max, i.number), 0
-            ) ?? 0;
-            startNumber = maxNumber + 1;
-          }
-        } else if (isDragJsx && dragJsxFile) {
-          const baseFilename = dragJsxFile.replace(/\.iteration-\d+\.tsx$/, '.tsx');
-          const response = await fetch('/playground/api/oncanvas-components');
-          if (response.ok) {
-            const { components } = await response.json() as { components: JsxComponentInfo[] };
-            const comp = components.find(c => c.filename === baseFilename);
-            const maxNumber = comp?.iterations.reduce(
-              (max: number, i: { iterationNumber: number }) => Math.max(max, i.iterationNumber),
-              0,
-            ) ?? 0;
-            startNumber = maxNumber + 1;
-          }
-        } else {
-          const cleanName = componentName.replace(/\s+/g, '');
-          const response = await fetch('/playground/api/iterations');
-          if (response.ok) {
-            const { iterations } = await response.json();
-            const componentIterations = iterations.filter(
-              (i: { componentName: string }) => i.componentName === cleanName
-            );
-            const maxNumber = componentIterations.reduce(
-              (max: number, i: { iterationNumber: number }) =>
-                Math.max(max, i.iterationNumber),
-              0
-            );
-            startNumber = maxNumber + 1;
-          }
-        }
-      } catch { /* use default */ }
-
-      // Capture screenshot of the source node
-      const screenshotFilename = getScreenshotFilename(componentName, sourceFilename);
-      const screenshotPath = await captureAndSaveScreenshot(parentNodeId, screenshotFilename);
-
-      if (isDragHtml) {
-        // HTML mode prompt
-        if (sourceFilename && sourceFilename.includes('iteration-')) {
-          const iterFolder = sourceFilename.split('/').pop() || sourceFilename;
-          prompt = generateHtmlIterationFromIterationPrompt(
-            dragHtmlFolder,
-            iterFolder,
-            iterationCount,
-            startNumber,
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
-          );
-        } else {
-          prompt = generateHtmlIterationPrompt(
-            dragHtmlFolder,
-            iterationCount,
-            startNumber,
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
-          );
-        }
-      } else if (isDragJsx && dragJsxFile) {
-        const baseFile = dragJsxFile.replace(/\.iteration-\d+\.tsx$/, '.tsx');
-        if (sourceFilename) {
-          prompt = generateJsxIterationFromIterationPrompt(
-            baseFile,
-            sourceFilename,
-            iterationCount,
-            startNumber,
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
-          );
-        } else {
-          prompt = generateJsxIterationPrompt(
-            baseFile,
-            iterationCount,
-            startNumber,
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
-          );
-        }
-      } else if (sourceFilename) {
-        try {
-          prompt = generateIterationFromIterationPrompt(
-            componentId,
-            sourceFilename,
-            iterationCount,
-            startNumber,
-            'shell',
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-            undefined,
-            // screenshotPath ?? undefined,
-          );
-        } catch {
-          prompt = generateIterationPrompt(
-            componentId,
-            iterationCount,
-            startNumber,
-            'shell',
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-            undefined,
-            // screenshotPath ?? undefined,
-          );
-        }
-      } else {
-        prompt = generateIterationPrompt(
-          componentId,
-          iterationCount,
-          startNumber,
-          'shell',
-          DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-          defaultSkillPrompt || undefined,
-          undefined,
-          // screenshotPath ?? undefined,
-        );
-      }
-
-      // Guard: prompt must be non-empty before we proceed
-      if (!prompt) {
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: {
-              componentId,
-              parentNodeId,
-              error: isDragHtml
-                ? `HTML page "${dragHtmlFolder}" not found.`
-                : isDragJsx
-                  ? 'Could not build prompt for this JSX frame (missing jsxFile or canvas-components data).'
-                  : `Component "${componentId}" is not registered. Add it to the registry or re-run discovery before iterating.`,
-            },
-          }),
-        );
-        return;
-      }
-
-      const dragPf = getProviderFields();
-      // Dispatch generation start (creates skeleton nodes in grid layout)
-      window.dispatchEvent(
-        new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-          detail: {
-            componentId,
-            componentName,
-            parentNodeId,
-            iterationCount,
-            startNumber,
-            model: model || undefined,
-            provider: dragPf.provider as GenerationStartPayload['provider'],
-            gridLayout: { rows: e.detail.rows, cols: e.detail.cols },
-            ...(isDragHtml
-              ? { renderMode: 'html' as const, htmlFolder: dragHtmlFolder }
-              : isDragJsx && dragJsxFile
-                ? { renderMode: 'jsx' as const, jsxFile: dragJsxFile }
-                : {}),
-          },
-        }),
-      );
-
-      // Call the generate API
-      try {
-        const response = await fetch('/playground/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            componentId,
-            iterationCount,
-            model: model || undefined,
-            source: 'drag',
-            ...getProviderFields(),
-            ...(isDragHtml ? { htmlFolder: dragHtmlFolder } : {}),
-            ...(isDragJsx && dragJsxFile ? { jsxFile: dragJsxFile } : {}),
-          }),
-        });
-
-        let data;
-        try {
-          data = await response.json();
-        } catch {
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: {
-                componentId,
-                parentNodeId,
-                error: 'Failed to parse response',
-              },
-            }),
-          );
-          return;
-        }
-
-        if (!response.ok || !data.success) {
-          const error =
-            typeof data?.error === 'string' ? data.error : 'Generation failed';
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: { componentId, parentNodeId, error },
-            }),
-          );
-        } else {
-          window.dispatchEvent(
-            new CustomEvent<GenerationCompletePayload>(
-              GENERATION_COMPLETE_EVENT,
-              { detail: { componentId, parentNodeId, output: '' } },
-            ),
-          );
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: { componentId, parentNodeId, error: msg },
-          }),
-        );
-      }
-    };
-
-    const listener = ((e: Event) =>
-      handleDragIterate(e as CustomEvent<DragIteratePayload>)) as EventListener;
-    window.addEventListener(DRAG_ITERATE_EVENT, listener);
-    return () => window.removeEventListener(DRAG_ITERATE_EVENT, listener);
-  }, []);
+  useDragIterateEventHandler();
 
   // ---------------------------------------------------------------------------
   // Cursor Chat submit handler + queue
