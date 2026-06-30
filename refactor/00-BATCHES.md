@@ -133,7 +133,15 @@ Landed as `12d8eca refactor(server): extract lockfile/watcher/timer/jsonl from g
 
 `PlaygroundCanvas.tsx` is now ~1128 LOC: hook composition + React Flow inline + context menu. Paste/drag-drop/presence/persistence/node-delete/frame-ops/auto-arrange live in `hooks/`; layout math in `lib/canvas-auto-arrange.ts`, `lib/canvas-visibility.ts`, extended `lib/iteration-scan.ts`.
 
-**Batch I status:** DONE (extended by Batch J). **Task 10 assembler target:** largely met (~1128 LOC; context menu + create-page flow remain in parent by design).
+**Batch I status:** DONE (extended by Batch J). **Task 10 assembler target:** met (~725 LOC after Batch J2).
+
+**Phase 4 — Batch J2 polish (~1128→~725 LOC):** Dead-code cleanup + final assembler extractions:
+
+| Commit | Seam |
+|--------|------|
+| `a89d0a6` | **J2** — dead-code cleanup; `PlaygroundCanvasContextMenu`; `useCanvasCreatePage`; `useCanvasClipboard` + `useCanvasClear` |
+
+`PlaygroundCanvas.tsx` is now ~725 LOC: hook composition + React Flow inline. Context menu, create-page, clipboard, and clear-canvas live in dedicated modules.
 **Gate:** each seam committed separately; parent shrinks per extraction (replace, don't layer).
 
 ---

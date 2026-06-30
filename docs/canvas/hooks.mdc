@@ -25,6 +25,9 @@ All hooks live in `hooks/` (embedded at `src/app/playground/hooks/` in the host)
 | `useCanvasPersistence.ts` | localStorage save + beforeunload viewport | `PlaygroundCanvas.tsx` |
 | `useCanvasNodeDelete.ts` | Delete dialog + cascade/reparent API | `PlaygroundCanvas.tsx` |
 | `useCanvasFrameOps.ts` | Group/ungroup, z-order, helper-line drag | `PlaygroundCanvas.tsx` |
+| `useCanvasCreatePage.ts` | Create design/page dialog + `CREATE_DESIGN_EVENT` | `PlaygroundCanvas.tsx` |
+| `useCanvasClipboard.ts` | Node copy/paste/duplicate for keyboard shortcuts | `PlaygroundCanvas.tsx` |
+| `useCanvasClear.ts` | Clear-canvas dialog + `PLAYGROUND_CLEAR_EVENT` | `PlaygroundCanvas.tsx` |
 | `useModelCycle.ts` | Docked chat model selection + flip animation | `DockedChatBar.tsx` |
 | `useDynamicBackground.ts` | Dynamic canvas background dot sizing | `PlaygroundCanvas.tsx` |
 | `useElementSelection.ts` | Alt+click DOM element selection in iframes | `ComponentNode.tsx`, `IterationNode.tsx` |
@@ -39,6 +42,14 @@ All hooks live in `hooks/` (embedded at `src/app/playground/hooks/` in the host)
 | `lib/canvas-visibility.ts` | Collapse filter + `hasChildren`/`isCollapsed` annotation |
 | `lib/iteration-scan.ts` | Iteration positioning + parent lookup helpers |
 | `lib/canvas-paste.ts` | Clipboard classification (`classifyClipboard`) |
+
+## Shell components (Batch J / J2)
+
+| Component | Purpose |
+|-----------|---------|
+| `PlaygroundCanvasToolbar.tsx` | Left rail tools |
+| `PlaygroundCanvasDialogs.tsx` | Clear, delete, create-page dialogs |
+| `PlaygroundCanvasContextMenu.tsx` | Right-click context menu |
 
 ## Related Docs
 
