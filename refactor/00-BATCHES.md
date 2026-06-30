@@ -105,22 +105,27 @@ Landed as `12d8eca refactor(server): extract lockfile/watcher/timer/jsonl from g
 
 ---
 
-## Batch I — Canvas god-module (10) 🟡 PARTIAL (5 of ~9 seams)
+## Batch I — Canvas god-module (10) ✅ DONE
 
-Three verified seams landed first (Sonnet sub-agent, one commit each; 5664→5482 LOC): `8cfdfd7` extract `CanvasPresenceLayer` → `components/canvas/CanvasPresenceLayer.tsx`; `72f2042` finish `lib/canvas-persistence` (`getCanvasStorageKey`, dedupe the storage-key ternary); `f639bf4` extract the pure scan helpers (`isInExpectedBatch`, `getSkeletonIdForFileIteration`, `resolveIterationPosition`, `countBatchIterationNodes`) → `lib/iteration-scan.ts`.
+**Phase 1 — early seams (5664→5302 LOC):** `8cfdfd7` `CanvasPresenceLayer`; `72f2042` `lib/canvas-persistence` finish; `f639bf4` pure `lib/iteration-scan` helpers; `0b2c19b` **seam 8** `useCanvasDrawTool`; `bf51899` **seam 6** `lib/canvas-paste`.
 
-**Two more verified seams landed 2026-06-30 (Opus, one commit each; 5479→5302 LOC):**
-- `0b2c19b` **seam 8** — extract `hooks/useCanvasDrawTool.ts` (freehand-ink + drag-to-draw-shape pointer effects). Pure listener-shell: every piece of canvas state it touches is passed in, never reaches back into the parent. Also folded in the pre-existing garbled duplicate-closing-tag tail fix that was sitting unbuilt in the working tree.
-- `bf51899` **seam 6** — extract `lib/canvas-paste.ts` (`classifyClipboard` → `PasteIntent`, and `nextFrameNumber`, which was duplicated across the JSX and HTML branches). The handler keeps the I/O orchestration (upload/PUT/insert) because it is entangled with `getNodeId`/`setNodes`/`screenToFlowPosition` — node insertion may stay in the parent per the brief. Both verified by reading (pure functions; no test runner in repo).
+**Phase 2 — prerequisite + deferred seams (5302→~2943 LOC, 2026-06-30):** After consolidating the five shared coordination refs behind `useGenerationCoordination`, the four mutually-entangled stateful seams plus keyboard landed one commit each:
 
-**Still deferred — the 4 mutually-entangled stateful seams** (2 generation-lifecycle, the stateful tail of 3 iteration-scan, 4 drag-to-iterate consolidation, 5 chat-submit). These all read **and write** the same 5 coordination refs — `generationInfoRef`, `nodesRef`, `scanContextOverrideRef`, `isGeneratingRef`, `knownIterationsRef` (68 read/write sites in the file as of 2026-06-30) — plus `nodeIdCounterRef`/`getNodeId()` and the `setNodes`/`screenToFlowPosition` closures. Pulling any one into a hook would force the hook to mutate parent refs that other still-in-parent handlers also mutate — the brief's explicit "if a seam needs to mutate a parent ref, the seam is wrong" condition. They need a **prerequisite pass that consolidates ref ownership** (e.g. a single `useGenerationState` that owns generationInfo/nodes/scan refs and exposes typed accessors) before the lifecycle/scan/chat/drag seams can be lifted. Their SSE/poll/reconcile/resume-after-reload/timeout behaviour also can't be verified by reading alone — they need the running host canvas, which the brief requires before extracting (`If you cannot exercise a seam's verification, do not extract it`). Seam 7 (keyboard) is mechanically extractable but its goal is to *consolidate* the scattered `window` keydown listeners into one map; merging independent listeners changes the order handlers observe events, a parity risk that also wants live verification. **Deferred React Flow modernizations** (kept out of the parity refactor): `getNodesBounds()` for the manual frame-bounds `Math.min/max`, and `updateNode`/`updateNodeData` for `setNodes(map)` — see [[reactflow-port-pattern]].
+| Commit | Seam |
+|--------|------|
+| `0819a79` | Prerequisite — `hooks/useGenerationCoordination.ts` (typed accessors for generationInfo/isGenerating/nodes/knownIterations/scan mutex) |
+| `ad36099` | **seam 3 tail** — `hooks/useIterationScan.ts` (stateful scan + prompt-copy poll + generation SSE fallback poll) |
+| `0859a00` | **seam 2** — `hooks/useGenerationLifecycle.ts` (timer, reconcile, SSE, resume-after-reload, START/COMPLETE/ERROR) |
+| `1b7242a` | **seam 4** — `useDragIterateEventHandler` in `hooks/useDragToIterate.ts` + `lib/load-default-skill-prompt.ts` |
+| `cd4ad08` | **seam 5** — `hooks/useChatSubmit.ts` |
+| `318e3e9` | **seam 7** — `hooks/useCanvasKeyboard.ts` (consolidated bubble + capture stroke-delete; Control/⌘ snap stays in parent) |
 
-**Post-refactor dead-code audit (batches E–H, 4 parallel agents):** Batch G clean; fixes committed — `4589146 chore(server): remove dead stat/cancellation state` (dead `readNewFileLineTotals`/`combineLineStat` + 4 write-only vars; watcher `onIterationFile` made optional) and `1541818 chore(ui): remove dead code` (4 zero-consumer legacy dropdowns from iterate-dialog/parts.tsx, the never-wired `useChatDockProximity.onExpand`, de-export `PILL_VALUE_ATTR`). **Known issue left as-is (owner decision):** `hooks/useOpenIn.ts` imports `../assets/cursor-icon.svg` which is missing since `055acbd` — `'cursor'` is the default Open-in target, so it needs a real asset/decision, flagged not fixed.
+`PlaygroundCanvas.tsx` is now an assembler (~2943 LOC): it composes coordination, scan, lifecycle, drag-iterate, chat-submit, draw-tool, and keyboard hooks; heavy paste I/O and React Flow wiring remain in the parent per the brief. **Deferred (out of parity refactor):** React Flow modernizations (`getNodesBounds`, `updateNodeData`); paste handler I/O orchestration stays in parent.
+
+**Post-refactor dead-code audit (batches E–H):** `4589146`, `1541818`. **Known issue left as-is:** `hooks/useOpenIn.ts` dangling `cursor-icon.svg` import.
 
 **Task:** 10 (deepen `PlaygroundCanvas.tsx`). **Solo, last, largest.**
-**Position:** **last.** It depends on Batch D (09) and benefits from B (06 moved its path) and F (12's payload). Doing it last means the most surrounding code is already settled.
-**Commit:** **one commit per extracted seam** (the task mandates stop-and-verify per seam). Land them as a sequence under one review, e.g. `refactor(canvas): extract generation lifecycle`, `… extract iteration-scan`, `… extract paste handling`, etc.
-**Gate:** each seam's verification passes before its commit; parent file shrinks per extraction (replace, don't layer).
+**Gate:** each seam committed separately; parent shrinks per extraction (replace, don't layer).
 
 ---
 
