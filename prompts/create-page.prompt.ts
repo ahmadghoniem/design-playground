@@ -1,6 +1,6 @@
 /**
  * @name: create-page-prompt
- * @description: Prompt used to scaffold a brand-new Next.js page from a user description, register it in the playground registry, and place it under src/app/{slug}/page.tsx so it becomes a real public route.
+ * @description: Prompt used to scaffold a brand-new page from a user description, register it in the playground registry, and place it under src/app/{slug}/page.tsx following this project's page.tsx/layout.tsx convention.
  * @variables :
  *   skillSection: Optional skill context block to prepend to the prompt.
  *   description: The user's natural-language description of the page they want.
@@ -8,14 +8,14 @@
  *   reservedSlugs: Comma-separated list of slugs that must never be used.
  */
 
-import { fillTemplate } from './utility';
+import { fillTemplate } from "./utility";
 
 const prompt = `
 {{skillSection}}
-CREATE NEW NEXT.JS PAGE
+CREATE NEW PAGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You are creating a brand-new Next.js page from the user's description below. The page becomes a real public route at /{slug} on the production site.blahbalh
+You are creating a brand-new page from the user's description below. It follows this project's page.tsx/layout.tsx convention and becomes a route at /{slug}.
 
 USER DESCRIPTION
 {{description}}
@@ -23,8 +23,8 @@ USER DESCRIPTION
 
 CONTEXT YOU MUST KNOW
 
-- Reserved Next.js convention slugs (NEVER use these — even with a suffix): {{reservedSlugs}}
-- The new page will inherit src/app/layout.tsx (root layout already wraps the site with navbar, footer, providers, fonts, app-theme CSS variables, and globals.css). Do NOT create a layout.tsx.
+- Reserved top-level slugs (NEVER use these — even with a suffix): {{reservedSlugs}}
+- The host app already provides its global shell (navbar, footer, providers, fonts, app-theme CSS variables, and globals.css) around every route. Do NOT create a layout.tsx or any other wrapper/shell file — write only the page component.
 - The page will also be rendered as a node on the playground canvas via the existing ComponentNode. The canvas wraps it in an .app-theme div, so all CSS variables from src/app/globals.css apply both on canvas and on the live route.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -46,7 +46,7 @@ INSTRUCTIONS
    - Used as the sidebar label.
 
 4. Write the page file at src/app/{slug}/page.tsx
-   - Top of file: 'use client';
+   - Top of file:
    - Default export: export default function {PascalName}() { ... }
    - Use Tailwind utility classes for layout and spacing.
    - Use the host app's semantic theme tokens (defined in src/app/globals.css; the canvas inherits them through .app-theme) for colors and fonts — e.g., text-foreground, bg-background, bg-primary, text-primary-foreground, border-border, text-muted-foreground, font-sans. ALWAYS prefer these tokens over hardcoded hex/rgb so the page matches the host app in both light and dark mode.
@@ -55,7 +55,7 @@ INSTRUCTIONS
    - Prefer composing with primitives from @/components/ui where they exist; otherwise inline JSX is fine.
    - Avoid heavy external dependencies. Stick to React, Tailwind, and what is already in package.json.
    - Do NOT create a layout.tsx file in the new directory.
-   - Do NOT add metadata exports unless the description asks for them.
+   - Do NOT add framework-specific route-config exports (e.g. metadata, generateStaticParams) — this is a plain component, not a special routing file.
 
 5. Register the page in the playground registry
    File: src/app/playground/registry.tsx
@@ -84,7 +84,7 @@ INSTRUCTIONS
 QUALITY CHECKLIST
 
 - [ ] Slug is unique against the taken list AND not in the reserved list
-- [ ] src/app/{slug}/page.tsx exists, starts with 'use client', has a default export named {PascalName}
+- [ ] src/app/{slug}/page.tsx exists and has a default export named {PascalName}
 - [ ] No layout.tsx was created in src/app/{slug}/
 - [ ] registry.tsx has a new static import line for the page
 - [ ] registry.tsx Pages group includes the new leaf, alphabetically sorted by label
@@ -95,15 +95,15 @@ QUALITY CHECKLIST
 Create the page now.`;
 
 export const RESERVED_TOP_LEVEL_SLUGS = [
-  'api',
-  'app',
-  'playground',
-  'pricing',
-  'search',
-  'public',
-  'static',
-  '_next',
-  'favicon.ico',
+  "api",
+  "app",
+  "playground",
+  "pricing",
+  "search",
+  "public",
+  "static",
+  "_next",
+  "favicon.ico",
 ];
 
 export interface CreatePagePromptVars {

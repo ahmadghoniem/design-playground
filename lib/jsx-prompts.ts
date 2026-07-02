@@ -55,5 +55,5 @@ export function generateJsxIterationFromIterationPrompt(
 
 export function generateJsxAdoptPrompt(baseFilename: string, iterationFilename: string): string {
   return `Copy the contents of src/app/playground/canvas-components/${iterationFilename} to src/app/playground/canvas-components/${baseFilename}.
-Keep the 'use client' directive and default export. Do not change any imports or component logic.`;
+Keep the default export. Do not add framework directives (e.g. 'use client') and do not change any imports or component logic.`;
 }

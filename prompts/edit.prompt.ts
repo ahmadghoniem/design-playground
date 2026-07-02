@@ -23,24 +23,24 @@ export function editPrompt(opts: EditPromptOptions): string {
 
   sections.push(
     `Edit the file at ${opts.filePath} according to the following instructions.`,
-    'Do NOT create new files. Modify the existing file in-place.',
+    "Do NOT create new files. Modify the existing file in-place.",
   );
 
   // JSX canvas-components must stay fully self-contained
-  if (opts.filePath.includes('canvas-components/')) {
+  if (opts.filePath.includes("canvas-components/")) {
     sections.push(
       `## Self-Contained Component Rules\n` +
-      `This file is a canvas-component that renders inside the playground. It MUST remain fully self-contained:\n` +
-      `- The ONLY allowed import is 'react' (e.g. import React, { useState } from 'react')\n` +
-      `- Do NOT add imports for any UI library: no shadcn/ui, no @radix-ui, no lucide-react, no @/components, no next/image, no next/link, no framer-motion, no other packages\n` +
-      `- Use ONLY inline styles or style objects — no Tailwind classes, no external CSS imports, no CSS modules\n` +
-      `- All icons, images, and assets must be inline SVG or CSS-based\n` +
-      `- Keep 'use client' directive and default export`,
+        `This file is a canvas-component that renders inside the playground. It MUST remain fully self-contained:\n` +
+        `- The ONLY allowed import is 'react' (e.g. import React, { useState } from 'react')\n` +
+        `- Do NOT add imports for any UI library: no shadcn/ui, no @radix-ui, no lucide-react, no @/components, no framer-motion, no other packages — no framework image/link helpers either (use plain <img>/<a> tags), since 'react' is the only allowed import\n` +
+        `- Use ONLY inline styles or style objects — no Tailwind classes, no external CSS imports, no CSS modules\n` +
+        `- All icons, images, and assets must be inline SVG or CSS-based\n` +
+        `- Keep default export`,
     );
   }
 
   if (opts.skillPrompt) {
-    sections.push('## Skills\n' + opts.skillPrompt);
+    sections.push("## Skills\n" + opts.skillPrompt);
   }
 
   if (opts.screenshotPath) {
@@ -53,19 +53,25 @@ export function editPrompt(opts: EditPromptOptions): string {
     const selLines = opts.elementSelections.map((el) => {
       const parts = [`- **${el.displayName || el.tagName}**`];
       if (el.cssSelector) parts.push(`  Selector: \`${el.cssSelector}\``);
-      if (el.textContent) parts.push(`  Text: "${el.textContent.slice(0, 200)}"`);
-      if (el.htmlSource) parts.push(`  HTML:\n\`\`\`html\n${el.htmlSource}\n\`\`\``);
-      if (el.ancestorComponents?.length) parts.push(`  Ancestors: ${el.ancestorComponents.join(' > ')}`);
-      return parts.join('\n');
+      if (el.textContent)
+        parts.push(`  Text: "${el.textContent.slice(0, 200)}"`);
+      if (el.htmlSource)
+        parts.push(`  HTML:\n\`\`\`html\n${el.htmlSource}\n\`\`\``);
+      if (el.ancestorComponents?.length)
+        parts.push(`  Ancestors: ${el.ancestorComponents.join(" > ")}`);
+      return parts.join("\n");
     });
-    sections.push('## Selected Elements\nApply changes specifically to these selected elements:\n' + selLines.join('\n\n'));
+    sections.push(
+      "## Selected Elements\nApply changes specifically to these selected elements:\n" +
+        selLines.join("\n\n"),
+    );
   }
 
   if (opts.referenceNodesSection) {
-    sections.push('## Reference Nodes\n' + opts.referenceNodesSection);
+    sections.push("## Reference Nodes\n" + opts.referenceNodesSection);
   }
 
-  sections.push('## Instructions\n' + opts.customInstructions);
+  sections.push("## Instructions\n" + opts.customInstructions);
 
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }

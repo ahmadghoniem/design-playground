@@ -1,7 +1,7 @@
 /**
  * Prompt template for generating JSX iterations from an existing JSX iteration.
  */
-import { fillTemplate } from './utility';
+import { fillTemplate } from "./utility";
 
 const prompt = `
 {{skillSection}}
@@ -22,12 +22,11 @@ INSTRUCTIONS
 5. Complete each iteration fully before starting the next
 
 CRITICAL REQUIREMENTS
-- Each file MUST start with 'use client';
 - Each file MUST have a default export (export default function ComponentName() { ... })
 - Components MUST be fully self-contained units:
   • Use ONLY inline styles or style objects — NO external CSS imports, NO Tailwind, NO CSS modules
   • The ONLY allowed import is 'react' (e.g. import React, { useState } from 'react')
-  • Do NOT import any UI library: no shadcn/ui, no @radix-ui, no lucide-react, no @/components, no next/image, no next/link, no framer-motion, no any other package
+  • Do NOT import any UI library: no shadcn/ui, no @radix-ui, no lucide-react, no @/components, no framer-motion, no any other package — no framework image/link helpers either (use plain <img>/<a> tags), since 'react' is the only allowed import
   • Do NOT import anything from the playground codebase — these components render inside the playground and must not affect its UI
   • All icons, images, and assets must be inline SVG or CSS-based
 - Preserve the component's core functionality and structure
@@ -40,11 +39,10 @@ CREATIVE LAYOUT & THEME FREEDOM (when iterationCount > 1)
 - Each iteration must be structurally and/or visually distinct from the source and other iterations
 
 QUALITY CHECKLIST
-- [ ] File starts with 'use client';
 - [ ] Has a default export
 - [ ] Only imports from 'react' — zero other packages
 - [ ] Self-contained styles (inline/style objects only, no Tailwind, no CSS imports)
-- [ ] No UI library imports (no shadcn, radix, lucide, next/*, @/components, etc.)
+- [ ] No UI library imports (no shadcn, radix, lucide, framework image/link helpers, @/components, etc.)
 - [ ] Renders without errors
 - [ ] Visually distinct from source and other iterations`;
 
@@ -60,6 +58,8 @@ export interface JsxIterationFromIterationPromptVars {
   customInstructionsSection?: string;
 }
 
-export function jsxIterationFromIterationPrompt(vars: JsxIterationFromIterationPromptVars): string {
+export function jsxIterationFromIterationPrompt(
+  vars: JsxIterationFromIterationPromptVars,
+): string {
   return fillTemplate(prompt, vars as unknown as Record<string, string>);
 }

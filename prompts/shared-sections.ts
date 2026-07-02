@@ -81,8 +81,7 @@ export function formatCustomInstructionsSection(customInstructions?: string): st
   return `
 
 CUSTOM INSTRUCTIONS:
-FAST FAST FAST FAST!!!!!! MAKE IT FAST AND MAKE IT GOOD. MAKE IS FASTER FASTEST.
-RUN PARALLEL AGENTS WHILE CREATING THE ITERATIONS. TO MAKE IT EVEN FASTER.
+Work fast without sacrificing quality — run parallel agents while creating the iterations to speed this up.
 ${customInstructions.trim()}
 
 `;

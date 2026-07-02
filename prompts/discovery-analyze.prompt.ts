@@ -1,6 +1,6 @@
 /**
  * Prompt template for per-component AI analysis.
- * The Cursor agent uses this to add a component to the playground registry
+ * The coding agent uses this to add a component to the playground registry
  * with realistic mock props — no wrapper files, just data + registry entry.
  */
 
@@ -30,21 +30,21 @@ export function discoveryAnalyzePrompt({
 
   const pageInstructions = `This is a page component (\`page.tsx\`). Examine its structure carefully:
 
-**CRITICAL — server-only exports break the build:**
-Before importing ANY \`page.tsx\` file, check whether it exports \`metadata\`, \`dynamic\`, \`revalidate\`, \`generateStaticParams\`, \`generateMetadata\`, or other Next.js route-segment config values. These are **server-only exports** and CANNOT be imported into the client component tree (registry.tsx is a client module). Importing such a file will cause a build error like: "You are attempting to export 'metadata' from a component marked with 'use client'".
+**CRITICAL — server/environment-only code breaks the build:**
+Before importing ANY \`page.tsx\` file, check whether it performs work that cannot safely run in the browser — database queries, filesystem access, secret-bearing API calls, or other server-only dependencies. registry.tsx is a client-rendered module in this Vite host, so importing a file with such code will break the build or leak secrets into the client bundle. A stray \`'use client'\` directive at the top of a file is not itself a problem here (it has no build effect in Vite) but can be a hint that the file was written with a client/server split in mind — treat it as a weak signal, not a rule.
 
-**If the page has ANY server-only exports OR uses server-only features** (async component, \`cookies()\`, \`headers()\`, database queries, \`getSupabaseClient()\`, \`fetch\` with \`cache\`), you MUST do one of:
+**If the page has ANY server-only code or dependencies** (\`cookies()\`, \`headers()\`, database queries, \`getSupabaseClient()\`, \`fetch\` calls carrying secrets), you MUST do one of:
 - Find the client-side presentational component it delegates to and register that instead
-- If there is no client component to delegate to (the page renders inline JSX with server data), **skip this component** — update discovery.json to set status to \`"added"\` with a note, but do NOT add it to registry.tsx. Instead, print: "SKIPPED: [component name] — server-only page with no client presentational component."
+- If there is no presentational component to delegate to (the page renders inline JSX with server-fetched data), **skip this component** — update discovery.json to set status to \`"added"\` with a note, but do NOT add it to registry.tsx. Instead, print: "SKIPPED: [component name] — server-only page with no client presentational component."
 
 For pages that CAN be safely imported:
 1. **If the page imports and renders a SINGLE primary UI component** (e.g. \`<InsightsClient />\`), register that imported component directly — use its actual import path.
-2. **If the page renders MULTIPLE components or significant inline JSX** and has NO server-only exports, register the page's default export.
-3. **If the page re-exports or wraps a client component with minimal additions**, register the client component directly.`;
+2. **If the page renders MULTIPLE components or significant inline JSX** and has NO server-only dependencies, register the page's default export.
+3. **If the page re-exports or wraps a presentational component with minimal additions**, register that component directly.`;
 
   const componentInstructions = `This is a standalone component. Register it directly using its actual import path.
 
-If it uses server-only features, find the underlying presentational component and register that instead.`;
+If it uses server-only or environment-only features, find the underlying presentational component and register that instead.`;
 
   const snapshotSection = propsSnapshot
     ? `## Real data snapshot — use this for mock props

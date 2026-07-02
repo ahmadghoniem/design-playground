@@ -27,7 +27,7 @@ INSTRUCTIONS
       { "version": 1, "entries": { "{{pageFolder}}/iteration-{{N}}": { "parent": "html:{{pageFolder}}" } } }
    e. Only then start the next iteration
 
-FAST FAST FAST FAST!!!!!! MAKE IT FAST AND MAKE IT GOOD.
+Work fast without sacrificing quality.
 
 CRITICAL REQUIREMENTS
 - Output must be a complete, self-contained HTML file
