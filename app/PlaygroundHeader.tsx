@@ -1,26 +1,40 @@
-'use client';
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Eraser,
+  RefreshCw,
+  SlidersVertical,
+  Keyboard,
+  ChevronDown,
+  Copy,
+  Wrench,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react";
+import { usePreviewColorSchemeStore } from "../stores/preview-color-scheme-store";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { Eraser, RefreshCw, SlidersVertical, Keyboard, ChevronDown, Copy, Wrench, Sun, Moon, Monitor } from 'lucide-react';
-import { useDevModeStore } from '../stores/dev-mode-store';
-import { usePreviewColorSchemeStore } from '../stores/preview-color-scheme-store';
-
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { CANVAS_BACKGROUND_COLOR, OPEN_SKILLS_CATALOG_EVENT, ITERATION_FETCH_EVENT, PLAYGROUND_CLEAR_EVENT } from '../lib/constants';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
+import {
+  CANVAS_BACKGROUND_COLOR,
+  OPEN_SKILLS_CATALOG_EVENT,
+  ITERATION_FETCH_EVENT,
+  PLAYGROUND_CLEAR_EVENT,
+} from "../lib/constants";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { cn } from '../lib/utils';
-import ModelSettingsModal from '../components/modals/ModelSettingsModal';
-import KeyboardShortcutsModal from '../components/modals/KeyboardShortcutsModal';
-import PlaygroundHeaderPresence from '../components/canvas/PlaygroundHeaderPresence';
-import { useOpenIn, type OpenInTarget } from '../hooks/useOpenIn';
-import { useProjectContext } from '../hooks/useProjectContext';
-import { usePresenceBubbles } from '../hooks/usePresenceBubbles';
+} from "../components/ui/dropdown-menu";
+import ModelSettingsModal from "../components/modals/ModelSettingsModal";
+import KeyboardShortcutsModal from "../components/modals/KeyboardShortcutsModal";
+import { useOpenIn, type OpenInTarget } from "../hooks/useOpenIn";
+import { useProjectContext } from "../hooks/useProjectContext";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -41,17 +55,21 @@ export default function PlaygroundHeader({
 }: PlaygroundHeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [devModeMenu, setDevModeMenu] = useState<{ x: number; y: number } | null>(null);
-  const devMode = useDevModeStore((s) => s.enabled);
-  const toggleDevMode = useDevModeStore((s) => s.toggle);
   const previewScheme = usePreviewColorSchemeStore((s) => s.scheme);
   const cyclePreviewScheme = usePreviewColorSchemeStore((s) => s.cycle);
-  const { bubbles: presenceBubbles, handleBubbleClick, handleBubbleRemove } = usePresenceBubbles();
   const projectContext = useProjectContext();
-  const { targets, labels: TARGET_LABELS, icons, defaultTarget, openIn } = useOpenIn();
+  const {
+    targets,
+    labels: TARGET_LABELS,
+    icons,
+    defaultTarget,
+    openIn,
+  } = useOpenIn();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [pathCopied, setPathCopied] = useState(false);
-  const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     return () => {
@@ -61,18 +79,6 @@ export default function PlaygroundHeader({
     };
   }, []);
 
-  useEffect(() => {
-    if (!devModeMenu) return;
-    const handleClick = () => setDevModeMenu(null);
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDevModeMenu(null); };
-    window.addEventListener('click', handleClick);
-    window.addEventListener('keydown', handleKey);
-    return () => {
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('keydown', handleKey);
-    };
-  }, [devModeMenu]);
-
   const handleRefresh = () => {
     window.dispatchEvent(new CustomEvent(ITERATION_FETCH_EVENT));
   };
@@ -81,18 +87,25 @@ export default function PlaygroundHeader({
     window.dispatchEvent(new CustomEvent(PLAYGROUND_CLEAR_EVENT));
   };
 
-  const handleOpenTarget = useCallback(async (target: OpenInTarget, makeDefault = false) => {
-    await openIn(target, makeDefault);
-    setProjectMenuOpen(false);
-  }, [openIn]);
+  const handleOpenTarget = useCallback(
+    async (target: OpenInTarget, makeDefault = false) => {
+      await openIn(target, makeDefault);
+      setProjectMenuOpen(false);
+    },
+    [openIn],
+  );
 
   const handleCopyPath = useCallback(async () => {
     if (!projectContext.projectPath) return;
     try {
       await navigator.clipboard.writeText(projectContext.projectPath);
       setPathCopied(true);
-      if (copyFeedbackTimerRef.current) clearTimeout(copyFeedbackTimerRef.current);
-      copyFeedbackTimerRef.current = setTimeout(() => setPathCopied(false), 1200);
+      if (copyFeedbackTimerRef.current)
+        clearTimeout(copyFeedbackTimerRef.current);
+      copyFeedbackTimerRef.current = setTimeout(
+        () => setPathCopied(false),
+        1200,
+      );
     } catch {
       // Ignore copy failures to avoid interrupting flow.
     } finally {
@@ -115,7 +128,7 @@ export default function PlaygroundHeader({
           </span>
         </div>
 
-        {/* Right: action icons + presence bubbles */}
+        {/* Right: action icons */}
         <div className="flex items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -124,9 +137,9 @@ export default function PlaygroundHeader({
                 className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
                 aria-label="Preview color scheme"
               >
-                {previewScheme === 'dark' ? (
+                {previewScheme === "dark" ? (
                   <Moon className="w-[18px] h-[18px]" />
-                ) : previewScheme === 'light' ? (
+                ) : previewScheme === "light" ? (
                   <Sun className="w-[18px] h-[18px]" />
                 ) : (
                   <Monitor className="w-[18px] h-[18px]" />
@@ -135,19 +148,23 @@ export default function PlaygroundHeader({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>
-                Preview theme:{' '}
-                {previewScheme === 'auto'
-                  ? 'Auto (match app)'
-                  : previewScheme === 'dark'
-                    ? 'Dark'
-                    : 'Light'}
+                Preview theme:{" "}
+                {previewScheme === "auto"
+                  ? "Auto (match app)"
+                  : previewScheme === "dark"
+                    ? "Dark"
+                    : "Light"}
               </p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SKILLS_CATALOG_EVENT))}
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent(OPEN_SKILLS_CATALOG_EVENT),
+                  )
+                }
                 className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
                 aria-label="Skills"
               >
@@ -178,15 +195,6 @@ export default function PlaygroundHeader({
             <TooltipTrigger asChild>
               <button
                 onClick={() => setSettingsOpen(true)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  const MENU_WIDTH = 180;
-                  const MENU_HEIGHT = 44;
-                  const PADDING = 8;
-                  const x = Math.min(e.clientX, window.innerWidth - MENU_WIDTH - PADDING);
-                  const y = Math.min(e.clientY, window.innerHeight - MENU_HEIGHT - PADDING);
-                  setDevModeMenu({ x, y });
-                }}
                 className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
                 aria-label="Model settings"
               >
@@ -198,39 +206,35 @@ export default function PlaygroundHeader({
             </TooltipContent>
           </Tooltip>
 
-          {devMode && (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleClear}
-                    className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
-                    aria-label="Clear all"
-                  >
-                    <Eraser className="w-[18px] h-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Clear all</p>
-                </TooltipContent>
-              </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleClear}
+                className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
+                aria-label="Clear all"
+              >
+                <Eraser className="w-[18px] h-[18px]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Clear all</p>
+            </TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleRefresh}
-                    className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
-                    aria-label="Refresh variations"
-                  >
-                    <RefreshCw className="w-[18px] h-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Refresh variations</p>
-                </TooltipContent>
-              </Tooltip>
-            </>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleRefresh}
+                className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
+                aria-label="Refresh variations"
+              >
+                <RefreshCw className="w-[18px] h-[18px]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Refresh variations</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Split open-in button — far right */}
           <div className="flex items-center ml-1.5">
@@ -262,7 +266,10 @@ export default function PlaygroundHeader({
               <div className="w-px h-4 bg-stone-200 shrink-0" />
 
               {/* Chevron: opens picker dropdown */}
-              <DropdownMenu open={projectMenuOpen} onOpenChange={setProjectMenuOpen}>
+              <DropdownMenu
+                open={projectMenuOpen}
+                onOpenChange={setProjectMenuOpen}
+              >
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
@@ -284,7 +291,13 @@ export default function PlaygroundHeader({
                       className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-mono text-stone-700 cursor-pointer"
                       onSelect={() => handleOpenTarget(target, true)}
                     >
-                      <img src={icon} alt="" width={16} height={16} className="rounded-sm" />
+                      <img
+                        src={icon}
+                        alt=""
+                        width={16}
+                        height={16}
+                        className="rounded-sm"
+                      />
                       <span className="flex-1">{label}</span>
                       {defaultTarget === target && (
                         <span className="w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
@@ -297,56 +310,20 @@ export default function PlaygroundHeader({
                     onSelect={handleCopyPath}
                   >
                     <Copy className="h-4 w-4 text-stone-400" />
-                    <span>{pathCopied ? 'Copied!' : 'Copy path'}</span>
+                    <span>{pathCopied ? "Copied!" : "Copy path"}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
-
-          {/* Presence bubbles — stacked, active leftmost on top */}
-          <PlaygroundHeaderPresence
-            bubbles={presenceBubbles}
-            onBubbleClick={handleBubbleClick}
-            onBubbleRemove={handleBubbleRemove}
-          />
         </div>
       </header>
 
       <ModelSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <KeyboardShortcutsModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-
-      {devModeMenu && createPortal(
-        <div
-          className="fixed z-50 min-w-[180px] bg-white border border-stone-200 rounded-2xl shadow-lg p-1 animate-in fade-in zoom-in-95 duration-100"
-          style={{ top: devModeMenu.y, left: devModeMenu.x }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => {
-              toggleDevMode();
-              setDevModeMenu(null);
-            }}
-            className="flex items-center justify-between gap-3 w-full px-3 py-1.5 text-[13px] text-stone-700 hover:bg-stone-100 transition-colors text-left rounded-xl"
-          >
-            <span>Dev mode</span>
-            <span
-              className={cn(
-                'relative inline-flex h-[16px] w-[28px] items-center rounded-full transition-colors',
-                devMode ? 'bg-stone-800' : 'bg-stone-300',
-              )}
-            >
-              <span
-                className={cn(
-                  'inline-block h-[12px] w-[12px] rounded-full bg-white shadow transition-transform',
-                  devMode ? 'translate-x-[14px]' : 'translate-x-[2px]',
-                )}
-              />
-            </span>
-          </button>
-        </div>,
-        document.body,
-      )}
+      <KeyboardShortcutsModal
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+      />
     </TooltipProvider>
   );
 }

@@ -1,15 +1,22 @@
-'use client';
-
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import type { Edge, Node } from '@xyflow/react';
-import type { GenerationInfo } from '../lib/canvas-persistence';
-import { countBatchIterationNodes, calculateIterationPosition } from '../lib/iteration-scan';
-import type { GenerationCoordination } from './useGenerationCoordination';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import type { Edge, Node } from "@xyflow/react";
+import type { GenerationInfo } from "../lib/canvas-persistence";
+import {
+  countBatchIterationNodes,
+  calculateIterationPosition,
+} from "../lib/iteration-scan";
+import type { GenerationCoordination } from "./useGenerationCoordination";
 import {
   GENERATION_START_EVENT,
   GENERATION_COMPLETE_EVENT,
   GENERATION_ERROR_EVENT,
-  GENERATION_AGENT_PREVIEW_EVENT,
   DRAG_GHOST_GAP,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
@@ -21,9 +28,8 @@ import {
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
-  type GenerationAgentPreviewPayload,
-} from '../lib/constants';
-import { toast } from 'sonner';
+} from "../lib/constants";
+import { toast } from "sonner";
 
 export interface UseGenerationLifecycleParams {
   coord: GenerationCoordination;
@@ -51,7 +57,7 @@ export function useGenerationLifecycle({
 }: UseGenerationLifecycleParams): void {
   const generationEventSourceRef = useRef<EventSource | null>(null);
   const [, setLastGenerationDuration] = useState<string | null>(null);
-  const [, setElapsedTime] = useState<string>('0m:00s');
+  const [, setElapsedTime] = useState<string>("0m:00s");
 
   // Running timer during generation + safety timeout for orphaned skeletons
   useEffect(() => {
@@ -65,7 +71,7 @@ export function useGenerationLifecycle({
       const totalSeconds = Math.floor(durationMs / 1000);
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
-      setElapsedTime(`${minutes}m:${seconds.toString().padStart(2, '0')}s`);
+      setElapsedTime(`${minutes}m:${seconds.toString().padStart(2, "0")}s`);
     };
 
     // Initial update
@@ -75,15 +81,23 @@ export function useGenerationLifecycle({
     const intervalId = setInterval(updateElapsed, 1000);
 
     // Safety: auto-clean skeleton nodes after 10 minutes if generation hangs
-    const safetyTimeout = setTimeout(() => {
-      const info = coord.getGenerationInfo();
-      if (info) {
-        setNodes(nds => nds.filter(n => !info.skeletonNodeIds.includes(n.id)));
-        setEdges(eds => eds.filter(e => !info.skeletonNodeIds.some(sid => e.target === sid)));
-      }
-      coord.clearGenerationEager();
-
-    }, 10 * 60 * 1000);
+    const safetyTimeout = setTimeout(
+      () => {
+        const info = coord.getGenerationInfo();
+        if (info) {
+          setNodes((nds) =>
+            nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
+          );
+          setEdges((eds) =>
+            eds.filter(
+              (e) => !info.skeletonNodeIds.some((sid) => e.target === sid),
+            ),
+          );
+        }
+        coord.clearGenerationEager();
+      },
+      10 * 60 * 1000,
+    );
 
     return () => {
       clearInterval(intervalId);
@@ -103,7 +117,7 @@ export function useGenerationLifecycle({
       if (cancelled) return;
 
       try {
-        const response = await fetch('/playground/api/generate?action=status');
+        const response = await fetch("/playground/api/generate?action=status");
         if (!response.ok) return;
 
         const data = (await response.json()) as {
@@ -122,8 +136,10 @@ export function useGenerationLifecycle({
         } else if (coord.getGenerationInfo()) {
           const now = Date.now();
           const generationStartedAt =
-            coord.getGenerationStartedAt() || coord.getGenerationInfo()!.startTime;
-          const stillInStartupGrace = now - generationStartedAt < STARTUP_GRACE_MS;
+            coord.getGenerationStartedAt() ||
+            coord.getGenerationInfo()!.startTime;
+          const stillInStartupGrace =
+            now - generationStartedAt < STARTUP_GRACE_MS;
           if (!stillInStartupGrace) {
             coord.bumpInactiveStreak();
           }
@@ -137,13 +153,16 @@ export function useGenerationLifecycle({
         ) {
           const info = coord.getGenerationInfo()!;
           window.dispatchEvent(
-            new CustomEvent<GenerationCompletePayload>(GENERATION_COMPLETE_EVENT, {
-              detail: {
-                componentId: info.componentId,
-                parentNodeId: info.parentNodeId,
-                output: '',
+            new CustomEvent<GenerationCompletePayload>(
+              GENERATION_COMPLETE_EVENT,
+              {
+                detail: {
+                  componentId: info.componentId,
+                  parentNodeId: info.parentNodeId,
+                  output: "",
+                },
               },
-            }),
+            ),
           );
           coord.resetInactiveStreak();
           return;
@@ -169,26 +188,19 @@ export function useGenerationLifecycle({
   // The server watches tree.json via fs.watch and pushes events when it changes.
   const startGenerationEventSource = useCallback(() => {
     stopGenerationEventSource();
-    const es = new EventSource('/playground/api/generate?action=events');
+    const es = new EventSource("/playground/api/generate?action=events");
     es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'iteration-added') {
+        if (data.type === "iteration-added") {
           const ctx = coord.getGenerationInfo();
           scanForIterations(false, ctx ?? undefined);
-        } else if (data.type === 'agent-preview' && data.componentId != null) {
-          window.dispatchEvent(
-            new CustomEvent<GenerationAgentPreviewPayload>(GENERATION_AGENT_PREVIEW_EVENT, {
-              detail: {
-                componentId: String(data.componentId),
-                text: typeof data.text === 'string' ? data.text : '',
-              },
-            }),
-          );
-        } else if (data.type === 'done') {
+        } else if (data.type === "done") {
           es.close();
         }
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
     };
     es.onerror = () => {
       // Connection lost — server will close when generation ends.
@@ -212,9 +224,12 @@ export function useGenerationLifecycle({
     if (!persisted) return;
 
     // Verify skeletons actually exist in the loaded nodes
-    const currentSkeletons = coord.getNodes().filter(
-      n => n.type === 'skeleton' && persisted.skeletonNodeIds.includes(n.id),
-    );
+    const currentSkeletons = coord
+      .getNodes()
+      .filter(
+        (n) =>
+          n.type === "skeleton" && persisted.skeletonNodeIds.includes(n.id),
+      );
     if (currentSkeletons.length === 0) return;
 
     // Restore generation state
@@ -257,11 +272,19 @@ export function useGenerationLifecycle({
       const MAX_ATTEMPTS = 20;
 
       // Build bounding boxes for all existing canvas nodes
-      const obstacles = existingNodes.map(n => ({
+      const obstacles = existingNodes.map((n) => ({
         x: n.position.x,
         y: n.position.y,
-        w: n.measured?.width ?? (n.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH),
-        h: n.measured?.height ?? (n.type === 'component' ? DEFAULT_COMPONENT_NODE_HEIGHT : DEFAULT_ITERATION_NODE_HEIGHT),
+        w:
+          n.measured?.width ??
+          (n.type === "component"
+            ? DEFAULT_COMPONENT_NODE_WIDTH
+            : DEFAULT_ITERATION_NODE_WIDTH),
+        h:
+          n.measured?.height ??
+          (n.type === "component"
+            ? DEFAULT_COMPONENT_NODE_HEIGHT
+            : DEFAULT_ITERATION_NODE_HEIGHT),
       }));
 
       let attempts = 0;
@@ -307,13 +330,13 @@ export function useGenerationLifecycle({
       coord.setGenerationStartedAt(Date.now());
       coord.resetInactiveStreak();
 
-      // Edit mode: presence bubble is handled via the event, but no skeletons
+      // Edit mode: no skeleton nodes are created
       if (isEditMode) {
         coord.setIsGeneratingEager(true);
         coord.setGenerationInfoEager({
           componentId,
           componentName,
-          parentNodeId: '',
+          parentNodeId: "",
           iterationCount: 0,
           skeletonNodeIds: [],
           startTime: Date.now(),
@@ -321,7 +344,7 @@ export function useGenerationLifecycle({
           htmlFolder: genHtmlFolder,
           jsxFile: genJsxFile,
         });
-        // Subscribe to SSE for agent-preview (Claude stream-json) — same as iterate/freeform
+        // Subscribe to SSE for progressive iteration detection — same as iterate/freeform
         startGenerationEventSource();
         return;
       }
@@ -332,24 +355,24 @@ export function useGenerationLifecycle({
         const skeletonId = getNodeId();
         const skeletonNode: Node = {
           id: skeletonId,
-          type: 'skeleton',
+          type: "skeleton",
           position: flowPos,
           data: {
             iterationNumber: 1,
             componentName,
-            parentNodeId: '',
+            parentNodeId: "",
             totalIterations: 1,
             width: DEFAULT_COMPONENT_NODE_WIDTH,
             height: DEFAULT_COMPONENT_NODE_HEIGHT,
           },
         };
 
-        setNodes(nds => [...nds, skeletonNode]);
+        setNodes((nds) => [...nds, skeletonNode]);
 
         const newInfo: GenerationInfo = {
           componentId,
           componentName,
-          parentNodeId: '',
+          parentNodeId: "",
           iterationCount: 1,
           skeletonNodeIds: [skeletonId],
           startTime: Date.now(),
@@ -362,28 +385,27 @@ export function useGenerationLifecycle({
         coord.setGenerationInfoEager(newInfo);
         coord.setIsGeneratingEager(true);
 
-
         // Subscribe to server-sent events for progressive iteration detection
         startGenerationEventSource();
         return;
       }
 
       // Find the parent node (use ref for current nodes)
-      const parentNode = coord.getNodes().find(n => n.id === parentNodeId);
+      const parentNode = coord.getNodes().find((n) => n.id === parentNodeId);
       if (!parentNode) {
-        console.error('[Playground] Parent node not found:', parentNodeId);
+        console.error("[Playground] Parent node not found:", parentNodeId);
         return;
       }
 
       // Parent node dimensions (used for grid sizing and skeleton sizing)
       const cellW =
         parentNode.measured?.width ??
-        (parentNode.type === 'component'
+        (parentNode.type === "component"
           ? DEFAULT_COMPONENT_NODE_WIDTH
           : DEFAULT_ITERATION_NODE_WIDTH);
       const cellH =
         parentNode.measured?.height ??
-        (parentNode.type === 'component'
+        (parentNode.type === "component"
           ? DEFAULT_COMPONENT_NODE_HEIGHT
           : DEFAULT_ITERATION_NODE_HEIGHT);
 
@@ -393,7 +415,8 @@ export function useGenerationLifecycle({
       const skeletonNodeIds: string[] = [];
 
       // Build candidate positions for all skeletons first
-      const candidateRects: { x: number; y: number; w: number; h: number }[] = [];
+      const candidateRects: { x: number; y: number; w: number; h: number }[] =
+        [];
 
       for (let i = 1; i <= iterationCount; i++) {
         let x: number;
@@ -403,10 +426,14 @@ export function useGenerationLifecycle({
           // Grid layout from drag-to-iterate: anchor grid to the right of parent
           const { cols } = gridLayout;
           const gap = DRAG_GHOST_GAP;
-          const parentW = parentNode.measured?.width
-            ?? (parentNode.type === 'component' ? DEFAULT_COMPONENT_NODE_WIDTH : DEFAULT_ITERATION_NODE_WIDTH);
+          const parentW =
+            parentNode.measured?.width ??
+            (parentNode.type === "component"
+              ? DEFAULT_COMPONENT_NODE_WIDTH
+              : DEFAULT_ITERATION_NODE_WIDTH);
 
-          const gridOriginX = parentNode.position.x + parentW + ARRANGE_HORIZONTAL_GAP;
+          const gridOriginX =
+            parentNode.position.x + parentW + ARRANGE_HORIZONTAL_GAP;
           const gridOriginY = parentNode.position.y;
 
           // Fill grid left-to-right, top-to-bottom
@@ -417,7 +444,12 @@ export function useGenerationLifecycle({
           y = gridOriginY + row * (cellH + gap);
         } else {
           // Dialog flow: place iterations to the right of the parent
-          const pos = calculateIterationPosition(coord.getNodes(), parentNode, i, iterationCount);
+          const pos = calculateIterationPosition(
+            coord.getNodes(),
+            parentNode,
+            i,
+            iterationCount,
+          );
           x = pos.x;
           y = pos.y;
         }
@@ -426,7 +458,9 @@ export function useGenerationLifecycle({
       }
 
       // Resolve overlaps with existing canvas nodes (excludes parent which is above)
-      const existingNodes = coord.getNodes().filter(n => n.id !== parentNodeId);
+      const existingNodes = coord
+        .getNodes()
+        .filter((n) => n.id !== parentNodeId);
       resolveOverlaps(candidateRects, existingNodes);
 
       for (let i = 0; i < iterationCount; i++) {
@@ -436,7 +470,7 @@ export function useGenerationLifecycle({
 
         skeletonNodes.push({
           id: nodeId,
-          type: 'skeleton',
+          type: "skeleton",
           position,
           data: {
             iterationNumber: i + 1,
@@ -453,15 +487,15 @@ export function useGenerationLifecycle({
           id: `edge_${parentNodeId}_${nodeId}`,
           source: parentNodeId,
           target: nodeId,
-          type: 'smoothstep',
+          type: "smoothstep",
           animated: true,
           style: SKELETON_EDGE_STYLE,
         });
       }
 
       // Add skeleton nodes to canvas
-      setNodes(nds => [...nds, ...skeletonNodes]);
-      setEdges(eds => [...eds, ...skeletonEdges]);
+      setNodes((nds) => [...nds, ...skeletonNodes]);
+      setEdges((eds) => [...eds, ...skeletonEdges]);
 
       // Update generation state — sync ref eagerly so that a fast
       // GENERATION_COMPLETE_EVENT can read the skeleton IDs before React
@@ -473,9 +507,12 @@ export function useGenerationLifecycle({
         iterationCount,
         skeletonNodeIds,
         startTime: Date.now(),
-        skeletonPositions: skeletonNodes.map(n => ({ x: n.position.x, y: n.position.y })),
+        skeletonPositions: skeletonNodes.map((n) => ({
+          x: n.position.x,
+          y: n.position.y,
+        })),
         gridPositions: gridLayout
-          ? skeletonNodes.map(n => ({ x: n.position.x, y: n.position.y }))
+          ? skeletonNodes.map((n) => ({ x: n.position.x, y: n.position.y }))
           : undefined,
         gridCellSize: gridLayout ? { width: cellW, height: cellH } : undefined,
         renderMode: genRenderMode,
@@ -502,7 +539,7 @@ export function useGenerationLifecycle({
         const totalSeconds = Math.floor(durationMs / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
-        const formatted = `${minutes}m:${seconds.toString().padStart(2, '0')}s`;
+        const formatted = `${minutes}m:${seconds.toString().padStart(2, "0")}s`;
         setLastGenerationDuration(formatted);
       }
 
@@ -519,23 +556,38 @@ export function useGenerationLifecycle({
           await scanForIterations(false);
         }
 
-        if (savedScanContext && savedScanContext.iterationCount > 0 && savedScanContext.startNumber != null) {
-          const created = countBatchIterationNodes(coord.getNodes(), savedScanContext);
+        if (
+          savedScanContext &&
+          savedScanContext.iterationCount > 0 &&
+          savedScanContext.startNumber != null
+        ) {
+          const created = countBatchIterationNodes(
+            coord.getNodes(),
+            savedScanContext,
+          );
           const expected = savedScanContext.iterationCount;
           if (created < expected) {
             toast.warning(
-              `Generated ${created} of ${expected} iteration${expected === 1 ? '' : 's'}. Remaining placeholders kept on canvas.`,
+              `Generated ${created} of ${expected} iteration${expected === 1 ? "" : "s"}. Remaining placeholders kept on canvas.`,
               { duration: 8000 },
             );
           }
 
           const start = savedScanContext.startNumber ?? 1;
           const replacedSkeletonIds = new Set<string>();
-          for (let slot = 0; slot < savedScanContext.skeletonNodeIds.length; slot++) {
+          for (
+            let slot = 0;
+            slot < savedScanContext.skeletonNodeIds.length;
+            slot++
+          ) {
             const iterNum = start + slot;
-            const hasNode = coord.getNodes().some(
-              (n) => n.type === 'iteration' && (n.data.iterationNumber as number) === iterNum,
-            );
+            const hasNode = coord
+              .getNodes()
+              .some(
+                (n) =>
+                  n.type === "iteration" &&
+                  (n.data.iterationNumber as number) === iterNum,
+              );
             if (hasNode) {
               replacedSkeletonIds.add(savedScanContext.skeletonNodeIds[slot]);
             }
@@ -557,9 +609,13 @@ export function useGenerationLifecycle({
             ),
           );
         } else if (info) {
-          setNodes((nds) => nds.filter((n) => !info.skeletonNodeIds.includes(n.id)));
+          setNodes((nds) =>
+            nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
+          );
           setEdges((eds) =>
-            eds.filter((e) => !info.skeletonNodeIds.some((id) => e.target === id)),
+            eds.filter(
+              (e) => !info.skeletonNodeIds.some((id) => e.target === id),
+            ),
           );
         }
 
@@ -567,9 +623,9 @@ export function useGenerationLifecycle({
 
         if (savedPositions && savedParentNodeId) {
           setTimeout(() => {
-            const newNodes = coord.getNodes().filter(
-              (n) => !nodesBefore.has(n.id) && n.type === 'iteration',
-            );
+            const newNodes = coord
+              .getNodes()
+              .filter((n) => !nodesBefore.has(n.id) && n.type === "iteration");
             if (newNodes.length > 0) {
               const sorted = [...newNodes].sort((a, b) => {
                 const aNum = (a.data.iterationNumber as number) || 0;
@@ -597,9 +653,9 @@ export function useGenerationLifecycle({
       stopGenerationEventSource();
 
       const detail = e.detail || {};
-      const errorMessage = detail.error || 'Unknown error occurred';
-      const componentId = detail.componentId || 'unknown';
-      const parentNodeId = detail.parentNodeId || 'unknown';
+      const errorMessage = detail.error || "Unknown error occurred";
+      const componentId = detail.componentId || "unknown";
+      const parentNodeId = detail.parentNodeId || "unknown";
       const logPayload = {
         error: errorMessage,
         componentId,
@@ -611,19 +667,32 @@ export function useGenerationLifecycle({
       const info = coord.getGenerationInfo();
       const isDragFlow = !!info?.gridPositions;
 
-      if (errorMessage === 'Cancelled by user') {
-        console.info('[Playground] Generation cancelled by user.', logPayload);
-      } else if (errorMessage.includes('generation is already in progress')) {
-        console.info('[Playground] Generation already in progress.', logPayload);
+      if (errorMessage === "Cancelled by user") {
+        console.info("[Playground] Generation cancelled by user.", logPayload);
+      } else if (errorMessage.includes("generation is already in progress")) {
+        console.info(
+          "[Playground] Generation already in progress.",
+          logPayload,
+        );
       } else {
-        console.error('[Playground] Generation error:', errorMessage, logPayload);
+        console.error(
+          "[Playground] Generation error:",
+          errorMessage,
+          logPayload,
+        );
         toast.error(errorMessage, { duration: 6000 });
       }
-      
+
       // Remove skeleton nodes
       if (info) {
-        setNodes(nds => nds.filter(n => !info.skeletonNodeIds.includes(n.id)));
-        setEdges(eds => eds.filter(e => !info.skeletonNodeIds.some(id => e.target === id)));
+        setNodes((nds) =>
+          nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
+        );
+        setEdges((eds) =>
+          eds.filter(
+            (e) => !info.skeletonNodeIds.some((id) => e.target === id),
+          ),
+        );
       }
 
       // Reset generation state — eagerly sync ref
@@ -631,16 +700,40 @@ export function useGenerationLifecycle({
       coord.resetInactiveStreak();
     };
 
-    window.addEventListener(GENERATION_START_EVENT, handleGenerationStart as EventListener);
-    window.addEventListener(GENERATION_COMPLETE_EVENT, handleGenerationComplete as EventListener);
-    window.addEventListener(GENERATION_ERROR_EVENT, handleGenerationError as EventListener);
+    window.addEventListener(
+      GENERATION_START_EVENT,
+      handleGenerationStart as EventListener,
+    );
+    window.addEventListener(
+      GENERATION_COMPLETE_EVENT,
+      handleGenerationComplete as EventListener,
+    );
+    window.addEventListener(
+      GENERATION_ERROR_EVENT,
+      handleGenerationError as EventListener,
+    );
 
     return () => {
-      window.removeEventListener(GENERATION_START_EVENT, handleGenerationStart as EventListener);
-      window.removeEventListener(GENERATION_COMPLETE_EVENT, handleGenerationComplete as EventListener);
-      window.removeEventListener(GENERATION_ERROR_EVENT, handleGenerationError as EventListener);
+      window.removeEventListener(
+        GENERATION_START_EVENT,
+        handleGenerationStart as EventListener,
+      );
+      window.removeEventListener(
+        GENERATION_COMPLETE_EVENT,
+        handleGenerationComplete as EventListener,
+      );
+      window.removeEventListener(
+        GENERATION_ERROR_EVENT,
+        handleGenerationError as EventListener,
+      );
       stopGenerationEventSource();
     };
     // Using refs for nodes and generationInfo so we don't need them in deps
-  }, [getNodeId, setNodes, setEdges, scanForIterations, startGenerationEventSource]);
+  }, [
+    getNodeId,
+    setNodes,
+    setEdges,
+    scanForIterations,
+    startGenerationEventSource,
+  ]);
 }

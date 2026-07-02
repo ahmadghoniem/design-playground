@@ -1,6 +1,11 @@
-﻿'use client';
-
-import { useCallback, useMemo, useRef, useEffect, useState, type CSSProperties } from 'react';
+﻿import {
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   ReactFlow,
   Background,
@@ -12,66 +17,70 @@ import {
   Node,
   SelectionMode,
   type NodeChange,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { TooltipProvider } from '../ui/tooltip';
-import { loadCanvasState, getCanvasStorageKey, getIterationKeyFromNode, pruneKnownIterations } from '../lib/canvas-persistence';
-import { useCanvasFlow } from '../lib/canvas-flow';
-import PlaygroundCanvasDrawLayer from '../components/canvas/PlaygroundCanvasDrawLayer';
-import PlaygroundCanvasToolbar from '../components/canvas/PlaygroundCanvasToolbar';
-import PlaygroundCanvasDialogs from '../components/canvas/PlaygroundCanvasDialogs';
-import PlaygroundCanvasContextMenu from '../components/canvas/PlaygroundCanvasContextMenu';
-import CanvasPresenceLayer from '../components/canvas/CanvasPresenceLayer';
-import { usePlaygroundDrawStore } from '../stores/playground-draw-store';
-import { type DrawPenKind, type DrawStroke } from '../lib/draw-types';
-import { useCanvasDrawTool } from '../hooks/useCanvasDrawTool';
-import { useCanvasPersistence } from '../hooks/useCanvasPersistence';
-import { useCanvasPresenceBubbles } from '../hooks/useCanvasPresenceBubbles';
-import { useCanvasDragDrop } from '../hooks/useCanvasDragDrop';
-import { useCanvasPaste } from '../hooks/useCanvasPaste';
-import { useGenerationCoordination } from '../hooks/useGenerationCoordination';
-import { useGenerationLifecycle } from '../hooks/useGenerationLifecycle';
-import { useIterationScan } from '../hooks/useIterationScan';
-import { useChatSubmit } from '../hooks/useChatSubmit';
-import { useCanvasKeyboard } from '../hooks/useCanvasKeyboard';
-import { useCanvasFrameOps } from '../hooks/useCanvasFrameOps';
-import { useCanvasNodeDelete } from '../hooks/useCanvasNodeDelete';
-import { useCanvasAutoArrange } from '../hooks/useCanvasAutoArrange';
-import { useCanvasCreatePage } from '../hooks/useCanvasCreatePage';
-import { useCanvasClipboard } from '../hooks/useCanvasClipboard';
-import { useCanvasClear } from '../hooks/useCanvasClear';
-import { useDragIterateEventHandler } from '../hooks/useDragToIterate';
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { TooltipProvider } from "../components/ui/tooltip";
+import {
+  loadCanvasState,
+  getCanvasStorageKey,
+  getIterationKeyFromNode,
+  pruneKnownIterations,
+} from "../lib/canvas-persistence";
+import { useCanvasFlow } from "../lib/canvas-flow";
+import PlaygroundCanvasDrawLayer from "../components/canvas/PlaygroundCanvasDrawLayer";
+import PlaygroundCanvasToolbar from "../components/canvas/PlaygroundCanvasToolbar";
+import PlaygroundCanvasDialogs from "../components/canvas/PlaygroundCanvasDialogs";
+import PlaygroundCanvasContextMenu from "../components/canvas/PlaygroundCanvasContextMenu";
+import { usePlaygroundDrawStore } from "../stores/playground-draw-store";
+import { type DrawPenKind, type DrawStroke } from "../lib/draw-types";
+import { useCanvasDrawTool } from "../hooks/useCanvasDrawTool";
+import { useCanvasPersistence } from "../hooks/useCanvasPersistence";
+import { useCanvasDragDrop } from "../hooks/useCanvasDragDrop";
+import { useCanvasPaste } from "../hooks/useCanvasPaste";
+import { useGenerationCoordination } from "../hooks/useGenerationCoordination";
+import { useGenerationLifecycle } from "../hooks/useGenerationLifecycle";
+import { useIterationScan } from "../hooks/useIterationScan";
+import { useChatSubmit } from "../hooks/useChatSubmit";
+import { useCanvasKeyboard } from "../hooks/useCanvasKeyboard";
+import { useCanvasFrameOps } from "../hooks/useCanvasFrameOps";
+import { useCanvasNodeDelete } from "../hooks/useCanvasNodeDelete";
+import { useCanvasAutoArrange } from "../hooks/useCanvasAutoArrange";
+import { useCanvasCreatePage } from "../hooks/useCanvasCreatePage";
+import { useCanvasClipboard } from "../hooks/useCanvasClipboard";
+import { useCanvasClear } from "../hooks/useCanvasClear";
+import { useDragIterateEventHandler } from "../hooks/useDragToIterate";
 
-import ComponentNode from '../nodes/ComponentNode';
-import IterationNode from '../nodes/IterationNode';
-import SkeletonIterationNode from '../nodes/SkeletonIterationNode';
-import DragGhostNode from '../nodes/DragGhostNode';
-import ImageNode from '../nodes/ImageNode';
-import { hitTestStrokes } from '../lib/draw-hit-test';
-import TextNode from '../nodes/TextNode';
-import ShapeNode, { type ShapeKind } from '../nodes/ShapeNode';
-import FrameNode from '../nodes/FrameNode';
-import HelperLines from '../nodes/shared/HelperLines';
+import ComponentNode from "../nodes/ComponentNode";
+import IterationNode from "../nodes/IterationNode";
+import SkeletonIterationNode from "../nodes/SkeletonIterationNode";
+import DragGhostNode from "../nodes/DragGhostNode";
+import ImageNode from "../nodes/ImageNode";
+import { hitTestStrokes } from "../lib/draw-hit-test";
+import TextNode from "../nodes/TextNode";
+import ShapeNode, { type ShapeKind } from "../nodes/ShapeNode";
+import FrameNode from "../nodes/FrameNode";
+import HelperLines from "../nodes/shared/HelperLines";
 import {
   CANVAS_BACKGROUND_COLOR,
   BACKGROUND_COLOR,
   CANVAS_MAX_ZOOM,
   CANVAS_MIN_ZOOM,
   ITERATION_COLLAPSE_TOGGLE_EVENT,
-} from '../lib/constants';
-import DockedChatBar from '../components/chat/DockedChatBar';
-import ElementHighlight from '../components/canvas/ElementHighlight';
-import { useElementSelection } from '../hooks/useElementSelection';
-import { useNodeSelection } from '../hooks/useNodeSelection';
-import { useInteractiveNodeStore } from '../stores/interactive-node-store';
-import { useDynamicBackground } from '../hooks/useDynamicBackground';
-import { computeVisibleNodes } from '../lib/canvas-visibility';
+  FIT_COMPONENT_NODES_EVENT,
+} from "../lib/constants";
+import DockedChatBar from "../components/chat/DockedChatBar";
+import ElementHighlight from "../components/canvas/ElementHighlight";
+import { useElementSelection } from "../hooks/useElementSelection";
+import { useNodeSelection } from "../hooks/useNodeSelection";
+import { useInteractiveNodeStore } from "../stores/interactive-node-store";
+import { useDynamicBackground } from "../hooks/useDynamicBackground";
+import { computeVisibleNodes } from "../lib/canvas-visibility";
 
 const nodeTypes = {
   component: ComponentNode,
   iteration: IterationNode,
   skeleton: SkeletonIterationNode,
-  'drag-ghost': DragGhostNode,
+  "drag-ghost": DragGhostNode,
   image: ImageNode,
   text: TextNode,
   shape: ShapeNode,
@@ -80,21 +89,27 @@ const nodeTypes = {
 
 /** Minimap dot color by node type — keeps the overview readable at a glance. */
 const MINIMAP_NODE_COLORS: Record<string, string> = {
-  component: '#a8a29e',
-  iteration: '#34d399',
-  skeleton: '#e7e5e4',
-  image: '#60a5fa',
-  text: '#d6d3d1',
-  shape: '#fbbf24',
-  frame: '#c4b5fd',
+  component: "#a8a29e",
+  iteration: "#34d399",
+  skeleton: "#e7e5e4",
+  image: "#60a5fa",
+  text: "#d6d3d1",
+  shape: "#fbbf24",
+  frame: "#c4b5fd",
 };
 function getMinimapNodeColor(node: Node): string {
-  return (node.type && MINIMAP_NODE_COLORS[node.type]) || '#d6d3d1';
+  return (node.type && MINIMAP_NODE_COLORS[node.type]) || "#d6d3d1";
 }
 
 // Re-export event names so existing imports keep working
-export { ITERATION_PROMPT_COPIED_EVENT, ITERATION_FETCH_EVENT } from '../lib/constants';
-import { ITERATION_PROMPT_COPIED_EVENT, ITERATION_FETCH_EVENT } from '../lib/constants';
+export {
+  ITERATION_PROMPT_COPIED_EVENT,
+  ITERATION_FETCH_EVENT,
+} from "../lib/constants";
+import {
+  ITERATION_PROMPT_COPIED_EVENT,
+  ITERATION_FETCH_EVENT,
+} from "../lib/constants";
 
 interface PlaygroundCanvasProps {
   sidebarVisible: boolean;
@@ -119,30 +134,43 @@ export default function PlaygroundCanvas({
   const storageKey = getCanvasStorageKey(projectId);
   const initialState = loadCanvasState(storageKey);
   const initialKnownIterations = initialState?.knownIterations
-    ? pruneKnownIterations(initialState.knownIterations, initialState.nodes || [])
+    ? pruneKnownIterations(
+        initialState.knownIterations,
+        initialState.nodes || [],
+      )
     : [];
-  const [knownIterations, setKnownIterations] = useState<string[]>(initialKnownIterations);
+  const [knownIterations, setKnownIterations] = useState<string[]>(
+    initialKnownIterations,
+  );
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(
     new Set(initialState?.collapsedNodeIds || []),
   );
-  const collapsedNodeIdsRef = useRef<Set<string>>(new Set(initialState?.collapsedNodeIds || []));
-  
+  const collapsedNodeIdsRef = useRef<Set<string>>(
+    new Set(initialState?.collapsedNodeIds || []),
+  );
+
   // Node ID counter as a ref (survives re-renders, initialized from localStorage)
   const nodeIdCounterRef = useRef<number>(initialState?.nodeIdCounter || 0);
   const getNodeId = useCallback(() => `node_${++nodeIdCounterRef.current}`, []);
-  
+
   // Keep collapsed ref in sync
   useEffect(() => {
     collapsedNodeIdsRef.current = collapsedNodeIds;
   }, [collapsedNodeIds]);
-  
+
   // Right-click context menu
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    nodeId?: string;
+  } | null>(null);
 
   // Canvas tool mode: 'select' is default pointer, 'text' is click-to-place text, 'draw' is freehand ink,
   // 'shape' is drag-to-draw annotation shapes (kind chosen via shapeKind).
-  const [activeTool, setActiveTool] = useState<'select' | 'text' | 'draw' | 'shape'>('select');
-  const [shapeKind, setShapeKind] = useState<ShapeKind>('rect');
+  const [activeTool, setActiveTool] = useState<
+    "select" | "text" | "draw" | "shape"
+  >("select");
+  const [shapeKind, setShapeKind] = useState<ShapeKind>("rect");
   // Snap-to-grid is modal like Excalidraw: freeform placement is the default and
   // snapping only engages while the user holds Control/⌘ (see the effect below).
   // Plus transient Figma-style alignment guides shown while dragging.
@@ -153,29 +181,35 @@ export default function PlaygroundCanvas({
   // window focus mid-hold — turns it back off so it never sticks on.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Control' || e.key === 'Meta') setSnapEnabled(true);
+      if (e.key === "Control" || e.key === "Meta") setSnapEnabled(true);
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control' || e.key === 'Meta') setSnapEnabled(false);
+      if (e.key === "Control" || e.key === "Meta") setSnapEnabled(false);
     };
     const reset = () => setSnapEnabled(false);
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
-    window.addEventListener('blur', reset);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", reset);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('blur', reset);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", reset);
     };
   }, []);
   const [canvasDrawings, setCanvasDrawings] = useState<DrawStroke[]>(
     initialState?.canvasDrawings ?? [],
   );
-  const canvasDrawingsRef = useRef<DrawStroke[]>(initialState?.canvasDrawings ?? []);
+  const canvasDrawingsRef = useRef<DrawStroke[]>(
+    initialState?.canvasDrawings ?? [],
+  );
   const imageInputRef = useRef<HTMLInputElement>(null);
   const setDrawToolActive = usePlaygroundDrawStore((s) => s.setDrawToolActive);
-  const setStrokeSelectEnabled = usePlaygroundDrawStore((s) => s.setStrokeSelectEnabled);
-  const setStrokeSelection = usePlaygroundDrawStore((s) => s.setStrokeSelection);
+  const setStrokeSelectEnabled = usePlaygroundDrawStore(
+    (s) => s.setStrokeSelectEnabled,
+  );
+  const setStrokeSelection = usePlaygroundDrawStore(
+    (s) => s.setStrokeSelection,
+  );
   const drawPenKind = usePlaygroundDrawStore((s) => s.drawPenKind);
   const setDrawPenKind = usePlaygroundDrawStore((s) => s.setDrawPenKind);
   const strokeSelection = usePlaygroundDrawStore((s) => s.strokeSelection);
@@ -195,12 +229,13 @@ export default function PlaygroundCanvas({
     undo,
     redo,
   } = useCanvasFlow();
-  const coord = useGenerationCoordination({ nodes, knownIterations, setKnownIterations });
-  const {
-    isGenerating,
-    generationInfo,
-  } = coord;
-  const { screenToFlowPosition, fitView, setCenter, getViewport } = useReactFlow();
+  const coord = useGenerationCoordination({
+    nodes,
+    knownIterations,
+    setKnownIterations,
+  });
+  const { isGenerating, generationInfo } = coord;
+  const { screenToFlowPosition, fitView, getViewport } = useReactFlow();
 
   const {
     handleZOrder,
@@ -225,19 +260,13 @@ export default function PlaygroundCanvas({
     setCollapsedNodeIds,
   });
 
-  const {
-    canvasPresenceBubbles,
-    getCanvasPresenceBubblePosition,
-    handleCanvasPresenceBubbleClick,
-  } = useCanvasPresenceBubbles({ coord, setCenter, fitView });
-
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const removedIterationKeys: string[] = [];
       for (const change of changes) {
-        if (change.type === 'remove') {
+        if (change.type === "remove") {
           const node = coord.getNodes().find((n) => n.id === change.id);
-          if (node?.type === 'iteration') {
+          if (node?.type === "iteration") {
             const key = getIterationKeyFromNode(node);
             if (key) removedIterationKeys.push(key);
           }
@@ -248,7 +277,7 @@ export default function PlaygroundCanvas({
       }
 
       if (usePlaygroundDrawStore.getState().strokeSelection) {
-        const withoutRemove = changes.filter((c) => c.type !== 'remove');
+        const withoutRemove = changes.filter((c) => c.type !== "remove");
         if (withoutRemove.length === 0) return;
         onNodesChange(withoutRemove);
         return;
@@ -263,24 +292,34 @@ export default function PlaygroundCanvas({
   }, [canvasDrawings]);
 
   useEffect(() => {
-    setDrawToolActive(activeTool === 'draw');
-    setStrokeSelectEnabled(activeTool === 'select');
-    if (activeTool === 'draw') setStrokeSelection(null);
-  }, [activeTool, setDrawToolActive, setStrokeSelectEnabled, setStrokeSelection]);
+    setDrawToolActive(activeTool === "draw");
+    setStrokeSelectEnabled(activeTool === "select");
+    if (activeTool === "draw") setStrokeSelection(null);
+  }, [
+    activeTool,
+    setDrawToolActive,
+    setStrokeSelectEnabled,
+    setStrokeSelection,
+  ]);
 
   const CANVAS_DRAW_EXTENT = 8000;
 
   // Select canvas ink strokes in select mode (complements path hit targets)
   useEffect(() => {
-    if (activeTool !== 'select') return;
+    if (activeTool !== "select") return;
     const wrapper = reactFlowWrapper.current;
     if (!wrapper) return;
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || canvasDrawingsRef.current.length === 0) return;
-      if (e.target instanceof Element && e.target.closest('[data-canvas-draw-stroke]')) return;
-      if (e.target instanceof Element && e.target.closest('.react-flow__node')) return;
-      const pane = wrapper.querySelector('.react-flow__pane');
+      if (
+        e.target instanceof Element &&
+        e.target.closest("[data-canvas-draw-stroke]")
+      )
+        return;
+      if (e.target instanceof Element && e.target.closest(".react-flow__node"))
+        return;
+      const pane = wrapper.querySelector(".react-flow__pane");
       if (!pane?.contains(e.target as globalThis.Node)) return;
 
       const pt = screenToFlowPosition({ x: e.clientX, y: e.clientY });
@@ -296,12 +335,13 @@ export default function PlaygroundCanvas({
       );
       if (hit) {
         e.stopPropagation();
-        setStrokeSelection({ scope: 'canvas', strokeId: hit });
+        setStrokeSelection({ scope: "canvas", strokeId: hit });
       }
     };
 
-    wrapper.addEventListener('pointerdown', onPointerDown, true);
-    return () => wrapper.removeEventListener('pointerdown', onPointerDown, true);
+    wrapper.addEventListener("pointerdown", onPointerDown, true);
+    return () =>
+      wrapper.removeEventListener("pointerdown", onPointerDown, true);
   }, [activeTool, screenToFlowPosition, getViewport, setStrokeSelection]);
 
   useCanvasPersistence({
@@ -332,15 +372,18 @@ export default function PlaygroundCanvas({
 
   // Handle iteration deletion callback
   const handleIterationDelete = useCallback((filename: string) => {
-    setKnownIterations(prev => prev.filter(f => f !== filename));
+    setKnownIterations((prev) => prev.filter((f) => f !== filename));
   }, []);
 
   // Handle iteration adoption — IterationNode now owns the full adoption flow
-  // (agent execution, toasts, presence bubbles). This callback is kept for
-  // any canvas-level bookkeeping needed after a successful adoption.
-  const handleIterationAdopt = useCallback((_filename: string, _componentName: string) => {
-    // No-op: IterationNode handles everything via events + API calls
-  }, []);
+  // (agent execution, toasts). This callback is kept for any canvas-level
+  // bookkeeping needed after a successful adoption.
+  const handleIterationAdopt = useCallback(
+    (_filename: string, _componentName: string) => {
+      // No-op: IterationNode handles everything via events + API calls
+    },
+    [],
+  );
 
   const { scanForIterations, stopPolling } = useIterationScan({
     coord,
@@ -352,19 +395,16 @@ export default function PlaygroundCanvas({
     handleIterationAdopt,
   });
 
-  const {
-    showClearDialog,
-    setShowClearDialog,
-    confirmClearAllNodes,
-  } = useCanvasClear({
-    stopPolling,
-    setNodes,
-    setEdges,
-    setKnownIterations,
-    setCollapsedNodeIds,
-    setCanvasDrawings,
-    storageKey,
-  });
+  const { showClearDialog, setShowClearDialog, confirmClearAllNodes } =
+    useCanvasClear({
+      stopPolling,
+      setNodes,
+      setEdges,
+      setKnownIterations,
+      setCollapsedNodeIds,
+      setCanvasDrawings,
+      storageKey,
+    });
 
   const {
     createPageDialog,
@@ -385,11 +425,12 @@ export default function PlaygroundCanvas({
     reactFlowWrapper,
   });
 
-  const { handleCopyNodes, handlePasteNodes, handleDuplicateNodes } = useCanvasClipboard({
-    coord,
-    getNodeId,
-    setNodes,
-  });
+  const { handleCopyNodes, handlePasteNodes, handleDuplicateNodes } =
+    useCanvasClipboard({
+      coord,
+      getNodeId,
+      setNodes,
+    });
 
   useGenerationLifecycle({
     coord,
@@ -419,11 +460,50 @@ export default function PlaygroundCanvas({
     scanForIterations,
   });
 
-  // Fit viewport around all nodes for a given component — handled in useCanvasPresenceBubbles.
+  // Fit viewport around all nodes for a given component (e.g. after an
+  // iteration adoption completes — see useIterationAdoption).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { componentId } = (e as CustomEvent<{ componentId: string }>)
+        .detail;
+      if (!componentId) return;
+
+      const parentNode = coord
+        .getNodes()
+        .find(
+          (n) =>
+            n.type === "component" &&
+            (n.data.componentId as string)?.includes(componentId),
+        );
+      const childNodes = coord
+        .getNodes()
+        .filter(
+          (n) =>
+            (n.type === "iteration" || n.type === "skeleton") &&
+            parentNode &&
+            n.data.parentNodeId === parentNode.id,
+        );
+
+      const nodeIds = [
+        ...(parentNode ? [parentNode.id] : []),
+        ...childNodes.map((n) => n.id),
+      ];
+
+      if (nodeIds.length > 0) {
+        fitView({
+          nodes: nodeIds.map((id) => ({ id })),
+          duration: 400,
+          padding: 0.15,
+        });
+      }
+    };
+    window.addEventListener(FIT_COMPONENT_NODES_EVENT, handler);
+    return () => window.removeEventListener(FIT_COMPONENT_NODES_EVENT, handler);
+  }, [coord, fitView]);
 
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges]
+    [setEdges],
   );
 
   const { onDragOver, onDrop } = useCanvasDragDrop({
@@ -436,48 +516,64 @@ export default function PlaygroundCanvas({
     handleIterationAdopt,
   });
 
-  const handlePaneClick = useCallback((event: React.MouseEvent) => {
-    setContextMenu(null);
-    useInteractiveNodeStore.getState().setInteractiveNodeId(null);
-    setStrokeSelection(null);
+  const handlePaneClick = useCallback(
+    (event: React.MouseEvent) => {
+      setContextMenu(null);
+      useInteractiveNodeStore.getState().setInteractiveNodeId(null);
+      setStrokeSelection(null);
 
-    if (activeTool === 'text') {
-      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      const newNode = {
-        id: getNodeId(),
-        type: 'text' as const,
-        position,
-        selected: true,
-        data: { text: '', autofocus: true },
-      };
-      // Defer until after the pane click finishes so focus isn't stolen by the click target.
-      requestAnimationFrame(() => {
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })).concat(newNode));
-        setActiveTool('select');
-      });
-    }
-  }, [activeTool, screenToFlowPosition, getNodeId, setNodes, setStrokeSelection]);
+      if (activeTool === "text") {
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const newNode = {
+          id: getNodeId(),
+          type: "text" as const,
+          position,
+          selected: true,
+          data: { text: "", autofocus: true },
+        };
+        // Defer until after the pane click finishes so focus isn't stolen by the click target.
+        requestAnimationFrame(() => {
+          setNodes((nds) =>
+            nds.map((n) => ({ ...n, selected: false })).concat(newNode),
+          );
+          setActiveTool("select");
+        });
+      }
+    },
+    [activeTool, screenToFlowPosition, getNodeId, setNodes, setStrokeSelection],
+  );
 
   // Right-click context menu on canvas pane
-  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
-    event.preventDefault();
-    setContextMenu({ x: event.clientX, y: event.clientY });
-  }, []);
+  const handlePaneContextMenu = useCallback(
+    (event: MouseEvent | React.MouseEvent) => {
+      event.preventDefault();
+      setContextMenu({ x: event.clientX, y: event.clientY });
+    },
+    [],
+  );
 
   // Right-click context menu on a node — also select the node so the
   // z-order actions in the menu have a clear target.
-  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
-    event.preventDefault();
-    setNodes((nds) => nds.map((n) => (n.id === node.id ? { ...n, selected: true } : n)));
-    setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
-  }, [setNodes]);
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      setNodes((nds) =>
+        nds.map((n) => (n.id === node.id ? { ...n, selected: true } : n)),
+      );
+      setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+    },
+    [setNodes],
+  );
 
   // Close context menu on any click outside
   useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
-    window.addEventListener('click', close);
-    return () => window.removeEventListener('click', close);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
   }, [contextMenu]);
 
   // Suppress browser history swipe (macOS trackpad two-finger swipe-back/forward).
@@ -495,8 +591,8 @@ export default function PlaygroundCanvas({
       }
     };
 
-    wrapper.addEventListener('wheel', handleWheel, { passive: false });
-    return () => wrapper.removeEventListener('wheel', handleWheel);
+    wrapper.addEventListener("wheel", handleWheel, { passive: false });
+    return () => wrapper.removeEventListener("wheel", handleWheel);
   }, []);
 
   useCanvasPaste({
@@ -521,7 +617,7 @@ export default function PlaygroundCanvas({
   useEffect(() => {
     const handleCollapseToggle = (e: CustomEvent<{ nodeId: string }>) => {
       const { nodeId } = e.detail;
-      setCollapsedNodeIds(prev => {
+      setCollapsedNodeIds((prev) => {
         const next = new Set(prev);
         if (next.has(nodeId)) {
           next.delete(nodeId);
@@ -532,9 +628,15 @@ export default function PlaygroundCanvas({
       });
     };
 
-    window.addEventListener(ITERATION_COLLAPSE_TOGGLE_EVENT, handleCollapseToggle as EventListener);
+    window.addEventListener(
+      ITERATION_COLLAPSE_TOGGLE_EVENT,
+      handleCollapseToggle as EventListener,
+    );
     return () => {
-      window.removeEventListener(ITERATION_COLLAPSE_TOGGLE_EVENT, handleCollapseToggle as EventListener);
+      window.removeEventListener(
+        ITERATION_COLLAPSE_TOGGLE_EVENT,
+        handleCollapseToggle as EventListener,
+      );
     };
   }, []);
 
@@ -544,65 +646,73 @@ export default function PlaygroundCanvas({
   );
 
   // Image upload via toolbar button (reuses same logic as drag-drop)
-  const handleImageFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const handleImageFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
 
-    const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (imageFiles.length === 0) return;
+      const imageFiles = Array.from(files).filter((f) =>
+        f.type.startsWith("image/"),
+      );
+      if (imageFiles.length === 0) return;
 
-    const wrapper = reactFlowWrapper.current;
-    if (!wrapper) return;
-    const rect = wrapper.getBoundingClientRect();
-    const position = screenToFlowPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-    });
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
+      const position = screenToFlowPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
 
-    imageFiles.forEach((file, idx) => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        try {
-          const res = await fetch('/playground/api/images', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, originalName: file.name }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            const newNode: Node = {
-              id: getNodeId(),
-              type: 'image',
-              position: { x: position.x + idx * 320, y: position.y },
-              style: { width: 300, height: 250 },
-              data: {
-                imagePath: data.path,
-                imageUrl: data.url,
-                filename: data.filename,
+      imageFiles.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result as string;
+          try {
+            const res = await fetch("/playground/api/images", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                imageBase64: base64,
                 originalName: file.name,
-              },
-            };
-            setNodes((nds) => nds.concat(newNode));
+              }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              const newNode: Node = {
+                id: getNodeId(),
+                type: "image",
+                position: { x: position.x + idx * 320, y: position.y },
+                style: { width: 300, height: 250 },
+                data: {
+                  imagePath: data.path,
+                  imageUrl: data.url,
+                  filename: data.filename,
+                  originalName: file.name,
+                },
+              };
+              setNodes((nds) => nds.concat(newNode));
+            }
+          } catch (err) {
+            console.error("[Playground] Image upload failed:", err);
           }
-        } catch (err) {
-          console.error('[Playground] Image upload failed:', err);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+        };
+        reader.readAsDataURL(file);
+      });
 
-    // Reset input so the same file can be re-selected
-    e.target.value = '';
-  }, [screenToFlowPosition, getNodeId, setNodes]);
+      // Reset input so the same file can be re-selected
+      e.target.value = "";
+    },
+    [screenToFlowPosition, getNodeId, setNodes],
+  );
 
   const toggleDrawPenKind = useCallback(
     (kind: DrawPenKind) => {
-      if (activeTool === 'draw' && drawPenKind === kind) {
-        setActiveTool('select');
+      if (activeTool === "draw" && drawPenKind === kind) {
+        setActiveTool("select");
       } else {
         setDrawPenKind(kind);
-        setActiveTool('draw');
+        setActiveTool("draw");
       }
     },
     [activeTool, drawPenKind, setDrawPenKind],
@@ -639,8 +749,8 @@ export default function PlaygroundCanvas({
     <TooltipProvider>
       <div
         ref={reactFlowWrapper}
-        className={`w-full h-full${activeTool === 'text' ? ' playground-text-tool' : ''}${activeTool === 'draw' ? ' playground-draw-tool' : ''}${activeTool === 'shape' ? ' playground-shape-tool' : ''}`}
-        data-draw-kind={activeTool === 'draw' ? drawPenKind : undefined}
+        className={`w-full h-full${activeTool === "text" ? " playground-text-tool" : ""}${activeTool === "draw" ? " playground-draw-tool" : ""}${activeTool === "shape" ? " playground-shape-tool" : ""}`}
+        data-draw-kind={activeTool === "draw" ? drawPenKind : undefined}
       >
         {/* XY Flow reads pane fill from `--xy-background-color`; Tailwind bg-* often loses to `.react-flow` in the cascade. */}
         <ReactFlow
@@ -663,7 +773,11 @@ export default function PlaygroundCanvas({
           {...(initialState?.viewport
             ? { defaultViewport: initialState.viewport }
             : { fitView: true })}
-          style={{ '--xy-background-color': CANVAS_BACKGROUND_COLOR } as CSSProperties}
+          style={
+            {
+              "--xy-background-color": CANVAS_BACKGROUND_COLOR,
+            } as CSSProperties
+          }
           proOptions={{ hideAttribution: true }}
           minZoom={CANVAS_MIN_ZOOM}
           maxZoom={CANVAS_MAX_ZOOM}
@@ -672,121 +786,120 @@ export default function PlaygroundCanvas({
           zoomOnPinch
           panOnDrag={[1]}
           panActivationKeyCode={null}
-          selectionOnDrag={activeTool === 'select'}
+          selectionOnDrag={activeTool === "select"}
           selectionMode={SelectionMode.Partial}
-          nodesDraggable={activeTool !== 'draw'}
+          nodesDraggable={activeTool !== "draw"}
           nodesConnectable={false}
           elementsSelectable
-          deleteKeyCode={strokeSelection ? null : ['Delete', 'Backspace']}
+          deleteKeyCode={strokeSelection ? null : ["Delete", "Backspace"]}
         >
           {/* <Controls
             className="!bg-white !border-stone-200 !rounded-lg !shadow-sm [&>button]:!bg-white [&>button]:!border-stone-200 [&>button]:!text-stone-600 [&>button:hover]:!bg-stone-50"
           /> */}
-        <PlaygroundCanvasDrawLayer strokes={canvasDrawings} wrapperRef={reactFlowWrapper} />
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={dynamicBg.gap}
-          size={dynamicBg.size}
-          bgColor={CANVAS_BACKGROUND_COLOR}
-          color={BACKGROUND_COLOR}
+          <PlaygroundCanvasDrawLayer
+            strokes={canvasDrawings}
+            wrapperRef={reactFlowWrapper}
+          />
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={dynamicBg.gap}
+            size={dynamicBg.size}
+            bgColor={CANVAS_BACKGROUND_COLOR}
+            color={BACKGROUND_COLOR}
+          />
+          <MiniMap
+            position="bottom-right"
+            pannable
+            zoomable
+            ariaLabel="Canvas minimap"
+            className="!bottom-6 !right-6 !m-0 overflow-hidden rounded-xl border border-stone-200 bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.06)] backdrop-blur"
+            style={{ width: 200, height: 140 }}
+            maskColor="rgba(120,113,108,0.12)"
+            nodeColor={getMinimapNodeColor}
+            nodeStrokeColor="transparent"
+            nodeBorderRadius={4}
+          />
+          <HelperLines
+            vertical={helperLines.vertical}
+            horizontal={helperLines.horizontal}
+          />
+        </ReactFlow>
+
+        {/* Hidden file input for image upload */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleImageFileSelect}
         />
-        <MiniMap
-          position="bottom-right"
-          pannable
-          zoomable
-          ariaLabel="Canvas minimap"
-          className="!bottom-6 !right-6 !m-0 overflow-hidden rounded-xl border border-stone-200 bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.06)] backdrop-blur"
-          style={{ width: 200, height: 140 }}
-          maskColor="rgba(120,113,108,0.12)"
-          nodeColor={getMinimapNodeColor}
-          nodeStrokeColor="transparent"
-          nodeBorderRadius={4}
+
+        <PlaygroundCanvasToolbar
+          sidebarVisible={sidebarVisible}
+          onSidebarButtonClick={handleSidebarButtonClick}
+          onSidebarButtonMouseEnter={handleSidebarButtonMouseEnter}
+          onHideSidebar={onHideSidebar}
+          activeTool={activeTool}
+          setActiveTool={setActiveTool}
+          shapeKind={shapeKind}
+          setShapeKind={setShapeKind}
+          drawPenKind={drawPenKind}
+          setDrawPenKind={setDrawPenKind}
+          imageInputRef={imageInputRef}
         />
-        <HelperLines vertical={helperLines.vertical} horizontal={helperLines.horizontal} />
-        <CanvasPresenceLayer
-          bubbles={canvasPresenceBubbles}
+
+        {/* Element selection highlights */}
+        <ElementHighlight
+          isAltHeld={elementSelection.isAltHeld}
+          hoveredElement={elementSelection.hoveredElement}
+          hoveredRect={elementSelection.hoveredRect}
+          hoveredInfo={elementSelection.hoveredInfo}
+          selectedElements={elementSelection.selectedElements}
+        />
+
+        {/* Always-on bottom-center chat composer (the only chat surface) */}
+        <DockedChatBar
+          isGenerating={isGenerating}
+          onSubmit={handleChatSubmit}
+          selectedElements={elementSelection.selectedElements}
+          onRemoveElement={(idx) => elementSelection.removeElement(idx)}
+          onClearElements={elementSelection.clearSelection}
+          selectedNodes={nodeSelection.selectedNodes}
+          onRemoveNode={nodeSelection.removeNode}
+          onClearNodes={nodeSelection.clearNodeSelection}
+        />
+
+        <PlaygroundCanvasDialogs
+          showClearDialog={showClearDialog}
+          setShowClearDialog={setShowClearDialog}
+          confirmClearAllNodes={confirmClearAllNodes}
+          deleteDialogNode={deleteDialogNode}
+          setDeleteDialogNode={setDeleteDialogNode}
+          handleDeleteWithMode={handleDeleteWithMode}
+          createPageDialog={createPageDialog}
+          setCreatePageDialog={setCreatePageDialog}
+          newPageDescription={newPageDescription}
+          setNewPageDescription={setNewPageDescription}
+          createPageError={createPageError}
+          setCreatePageError={setCreatePageError}
+          creatingPage={creatingPage}
+          newPageInputRef={newPageInputRef}
+          handleCreatePage={handleCreatePage}
+        />
+
+        <PlaygroundCanvasContextMenu
+          contextMenu={contextMenu}
           nodes={nodes}
-          getPosition={getCanvasPresenceBubblePosition}
-          onBubbleClick={handleCanvasPresenceBubbleClick}
+          onClose={() => setContextMenu(null)}
+          onCreateDesign={handleCreateHtmlPageAt}
+          onCreatePage={openCreatePageDialog}
+          onOrganize={() => autoArrangeNodes(true)}
+          onGroup={handleGroupSelection}
+          onUngroup={handleUngroupFrame}
+          onZOrder={handleZOrder}
         />
-      </ReactFlow>
-
-      {/* Hidden file input for image upload */}
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleImageFileSelect}
-      />
-
-      <PlaygroundCanvasToolbar
-        sidebarVisible={sidebarVisible}
-        onSidebarButtonClick={handleSidebarButtonClick}
-        onSidebarButtonMouseEnter={handleSidebarButtonMouseEnter}
-        onHideSidebar={onHideSidebar}
-        activeTool={activeTool}
-        setActiveTool={setActiveTool}
-        shapeKind={shapeKind}
-        setShapeKind={setShapeKind}
-        drawPenKind={drawPenKind}
-        setDrawPenKind={setDrawPenKind}
-        imageInputRef={imageInputRef}
-      />
-
-      {/* Element selection highlights */}
-      <ElementHighlight
-        isAltHeld={elementSelection.isAltHeld}
-        hoveredElement={elementSelection.hoveredElement}
-        hoveredRect={elementSelection.hoveredRect}
-        hoveredInfo={elementSelection.hoveredInfo}
-        selectedElements={elementSelection.selectedElements}
-      />
-
-      {/* Always-on bottom-center chat composer (the only chat surface) */}
-      <DockedChatBar
-        isGenerating={isGenerating}
-        onSubmit={handleChatSubmit}
-        selectedElements={elementSelection.selectedElements}
-        onRemoveElement={(idx) => elementSelection.removeElement(idx)}
-        onClearElements={elementSelection.clearSelection}
-        selectedNodes={nodeSelection.selectedNodes}
-        onRemoveNode={nodeSelection.removeNode}
-        onClearNodes={nodeSelection.clearNodeSelection}
-      />
-
-      <PlaygroundCanvasDialogs
-        showClearDialog={showClearDialog}
-        setShowClearDialog={setShowClearDialog}
-        confirmClearAllNodes={confirmClearAllNodes}
-        deleteDialogNode={deleteDialogNode}
-        setDeleteDialogNode={setDeleteDialogNode}
-        handleDeleteWithMode={handleDeleteWithMode}
-        createPageDialog={createPageDialog}
-        setCreatePageDialog={setCreatePageDialog}
-        newPageDescription={newPageDescription}
-        setNewPageDescription={setNewPageDescription}
-        createPageError={createPageError}
-        setCreatePageError={setCreatePageError}
-        creatingPage={creatingPage}
-        newPageInputRef={newPageInputRef}
-        handleCreatePage={handleCreatePage}
-      />
-
-      <PlaygroundCanvasContextMenu
-        contextMenu={contextMenu}
-        nodes={nodes}
-        onClose={() => setContextMenu(null)}
-        onCreateDesign={handleCreateHtmlPageAt}
-        onCreatePage={openCreatePageDialog}
-        onOrganize={() => autoArrangeNodes(true)}
-        onGroup={handleGroupSelection}
-        onUngroup={handleUngroupFrame}
-        onZOrder={handleZOrder}
-      />
-
-    </div>
+      </div>
     </TooltipProvider>
   );
 }

@@ -184,7 +184,7 @@ export function generateRoutes() {
         `=== Agent Output ===`,
         ...(streamJsonForPreview
           ? [
-              '(Raw stream-json is not written to this file. Live assistant text appears in the presence-bubble tooltip.)',
+              '(Raw stream-json is not written to this file.)',
               '',
             ]
           : ['']),
@@ -230,25 +230,11 @@ export function generateRoutes() {
         let stderr = '';
         const stdoutLinesForErrors: string[] = [];
 
+        // assistantPreview accumulates the agent's streamed text; used for
+        // error messages and session-id extraction below.
         const assistantPreview = { value: '' };
         let agentSessionId: string | null = null;
         let stdoutLineBuf = '';
-        let previewThrottleTimer: ReturnType<typeof setTimeout> | null = null;
-
-        const flushAgentPreview = () => {
-          generationEvents.emit('agent-preview', {
-            componentId: clientComponentId,
-            text: assistantPreview.value,
-          });
-        };
-
-        const scheduleAgentPreview = () => {
-          if (previewThrottleTimer) return;
-          previewThrottleTimer = setTimeout(() => {
-            previewThrottleTimer = null;
-            flushAgentPreview();
-          }, 80);
-        };
 
         currentProcess.stdout?.on('data', (data: Buffer) => {
           const chunk = data.toString('utf8');
@@ -266,9 +252,6 @@ export function generateRoutes() {
           if (!agentSessionId && parsed.sessionId) {
             agentSessionId = parsed.sessionId;
             currentLogStream?.write(`\nClaude Session ID: ${agentSessionId}\n`);
-          }
-          if (parsed.textChanged) {
-            scheduleAgentPreview();
           }
         });
 
@@ -292,14 +275,6 @@ export function generateRoutes() {
             }
             stdoutLineBuf = '';
           }
-          if (previewThrottleTimer) {
-            clearTimeout(previewThrottleTimer);
-            previewThrottleTimer = null;
-          }
-          if (streamJsonForPreview) {
-            flushAgentPreview();
-          }
-
           currentLogStream?.write(`\n=== Generation ended with code ${code} at ${new Date().toISOString()} ===\n`);
           closeLogStream();
           removeLockfile();
@@ -347,14 +322,6 @@ export function generateRoutes() {
             }
             stdoutLineBuf = '';
           }
-          if (previewThrottleTimer) {
-            clearTimeout(previewThrottleTimer);
-            previewThrottleTimer = null;
-          }
-          if (streamJsonForPreview) {
-            flushAgentPreview();
-          }
-
           const errorMessage = error.message.includes('ENOENT')
             ? getProviderNotFoundMessage(providerId)
             : error.message;
@@ -464,25 +431,13 @@ export function generateRoutes() {
             resolve();
           };
 
-          const onAgentPreview = (payload: { componentId: string; text: string }) => {
-            stream.writeSSE({
-              data: JSON.stringify({
-                type: 'agent-preview',
-                componentId: payload.componentId,
-                text: payload.text,
-              }),
-            }).catch(() => {});
-          };
-
           const cleanup = () => {
             generationEvents.removeListener('iteration-added', onIteration);
             generationEvents.removeListener('done', onDone);
-            generationEvents.removeListener('agent-preview', onAgentPreview);
           };
 
           generationEvents.on('iteration-added', onIteration);
           generationEvents.on('done', onDone);
-          generationEvents.on('agent-preview', onAgentPreview);
 
           // Client disconnect — mirror the old req.on('close') cleanup.
           stream.onAbort(() => {
