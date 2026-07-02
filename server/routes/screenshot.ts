@@ -22,23 +22,6 @@ const SAFE_FILENAME_RE = /^[A-Za-z0-9._-]+\.png$/;
 export function screenshotRoutes() {
   const app = new Hono();
 
-  app.get('/api/screenshot', async (c) => {
-    const filename = c.req.query('filename');
-
-    if (!filename || !SAFE_FILENAME_RE.test(filename)) {
-      return c.json({ exists: false, error: 'Invalid or missing filename' }, 400);
-    }
-
-    const filePath = path.join(IMAGES_DIR, filename);
-    const relativePath = path.relative(process.cwd(), filePath);
-
-    if (fsSync.existsSync(filePath)) {
-      return c.json({ exists: true, path: relativePath });
-    }
-
-    return c.json({ exists: false });
-  });
-
   app.post('/api/screenshot', async (c) => {
     try {
       const body = await readJson<{
