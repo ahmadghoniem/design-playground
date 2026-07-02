@@ -5,7 +5,7 @@
  * DOM nodes or segment data. No React imports — testable with jsdom.
  */
 
-import { cn } from "../../lib/utils"
+import { cn } from "../../../lib/utils"
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Loader2,
   Download,
@@ -10,10 +8,11 @@ import {
   Wand2,
   Bot,
   ChevronRight,
-} from 'lucide-react';
-import type { StatusResponse } from './cards';
+} from "lucide-react";
+import type { StatusResponse } from "./cards";
 
-type Section = 'home' | 'preview' | 'edit' | 'check' | 'history' | 'export' | 'spec';
+type Section =
+  "home" | "preview" | "edit" | "check" | "history" | "export" | "spec";
 
 export default function HomeSection({
   status,
@@ -54,12 +53,14 @@ export default function HomeSection({
   return (
     <div className="px-8 py-8 max-w-2xl">
       <h2 className="text-xl font-semibold tracking-tight text-stone-900">
-        {ready ? 'Your design system is ready' : "Let's set up your design system"}
+        {ready
+          ? "Your design system is ready"
+          : "Let's set up your design system"}
       </h2>
       <p className="mt-1.5 text-sm text-stone-600 leading-relaxed">
         {ready
-          ? 'Edit your design system, run checks, and export it for code. Turn on AI generation to keep variations on-brand automatically.'
-          : 'A design system is one shared place for your colors, fonts, spacing, and rules. We\'ll create one for you in a single click.'}
+          ? "Edit your design system, run checks, and export it for code. Turn on AI generation to keep variations on-brand automatically."
+          : "A design system is one shared place for your colors, fonts, spacing, and rules. We'll create one for you in a single click."}
       </p>
 
       {!ready && (
@@ -73,7 +74,8 @@ export default function HomeSection({
               Set up design system
             </h3>
             <p className="mt-1 text-[12.5px] text-stone-600 leading-relaxed">
-              We&apos;ll install the tools and add helpful shortcuts to your project. Takes about 30 seconds.
+              We&apos;ll install the tools and add helpful shortcuts to your
+              project. Takes about 30 seconds.
             </p>
 
             <div className="mt-4 flex items-center gap-2">
@@ -83,7 +85,11 @@ export default function HomeSection({
                 className="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-white bg-stone-900 hover:bg-black rounded-lg transition-colors disabled:opacity-50"
               >
                 {setupRunning && <Loader2 className="w-4 h-4 animate-spin" />}
-                {setupRunning ? 'Setting up…' : installed ? 'Re-run setup' : 'Set up design system'}
+                {setupRunning
+                  ? "Setting up…"
+                  : installed
+                    ? "Re-run setup"
+                    : "Set up design system"}
               </button>
             </div>
           </div>
@@ -112,14 +118,18 @@ export default function HomeSection({
               Let AI build it from your codebase
             </h3>
             <p className="mt-1 text-[12.5px] text-stone-700 leading-relaxed">
-              The AI will read your Tailwind config, components, and styles to draft a{' '}
-              <code className="font-mono text-[11px] bg-white/70 px-1 py-0.5 rounded">DESIGN.md</code>{' '}
+              The AI will read your Tailwind config, components, and styles to
+              draft a{" "}
+              <code className="font-mono text-[11px] bg-white/70 px-1 py-0.5 rounded">
+                DESIGN.md
+              </code>{" "}
               that matches what you already have. You can edit it afterward.
             </p>
 
             <div className="mt-3">
               <label className="text-[11px] font-medium text-stone-600 block mb-1">
-                Anything specific to mention? <span className="text-stone-400 font-normal">(optional)</span>
+                Anything specific to mention?{" "}
+                <span className="text-stone-400 font-normal">(optional)</span>
               </label>
               <textarea
                 value={aiNotes}
@@ -141,7 +151,7 @@ export default function HomeSection({
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                {aiRunning ? 'AI is working…' : 'Generate from my codebase'}
+                {aiRunning ? "AI is working…" : "Generate from my codebase"}
               </button>
               <button
                 onClick={onScaffold}
@@ -176,25 +186,25 @@ export default function HomeSection({
               icon={FileText}
               title="Edit your design system"
               description="Update colors, fonts, and spacing."
-              onClick={() => onGo('edit')}
+              onClick={() => onGo("edit")}
             />
             <ShortcutCard
               icon={CheckCircle2}
               title="Check for issues"
               description="Find broken references and contrast problems."
-              onClick={() => onGo('check')}
+              onClick={() => onGo("check")}
             />
             <ShortcutCard
               icon={GitCompare}
               title="See what you changed"
               description="Compare to your last saved version."
-              onClick={() => onGo('history')}
+              onClick={() => onGo("history")}
             />
             <ShortcutCard
               icon={Download}
               title="Export to code"
               description="Tailwind theme or W3C tokens."
-              onClick={() => onGo('export')}
+              onClick={() => onGo("export")}
             />
           </div>
 
@@ -212,7 +222,8 @@ export default function HomeSection({
                   Use in AI generation
                 </div>
                 <p className="mt-0.5 text-[12px] text-stone-600 leading-relaxed">
-                  When you generate variations on the canvas, the AI will follow your design system automatically.
+                  When you generate variations on the canvas, the AI will follow
+                  your design system automatically.
                 </p>
               </div>
             </label>
@@ -243,8 +254,12 @@ function ShortcutCard({
         <Icon className="w-4 h-4 text-stone-500 group-hover:text-stone-700 transition-colors" />
         <ChevronRight className="w-3.5 h-3.5 text-stone-300 group-hover:text-stone-500 group-hover:translate-x-0.5 transition-all" />
       </div>
-      <div className="mt-2.5 text-[13px] font-medium text-stone-900">{title}</div>
-      <div className="mt-1 text-[11.5px] text-stone-500 leading-snug">{description}</div>
+      <div className="mt-2.5 text-[13px] font-medium text-stone-900">
+        {title}
+      </div>
+      <div className="mt-1 text-[11.5px] text-stone-500 leading-snug">
+        {description}
+      </div>
     </button>
   );
 }

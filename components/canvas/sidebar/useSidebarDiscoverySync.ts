@@ -1,12 +1,10 @@
-'use client';
-
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   GENERATION_COMPLETE_EVENT,
   JSX_COMPONENT_ADDED_EVENT,
   DESIGN_SYSTEM_GENERATED_EVENT,
-} from '../../../lib/constants';
-import type { HtmlPageInfo, JsxComponentInfo } from '../../../lib/constants';
+} from "../../../lib/constants";
+import type { HtmlPageInfo, JsxComponentInfo } from "../../../lib/constants";
 
 /**
  * Owns the sidebar's "react to discovery" surface: fetching HTML pages /
@@ -25,8 +23,8 @@ export function useSidebarDiscoverySync() {
     try {
       setIsRefreshingHtml(true);
       const [htmlRes, jsxRes] = await Promise.all([
-        fetch('/playground/api/html-pages'),
-        fetch('/playground/api/oncanvas-components'),
+        fetch("/playground/api/html-pages"),
+        fetch("/playground/api/oncanvas-components"),
       ]);
       if (htmlRes.ok) {
         const data = await htmlRes.json();
@@ -36,39 +34,70 @@ export function useSidebarDiscoverySync() {
         const data = await jsxRes.json();
         setJsxComponents(data.components || []);
       }
-    } catch { /* ignore */ }
-    finally { setIsRefreshingHtml(false); }
+    } catch {
+      /* ignore */
+    } finally {
+      setIsRefreshingHtml(false);
+    }
   }, []);
 
-  useEffect(() => { fetchHtmlPages(); }, [fetchHtmlPages]);
+  useEffect(() => {
+    fetchHtmlPages();
+  }, [fetchHtmlPages]);
 
   useEffect(() => {
-    const refresh = () => { void fetchHtmlPages(); };
-    window.addEventListener('playground:html-pages-updated', refresh);
-    window.addEventListener(GENERATION_COMPLETE_EVENT, refresh as EventListener);
-    window.addEventListener(JSX_COMPONENT_ADDED_EVENT, refresh as EventListener);
+    const refresh = () => {
+      void fetchHtmlPages();
+    };
+    window.addEventListener("playground:html-pages-updated", refresh);
+    window.addEventListener(
+      GENERATION_COMPLETE_EVENT,
+      refresh as EventListener,
+    );
+    window.addEventListener(
+      JSX_COMPONENT_ADDED_EVENT,
+      refresh as EventListener,
+    );
     return () => {
-      window.removeEventListener('playground:html-pages-updated', refresh);
-      window.removeEventListener(GENERATION_COMPLETE_EVENT, refresh as EventListener);
-      window.removeEventListener(JSX_COMPONENT_ADDED_EVENT, refresh as EventListener);
+      window.removeEventListener("playground:html-pages-updated", refresh);
+      window.removeEventListener(
+        GENERATION_COMPLETE_EVENT,
+        refresh as EventListener,
+      );
+      window.removeEventListener(
+        JSX_COMPONENT_ADDED_EVENT,
+        refresh as EventListener,
+      );
     };
   }, [fetchHtmlPages]);
 
   const fetchDesignSystem = useCallback(async () => {
     try {
-      const res = await fetch('/playground/api/design/preview-showcase', { cache: 'no-store' });
+      const res = await fetch("/playground/api/design/preview-showcase", {
+        cache: "no-store",
+      });
       if (!res.ok) return;
-      const data = await res.json() as { exists: boolean; html: string | null };
+      const data = (await res.json()) as {
+        exists: boolean;
+        html: string | null;
+      };
       setDesignSystemHtml(data.exists && data.html ? data.html : null);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
-  useEffect(() => { fetchDesignSystem(); }, [fetchDesignSystem]);
+  useEffect(() => {
+    fetchDesignSystem();
+  }, [fetchDesignSystem]);
 
   useEffect(() => {
-    const handler = () => { fetchDesignSystem(); };
+    const handler = () => {
+      fetchDesignSystem();
+    };
     window.addEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
-    return () => window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
+    return () =>
+      window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
   }, [fetchDesignSystem]);
 
   return {

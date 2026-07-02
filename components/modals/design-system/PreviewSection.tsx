@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Loader2,
   Sparkles,
@@ -12,12 +10,12 @@ import {
   Wand2,
   LayoutGrid,
   RotateCcw,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   parseDesignMd,
   readableTextColor,
   pickSurfaceColor,
-} from '../../../lib/parse-design-md';
+} from "../../../lib/parse-design-md";
 import {
   SectionShell,
   ColorCard,
@@ -25,7 +23,7 @@ import {
   ShowcaseCard,
   PreviewButton,
   CircleIcon,
-} from './cards';
+} from "./cards";
 
 /** Preview — bento-grid showcase of the parsed design system. */
 export default function PreviewSection({
@@ -42,21 +40,31 @@ export default function PreviewSection({
   onAiRegenerate: () => void;
 }) {
   const ds = parseDesignMd(content);
-  const colorEntries = Object.entries(ds.colors).filter(([k]) =>
-    !k.startsWith('on-'),
+  const colorEntries = Object.entries(ds.colors).filter(
+    ([k]) => !k.startsWith("on-"),
   );
   const surface = pickSurfaceColor(ds);
-  const headlineFont = ds.typography.h1?.fontFamily || ds.typography.headline?.fontFamily || 'serif';
-  const bodyFont = ds.typography['body-md']?.fontFamily || ds.typography.body?.fontFamily || 'sans-serif';
-  const labelFont = ds.typography['label-caps']?.fontFamily || ds.typography.label?.fontFamily || bodyFont;
+  const headlineFont =
+    ds.typography.h1?.fontFamily ||
+    ds.typography.headline?.fontFamily ||
+    "serif";
+  const bodyFont =
+    ds.typography["body-md"]?.fontFamily ||
+    ds.typography.body?.fontFamily ||
+    "sans-serif";
+  const labelFont =
+    ds.typography["label-caps"]?.fontFamily ||
+    ds.typography.label?.fontFamily ||
+    bodyFont;
 
-  const primaryHex = ds.colors.primary || '#141414';
-  const secondaryHex = ds.colors.secondary || ds.colors.tertiary || '#EC722F';
+  const primaryHex = ds.colors.primary || "#141414";
+  const secondaryHex = ds.colors.secondary || ds.colors.tertiary || "#EC722F";
   const tertiaryHex = ds.colors.tertiary || ds.colors.secondary || primaryHex;
-  const onPrimary = ds.colors['on-primary'] || readableTextColor(primaryHex);
-  const onSecondary = ds.colors['on-secondary'] || readableTextColor(secondaryHex);
-  const onTertiary = ds.colors['on-tertiary'] || readableTextColor(tertiaryHex);
-  const danger = ds.colors.destructive || ds.colors.danger || '#C0362C';
+  const onPrimary = ds.colors["on-primary"] || readableTextColor(primaryHex);
+  const onSecondary =
+    ds.colors["on-secondary"] || readableTextColor(secondaryHex);
+  const onTertiary = ds.colors["on-tertiary"] || readableTextColor(tertiaryHex);
+  const danger = ds.colors.destructive || ds.colors.danger || "#C0362C";
 
   if (loading) {
     return (
@@ -78,7 +86,11 @@ export default function PreviewSection({
             disabled={aiRunning}
             className="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-white bg-stone-900 hover:bg-black rounded-lg transition-colors disabled:opacity-50"
           >
-            {aiRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {aiRunning ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
             Generate from my codebase
           </button>
           <button
@@ -97,7 +109,7 @@ export default function PreviewSection({
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-stone-900">
-            {ds.name || 'Your design system'}
+            {ds.name || "Your design system"}
           </h2>
           {ds.description && (
             <p className="mt-1 text-[12.5px] text-stone-600 leading-relaxed max-w-xl">
@@ -112,7 +124,11 @@ export default function PreviewSection({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-stone-700 bg-white border border-stone-200 hover:bg-stone-100 rounded-lg transition-colors disabled:opacity-50"
             title="Regenerate from your codebase"
           >
-            {aiRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+            {aiRunning ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <RotateCcw className="w-3.5 h-3.5" />
+            )}
             Regenerate
           </button>
           <button
@@ -143,7 +159,12 @@ export default function PreviewSection({
 
         {/* Column 2: Typography */}
         <div className="col-span-4 flex flex-col gap-4">
-          <TypographyCard label="Headline" font={headlineFont} surface={surface} serif />
+          <TypographyCard
+            label="Headline"
+            font={headlineFont}
+            surface={surface}
+            serif
+          />
           <TypographyCard label="Body" font={bodyFont} surface={surface} />
           <TypographyCard label="Label" font={labelFont} surface={surface} />
         </div>
@@ -152,10 +173,33 @@ export default function PreviewSection({
         <div className="col-span-5 flex flex-col gap-4">
           <ShowcaseCard surface={surface}>
             <div className="grid grid-cols-2 gap-2.5">
-              <PreviewButton label="Primary" bg={primaryHex} text={onPrimary} rounded={ds.rounded.md} />
-              <PreviewButton label="Secondary" bg={surface} text={primaryHex} rounded={ds.rounded.md} muted />
-              <PreviewButton label="Inverted" bg={primaryHex} text={onPrimary} rounded={ds.rounded.md} />
-              <PreviewButton label="Outlined" bg="transparent" text={primaryHex} rounded={ds.rounded.md} outlined borderColor={primaryHex} />
+              <PreviewButton
+                label="Primary"
+                bg={primaryHex}
+                text={onPrimary}
+                rounded={ds.rounded.md}
+              />
+              <PreviewButton
+                label="Secondary"
+                bg={surface}
+                text={primaryHex}
+                rounded={ds.rounded.md}
+                muted
+              />
+              <PreviewButton
+                label="Inverted"
+                bg={primaryHex}
+                text={onPrimary}
+                rounded={ds.rounded.md}
+              />
+              <PreviewButton
+                label="Outlined"
+                bg="transparent"
+                text={primaryHex}
+                rounded={ds.rounded.md}
+                outlined
+                borderColor={primaryHex}
+              />
             </div>
           </ShowcaseCard>
 
@@ -164,7 +208,7 @@ export default function PreviewSection({
               <div
                 className="flex items-center gap-2 bg-white px-3"
                 style={{
-                  borderRadius: ds.rounded.lg || ds.rounded.md || '999px',
+                  borderRadius: ds.rounded.lg || ds.rounded.md || "999px",
                   height: 40,
                 }}
               >
@@ -180,9 +224,18 @@ export default function PreviewSection({
 
             <ShowcaseCard surface={surface}>
               <div className="flex flex-col gap-2 py-3">
-                <div className="h-[3px] rounded-full" style={{ background: primaryHex, width: '85%' }} />
-                <div className="h-[3px] rounded-full" style={{ background: secondaryHex, width: '70%' }} />
-                <div className="h-[3px] rounded-full" style={{ background: primaryHex, width: '55%' }} />
+                <div
+                  className="h-[3px] rounded-full"
+                  style={{ background: primaryHex, width: "85%" }}
+                />
+                <div
+                  className="h-[3px] rounded-full"
+                  style={{ background: secondaryHex, width: "70%" }}
+                />
+                <div
+                  className="h-[3px] rounded-full"
+                  style={{ background: primaryHex, width: "55%" }}
+                />
               </div>
             </ShowcaseCard>
           </div>
@@ -210,7 +263,11 @@ export default function PreviewSection({
             <ShowcaseCard surface={surface}>
               <div className="flex items-center justify-around py-1">
                 <CircleIcon bg={primaryHex} text={onPrimary} icon={Wand2} />
-                <CircleIcon bg={secondaryHex} text={onSecondary} icon={LayoutGrid} />
+                <CircleIcon
+                  bg={secondaryHex}
+                  text={onSecondary}
+                  icon={LayoutGrid}
+                />
                 <CircleIcon bg={tertiaryHex} text={onTertiary} icon={Tag} />
                 <CircleIcon bg={danger} text="#fff" icon={Trash2} />
               </div>
@@ -224,7 +281,7 @@ export default function PreviewSection({
                 style={{
                   background: primaryHex,
                   color: onPrimary,
-                  borderRadius: ds.rounded.md || '8px',
+                  borderRadius: ds.rounded.md || "8px",
                   width: 44,
                   height: 44,
                 }}
@@ -236,9 +293,9 @@ export default function PreviewSection({
               <div
                 className="inline-flex items-center gap-1.5 px-3.5 py-2"
                 style={{
-                  background: 'transparent',
+                  background: "transparent",
                   color: primaryHex,
-                  borderRadius: ds.rounded.md || '8px',
+                  borderRadius: ds.rounded.md || "8px",
                   border: `1px solid ${primaryHex}`,
                   fontFamily: bodyFont,
                   fontSize: 13,

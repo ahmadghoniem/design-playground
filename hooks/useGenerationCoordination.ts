@@ -1,8 +1,13 @@
-'use client';
-
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import type { Node } from '@xyflow/react';
-import type { GenerationInfo } from '../lib/canvas-persistence';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import type { Node } from "@xyflow/react";
+import type { GenerationInfo } from "../lib/canvas-persistence";
 
 export interface UseGenerationCoordinationParams {
   nodes: Node[];
@@ -31,7 +36,10 @@ export interface GenerationCoordination {
   takeScanContextOverride: () => GenerationInfo | null | undefined;
 
   tryAcquireScanLock: () => boolean;
-  releaseScanLock: () => { queued: boolean; override: GenerationInfo | null | undefined };
+  releaseScanLock: () => {
+    queued: boolean;
+    override: GenerationInfo | null | undefined;
+  };
   markScanQueued: (override?: GenerationInfo | null) => void;
 
   resetInactiveStreak: () => void;
@@ -52,13 +60,17 @@ export function useGenerationCoordination({
   setKnownIterations,
 }: UseGenerationCoordinationParams): GenerationCoordination {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationInfo, setGenerationInfo] = useState<GenerationInfo | null>(null);
+  const [generationInfo, setGenerationInfo] = useState<GenerationInfo | null>(
+    null,
+  );
 
   const isGeneratingRef = useRef(false);
   const generationInfoRef = useRef<GenerationInfo | null>(null);
   const nodesRef = useRef<Node[]>(nodes);
   const knownIterationsRef = useRef<string[]>(knownIterations);
-  const scanContextOverrideRef = useRef<GenerationInfo | null | undefined>(undefined);
+  const scanContextOverrideRef = useRef<GenerationInfo | null | undefined>(
+    undefined,
+  );
   const scanLockRef = useRef(false);
   const scanQueuedRef = useRef(false);
   const generationStartedAtMsRef = useRef(0);
@@ -84,7 +96,10 @@ export function useGenerationCoordination({
   const getIsGenerating = useCallback(() => isGeneratingRef.current, []);
   const getNodes = useCallback(() => nodesRef.current, []);
   const getKnownIterations = useCallback(() => knownIterationsRef.current, []);
-  const peekScanContextOverride = useCallback(() => scanContextOverrideRef.current, []);
+  const peekScanContextOverride = useCallback(
+    () => scanContextOverrideRef.current,
+    [],
+  );
 
   const setGenerationInfoEager = useCallback((info: GenerationInfo | null) => {
     generationInfoRef.current = info;
@@ -105,7 +120,10 @@ export function useGenerationCoordination({
 
   const appendKnownIterations = useCallback(
     (filenames: string[]) => {
-      knownIterationsRef.current = [...knownIterationsRef.current, ...filenames];
+      knownIterationsRef.current = [
+        ...knownIterationsRef.current,
+        ...filenames,
+      ];
       setKnownIterations((prev) => [...prev, ...filenames]);
     },
     [setKnownIterations],
@@ -114,15 +132,20 @@ export function useGenerationCoordination({
   const removeKnownIterations = useCallback(
     (keys: string[]) => {
       if (keys.length === 0) return;
-      knownIterationsRef.current = knownIterationsRef.current.filter((k) => !keys.includes(k));
+      knownIterationsRef.current = knownIterationsRef.current.filter(
+        (k) => !keys.includes(k),
+      );
       setKnownIterations((prev) => prev.filter((k) => !keys.includes(k)));
     },
     [setKnownIterations],
   );
 
-  const setScanContextOverride = useCallback((ctx: GenerationInfo | null | undefined) => {
-    scanContextOverrideRef.current = ctx;
-  }, []);
+  const setScanContextOverride = useCallback(
+    (ctx: GenerationInfo | null | undefined) => {
+      scanContextOverrideRef.current = ctx;
+    },
+    [],
+  );
 
   const takeScanContextOverride = useCallback(() => {
     const ctx = scanContextOverrideRef.current;
@@ -161,9 +184,15 @@ export function useGenerationCoordination({
     return inactiveStatusStreakRef.current;
   }, []);
 
-  const getInactiveStreak = useCallback(() => inactiveStatusStreakRef.current, []);
+  const getInactiveStreak = useCallback(
+    () => inactiveStatusStreakRef.current,
+    [],
+  );
 
-  const getGenerationStartedAt = useCallback(() => generationStartedAtMsRef.current, []);
+  const getGenerationStartedAt = useCallback(
+    () => generationStartedAtMsRef.current,
+    [],
+  );
 
   const setGenerationStartedAt = useCallback((ms: number) => {
     generationStartedAtMsRef.current = ms;

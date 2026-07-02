@@ -1,10 +1,8 @@
-'use client';
-
-import { useEffect, type MutableRefObject } from 'react';
-import type { Edge, Node, Viewport } from '@xyflow/react';
-import type { DrawStroke } from '../lib/draw-types';
-import { saveCanvasState } from '../lib/canvas-persistence';
-import type { GenerationCoordination } from './useGenerationCoordination';
+import { useEffect, type MutableRefObject } from "react";
+import type { Edge, Node, Viewport } from "@xyflow/react";
+import type { DrawStroke } from "../lib/draw-types";
+import { saveCanvasState } from "../lib/canvas-persistence";
+import type { GenerationCoordination } from "./useGenerationCoordination";
 
 export interface UseCanvasPersistenceParams {
   storageKey: string;
@@ -46,7 +44,15 @@ export function useCanvasPersistence({
       getViewport(),
       canvasDrawingsRef.current,
     );
-  }, [nodes, edges, knownIterations, collapsedNodeIds, canvasDrawings, getViewport, storageKey]);
+  }, [
+    nodes,
+    edges,
+    knownIterations,
+    collapsedNodeIds,
+    canvasDrawings,
+    getViewport,
+    storageKey,
+  ]);
 
   // Save viewport on page unload (captures pan/zoom changes that don't trigger node updates)
   useEffect(() => {
@@ -63,7 +69,7 @@ export function useCanvasPersistence({
         canvasDrawingsRef.current,
       );
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [edges, getViewport, storageKey]);
 }

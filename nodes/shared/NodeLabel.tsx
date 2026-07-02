@@ -1,8 +1,9 @@
-'use client';
-
-import { memo, type CSSProperties, type ReactNode } from 'react';
-import { useNodeId, useStore } from '@xyflow/react';
-import { NODE_LABEL_MAX_INV_SCALE, NODE_LABEL_SCALE_THRESHOLD } from '../../lib/constants';
+import { memo, type CSSProperties, type ReactNode } from "react";
+import { useNodeId, useStore } from "@xyflow/react";
+import {
+  NODE_LABEL_MAX_INV_SCALE,
+  NODE_LABEL_SCALE_THRESHOLD,
+} from "../../lib/constants";
 
 /** Inverse-zoom factor: grows as the canvas zooms out, capped by the constants. */
 export function useInverseZoom(): number {
@@ -27,7 +28,10 @@ function NodeLabelInner({ children, color, className, style }: NodeLabelProps) {
   const nodeWidth = useStore((s) => {
     if (!nodeId) return 0;
     const node = s.nodeLookup?.get(nodeId);
-    return node?.measured?.width ?? (typeof node?.width === 'number' ? node.width : 0);
+    return (
+      node?.measured?.width ??
+      (typeof node?.width === "number" ? node.width : 0)
+    );
   });
   const isSelected = useStore((s) => {
     if (!nodeId) return false;
@@ -40,24 +44,24 @@ function NodeLabelInner({ children, color, className, style }: NodeLabelProps) {
 
   // Labels are muted-grey by default; show their accent color only when the
   // owning node is selected.
-  const effectiveColor = isSelected ? color : '#A8A29E';
+  const effectiveColor = isSelected ? color : "#A8A29E";
 
   return (
     <span
-      className={`text-[11px] font-medium select-none leading-none ${className ?? ''}`}
+      className={`text-[11px] font-medium select-none leading-none ${className ?? ""}`}
       style={{
-        fontFamily: 'var(--pg-font-sans)',
+        fontFamily: "var(--pg-font-sans)",
         color: effectiveColor,
-        display: 'inline-block',
+        display: "inline-block",
         transform: `scale(${inv})`,
-        transformOrigin: 'left bottom',
-        willChange: 'transform',
-        position: 'relative',
+        transformOrigin: "left bottom",
+        willChange: "transform",
+        position: "relative",
         zIndex: 10,
         maxWidth: maxIntrinsicWidth,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
         ...style,
       }}
     >

@@ -1,10 +1,15 @@
-'use client';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { NodeResizer, useReactFlow } from "@xyflow/react";
+import { cn } from "../lib/utils";
 
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { NodeResizer, useReactFlow } from '@xyflow/react';
-import { cn } from '../lib/utils';
-
-export type ShapeKind = 'rect' | 'ellipse' | 'line';
+export type ShapeKind = "rect" | "ellipse" | "line";
 
 export interface ShapeNodeData {
   shape: ShapeKind;
@@ -19,13 +24,13 @@ export interface ShapeNodeData {
   autofocus?: boolean;
 }
 
-const DEFAULT_STROKE = '#1c1917';
-const DEFAULT_FILL = 'transparent';
+const DEFAULT_STROKE = "#1c1917";
+const DEFAULT_FILL = "transparent";
 const DEFAULT_STROKE_WIDTH = 2;
 const MIN_SIZE = 12;
 
 // A hand-drawn-looking double border via the classic asymmetric border-radius trick.
-const ROUGH_RADIUS = '255px 15px 225px 15px / 15px 225px 15px 255px';
+const ROUGH_RADIUS = "255px 15px 225px 15px / 15px 225px 15px 255px";
 
 function ShapeNodeInner({
   id,
@@ -51,7 +56,7 @@ function ShapeNodeInner({
 
   // Focus the label right after a shape is drawn, mirroring TextNode's autofocus.
   useEffect(() => {
-    if (data.autofocus && data.shape !== 'line') {
+    if (data.autofocus && data.shape !== "line") {
       updateNodeData(id, { autofocus: false });
       setIsEditing(true);
     } else if (data.autofocus) {
@@ -62,7 +67,7 @@ function ShapeNodeInner({
   useLayoutEffect(() => {
     if (!isEditing || !editorRef.current) return;
     const el = editorRef.current;
-    el.textContent = data.label ?? '';
+    el.textContent = data.label ?? "";
     el.focus({ preventScroll: true });
     const sel = window.getSelection();
     const range = document.createRange();
@@ -73,7 +78,7 @@ function ShapeNodeInner({
   }, [isEditing, data.label]);
 
   const commitLabel = useCallback(() => {
-    const text = editorRef.current?.innerText.replace(/\n$/, '') ?? '';
+    const text = editorRef.current?.innerText.replace(/\n$/, "") ?? "";
     updateNodeData(id, { label: text });
     setIsEditing(false);
   }, [id, updateNodeData]);
@@ -81,7 +86,7 @@ function ShapeNodeInner({
   const showResizer = Boolean(selected);
 
   // --- Line / arrow ---
-  if (data.shape === 'line') {
+  if (data.shape === "line") {
     const w = Math.max(width ?? 120, 1);
     const h = Math.max(height ?? 60, 1);
     const markerId = `arrow-${id}`;
@@ -99,7 +104,7 @@ function ShapeNodeInner({
           height="100%"
           viewBox={`0 0 ${w} ${h}`}
           preserveAspectRatio="none"
-          className={cn(selected && 'outline outline-1 outline-[#1e9bff]/40')}
+          className={cn(selected && "outline outline-1 outline-[#1e9bff]/40")}
         >
           <defs>
             <marker
@@ -130,9 +135,9 @@ function ShapeNodeInner({
   }
 
   // --- Rect / ellipse ---
-  const isEllipse = data.shape === 'ellipse';
-  const borderRadius = isEllipse ? '50%' : rough ? ROUGH_RADIUS : '6px';
-  const label = data.label ?? '';
+  const isEllipse = data.shape === "ellipse";
+  const borderRadius = isEllipse ? "50%" : rough ? ROUGH_RADIUS : "6px";
+  const label = data.label ?? "";
   const showPlaceholder = label.length === 0 && !isEditing && selected;
 
   return (
@@ -152,7 +157,8 @@ function ShapeNodeInner({
           borderRadius,
           // Softer offset "pencil" line for the sketchy double-stroke look —
           // a touch more spread + lower alpha reads as hand-drawn, not a hard shadow.
-          boxShadow: !isEllipse && rough ? `1.5px 2.5px 0 -2px ${stroke}26` : undefined,
+          boxShadow:
+            !isEllipse && rough ? `1.5px 2.5px 0 -2px ${stroke}26` : undefined,
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -162,16 +168,21 @@ function ShapeNodeInner({
         <div
           ref={editorRef}
           className={cn(
-            'max-w-full whitespace-pre-wrap break-words px-2 text-center text-[15px] leading-snug outline-none',
-            isEditing ? 'nodrag nopan nowheel cursor-text select-text' : 'cursor-move select-none',
-            showPlaceholder && 'text-stone-400',
+            "max-w-full whitespace-pre-wrap break-words px-2 text-center text-[15px] leading-snug outline-none",
+            isEditing
+              ? "nodrag nopan nowheel cursor-text select-text"
+              : "cursor-move select-none",
+            showPlaceholder && "text-stone-400",
           )}
-          style={{ fontFamily: 'var(--pg-font-hand, var(--pg-font-sans))', color: stroke }}
+          style={{
+            fontFamily: "var(--pg-font-hand, var(--pg-font-sans))",
+            color: stroke,
+          }}
           contentEditable={isEditing}
           suppressContentEditableWarning
           spellCheck={false}
           onInput={() => {
-            const text = editorRef.current?.innerText.replace(/\n$/, '') ?? '';
+            const text = editorRef.current?.innerText.replace(/\n$/, "") ?? "";
             updateNodeData(id, { label: text });
           }}
           onBlur={commitLabel}
@@ -180,13 +191,13 @@ function ShapeNodeInner({
           }}
           onKeyDown={(e) => {
             e.stopPropagation();
-            if (e.key === 'Escape') {
+            if (e.key === "Escape") {
               e.preventDefault();
               commitLabel();
             }
           }}
         >
-          {!isEditing ? (showPlaceholder ? 'Label' : label) : null}
+          {!isEditing ? (showPlaceholder ? "Label" : label) : null}
         </div>
       </div>
     </div>

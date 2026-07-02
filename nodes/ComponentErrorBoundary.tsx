@@ -1,7 +1,5 @@
-'use client';
-
-import { Component, ReactNode } from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Component, ReactNode } from "react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 interface Props {
   children: ReactNode;
   componentName?: string;
@@ -28,7 +26,7 @@ export default class ComponentErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error(
-      `[Playground] Component render error${this.props.componentName ? ` in ${this.props.componentName}` : ''}:`,
+      `[Playground] Component render error${this.props.componentName ? ` in ${this.props.componentName}` : ""}:`,
       error,
       info.componentStack,
     );
@@ -45,10 +43,13 @@ export default class ComponentErrorBoundary extends Component<Props, State> {
           <AlertCircle className="w-8 h-8 text-red-400" />
           <div>
             <p className="text-sm font-medium text-red-600">
-              {this.props.componentName ? `${this.props.componentName} crashed` : 'Component crashed'}
+              {this.props.componentName
+                ? `${this.props.componentName} crashed`
+                : "Component crashed"}
             </p>
             <p className="text-xs text-gray-500 mt-1 max-w-[300px] break-words">
-              {this.state.error?.message || 'An unexpected error occurred during rendering.'}
+              {this.state.error?.message ||
+                "An unexpected error occurred during rendering."}
             </p>
           </div>
           <button

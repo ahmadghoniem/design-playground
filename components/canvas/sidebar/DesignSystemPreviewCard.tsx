@@ -1,7 +1,8 @@
-'use client';
-
-import { useEffect, useRef, useState, type DragEvent } from 'react';
-import { DND_DATA_KEY, DESIGN_SYSTEM_SHOWCASE_ID } from '../../../lib/constants';
+import { useEffect, useRef, useState, type DragEvent } from "react";
+import {
+  DND_DATA_KEY,
+  DESIGN_SYSTEM_SHOWCASE_ID,
+} from "../../../lib/constants";
 
 /** Draggable thumbnail of the generated design-system showcase. */
 export default function DesignSystemPreviewCard({ html }: { html: string }) {
@@ -26,8 +27,8 @@ export default function DesignSystemPreviewCard({ html }: { html: string }) {
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData(DND_DATA_KEY, DESIGN_SYSTEM_SHOWCASE_ID);
-    e.dataTransfer.setData('text/plain', '');
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("text/plain", "");
+    e.dataTransfer.effectAllowed = "move";
   };
 
   return (

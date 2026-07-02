@@ -1,7 +1,5 @@
-'use client';
-
-import { useEffect } from 'react';
-import { SectionShell, ResultCard, type CliResult } from './cards';
+import { useEffect } from "react";
+import { SectionShell, ResultCard, type CliResult } from "./cards";
 
 /** Spec section — auto-loads the format spec the first time it's installed. */
 export default function SpecSection({

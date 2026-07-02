@@ -1,7 +1,5 @@
-'use client';
-
-import { Loader2, CheckCircle2, AlertCircle, Check } from 'lucide-react';
-import { tonalScale, readableTextColor } from '../../../lib/parse-design-md';
+import { Loader2, CheckCircle2, AlertCircle, Check } from "lucide-react";
+import { tonalScale, readableTextColor } from "../../../lib/parse-design-md";
 
 // ---------------------------------------------------------------------------
 // Shared CLI/status types — re-used by the CLI hook and every section.
@@ -29,7 +27,13 @@ export interface CliResult {
 // Sidebar status badge
 // ---------------------------------------------------------------------------
 
-export function ReadyBadge({ status, loading }: { status: StatusResponse | null; loading: boolean }) {
+export function ReadyBadge({
+  status,
+  loading,
+}: {
+  status: StatusResponse | null;
+  loading: boolean;
+}) {
   const ready = !!status?.installed && !!status?.fileExists;
   if (loading) {
     return (
@@ -55,21 +59,23 @@ export function ReadyBadge({ status, loading }: { status: StatusResponse | null;
   );
 }
 
-export function Switch({ checked, disabled }: { checked: boolean; disabled?: boolean }) {
+export function Switch({
+  checked,
+  disabled,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+}) {
   return (
     <span
       className={`relative inline-flex h-[18px] w-[30px] flex-shrink-0 items-center rounded-full transition-colors ${
-        disabled
-          ? 'bg-stone-200'
-          : checked
-          ? 'bg-stone-900'
-          : 'bg-stone-300'
+        disabled ? "bg-stone-200" : checked ? "bg-stone-900" : "bg-stone-300"
       }`}
       aria-hidden
     >
       <span
         className={`inline-block h-[14px] w-[14px] transform rounded-full bg-white shadow-sm transition-transform ${
-          checked ? 'translate-x-[14px]' : 'translate-x-[2px]'
+          checked ? "translate-x-[14px]" : "translate-x-[2px]"
         }`}
       />
     </span>
@@ -91,8 +97,12 @@ export function SectionShell({
 }) {
   return (
     <div className="px-8 py-7 max-w-3xl">
-      <h2 className="text-lg font-semibold tracking-tight text-stone-900">{title}</h2>
-      <p className="mt-1.5 text-[12.5px] text-stone-600 leading-relaxed max-w-xl">{blurb}</p>
+      <h2 className="text-lg font-semibold tracking-tight text-stone-900">
+        {title}
+      </h2>
+      <p className="mt-1.5 text-[12.5px] text-stone-600 leading-relaxed max-w-xl">
+        {blurb}
+      </p>
       <div className="mt-5">{children}</div>
     </div>
   );
@@ -102,11 +112,19 @@ export function SectionShell({
 // Result card — friendly result rendering
 // ---------------------------------------------------------------------------
 
-export function ResultCard({ result, successHint }: { result: CliResult | null; successHint?: string }) {
+export function ResultCard({
+  result,
+  successHint,
+}: {
+  result: CliResult | null;
+  successHint?: string;
+}) {
   if (!result) {
     return (
       <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/60 p-5 text-center">
-        <p className="text-[12px] text-stone-500">{successHint ?? 'Run an action to see results here.'}</p>
+        <p className="text-[12px] text-stone-500">
+          {successHint ?? "Run an action to see results here."}
+        </p>
       </div>
     );
   }
@@ -116,14 +134,18 @@ export function ResultCard({ result, successHint }: { result: CliResult | null; 
         <div className="flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
           <div className="min-w-0">
-            <div className="text-[12.5px] font-medium text-amber-900">Heads up</div>
-            <p className="mt-0.5 text-[12px] text-amber-800 leading-relaxed">{result.error}</p>
+            <div className="text-[12.5px] font-medium text-amber-900">
+              Heads up
+            </div>
+            <p className="mt-0.5 text-[12px] text-amber-800 leading-relaxed">
+              {result.error}
+            </p>
           </div>
         </div>
       </div>
     );
   }
-  const output = result.stdout || result.stderr || '';
+  const output = result.stdout || result.stderr || "";
   const isClean = result.ok && output.trim().length === 0;
   if (isClean) {
     return (
@@ -131,9 +153,11 @@ export function ResultCard({ result, successHint }: { result: CliResult | null; 
         <div className="flex items-start gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
           <div>
-            <div className="text-[12.5px] font-medium text-emerald-900">All good</div>
+            <div className="text-[12.5px] font-medium text-emerald-900">
+              All good
+            </div>
             <p className="mt-0.5 text-[12px] text-emerald-800 leading-relaxed">
-              {successHint ?? 'No issues found.'}
+              {successHint ?? "No issues found."}
             </p>
           </div>
         </div>
@@ -143,15 +167,15 @@ export function ResultCard({ result, successHint }: { result: CliResult | null; 
   return (
     <div
       className={`rounded-xl border bg-white shadow-sm overflow-hidden ${
-        result.ok ? 'border-stone-200' : 'border-rose-200'
+        result.ok ? "border-stone-200" : "border-rose-200"
       }`}
     >
       <div
         className={`px-4 py-2 text-[10.5px] font-medium uppercase tracking-wider flex items-center justify-between ${
-          result.ok ? 'bg-stone-50 text-stone-500' : 'bg-rose-50 text-rose-700'
+          result.ok ? "bg-stone-50 text-stone-500" : "bg-rose-50 text-rose-700"
         }`}
       >
-        <span>{result.ok ? 'Output' : 'Issues found'}</span>
+        <span>{result.ok ? "Output" : "Issues found"}</span>
         {result.exitCode !== null && result.exitCode !== 0 && (
           <span className="font-mono normal-case text-[10px]">
             exit {result.exitCode}
@@ -185,15 +209,17 @@ export function FormatCard({
       onClick={onClick}
       className={`text-left rounded-xl border p-3.5 transition-all ${
         active
-          ? 'border-stone-900 bg-stone-900 text-white shadow-sm'
-          : 'border-stone-200 bg-white hover:border-stone-300 text-stone-700'
+          ? "border-stone-900 bg-stone-900 text-white shadow-sm"
+          : "border-stone-200 bg-white hover:border-stone-300 text-stone-700"
       }`}
     >
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-semibold">{label}</span>
         {active && <Check className="w-3.5 h-3.5" />}
       </div>
-      <div className={`mt-1 text-[11px] ${active ? 'text-stone-300' : 'text-stone-500'}`}>
+      <div
+        className={`mt-1 text-[11px] ${active ? "text-stone-300" : "text-stone-500"}`}
+      >
         {description}
       </div>
     </button>
@@ -212,8 +238,13 @@ export function ColorCard({ name, hex }: { name: string; hex: string }) {
       className="rounded-2xl overflow-hidden border border-stone-200/60 shadow-sm"
       style={{ background: hex }}
     >
-      <div className="flex items-start justify-between px-4 pt-3.5 pb-3" style={{ color: text }}>
-        <span className="text-[13px] font-semibold capitalize">{name.replace(/-/g, ' ')}</span>
+      <div
+        className="flex items-start justify-between px-4 pt-3.5 pb-3"
+        style={{ color: text }}
+      >
+        <span className="text-[13px] font-semibold capitalize">
+          {name.replace(/-/g, " ")}
+        </span>
         <span className="text-[11.5px] font-mono tracking-tight opacity-90">
           {hex.toUpperCase()}
         </span>
@@ -246,13 +277,17 @@ export function TypographyCard({
     >
       <div className="flex items-center justify-between text-stone-500">
         <span className="text-[12px]">{label}</span>
-        <span className="text-[12px]">{font.split(',')[0].replace(/['"]/g, '').trim()}</span>
+        <span className="text-[12px]">
+          {font.split(",")[0].replace(/['"]/g, "").trim()}
+        </span>
       </div>
       <div className="flex-1 flex items-center justify-center">
         <span
           className="text-stone-900 leading-none"
           style={{
-            fontFamily: serif ? `"${font.split(',')[0].replace(/['"]/g, '')}", serif` : `"${font.split(',')[0].replace(/['"]/g, '')}", sans-serif`,
+            fontFamily: serif
+              ? `"${font.split(",")[0].replace(/['"]/g, "")}", serif`
+              : `"${font.split(",")[0].replace(/['"]/g, "")}", sans-serif`,
             fontSize: 96,
             fontWeight: serif ? 500 : 400,
           }}
@@ -276,7 +311,7 @@ export function ShowcaseCard({
   return (
     <div
       className={`rounded-2xl border border-stone-200/40 flex items-center justify-center ${
-        compact ? 'px-3 py-3' : 'px-4 py-4'
+        compact ? "px-3 py-3" : "px-4 py-4"
       }`}
       style={{ background: surface, minHeight: compact ? 78 : 96 }}
     >
@@ -308,9 +343,14 @@ export function PreviewButton({
       style={{
         background: bg,
         color: text,
-        borderRadius: rounded || '8px',
+        borderRadius: rounded || "8px",
         height: 36,
-        border: outlined && borderColor ? `1px solid ${borderColor}` : muted ? '1px solid rgba(0,0,0,0.06)' : 'none',
+        border:
+          outlined && borderColor
+            ? `1px solid ${borderColor}`
+            : muted
+              ? "1px solid rgba(0,0,0,0.06)"
+              : "none",
       }}
     >
       {label}
@@ -330,7 +370,13 @@ export function CircleIcon({
   return (
     <div
       className="flex items-center justify-center"
-      style={{ background: bg, color: text, width: 36, height: 36, borderRadius: 999 }}
+      style={{
+        background: bg,
+        color: text,
+        width: 36,
+        height: 36,
+        borderRadius: 999,
+      }}
     >
       <Icon className="w-4 h-4" />
     </div>

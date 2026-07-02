@@ -1,11 +1,18 @@
-'use client';
-
-import { useEffect, useRef, useState, type DragEvent, type MouseEvent } from 'react';
-import { DND_DATA_KEY } from '../../../lib/constants';
-import { RegistryLeafItem } from '../../../registry';
-import { pickPreviewViewport, slugFromSourcePath } from '../../../lib/registry-tree';
-import ComponentErrorBoundary from '../../../nodes/ComponentErrorBoundary';
-import { useFocusNode } from '../../../hooks/useFocusNode';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type MouseEvent,
+} from "react";
+import { DND_DATA_KEY } from "../../../lib/constants";
+import { RegistryLeafItem } from "../../../registry";
+import {
+  pickPreviewViewport,
+  slugFromSourcePath,
+} from "../../../lib/registry-tree";
+import ComponentErrorBoundary from "../../../nodes/ComponentErrorBoundary";
+import { useFocusNode } from "../../../hooks/useFocusNode";
 
 export interface PageContextPayload {
   id: string;
@@ -19,7 +26,10 @@ interface ComponentPreviewCardProps {
 }
 
 /** Renders a live, scaled-down preview of a registry component, draggable onto canvas. */
-export default function ComponentPreviewCard({ item, onPageContextMenu }: ComponentPreviewCardProps) {
+export default function ComponentPreviewCard({
+  item,
+  onPageContextMenu,
+}: ComponentPreviewCardProps) {
   const PreviewComponent = item.Component;
   const props = (item.props ?? {}) as Record<string, unknown>;
   const viewport = pickPreviewViewport(item.size);
@@ -45,8 +55,8 @@ export default function ComponentPreviewCard({ item, onPageContextMenu }: Compon
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData(DND_DATA_KEY, item.id);
-    e.dataTransfer.setData('text/plain', '');
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("text/plain", "");
+    e.dataTransfer.effectAllowed = "move";
   };
 
   const isPage = /^src\/app\/[^/]+\/page\.tsx$/.test(item.sourcePath);
@@ -57,7 +67,12 @@ export default function ComponentPreviewCard({ item, onPageContextMenu }: Compon
       draggable
       onDragStart={handleDragStart}
       onDoubleClick={() => focusNode(item.id)}
-      onContextMenu={isPage && slug && onPageContextMenu ? (e) => onPageContextMenu(e, { id: item.id, label: item.label, slug }) : undefined}
+      onContextMenu={
+        isPage && slug && onPageContextMenu
+          ? (e) =>
+              onPageContextMenu(e, { id: item.id, label: item.label, slug })
+          : undefined
+      }
       className="group cursor-grab active:cursor-grabbing select-none"
       title={`Drag ${item.label} onto canvas`}
     >

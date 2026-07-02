@@ -1,18 +1,25 @@
-'use client';
+import {
+  useEffect,
+  useRef,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
+import type { Node } from "@xyflow/react";
+import { usePlaygroundDrawStore } from "../stores/playground-draw-store";
+import { createNewStroke, type DrawStroke } from "../lib/draw-types";
+import type { ShapeKind } from "../nodes/ShapeNode";
 
-import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import type { Node } from '@xyflow/react';
-import { usePlaygroundDrawStore } from '../stores/playground-draw-store';
-import { createNewStroke, type DrawStroke } from '../lib/draw-types';
-import type { ShapeKind } from '../nodes/ShapeNode';
-
-type CanvasTool = 'select' | 'text' | 'draw' | 'shape';
+type CanvasTool = "select" | "text" | "draw" | "shape";
 
 interface UseCanvasDrawToolParams {
   /** Current canvas tool — the hook's listeners only arm while this is 'draw'/'shape'. */
   activeTool: CanvasTool;
   reactFlowWrapper: RefObject<HTMLDivElement | null>;
-  screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number };
+  screenToFlowPosition: (pos: { x: number; y: number }) => {
+    x: number;
+    y: number;
+  };
   /** Selected annotation-shape kind for the drag-to-draw shape tool. */
   shapeKind: ShapeKind;
   setCanvasDrawings: Dispatch<SetStateAction<DrawStroke[]>>;
@@ -44,20 +51,20 @@ export function useCanvasDrawTool({
 }: UseCanvasDrawToolParams) {
   // Freehand drawing on empty canvas.
   useEffect(() => {
-    if (activeTool !== 'draw') return;
+    if (activeTool !== "draw") return;
 
     const wrapper = reactFlowWrapper.current;
     if (!wrapper) return;
 
     let currentStrokeId: string | null = null;
     let drawing = false;
-    let points: DrawStroke['points'] = [];
+    let points: DrawStroke["points"] = [];
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
-      const pane = wrapper.querySelector('.react-flow__pane');
+      const pane = wrapper.querySelector(".react-flow__pane");
       if (!pane?.contains(e.target as globalThis.Node)) return;
-      if ((e.target as Element).closest('.react-flow__node')) return;
+      if ((e.target as Element).closest(".react-flow__node")) return;
 
       drawing = true;
       const pt = screenToFlowPosition({ x: e.clientX, y: e.clientY });
@@ -97,13 +104,13 @@ export function useCanvasDrawTool({
       points = [];
     };
 
-    wrapper.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('pointerup', onPointerUp);
+    wrapper.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerup", onPointerUp);
     return () => {
-      wrapper.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
+      wrapper.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
     };
   }, [activeTool, screenToFlowPosition, reactFlowWrapper, setCanvasDrawings]);
 
@@ -116,7 +123,7 @@ export function useCanvasDrawTool({
   }, [shapeKind]);
 
   useEffect(() => {
-    if (activeTool !== 'shape') return;
+    if (activeTool !== "shape") return;
     const wrapper = reactFlowWrapper.current;
     if (!wrapper) return;
 
@@ -127,16 +134,16 @@ export function useCanvasDrawTool({
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
-      const pane = wrapper.querySelector('.react-flow__pane');
+      const pane = wrapper.querySelector(".react-flow__pane");
       if (!pane?.contains(e.target as globalThis.Node)) return;
-      if ((e.target as Element).closest('.react-flow__node')) return;
+      if ((e.target as Element).closest(".react-flow__node")) return;
 
       drawing = true;
       startFlow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       startScreen = { x: e.clientX, y: e.clientY };
-      previewEl = document.createElement('div');
+      previewEl = document.createElement("div");
       previewEl.style.cssText =
-        'position:fixed;z-index:9999;pointer-events:none;border:2px dashed #1e9bff;background:rgba(30,155,255,0.06);border-radius:4px;';
+        "position:fixed;z-index:9999;pointer-events:none;border:2px dashed #1e9bff;background:rgba(30,155,255,0.06);border-radius:4px;";
       previewEl.style.left = `${e.clientX}px`;
       previewEl.style.top = `${e.clientY}px`;
       document.body.appendChild(previewEl);
@@ -166,35 +173,44 @@ export function useCanvasDrawTool({
 
       // Click without meaningful drag → drop a sensible default-sized shape.
       if (w < 8 && h < 8) {
-        w = kind === 'line' ? 160 : 140;
-        h = kind === 'line' ? 60 : 90;
+        w = kind === "line" ? 160 : 140;
+        h = kind === "line" ? 60 : 90;
         x = startFlow.x;
         y = startFlow.y;
       }
 
       const newNode: Node = {
         id: getNodeId(),
-        type: 'shape',
+        type: "shape",
         position: { x, y },
         width: Math.max(w, 12),
-        height: Math.max(h, kind === 'line' ? 1 : 12),
+        height: Math.max(h, kind === "line" ? 1 : 12),
         selected: true,
         data: { shape: kind, autofocus: true },
       };
       startFlow = null;
       startScreen = null;
-      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })).concat(newNode));
-      setActiveTool('select');
+      setNodes((nds) =>
+        nds.map((n) => ({ ...n, selected: false })).concat(newNode),
+      );
+      setActiveTool("select");
     };
 
-    wrapper.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('pointerup', onPointerUp);
+    wrapper.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerup", onPointerUp);
     return () => {
-      wrapper.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
+      wrapper.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
       if (previewEl) previewEl.remove();
     };
-  }, [activeTool, screenToFlowPosition, getNodeId, setNodes, reactFlowWrapper, setActiveTool]);
+  }, [
+    activeTool,
+    screenToFlowPosition,
+    getNodeId,
+    setNodes,
+    reactFlowWrapper,
+    setActiveTool,
+  ]);
 }

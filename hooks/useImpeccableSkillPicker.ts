@@ -1,13 +1,14 @@
-'use client';
-
-import { useState, useMemo, useCallback } from 'react';
-import type { PlaygroundSkill } from '../skills';
-import type { InlineReferenceItemData, OnSelectItemResult } from '../ui/inline-reference';
+import { useState, useMemo, useCallback } from "react";
+import type { PlaygroundSkill } from "../skills";
+import type {
+  InlineReferenceItemData,
+  OnSelectItemResult,
+} from "../components/ui/inline-reference";
 import {
   IMPECCABLE_ITEM_ID,
   IMPECCABLE_PARENT_ITEM,
   buildImpeccableCommandItems,
-} from '../lib/impeccable-skill';
+} from "../lib/impeccable-skill";
 
 export interface ImpeccableDemoteState {
   pillEl: HTMLElement;
@@ -16,19 +17,21 @@ export interface ImpeccableDemoteState {
 
 export function useImpeccableSkillPicker(skills: PlaygroundSkill[]) {
   const [impeccableSubMenuOpen, setImpeccableSubMenuOpen] = useState(false);
-  const [demoteState, setDemoteState] = useState<ImpeccableDemoteState | null>(null);
+  const [demoteState, setDemoteState] = useState<ImpeccableDemoteState | null>(
+    null,
+  );
 
   const skillPickerItems = useMemo((): InlineReferenceItemData[] => {
     if (impeccableSubMenuOpen) {
-      return buildImpeccableCommandItems('');
+      return buildImpeccableCommandItems("");
     }
     const regularItems = skills
       .filter((s) => s.id !== IMPECCABLE_ITEM_ID)
       .map((s) => ({
-      id: s.id,
-      label: s.label,
-      description: s.description,
-    }));
+        id: s.id,
+        label: s.label,
+        description: s.description,
+      }));
     return [IMPECCABLE_PARENT_ITEM, ...regularItems];
   }, [impeccableSubMenuOpen, skills]);
 
@@ -36,9 +39,13 @@ export function useImpeccableSkillPicker(skills: PlaygroundSkill[]) {
     (item: InlineReferenceItemData, query: string): boolean => {
       if (impeccableSubMenuOpen) {
         const q = query.toLowerCase();
-        const desc = typeof item.description === 'string' ? item.description : '';
-        return !q || item.id.replace('impeccable:', '').includes(q) ||
-          desc.toLowerCase().includes(q);
+        const desc =
+          typeof item.description === "string" ? item.description : "";
+        return (
+          !q ||
+          item.id.replace("impeccable:", "").includes(q) ||
+          desc.toLowerCase().includes(q)
+        );
       }
       if (item.id === IMPECCABLE_ITEM_ID) return true;
       return item.label.toLowerCase().includes(query.toLowerCase());
@@ -48,7 +55,7 @@ export function useImpeccableSkillPicker(skills: PlaygroundSkill[]) {
 
   const handleSelectItem = useCallback(
     (trigger: string, item: InlineReferenceItemData): OnSelectItemResult => {
-      if (trigger !== '/') return undefined;
+      if (trigger !== "/") return undefined;
 
       if (item.id === IMPECCABLE_ITEM_ID) {
         setImpeccableSubMenuOpen(true);

@@ -1,5 +1,3 @@
-"use client";
-
 // Canvas flow-state source. Provides a unified { nodes, edges, setNodes, setEdges,
 // onNodesChange, onEdgesChange } shape so the giant PlaygroundCanvas component doesn't care
 // about the underlying state implementation.

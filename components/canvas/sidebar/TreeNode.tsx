@@ -1,14 +1,17 @@
-'use client';
-
-import { useState, type DragEvent, type MouseEvent } from 'react';
-import { ChevronRight, ChevronDown, Loader2, Component } from 'lucide-react';
-import { PageDocumentIcon } from '../../../ui/playground-nav-icons';
-import { RegistryItem, RegistryLeafItem, isGroup, isLeaf } from '../../../registry';
-import { DND_DATA_KEY } from '../../../lib/constants';
-import { slugFromSourcePath } from '../../../lib/registry-tree';
-import type { PendingChild } from '../../../app/PlaygroundClient';
-import { useFocusNode } from '../../../hooks/useFocusNode';
-import type { PageContextPayload } from './ComponentPreviewCard';
+import { useState, type DragEvent, type MouseEvent } from "react";
+import { ChevronRight, ChevronDown, Loader2, Component } from "lucide-react";
+import { PageDocumentIcon } from "../../ui/playground-nav-icons";
+import {
+  RegistryItem,
+  RegistryLeafItem,
+  isGroup,
+  isLeaf,
+} from "../../../registry";
+import { DND_DATA_KEY } from "../../../lib/constants";
+import { slugFromSourcePath } from "../../../lib/registry-tree";
+import type { PendingChild } from "../../../app/PlaygroundClient";
+import { useFocusNode } from "../../../hooks/useFocusNode";
+import type { PageContextPayload } from "./ComponentPreviewCard";
 
 interface TreeNodeProps {
   item: RegistryItem;
@@ -20,20 +23,31 @@ interface TreeNodeProps {
 }
 
 /** Recursive tree row — renders groups (expandable headers) and leaves (draggable rows). */
-export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren, parentGroupId, onPageContextMenu }: TreeNodeProps) {
+export default function TreeNode({
+  item,
+  depth = 0,
+  childrenMap,
+  pendingChildren,
+  parentGroupId,
+  onPageContextMenu,
+}: TreeNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const { focusNode } = useFocusNode();
 
-  const handleDragStart = (e: DragEvent<HTMLDivElement>, componentId: string) => {
+  const handleDragStart = (
+    e: DragEvent<HTMLDivElement>,
+    componentId: string,
+  ) => {
     e.dataTransfer.setData(DND_DATA_KEY, componentId);
-    e.dataTransfer.setData('text/plain', '');
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("text/plain", "");
+    e.dataTransfer.effectAllowed = "move";
   };
 
   if (isGroup(item)) {
-    const sortedChildren = item.id === 'pages'
-      ? [...item.children].sort((a, b) => a.label.localeCompare(b.label))
-      : item.children;
+    const sortedChildren =
+      item.id === "pages"
+        ? [...item.children].sort((a, b) => a.label.localeCompare(b.label))
+        : item.children;
     return (
       <div>
         <button
@@ -46,7 +60,9 @@ export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren
           ) : (
             <ChevronRight className="w-3.5 h-3.5 shrink-0" />
           )}
-          <span className="uppercase tracking-[0.08em] text-[10px]">{item.label}</span>
+          <span className="uppercase tracking-[0.08em] text-[10px]">
+            {item.label}
+          </span>
         </button>
         {expanded && (
           <div>
@@ -72,10 +88,14 @@ export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren
     const pending = pendingChildren.get(item.id) || [];
     // Filter out pending items that already exist as registry children (done analyzing)
     const registryChildIds = new Set(registryChildren.map((c) => c.id));
-    const activePending = pending.filter((p) => p.status !== 'done' && !registryChildIds.has(p.id));
+    const activePending = pending.filter(
+      (p) => p.status !== "done" && !registryChildIds.has(p.id),
+    );
     const hasChildren = registryChildren.length > 0 || activePending.length > 0;
 
-    const isPageEntry = parentGroupId === 'pages' || /^src\/app\/[^/]+\/page\.tsx$/.test(item.sourcePath);
+    const isPageEntry =
+      parentGroupId === "pages" ||
+      /^src\/app\/[^/]+\/page\.tsx$/.test(item.sourcePath);
 
     if (hasChildren) {
       return (
@@ -92,28 +112,39 @@ export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren
               className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
             >
               {isPageEntry ? (
-                <PageDocumentIcon className="shrink-0 text-stone-500" size={14} />
+                <PageDocumentIcon
+                  className="shrink-0 text-stone-500"
+                  size={14}
+                />
               ) : (
                 <Component className="w-3.5 h-3.5 shrink-0" />
               )}
-              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{item.label}</span>
+              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                {item.label}
+              </span>
               <button
-              onClick={() => setExpanded(!expanded)}
-              className="shrink-0 p-0 text-stone-400 hover:text-stone-600"
-            >
-              {expanded ? (
-                <ChevronDown className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5" />
-              )}
-            </button>
+                onClick={() => setExpanded(!expanded)}
+                className="shrink-0 p-0 text-stone-400 hover:text-stone-600"
+              >
+                {expanded ? (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5" />
+                )}
+              </button>
             </div>
           </div>
           {expanded && (
             <div>
               {/* Already-analyzed child components */}
               {registryChildren.map((child) => (
-                <TreeNode key={child.id} item={child} depth={depth + 1} childrenMap={childrenMap} pendingChildren={pendingChildren} />
+                <TreeNode
+                  key={child.id}
+                  item={child}
+                  depth={depth + 1}
+                  childrenMap={childrenMap}
+                  pendingChildren={pendingChildren}
+                />
               ))}
               {/* Pending child components — greyed out with spinner */}
               {activePending.map((child) => (
@@ -124,7 +155,9 @@ export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren
                   style={{ paddingLeft: `${(depth + 1) * 10 + 8}px` }}
                 >
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-300 shrink-0" />
-                  <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{child.name}</span>
+                  <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {child.name}
+                  </span>
                 </div>
               ))}
             </div>
@@ -134,14 +167,19 @@ export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren
     }
 
     // Normal leaf — no children
-    const isPage = parentGroupId === 'pages';
+    const isPage = parentGroupId === "pages";
     const slug = isPage ? slugFromSourcePath(item.sourcePath) : null;
     return (
       <div
         draggable
         onDragStart={(e) => handleDragStart(e, item.id)}
         onDoubleClick={() => focusNode(item.id)}
-        onContextMenu={isPage && slug && onPageContextMenu ? (e) => onPageContextMenu(e, { id: item.id, label: item.label, slug }) : undefined}
+        onContextMenu={
+          isPage && slug && onPageContextMenu
+            ? (e) =>
+                onPageContextMenu(e, { id: item.id, label: item.label, slug })
+            : undefined
+        }
         className="flex items-center gap-1.5 px-2 py-1.5 text-[13px] text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-2xl cursor-grab active:cursor-grabbing transition-colors group select-none"
         style={{ paddingLeft: `${depth * 10 + 8}px` }}
       >
@@ -150,7 +188,9 @@ export default function TreeNode({ item, depth = 0, childrenMap, pendingChildren
         ) : (
           <Component className="w-3.5 h-3.5 shrink-0" />
         )}
-        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{item.label}</span>
+        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+          {item.label}
+        </span>
       </div>
     );
   }

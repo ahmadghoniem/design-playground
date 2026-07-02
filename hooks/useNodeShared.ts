@@ -1,9 +1,10 @@
-'use client';
-
-import { useState, useEffect, useCallback, RefObject } from 'react';
-import { flatRegistry } from '../registry';
-import { PROPS_CACHE_TTL_MS } from '../lib/constants';
-const propsCache = new Map<string, { ts: number; props: Record<string, unknown> }>();
+import { useState, useEffect, useCallback, RefObject } from "react";
+import { flatRegistry } from "../registry";
+import { PROPS_CACHE_TTL_MS } from "../lib/constants";
+const propsCache = new Map<
+  string,
+  { ts: number; props: Record<string, unknown> }
+>();
 
 // ---------------------------------------------------------------------------
 // useAsyncProps – loads props via registryItem.getProps with caching
@@ -16,7 +17,10 @@ export interface AsyncPropsState {
 }
 
 export function useAsyncProps(registryId: string): AsyncPropsState {
-  const [resolvedProps, setResolvedProps] = useState<Record<string, unknown> | null>(null);
+  const [resolvedProps, setResolvedProps] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [isLoadingProps, setIsLoadingProps] = useState(false);
   const [propsError, setPropsError] = useState<string | null>(null);
 
@@ -50,7 +54,7 @@ export function useAsyncProps(registryId: string): AsyncPropsState {
         setResolvedProps(next);
       } catch (err) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : 'Failed to load props';
+        const msg = err instanceof Error ? err.message : "Failed to load props";
         setPropsError(msg);
         setResolvedProps(null);
       } finally {
@@ -72,11 +76,11 @@ export function useAsyncProps(registryId: string): AsyncPropsState {
 // ---------------------------------------------------------------------------
 
 export function useHtmlContent(htmlUrl: string, isHtml: boolean) {
-  const [htmlContent, setHtmlContent] = useState<string>('');
+  const [htmlContent, setHtmlContent] = useState<string>("");
 
   useEffect(() => {
     if (!isHtml || !htmlUrl) {
-      setHtmlContent('');
+      setHtmlContent("");
       return;
     }
     let cancelled = false;
@@ -86,15 +90,19 @@ export function useHtmlContent(htmlUrl: string, isHtml: boolean) {
         if (cancelled) return;
         // Dynamically import to keep the bridge module out of the initial bundle
         // when not needed (non-HTML nodes)
-        import('../lib/iframe-selection-bridge').then(({ injectBridgeScript }) => {
-          if (cancelled) return;
-          setHtmlContent(injectBridgeScript(html));
-        });
+        import("../lib/iframe-selection-bridge").then(
+          ({ injectBridgeScript }) => {
+            if (cancelled) return;
+            setHtmlContent(injectBridgeScript(html));
+          },
+        );
       })
       .catch(() => {
-        if (!cancelled) setHtmlContent('');
+        if (!cancelled) setHtmlContent("");
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [htmlUrl, isHtml]);
 
   return htmlContent;
@@ -104,13 +112,22 @@ export function useHtmlContent(htmlUrl: string, isHtml: boolean) {
 // useScrollCapture – captures wheel events when the container can scroll
 // ---------------------------------------------------------------------------
 
-export function useScrollCapture(containerRef: RefObject<HTMLDivElement | null>) {
+export function useScrollCapture(
+  containerRef: RefObject<HTMLDivElement | null>,
+) {
   const handleWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
       const container = containerRef.current;
       if (!container) return;
 
-      const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = container;
+      const {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        scrollLeft,
+        scrollWidth,
+        clientWidth,
+      } = container;
       const isScrollableY = scrollHeight > clientHeight;
       const isScrollableX = scrollWidth > clientWidth;
 
@@ -125,8 +142,12 @@ export function useScrollCapture(containerRef: RefObject<HTMLDivElement | null>)
       const isScrollingLeft = e.deltaX < 0;
 
       const shouldCapture =
-        (isScrollableY && ((isScrollingDown && canScrollDown) || (isScrollingUp && canScrollUp))) ||
-        (isScrollableX && ((isScrollingRight && canScrollRight) || (isScrollingLeft && canScrollLeft)));
+        (isScrollableY &&
+          ((isScrollingDown && canScrollDown) ||
+            (isScrollingUp && canScrollUp))) ||
+        (isScrollableX &&
+          ((isScrollingRight && canScrollRight) ||
+            (isScrollingLeft && canScrollLeft)));
 
       if (shouldCapture) {
         e.stopPropagation();

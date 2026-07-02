@@ -1,8 +1,6 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import type { PlaygroundSkill } from '../skills';
-import { SKILLS_CHANGED_EVENT } from '../lib/constants';
+import { useEffect, useState } from "react";
+import type { PlaygroundSkill } from "../skills";
+import { SKILLS_CHANGED_EVENT } from "../lib/constants";
 
 // ---------------------------------------------------------------------------
 // useSkills — shared, deduped skills fetch
@@ -19,7 +17,7 @@ let inflight: Promise<PlaygroundSkill[]> | null = null;
 function loadSkills(): Promise<PlaygroundSkill[]> {
   if (cache) return Promise.resolve(cache);
   if (inflight) return inflight;
-  inflight = fetch('/playground/api/skills')
+  inflight = fetch("/playground/api/skills")
     .then((res) => (res.ok ? res.json() : { skills: [] }))
     .then((data: { skills?: PlaygroundSkill[] }) => {
       cache = Array.isArray(data?.skills) ? data.skills : [];

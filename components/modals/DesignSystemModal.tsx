@@ -1,6 +1,4 @@
-'use client';
-
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   Download,
   CheckCircle2,
@@ -10,28 +8,32 @@ import {
   Palette,
   ChevronRight,
   LayoutGrid,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '../../ui/dialog';
-import { useDesignSystemStore } from '../../stores/design-system-store';
-import { useModelSettingsStore } from '../../stores/model-settings-store';
-import { getProvider } from '../../lib/providers/registry';
-import { resolveToken, type ParsedDesignSystem } from '../../lib/parse-design-md';
-import { useDesignSystemCli } from './design-system/useDesignSystemCli';
-import { ReadyBadge, Switch } from './design-system/cards';
-import HomeSection from './design-system/HomeSection';
-import PreviewSection from './design-system/PreviewSection';
-import EditSection from './design-system/EditSection';
-import ActionSection from './design-system/ActionSection';
-import ExportSection from './design-system/ExportSection';
-import SpecSection from './design-system/SpecSection';
+} from "../ui/dialog";
+import { useDesignSystemStore } from "../../stores/design-system-store";
+import { useModelSettingsStore } from "../../stores/model-settings-store";
+import { getProvider } from "../../lib/providers/registry";
+import {
+  resolveToken,
+  type ParsedDesignSystem,
+} from "../../lib/parse-design-md";
+import { useDesignSystemCli } from "./design-system/useDesignSystemCli";
+import { ReadyBadge, Switch } from "./design-system/cards";
+import HomeSection from "./design-system/HomeSection";
+import PreviewSection from "./design-system/PreviewSection";
+import EditSection from "./design-system/EditSection";
+import ActionSection from "./design-system/ActionSection";
+import ExportSection from "./design-system/ExportSection";
+import SpecSection from "./design-system/SpecSection";
 
-type Section = 'home' | 'preview' | 'edit' | 'check' | 'history' | 'export' | 'spec';
+type Section =
+  "home" | "preview" | "edit" | "check" | "history" | "export" | "spec";
 
 interface DesignSystemModalProps {
   open: boolean;
@@ -46,36 +48,70 @@ interface NavItem {
 }
 
 const PRIMARY_NAV: NavItem[] = [
-  { id: 'preview', label: 'Preview', description: 'See your design system', icon: LayoutGrid },
-  { id: 'edit', label: 'Edit', description: 'Update your design system', icon: FileText },
-  { id: 'check', label: 'Check', description: 'Find issues automatically', icon: CheckCircle2 },
-  { id: 'history', label: 'Changes', description: 'See what you changed', icon: GitCompare },
+  {
+    id: "preview",
+    label: "Preview",
+    description: "See your design system",
+    icon: LayoutGrid,
+  },
+  {
+    id: "edit",
+    label: "Edit",
+    description: "Update your design system",
+    icon: FileText,
+  },
+  {
+    id: "check",
+    label: "Check",
+    description: "Find issues automatically",
+    icon: CheckCircle2,
+  },
+  {
+    id: "history",
+    label: "Changes",
+    description: "See what you changed",
+    icon: GitCompare,
+  },
 ];
 
 const SECONDARY_NAV: NavItem[] = [
-  { id: 'export', label: 'Export code', icon: Download },
-  { id: 'spec', label: 'How it works', icon: BookOpen },
+  { id: "export", label: "Export code", icon: Download },
+  { id: "spec", label: "How it works", icon: BookOpen },
 ];
 
-export default function DesignSystemModal({ open, onOpenChange }: DesignSystemModalProps) {
-  const [section, setSection] = useState<Section>('home');
-  const [aiNotes, setAiNotes] = useState('');
+export default function DesignSystemModal({
+  open,
+  onOpenChange,
+}: DesignSystemModalProps) {
+  const [section, setSection] = useState<Section>("home");
+  const [aiNotes, setAiNotes] = useState("");
 
-  const injectIntoGeneration = useDesignSystemStore((s) => s.injectIntoGeneration);
-  const setInjectIntoGeneration = useDesignSystemStore((s) => s.setInjectIntoGeneration);
+  const injectIntoGeneration = useDesignSystemStore(
+    (s) => s.injectIntoGeneration,
+  );
+  const setInjectIntoGeneration = useDesignSystemStore(
+    (s) => s.setInjectIntoGeneration,
+  );
   const activeProvider = useModelSettingsStore((s) => s.activeProvider);
   const enabledModels = useModelSettingsStore(
     (s) => s.providerState[s.activeProvider]?.enabledModels ?? [],
   );
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const value = injectIntoGeneration ? '1' : '0';
+    if (typeof document === "undefined") return;
+    const value = injectIntoGeneration ? "1" : "0";
     document.cookie = `pg-design-inject=${value}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
   }, [injectIntoGeneration]);
 
   const cli = useDesignSystemCli(open);
-  const { status, statusLoading, fileContent, fileLoading, loadFile, scaffoldOnly } = cli;
+  const {
+    status,
+    statusLoading,
+    fileContent,
+    fileLoading,
+    loadFile,
+    scaffoldOnly,
+  } = cli;
 
   const ready = !!status?.installed && !!status?.fileExists;
 
@@ -83,8 +119,8 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
   // promote them to Preview the first time we know.
   useEffect(() => {
     if (!status) return;
-    if (!ready) setSection('home');
-    else if (section === 'home') setSection('preview');
+    if (!ready) setSection("home");
+    else if (section === "home") setSection("preview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, statusLoading]);
 
@@ -129,17 +165,25 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                     disabled={disabled}
                     className={`group flex items-start gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors ${
                       isActive
-                        ? 'bg-white shadow-sm text-stone-900'
+                        ? "bg-white shadow-sm text-stone-900"
                         : disabled
-                        ? 'text-stone-400 cursor-not-allowed'
-                        : 'text-stone-700 hover:bg-stone-100'
+                          ? "text-stone-400 cursor-not-allowed"
+                          : "text-stone-700 hover:bg-stone-100"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 mt-[2px] flex-shrink-0 ${
-                      isActive ? 'text-stone-800' : disabled ? 'text-stone-300' : 'text-stone-500 group-hover:text-stone-700'
-                    }`} />
+                    <Icon
+                      className={`w-4 h-4 mt-[2px] flex-shrink-0 ${
+                        isActive
+                          ? "text-stone-800"
+                          : disabled
+                            ? "text-stone-300"
+                            : "text-stone-500 group-hover:text-stone-700"
+                      }`}
+                    />
                     <div className="min-w-0">
-                      <div className="text-[12.5px] font-semibold leading-tight">{item.label}</div>
+                      <div className="text-[12.5px] font-semibold leading-tight">
+                        {item.label}
+                      </div>
                       {item.description && (
                         <div className="text-[10.5px] leading-tight text-stone-500 mt-0.5 truncate">
                           {item.description}
@@ -166,16 +210,22 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                     disabled={disabled}
                     className={`group flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-colors ${
                       isActive
-                        ? 'bg-white shadow-sm text-stone-900'
+                        ? "bg-white shadow-sm text-stone-900"
                         : disabled
-                        ? 'text-stone-400 cursor-not-allowed'
-                        : 'text-stone-700 hover:bg-stone-100'
+                          ? "text-stone-400 cursor-not-allowed"
+                          : "text-stone-700 hover:bg-stone-100"
                     }`}
                   >
-                    <span className="text-[12.5px] font-medium">{item.label}</span>
-                    <ChevronRight className={`w-3.5 h-3.5 ${
-                      disabled ? 'text-stone-300' : 'text-stone-400 group-hover:text-stone-600 group-hover:translate-x-0.5 transition-all'
-                    }`} />
+                    <span className="text-[12.5px] font-medium">
+                      {item.label}
+                    </span>
+                    <ChevronRight
+                      className={`w-3.5 h-3.5 ${
+                        disabled
+                          ? "text-stone-300"
+                          : "text-stone-400 group-hover:text-stone-600 group-hover:translate-x-0.5 transition-all"
+                      }`}
+                    />
                   </button>
                 );
               })}
@@ -183,13 +233,19 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
               {/* AI toggle row — same single-line treatment as secondary items */}
               <button
                 type="button"
-                onClick={() => ready && setInjectIntoGeneration(!injectIntoGeneration)}
+                onClick={() =>
+                  ready && setInjectIntoGeneration(!injectIntoGeneration)
+                }
                 disabled={!ready}
                 className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg transition-colors ${
-                  !ready ? 'text-stone-400 cursor-not-allowed' : 'text-stone-700 hover:bg-stone-100'
+                  !ready
+                    ? "text-stone-400 cursor-not-allowed"
+                    : "text-stone-700 hover:bg-stone-100"
                 }`}
               >
-                <span className="text-[12.5px] font-medium text-left leading-tight">Always use the DS with AI</span>
+                <span className="text-[12.5px] font-medium text-left leading-tight">
+                  Always use the DS with AI
+                </span>
                 <Switch checked={injectIntoGeneration} disabled={!ready} />
               </button>
             </nav>
@@ -203,7 +259,7 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
 
           {/* Main content */}
           <main className="flex-1 min-w-0 overflow-y-auto">
-            {section === 'home' && (
+            {section === "home" && (
               <HomeSection
                 status={status}
                 statusLoading={statusLoading}
@@ -222,16 +278,16 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                 providerLabel={getProvider(activeProvider).displayName}
               />
             )}
-            {section === 'preview' && (
+            {section === "preview" && (
               <PreviewSection
                 content={fileContent}
                 loading={fileLoading}
-                onEdit={() => setSection('edit')}
+                onEdit={() => setSection("edit")}
                 aiRunning={cli.aiRunning}
                 onAiRegenerate={generateFromCodebase}
               />
             )}
-            {section === 'edit' && (
+            {section === "edit" && (
               <EditSection
                 content={fileContent}
                 loading={fileLoading}
@@ -250,7 +306,7 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                 onAiRegenerate={generateFromCodebase}
               />
             )}
-            {section === 'check' && (
+            {section === "check" && (
               <ActionSection
                 title="Check your design system"
                 blurb="We'll scan for missing colors, broken token references, and accessibility issues like low color contrast."
@@ -262,7 +318,7 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                 successHint="Looks great — no issues found."
               />
             )}
-            {section === 'history' && (
+            {section === "history" && (
               <ActionSection
                 title="See what you changed"
                 blurb="Compare your current design system with the last saved version in git."
@@ -274,7 +330,7 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                 successHint="No changes since your last commit."
               />
             )}
-            {section === 'export' && (
+            {section === "export" && (
               <ExportSection
                 format={cli.exportFormat}
                 setFormat={cli.setExportFormat}
@@ -284,7 +340,7 @@ export default function DesignSystemModal({ open, onOpenChange }: DesignSystemMo
                 installed={!!status?.installed}
               />
             )}
-            {section === 'spec' && (
+            {section === "spec" && (
               <SpecSection
                 running={cli.specRunning}
                 result={cli.specResult}

@@ -1,7 +1,5 @@
-'use client';
-
-import { memo } from 'react';
-import { useViewport } from '@xyflow/react';
+import { memo } from "react";
+import { useViewport } from "@xyflow/react";
 
 export interface HelperLineState {
   /** Flow-space X coordinate for a vertical guide, if any. */

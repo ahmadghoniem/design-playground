@@ -1,16 +1,14 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { useState, useEffect, useCallback } from "react";
+import { RotateCcw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '../../ui/dialog';
-import { Kbd } from '../../ui/kbd';
-import { useKeybindingStore } from '../../stores/keybinding-store';
+} from "../ui/dialog";
+import { Kbd } from "../ui/kbd";
+import { useKeybindingStore } from "../../stores/keybinding-store";
 import {
   DEFAULT_KEYBINDINGS,
   formatKeyComboSegments,
@@ -18,22 +16,31 @@ import {
   getCombo,
   type KeyCombo,
   type PlaygroundAction,
-} from '../../lib/keybindings';
+} from "../../lib/keybindings";
 
 interface KeyboardShortcutsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const CATEGORIES = ['Chat', 'Iterate Dialog', 'Canvas', 'Sidebar'] as const;
+const CATEGORIES = ["Chat", "Iterate Dialog", "Canvas", "Sidebar"] as const;
 
 /** Modifier keys that can be used as hold keys */
-const MODIFIER_KEYS = ['Meta', 'Shift', 'Alt', 'Control'] as const;
+const MODIFIER_KEYS = ["Meta", "Shift", "Alt", "Control"] as const;
 
-export default function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardShortcutsModalProps) {
-  const { overrides, setKeybinding, resetKeybinding, resetAll } = useKeybindingStore();
-  const [recordingAction, setRecordingAction] = useState<PlaygroundAction | null>(null);
-  const [conflict, setConflict] = useState<{ action: PlaygroundAction; combo: KeyCombo; conflictsWith: PlaygroundAction[] } | null>(null);
+export default function KeyboardShortcutsModal({
+  open,
+  onOpenChange,
+}: KeyboardShortcutsModalProps) {
+  const { overrides, setKeybinding, resetKeybinding, resetAll } =
+    useKeybindingStore();
+  const [recordingAction, setRecordingAction] =
+    useState<PlaygroundAction | null>(null);
+  const [conflict, setConflict] = useState<{
+    action: PlaygroundAction;
+    combo: KeyCombo;
+    conflictsWith: PlaygroundAction[];
+  } | null>(null);
 
   // Check if the recording action is a hold-type shortcut
   const recordingDef = recordingAction
@@ -70,15 +77,19 @@ export default function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardS
 
       const conflicts = findConflicts(recordingAction, combo);
       if (conflicts.length > 0) {
-        setConflict({ action: recordingAction, combo, conflictsWith: conflicts });
+        setConflict({
+          action: recordingAction,
+          combo,
+          conflictsWith: conflicts,
+        });
       } else {
         setKeybinding(recordingAction, combo);
         setRecordingAction(null);
       }
     };
 
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
   }, [recordingAction, isHoldRecording, setKeybinding]);
 
   // Reset recording state when modal closes
@@ -106,7 +117,9 @@ export default function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardS
   }, []);
 
   const getLabel = (action: PlaygroundAction): string => {
-    return DEFAULT_KEYBINDINGS.find((d) => d.action === action)?.label ?? action;
+    return (
+      DEFAULT_KEYBINDINGS.find((d) => d.action === action)?.label ?? action
+    );
   };
 
   const isOverridden = (action: PlaygroundAction): boolean => {
@@ -127,7 +140,9 @@ export default function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardS
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-1">
           {CATEGORIES.map((category) => {
-            const bindings = DEFAULT_KEYBINDINGS.filter((d) => d.category === category);
+            const bindings = DEFAULT_KEYBINDINGS.filter(
+              (d) => d.category === category,
+            );
             if (bindings.length === 0) return null;
 
             return (
@@ -147,14 +162,20 @@ export default function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardS
                         className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-stone-50 transition-colors group"
                       >
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-stone-700">{def.label}</span>
-                          <span className="text-[10px] text-stone-400">{def.description}</span>
+                          <span className="text-xs text-stone-700">
+                            {def.label}
+                          </span>
+                          <span className="text-[10px] text-stone-400">
+                            {def.description}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-1.5">
                           {isRecording ? (
                             <span className="text-[10px] text-amber-600 font-medium animate-pulse">
-                              {def.defaultCombo.hold ? 'Press a modifier key...' : 'Press keys...'}
+                              {def.defaultCombo.hold
+                                ? "Press a modifier key..."
+                                : "Press keys..."}
                             </span>
                           ) : (
                             <button
@@ -194,8 +215,9 @@ export default function KeyboardShortcutsModal({ open, onOpenChange }: KeyboardS
         {conflict && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-1">
             <p className="text-xs text-amber-800">
-              This shortcut conflicts with <strong>{getLabel(conflict.conflictsWith[0])}</strong>.
-              Override it?
+              This shortcut conflicts with{" "}
+              <strong>{getLabel(conflict.conflictsWith[0])}</strong>. Override
+              it?
             </p>
             <div className="flex gap-2 mt-2">
               <button

@@ -1,8 +1,10 @@
-'use client';
+import {
+  getStrokeOpacity,
+  pointsToSvgPath,
+  type DrawStroke,
+} from "../../lib/draw-types";
 
-import { getStrokeOpacity, pointsToSvgPath, type DrawStroke } from '../../lib/draw-types';
-
-const SELECTED_STROKE_COLOR = '#2563eb';
+const SELECTED_STROKE_COLOR = "#2563eb";
 
 interface DrawStrokePathsProps {
   strokes: DrawStroke[];
@@ -32,7 +34,9 @@ export function DrawStrokePaths({
     <>
       {strokes.map((stroke) => {
         const d = pointsToSvgPath(stroke.points, width, height, !!normalized);
-        const isSelected = stroke.id === selectedStrokeId || (selectedStrokeIds?.has(stroke.id) ?? false);
+        const isSelected =
+          stroke.id === selectedStrokeId ||
+          (selectedStrokeIds?.has(stroke.id) ?? false);
         const hitWidth = Math.max(stroke.width + 14, 16);
         const strokeOpacity = isSelected ? 1 : getStrokeOpacity(stroke);
 
@@ -47,8 +51,8 @@ export function DrawStrokePaths({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="cursor-pointer nodrag nowheel nopan"
-                {...(canvasStrokePick ? { 'data-canvas-draw-stroke': '' } : {})}
-                style={{ pointerEvents: 'stroke' }}
+                {...(canvasStrokePick ? { "data-canvas-draw-stroke": "" } : {})}
+                style={{ pointerEvents: "stroke" }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -65,7 +69,7 @@ export function DrawStrokePaths({
               strokeOpacity={strokeOpacity}
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ pointerEvents: 'none' }}
+              style={{ pointerEvents: "none" }}
             />
           </g>
         );

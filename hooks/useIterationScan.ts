@@ -1,16 +1,21 @@
-'use client';
-
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import type { Edge, Node } from '@xyflow/react';
-import type { GenerationInfo } from '../lib/canvas-persistence';
-import { getIterationKeysOnCanvas } from '../lib/canvas-persistence';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import type { Edge, Node } from "@xyflow/react";
+import type { GenerationInfo } from "../lib/canvas-persistence";
+import { getIterationKeysOnCanvas } from "../lib/canvas-persistence";
 import {
   isInExpectedBatch,
   resolveIterationPosition,
   findParentNode,
   findIterationNodeByFilename,
-} from '../lib/iteration-scan';
-import type { GenerationCoordination } from './useGenerationCoordination';
+} from "../lib/iteration-scan";
+import type { GenerationCoordination } from "./useGenerationCoordination";
 import {
   ITERATION_PROMPT_COPIED_EVENT,
   ITERATION_FETCH_EVENT,
@@ -23,7 +28,7 @@ import {
   JSX_ID_PREFIX,
   type JsxComponentInfo,
   type ComponentSize,
-} from '../lib/constants';
+} from "../lib/constants";
 
 /** Poll interval while a generation is active (SSE fallback). */
 const GENERATION_POLL_INTERVAL_MS = 4000;
@@ -100,18 +105,24 @@ export function useIterationScan({
       }
       setIsScanning(true);
       try {
-        const info = scanContext !== undefined ? scanContext : coord.getGenerationInfo();
+        const info =
+          scanContext !== undefined ? scanContext : coord.getGenerationInfo();
         const canvasIterationKeys = getIterationKeysOnCanvas(coord.getNodes());
 
-        if (info?.renderMode === 'html' && info.htmlFolder) {
+        if (info?.renderMode === "html" && info.htmlFolder) {
           const htmlFolder = info.htmlFolder;
           try {
-            const htmlResponse = await fetch('/playground/api/html-pages');
+            const htmlResponse = await fetch("/playground/api/html-pages");
             if (htmlResponse.ok) {
               const { pages } = (await htmlResponse.json()) as {
-                pages: { folder: string; iterations: { folder: string; number: number }[] }[];
+                pages: {
+                  folder: string;
+                  iterations: { folder: string; number: number }[];
+                }[];
               };
-              const page = pages.find((p: { folder: string }) => p.folder === htmlFolder);
+              const page = pages.find(
+                (p: { folder: string }) => p.folder === htmlFolder,
+              );
               if (page) {
                 const currentNodes = coord.getNodes();
                 const existingHtmlKeys = canvasIterationKeys;
@@ -133,12 +144,14 @@ export function useIterationScan({
                   const newKnownFilenames: string[] = [];
 
                   newHtmlIterations.sort(
-                    (a: { number: number }, b: { number: number }) => a.number - b.number,
+                    (a: { number: number }, b: { number: number }) =>
+                      a.number - b.number,
                   );
 
                   for (const iter of newHtmlIterations) {
                     const sourceNodeId = info.parentNodeId
-                      ? currentNodes.find((n) => n.id === info.parentNodeId)?.id || undefined
+                      ? currentNodes.find((n) => n.id === info.parentNodeId)
+                          ?.id || undefined
                       : undefined;
                     const sourceNode = sourceNodeId
                       ? currentNodes.find((n) => n.id === sourceNodeId) ||
@@ -155,20 +168,21 @@ export function useIterationScan({
                     );
 
                     const nodeId = getNodeId();
-                    const parentSize = sourceNode?.data?.size as ComponentSize | undefined;
+                    const parentSize = sourceNode?.data?.size as
+                      ComponentSize | undefined;
 
                     newNodes.push({
                       id: nodeId,
-                      type: 'iteration',
+                      type: "iteration",
                       position,
                       data: {
                         componentName: htmlFolder,
                         iterationNumber: iter.number,
                         filename: `${htmlFolder}/iteration-${iter.number}`,
-                        description: '',
+                        description: "",
                         parentNodeId: sourceNodeId || undefined,
                         parentSize,
-                        renderMode: 'html',
+                        renderMode: "html",
                         htmlFolder,
                         htmlIterationFolder: iter.folder,
                         onDelete: handleIterationDelete,
@@ -181,7 +195,7 @@ export function useIterationScan({
                         id: `edge_${sourceNodeId}_${nodeId}`,
                         source: sourceNodeId,
                         target: nodeId,
-                        type: 'smoothstep',
+                        type: "smoothstep",
                         animated: false,
                         style: ITERATION_EDGE_STYLE,
                       });
@@ -207,15 +221,20 @@ export function useIterationScan({
               }
             }
           } catch (error) {
-            console.error('Error scanning HTML iterations:', error);
+            console.error("Error scanning HTML iterations:", error);
           }
           return;
         }
 
-        if (info?.renderMode === 'jsx' && info.jsxFile) {
-          const baseFilename = info.jsxFile.replace(/\.iteration-\d+\.tsx$/, '.tsx');
+        if (info?.renderMode === "jsx" && info.jsxFile) {
+          const baseFilename = info.jsxFile.replace(
+            /\.iteration-\d+\.tsx$/,
+            ".tsx",
+          );
           try {
-            const jsxResponse = await fetch('/playground/api/oncanvas-components');
+            const jsxResponse = await fetch(
+              "/playground/api/oncanvas-components",
+            );
             if (jsxResponse.ok) {
               const { components } = (await jsxResponse.json()) as {
                 components: JsxComponentInfo[];
@@ -240,11 +259,14 @@ export function useIterationScan({
                   const newEdges: Edge[] = [];
                   const newKnownFilenames: string[] = [];
 
-                  newJsxIterations.sort((a, b) => a.iterationNumber - b.iterationNumber);
+                  newJsxIterations.sort(
+                    (a, b) => a.iterationNumber - b.iterationNumber,
+                  );
 
                   for (const it of newJsxIterations) {
                     const sourceNodeId = info.parentNodeId
-                      ? currentNodes.find((n) => n.id === info.parentNodeId)?.id || undefined
+                      ? currentNodes.find((n) => n.id === info.parentNodeId)
+                          ?.id || undefined
                       : undefined;
                     const sourceNode = sourceNodeId
                       ? currentNodes.find((n) => n.id === sourceNodeId) ||
@@ -261,24 +283,25 @@ export function useIterationScan({
                     );
 
                     const nodeId = getNodeId();
-                    const parentSize = sourceNode?.data?.size as ComponentSize | undefined;
+                    const parentSize = sourceNode?.data?.size as
+                      ComponentSize | undefined;
                     const registryId =
                       (sourceNode?.data?.componentId as string | undefined) ??
                       `${JSX_ID_PREFIX}${comp.label}`;
 
                     newNodes.push({
                       id: nodeId,
-                      type: 'iteration',
+                      type: "iteration",
                       position,
                       data: {
                         componentName: comp.label,
                         iterationNumber: it.iterationNumber,
                         filename: it.filename,
-                        description: '',
+                        description: "",
                         parentNodeId: sourceNodeId || undefined,
                         parentSize,
                         registryId,
-                        renderMode: 'jsx',
+                        renderMode: "jsx",
                         jsxFile: it.filename,
                         onDelete: handleIterationDelete,
                         onAdopt: handleIterationAdopt,
@@ -290,7 +313,7 @@ export function useIterationScan({
                         id: `edge_${sourceNodeId}_${nodeId}`,
                         source: sourceNodeId,
                         target: nodeId,
-                        type: 'smoothstep',
+                        type: "smoothstep",
                         animated: false,
                         style: ITERATION_EDGE_STYLE,
                       });
@@ -316,18 +339,23 @@ export function useIterationScan({
               }
             }
           } catch (error) {
-            console.error('Error scanning JSX iterations:', error);
+            console.error("Error scanning JSX iterations:", error);
           }
           return;
         }
 
-        const response = await fetch('/playground/api/iterations');
+        const response = await fetch("/playground/api/iterations");
         if (!response.ok) {
-          console.error('[Playground] Failed to fetch iterations:', response.status);
+          console.error(
+            "[Playground] Failed to fetch iterations:",
+            response.status,
+          );
           return;
         }
 
-        const { iterations } = (await response.json()) as { iterations: IterationFile[] };
+        const { iterations } = (await response.json()) as {
+          iterations: IterationFile[];
+        };
 
         const currentNodes = coord.getNodes();
         const existingFilenames = getIterationKeysOnCanvas(currentNodes);
@@ -336,10 +364,11 @@ export function useIterationScan({
           (iter: IterationFile) => !existingFilenames.has(iter.filename),
         );
         if (info?.startNumber != null && info.iterationCount) {
-          const cleanName = info.componentName.replace(/\s+/g, '');
+          const cleanName = info.componentName.replace(/\s+/g, "");
           newIterations = newIterations.filter(
             (iter) =>
-              iter.componentName === cleanName && isInExpectedBatch(iter.iterationNumber, info),
+              iter.componentName === cleanName &&
+              isInExpectedBatch(iter.iterationNumber, info),
           );
         }
 
@@ -359,7 +388,10 @@ export function useIterationScan({
           let sourceNodeId: string | undefined;
 
           if (iter.sourceIteration) {
-            const sourceIterNode = findIterationNodeByFilename(coord.getNodes(), iter.sourceIteration);
+            const sourceIterNode = findIterationNodeByFilename(
+              coord.getNodes(),
+              iter.sourceIteration,
+            );
             if (sourceIterNode) {
               sourceNodeId = sourceIterNode.id;
             } else {
@@ -368,7 +400,11 @@ export function useIterationScan({
           }
 
           if (!sourceNodeId) {
-            const parentNode = findParentNode(coord.getNodes(), iter.componentName, iter.parentId);
+            const parentNode = findParentNode(
+              coord.getNodes(),
+              iter.componentName,
+              iter.parentId,
+            );
             if (parentNode) {
               sourceNodeId = parentNode.id;
             }
@@ -393,7 +429,7 @@ export function useIterationScan({
           } else if (sourceNode) {
             const srcW =
               sourceNode.measured?.width ??
-              (sourceNode.type === 'component'
+              (sourceNode.type === "component"
                 ? DEFAULT_COMPONENT_NODE_WIDTH
                 : DEFAULT_ITERATION_NODE_WIDTH);
             position = {
@@ -408,14 +444,15 @@ export function useIterationScan({
           const nodeId = getNodeId();
           pendingNodesByFilename.set(iter.filename, nodeId);
 
-          const parentSize = sourceNode?.data?.size as ComponentSize | undefined;
+          const parentSize = sourceNode?.data?.size as
+            ComponentSize | undefined;
           const inheritedRegistryId =
             (sourceNode?.data?.componentId as string | undefined) ??
             (sourceNode?.data?.registryId as string | undefined);
 
           newNodes.push({
             id: nodeId,
-            type: 'iteration',
+            type: "iteration",
             position,
             data: {
               componentName: iter.componentName,
@@ -435,7 +472,7 @@ export function useIterationScan({
               id: `edge_${sourceNodeId}_${nodeId}`,
               source: sourceNodeId,
               target: nodeId,
-              type: 'smoothstep',
+              type: "smoothstep",
               animated: false,
               style: ITERATION_EDGE_STYLE,
             });
@@ -461,7 +498,7 @@ export function useIterationScan({
           }
         }
       } catch (error) {
-        console.error('Error scanning iterations:', error);
+        console.error("Error scanning iterations:", error);
       } finally {
         setIsScanning(false);
         const { queued, override } = coord.releaseScanLock();
@@ -508,7 +545,10 @@ export function useIterationScan({
     window.addEventListener(ITERATION_PROMPT_COPIED_EVENT, handlePromptCopied);
     window.addEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
     return () => {
-      window.removeEventListener(ITERATION_PROMPT_COPIED_EVENT, handlePromptCopied);
+      window.removeEventListener(
+        ITERATION_PROMPT_COPIED_EVENT,
+        handlePromptCopied,
+      );
       window.removeEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
       stopPolling();
     };

@@ -1,6 +1,4 @@
-'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // useProjectContext
@@ -16,20 +14,25 @@ export interface ProjectContext {
 }
 
 const DEFAULT_PROJECT_CONTEXT: ProjectContext = {
-  projectName: 'project',
-  projectPath: '',
+  projectName: "project",
+  projectPath: "",
 };
 
 export function useProjectContext(): ProjectContext {
-  const [projectContext, setProjectContext] = useState<ProjectContext>(DEFAULT_PROJECT_CONTEXT);
+  const [projectContext, setProjectContext] = useState<ProjectContext>(
+    DEFAULT_PROJECT_CONTEXT,
+  );
 
   useEffect(() => {
     (async () => {
       try {
-        const response = await fetch('/playground/api/open-in');
+        const response = await fetch("/playground/api/open-in");
         if (!response.ok) return;
         const data = await response.json();
-        if (typeof data?.projectName === 'string' && typeof data?.projectPath === 'string') {
+        if (
+          typeof data?.projectName === "string" &&
+          typeof data?.projectPath === "string"
+        ) {
           setProjectContext({
             projectName: data.projectName,
             projectPath: data.projectPath,

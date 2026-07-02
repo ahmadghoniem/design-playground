@@ -1,7 +1,5 @@
-'use client';
-
-import { memo } from 'react';
-import { DRAG_GHOST_GAP } from '../lib/constants';
+import { memo } from "react";
+import { DRAG_GHOST_GAP } from "../lib/constants";
 
 interface DragGhostNodeProps {
   data: {
@@ -44,9 +42,9 @@ function DragGhostNode({ data }: DragGhostNodeProps) {
       style={{
         width: totalWidth,
         height: totalHeight,
-        borderColor: '#0B99FF',
-        background: 'rgba(11, 153, 255, 0.04)',
-        position: 'relative',
+        borderColor: "#0B99FF",
+        background: "rgba(11, 153, 255, 0.04)",
+        position: "relative",
       }}
     >
       {/* Inner grid lines and labels — offset by padding */}
@@ -63,13 +61,13 @@ function DragGhostNode({ data }: DragGhostNodeProps) {
               top: y,
               width: cellWidth,
               height: cellHeight,
-              borderColor: 'rgba(11, 153, 255, 0.7)',
-              background: 'rgba(11, 153, 255, 0.02)',
+              borderColor: "rgba(11, 153, 255, 0.7)",
+              background: "rgba(11, 153, 255, 0.02)",
             }}
           >
             <span
               className="text-xl font-medium select-none"
-              style={{ color: 'rgba(11, 153, 255, 0.45)' }}
+              style={{ color: "rgba(11, 153, 255, 0.45)" }}
             >
               Create variant {cell.variantNumber}
             </span>

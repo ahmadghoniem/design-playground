@@ -1,8 +1,6 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
-import { IMPECCABLE_COMMANDS } from '../lib/impeccable-skill';
-import type { ImpeccableDemoteState } from '../hooks/useImpeccableSkillPicker';
+import { useState, useEffect, useCallback } from "react";
+import { IMPECCABLE_COMMANDS } from "../../lib/impeccable-skill";
+import type { ImpeccableDemoteState } from "../../hooks/useImpeccableSkillPicker";
 
 interface ImpeccableDemoteMenuProps {
   demoteState: ImpeccableDemoteState;
@@ -23,20 +21,20 @@ export function ImpeccableDemoteMenu({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         e.stopPropagation();
         setActiveIndex((i) => Math.min(i + 1, IMPECCABLE_COMMANDS.length - 1));
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
         e.stopPropagation();
         setActiveIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
+      } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
         e.stopPropagation();
         const cmd = IMPECCABLE_COMMANDS[activeIndex];
         if (cmd) onSelect(cmd.id);
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         e.stopPropagation();
         onClose();
       }
@@ -45,8 +43,8 @@ export function ImpeccableDemoteMenu({
   );
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [handleKeyDown]);
 
   useEffect(() => {
@@ -56,8 +54,8 @@ export function ImpeccableDemoteMenu({
         onClose();
       }
     };
-    window.addEventListener('mousedown', handleMouseDown);
-    return () => window.removeEventListener('mousedown', handleMouseDown);
+    window.addEventListener("mousedown", handleMouseDown);
+    return () => window.removeEventListener("mousedown", handleMouseDown);
   }, [onClose]);
 
   return (
@@ -90,8 +88,12 @@ export function ImpeccableDemoteMenu({
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left data-[selected=true]:bg-stone-100"
           >
             <span className="impeccable-cmd-category">{cmd.category}</span>
-            <span className="text-[13px] font-medium text-stone-800">{cmd.id}</span>
-            <span className="ml-1 text-[11px] text-stone-400 truncate">{cmd.description}</span>
+            <span className="text-[13px] font-medium text-stone-800">
+              {cmd.id}
+            </span>
+            <span className="ml-1 text-[11px] text-stone-400 truncate">
+              {cmd.description}
+            </span>
           </button>
         ))}
       </div>

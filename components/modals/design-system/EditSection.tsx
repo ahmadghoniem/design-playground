@@ -1,7 +1,5 @@
-'use client';
-
-import { Loader2, Check, RotateCcw } from 'lucide-react';
-import { SectionShell } from './cards';
+import { Loader2, Check, RotateCcw } from "lucide-react";
+import { SectionShell } from "./cards";
 
 export default function EditSection({
   content,
@@ -32,7 +30,10 @@ export default function EditSection({
 }) {
   if (!fileExists && !loading) {
     return (
-      <SectionShell title="Edit your design system" blurb="No design system file yet — create one to get started.">
+      <SectionShell
+        title="Edit your design system"
+        blurb="No design system file yet — create one to get started."
+      >
         <button
           onClick={onScaffold}
           className="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-white bg-stone-900 hover:bg-black rounded-lg transition-colors"
@@ -51,8 +52,11 @@ export default function EditSection({
             Edit your design system
           </h2>
           <p className="mt-1 text-[12.5px] text-stone-600 leading-relaxed">
-            Tokens (colors, fonts, spacing) live in the <code className="font-mono text-[11px] bg-stone-100 px-1 py-0.5 rounded">---</code> block at the top.
-            Below it, write notes in plain English.
+            Tokens (colors, fonts, spacing) live in the{" "}
+            <code className="font-mono text-[11px] bg-stone-100 px-1 py-0.5 rounded">
+              ---
+            </code>{" "}
+            block at the top. Below it, write notes in plain English.
           </p>
         </div>
         <button
@@ -61,7 +65,11 @@ export default function EditSection({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-stone-700 bg-white border border-stone-200 hover:bg-stone-100 hover:border-stone-300 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
           title="Ask AI to rewrite DESIGN.md from your current codebase"
         >
-          {aiRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+          {aiRunning ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <RotateCcw className="w-3.5 h-3.5" />
+          )}
           Regenerate with AI
         </button>
       </div>

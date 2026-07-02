@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useOnViewportChange, useReactFlow } from "@xyflow/react";
 import { type DrawStroke } from "../../lib/draw-types";

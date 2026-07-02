@@ -1,5 +1,5 @@
-import type { Segment } from '../ui/inline-reference';
-import type { InlineReferenceItemData } from '../ui/inline-reference';
+import type { Segment } from '../components/ui/inline-reference';
+import type { InlineReferenceItemData } from '../components/ui/inline-reference';
 
 /** Stable ID for the parent impeccable item in the skills picker. */
 export const IMPECCABLE_ITEM_ID = 'impeccable';

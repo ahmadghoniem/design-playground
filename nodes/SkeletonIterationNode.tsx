@@ -1,8 +1,6 @@
-'use client';
-
-import { memo } from 'react';
-import { Loader2 } from 'lucide-react';
-import { NodeLabel } from './shared/NodeLabel';
+import { memo } from "react";
+import { Loader2 } from "lucide-react";
+import { NodeLabel } from "./shared/NodeLabel";
 
 interface SkeletonIterationNodeProps {
   data: {
@@ -24,8 +22,12 @@ function SkeletonIterationNode({ data }: SkeletonIterationNodeProps) {
       className="flex flex-col"
       style={
         hasExplicitSize
-          ? { width: data.width, height: data.height, fontFamily: 'var(--pg-font-sans)' }
-          : { minWidth: 280, fontFamily: 'var(--pg-font-sans)' }
+          ? {
+              width: data.width,
+              height: data.height,
+              fontFamily: "var(--pg-font-sans)",
+            }
+          : { minWidth: 280, fontFamily: "var(--pg-font-sans)" }
       }
     >
       {/* Top bar — mirrors ComponentNode's label bar */}
@@ -49,9 +51,18 @@ function SkeletonIterationNode({ data }: SkeletonIterationNodeProps) {
       >
         <div className="w-full h-full p-4 flex flex-col justify-center gap-3">
           <div className="h-3 bg-stone-100 rounded-md w-3/4 animate-pulse" />
-          <div className="h-3 bg-stone-100 rounded-md w-1/2 animate-pulse" style={{ animationDelay: '150ms' }} />
-          <div className="h-8 bg-stone-100 rounded-md w-full animate-pulse" style={{ animationDelay: '300ms' }} />
-          <div className="h-3 bg-stone-100 rounded-md w-2/3 animate-pulse" style={{ animationDelay: '450ms' }} />
+          <div
+            className="h-3 bg-stone-100 rounded-md w-1/2 animate-pulse"
+            style={{ animationDelay: "150ms" }}
+          />
+          <div
+            className="h-8 bg-stone-100 rounded-md w-full animate-pulse"
+            style={{ animationDelay: "300ms" }}
+          />
+          <div
+            className="h-3 bg-stone-100 rounded-md w-2/3 animate-pulse"
+            style={{ animationDelay: "450ms" }}
+          />
         </div>
       </div>
     </div>

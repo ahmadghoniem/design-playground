@@ -1,8 +1,17 @@
-'use client';
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Plus, Search, Wrench, Package, Link2, X, Trash2, ExternalLink, ArrowUpCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Loader2,
+  Plus,
+  Search,
+  Wrench,
+  Package,
+  Link2,
+  X,
+  Trash2,
+  ExternalLink,
+  ArrowUpCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '../../ui/dialog';
-import { getSkillBubbleStyle } from '../../ui/skill-bubble-helpers';
-import { FEATURED_SKILLS, type FeaturedSkill } from '../../lib/featured-skills';
-import type { PlaygroundSkill } from '../../skills';
+} from "../ui/dialog";
+import { getSkillBubbleStyle } from "../ui/skill-bubble-helpers";
+import { FEATURED_SKILLS, type FeaturedSkill } from "../../lib/featured-skills";
+import type { PlaygroundSkill } from "../../skills";
 
 interface SkillsCatalogModalProps {
   open: boolean;
@@ -22,10 +31,10 @@ interface SkillsCatalogModalProps {
   onSkillsChanged?: () => void;
 }
 
-type Tab = 'installed' | 'browse' | 'url';
+type Tab = "installed" | "browse" | "url";
 
 interface InstalledSkill extends PlaygroundSkill {
-  source?: 'builtin' | 'user';
+  source?: "builtin" | "user";
 }
 
 interface PreviewedSkill {
@@ -61,7 +70,9 @@ function SkillRow({
       <span style={getSkillBubbleStyle(id, 28)} className="mt-0.5" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[13px] font-semibold text-stone-800 truncate">{name}</span>
+          <span className="text-[13px] font-semibold text-stone-800 truncate">
+            {name}
+          </span>
           {meta && (
             <span className="text-[10px] font-medium text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
               {meta}
@@ -69,7 +80,9 @@ function SkillRow({
           )}
         </div>
         {description && (
-          <p className="text-[12px] text-stone-500 leading-relaxed">{description}</p>
+          <p className="text-[12px] text-stone-500 leading-relaxed">
+            {description}
+          </p>
         )}
       </div>
       <div className="shrink-0 pt-0.5">{trailing}</div>
@@ -108,25 +121,28 @@ export default function SkillsCatalogModal({
   onOpenChange,
   onSkillsChanged,
 }: SkillsCatalogModalProps) {
-  const [tab, setTab] = useState<Tab>('browse');
+  const [tab, setTab] = useState<Tab>("browse");
   const [installed, setInstalled] = useState<InstalledSkill[]>([]);
   const [isLoadingInstalled, setIsLoadingInstalled] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
   // From URL tab
-  const [urlInput, setUrlInput] = useState('');
+  const [urlInput, setUrlInput] = useState("");
   const [urlPreview, setUrlPreview] = useState<PreviewedSkill[] | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const previewAbortRef = useRef<AbortController | null>(null);
 
-  const installedIds = useMemo(() => new Set(installed.map((s) => s.id)), [installed]);
+  const installedIds = useMemo(
+    () => new Set(installed.map((s) => s.id)),
+    [installed],
+  );
 
   const fetchInstalled = useCallback(async () => {
     setIsLoadingInstalled(true);
     try {
-      const res = await fetch('/playground/api/skills');
+      const res = await fetch("/playground/api/skills");
       const data = (await res.json()) as { skills?: InstalledSkill[] };
       if (Array.isArray(data.skills)) setInstalled(data.skills);
     } catch {
@@ -153,21 +169,24 @@ export default function SkillsCatalogModal({
       markBusy(dedupeId, true);
       const toastId = toast.loading(`Adding ${displayName}…`);
       try {
-        const res = await fetch('/playground/api/skills/add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/playground/api/skills/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ source }),
         });
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data.error || 'Failed to add skill', { id: toastId, duration: 5000 });
+          toast.error(data.error || "Failed to add skill", {
+            id: toastId,
+            duration: 5000,
+          });
           return;
         }
         toast.success(`Added ${displayName}`, { id: toastId, duration: 3000 });
         await fetchInstalled();
         onSkillsChanged?.();
       } catch {
-        toast.error('Failed to add skill', { id: toastId, duration: 5000 });
+        toast.error("Failed to add skill", { id: toastId, duration: 5000 });
       } finally {
         markBusy(dedupeId, false);
       }
@@ -180,21 +199,27 @@ export default function SkillsCatalogModal({
       markBusy(id, true);
       const toastId = toast.loading(`Updating ${displayName}…`);
       try {
-        const res = await fetch('/playground/api/skills/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/playground/api/skills/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id }),
         });
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data.error || 'Failed to update skill', { id: toastId, duration: 5000 });
+          toast.error(data.error || "Failed to update skill", {
+            id: toastId,
+            duration: 5000,
+          });
           return;
         }
-        toast.success(`${displayName} is up to date`, { id: toastId, duration: 3000 });
+        toast.success(`${displayName} is up to date`, {
+          id: toastId,
+          duration: 3000,
+        });
         await fetchInstalled();
         onSkillsChanged?.();
       } catch {
-        toast.error('Failed to update skill', { id: toastId, duration: 5000 });
+        toast.error("Failed to update skill", { id: toastId, duration: 5000 });
       } finally {
         markBusy(id, false);
       }
@@ -207,21 +232,27 @@ export default function SkillsCatalogModal({
       markBusy(skill.id, true);
       const toastId = toast.loading(`Removing ${skill.label}…`);
       try {
-        const res = await fetch('/playground/api/skills/remove', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/playground/api/skills/remove", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: skill.id }),
         });
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data.error || 'Failed to remove skill', { id: toastId, duration: 5000 });
+          toast.error(data.error || "Failed to remove skill", {
+            id: toastId,
+            duration: 5000,
+          });
           return;
         }
-        toast.success(`Removed ${skill.label}`, { id: toastId, duration: 3000 });
+        toast.success(`Removed ${skill.label}`, {
+          id: toastId,
+          duration: 3000,
+        });
         await fetchInstalled();
         onSkillsChanged?.();
       } catch {
-        toast.error('Failed to remove skill', { id: toastId, duration: 5000 });
+        toast.error("Failed to remove skill", { id: toastId, duration: 5000 });
       } finally {
         markBusy(skill.id, false);
       }
@@ -231,7 +262,7 @@ export default function SkillsCatalogModal({
 
   // Debounced preview
   useEffect(() => {
-    if (tab !== 'url') return;
+    if (tab !== "url") return;
     if (!urlInput.trim()) {
       setUrlPreview(null);
       setUrlError(null);
@@ -244,23 +275,23 @@ export default function SkillsCatalogModal({
       setIsPreviewing(true);
       setUrlError(null);
       try {
-        const res = await fetch('/playground/api/skills/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/playground/api/skills/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ source: urlInput.trim() }),
           signal: controller.signal,
         });
         const data = await res.json();
         if (!res.ok) {
           setUrlPreview(null);
-          setUrlError(data.error || 'Could not load preview');
+          setUrlError(data.error || "Could not load preview");
         } else {
           setUrlPreview(data.skills || []);
         }
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
+        if ((err as Error).name !== "AbortError") {
           setUrlPreview(null);
-          setUrlError('Could not load preview');
+          setUrlError("Could not load preview");
         }
       } finally {
         setIsPreviewing(false);
@@ -274,7 +305,7 @@ export default function SkillsCatalogModal({
 
   // Reset URL state when leaving tab
   useEffect(() => {
-    if (tab !== 'url') {
+    if (tab !== "url") {
       setUrlPreview(null);
       setUrlError(null);
     }
@@ -325,7 +356,7 @@ export default function SkillsCatalogModal({
               </DialogClose>
             </div>
             <DialogDescription>
-              Add reusable creative direction to your variations. Powered by{' '}
+              Add reusable creative direction to your variations. Powered by{" "}
               <a
                 href="https://www.npmjs.com/package/skills"
                 target="_blank"
@@ -340,27 +371,43 @@ export default function SkillsCatalogModal({
 
           {/* Tabs */}
           <div className="flex items-center gap-1 p-1 rounded-xl bg-stone-100 w-fit">
-            <TabButton active={tab === 'browse'} onClick={() => setTab('browse')} icon={Wrench}>
+            <TabButton
+              active={tab === "browse"}
+              onClick={() => setTab("browse")}
+              icon={Wrench}
+            >
               Browse
             </TabButton>
-            <TabButton active={tab === 'installed'} onClick={() => setTab('installed')} icon={Package}>
+            <TabButton
+              active={tab === "installed"}
+              onClick={() => setTab("installed")}
+              icon={Package}
+            >
               Installed
               <span className="ml-1.5 text-[10px] text-stone-500 bg-white px-1.5 py-0.5 rounded-full">
                 {installed.length}
               </span>
             </TabButton>
-            <TabButton active={tab === 'url'} onClick={() => setTab('url')} icon={Link2}>
+            <TabButton
+              active={tab === "url"}
+              onClick={() => setTab("url")}
+              icon={Link2}
+            >
               From URL
             </TabButton>
           </div>
 
           {/* Search (browse + installed only) */}
-          {tab !== 'url' && (
+          {tab !== "url" && (
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
               <input
                 type="text"
-                placeholder={tab === 'installed' ? 'Search installed skills…' : 'Search featured skills…'}
+                placeholder={
+                  tab === "installed"
+                    ? "Search installed skills…"
+                    : "Search featured skills…"
+                }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-300/50 focus:border-stone-300 transition-all"
@@ -371,7 +418,7 @@ export default function SkillsCatalogModal({
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
-          {tab === 'browse' && (
+          {tab === "browse" && (
             <BrowseTab
               groups={featuredByCategory}
               installedIds={installedIds}
@@ -381,16 +428,16 @@ export default function SkillsCatalogModal({
               totalFiltered={filteredFeatured.length}
             />
           )}
-          {tab === 'installed' && (
+          {tab === "installed" && (
             <InstalledTab
               skills={filteredInstalled}
               isLoading={isLoadingInstalled}
               busyIds={busyIds}
               onRemove={handleRemove}
-              onBrowse={() => setTab('browse')}
+              onBrowse={() => setTab("browse")}
             />
           )}
-          {tab === 'url' && (
+          {tab === "url" && (
             <FromUrlTab
               value={urlInput}
               onChange={setUrlInput}
@@ -400,11 +447,15 @@ export default function SkillsCatalogModal({
               installedIds={installedIds}
               busyIds={busyIds}
               onAdd={(p) => {
-                const installSource = p.isRootSkill ? p.source : `${p.source}@${p.skill}`;
+                const installSource = p.isRootSkill
+                  ? p.source
+                  : `${p.source}@${p.skill}`;
                 const installedId = p.isRootSkill ? p.name : p.skill;
                 handleAdd(installSource, p.name, installedId);
               }}
-              onUpdate={(p) => handleUpdate(p.isRootSkill ? p.name : p.skill, p.name)}
+              onUpdate={(p) =>
+                handleUpdate(p.isRootSkill ? p.name : p.skill, p.name)
+              }
             />
           )}
         </div>
@@ -434,8 +485,8 @@ function TabButton({
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
         active
-          ? 'bg-white text-stone-900 shadow-sm'
-          : 'text-stone-500 hover:text-stone-800'
+          ? "bg-white text-stone-900 shadow-sm"
+          : "text-stone-500 hover:text-stone-800"
       }`}
     >
       <Icon className="w-3.5 h-3.5" />
@@ -463,7 +514,7 @@ function BrowseTab({
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-[13px] text-stone-400">
-          {searchTerm ? `No results for “${searchTerm}”` : 'No featured skills'}
+          {searchTerm ? `No results for “${searchTerm}”` : "No featured skills"}
         </p>
       </div>
     );
@@ -530,7 +581,9 @@ function InstalledTab({
         <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center">
           <Package className="w-6 h-6 text-stone-400" />
         </div>
-        <p className="text-[14px] font-medium text-stone-600 text-center">No skills installed yet</p>
+        <p className="text-[14px] font-medium text-stone-600 text-center">
+          No skills installed yet
+        </p>
         <p className="text-[12px] text-stone-400 text-center max-w-[280px] leading-relaxed">
           Browse featured skills, or paste a GitHub URL to bring in your own.
         </p>
@@ -544,14 +597,18 @@ function InstalledTab({
     );
   }
 
-  const user = skills.filter((s) => s.source === 'user');
-  const builtin = skills.filter((s) => s.source !== 'user');
+  const user = skills.filter((s) => s.source === "user");
+  const builtin = skills.filter((s) => s.source !== "user");
 
   return (
     <>
       {user.length > 0 && (
         <div>
-          <SectionHeader icon={Package} label="Added by you" count={user.length} />
+          <SectionHeader
+            icon={Package}
+            label="Added by you"
+            count={user.length}
+          />
           <div className="space-y-2">
             {user.map((skill) => (
               <SkillRow
@@ -573,7 +630,11 @@ function InstalledTab({
       )}
       {builtin.length > 0 && (
         <div>
-          <SectionHeader icon={Wrench} label="Built in" count={builtin.length} />
+          <SectionHeader
+            icon={Wrench}
+            label="Built in"
+            count={builtin.length}
+          />
           <div className="space-y-2">
             {builtin.map((skill) => (
               <SkillRow
@@ -627,9 +688,11 @@ function FromUrlTab({
           className="w-full px-4 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-300/50 focus:border-stone-300 transition-all font-mono"
         />
         <p className="text-[11px] text-stone-400 mt-1.5 leading-relaxed">
-          Accepts <code className="font-mono text-stone-500">owner/repo</code>,{' '}
-          <code className="font-mono text-stone-500">owner/repo@skill</code>, a GitHub URL, or a full{' '}
-          <code className="font-mono text-stone-500">npx skills add …</code> command. Leave off the skill name to import everything in the repo.
+          Accepts <code className="font-mono text-stone-500">owner/repo</code>,{" "}
+          <code className="font-mono text-stone-500">owner/repo@skill</code>, a
+          GitHub URL, or a full{" "}
+          <code className="font-mono text-stone-500">npx skills add …</code>{" "}
+          command. Leave off the skill name to import everything in the repo.
         </p>
       </div>
 
@@ -654,7 +717,7 @@ function FromUrlTab({
             const isBusy = busyIds.has(installedId);
             return (
               <SkillRow
-                key={`${p.source}@${p.skill || '__root__'}`}
+                key={`${p.source}@${p.skill || "__root__"}`}
                 id={installedId}
                 name={p.name}
                 description={p.description}
@@ -747,4 +810,3 @@ function BusyPill({ label }: { label: string }) {
     </div>
   );
 }
-

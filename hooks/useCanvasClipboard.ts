@@ -1,8 +1,6 @@
-'use client';
-
-import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
-import type { Node } from '@xyflow/react';
-import type { GenerationCoordination } from './useGenerationCoordination';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from "react";
+import type { Node } from "@xyflow/react";
+import type { GenerationCoordination } from "./useGenerationCoordination";
 
 export interface UseCanvasClipboardParams {
   coord: GenerationCoordination;
@@ -20,11 +18,11 @@ export function useCanvasClipboard({
   const collectCopyableSelection = useCallback((): Node[] => {
     const all = coord.getNodes();
     const selected = all.filter(
-      (n) => n.selected && n.type !== 'skeleton' && n.type !== 'drag-ghost',
+      (n) => n.selected && n.type !== "skeleton" && n.type !== "drag-ghost",
     );
     const ids = new Set(selected.map((n) => n.id));
     for (const n of selected) {
-      if (n.type === 'frame') {
+      if (n.type === "frame") {
         for (const c of all) if (c.parentId === n.id) ids.add(c.id);
       }
     }
@@ -42,7 +40,9 @@ export function useCanvasClipboard({
           id: idMap.get(n.id) as string,
           parentId: parented ? idMap.get(n.parentId as string) : undefined,
           extent: parented ? n.extent : undefined,
-          position: parented ? n.position : { x: n.position.x + dx, y: n.position.y + dy },
+          position: parented
+            ? n.position
+            : { x: n.position.x + dx, y: n.position.y + dy },
           selected: true,
           data: { ...(n.data as Record<string, unknown>) },
         } as Node;
@@ -64,8 +64,13 @@ export function useCanvasClipboard({
     const sources = clipboardRef.current;
     if (sources.length === 0) return false;
     const clones = cloneNodes(sources, 28, 28);
-    clipboardRef.current = clones.map((c) => ({ ...c, data: { ...(c.data as Record<string, unknown>) } }));
-    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })).concat(clones));
+    clipboardRef.current = clones.map((c) => ({
+      ...c,
+      data: { ...(c.data as Record<string, unknown>) },
+    }));
+    setNodes((nds) =>
+      nds.map((n) => ({ ...n, selected: false })).concat(clones),
+    );
     return true;
   }, [cloneNodes, setNodes]);
 
@@ -73,7 +78,9 @@ export function useCanvasClipboard({
     const sources = collectCopyableSelection();
     if (sources.length === 0) return false;
     const clones = cloneNodes(sources, 28, 28);
-    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })).concat(clones));
+    setNodes((nds) =>
+      nds.map((n) => ({ ...n, selected: false })).concat(clones),
+    );
     return true;
   }, [collectCopyableSelection, cloneNodes, setNodes]);
 

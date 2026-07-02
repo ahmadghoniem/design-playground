@@ -1,25 +1,47 @@
-'use client';
-
-import { useState, useEffect, useRef, Fragment } from 'react';
-import { Pencil, Square, Circle, Slash, Shapes } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
-import type { ShapeKind } from '../../nodes/ShapeNode';
-import type { DrawPenKind } from '../../lib/draw-types';
+import { useState, useEffect, useRef, Fragment } from "react";
+import { Pencil, Square, Circle, Slash, Shapes } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import type { ShapeKind } from "../../nodes/ShapeNode";
+import type { DrawPenKind } from "../../lib/draw-types";
 
 interface ShapeToolGroupProps {
-  activeTool: 'select' | 'text' | 'draw' | 'shape';
+  activeTool: "select" | "text" | "draw" | "shape";
   shapeKind: ShapeKind;
   drawPenKind: DrawPenKind;
-  setActiveTool: (tool: 'select' | 'text' | 'draw' | 'shape') => void;
+  setActiveTool: (tool: "select" | "text" | "draw" | "shape") => void;
   setShapeKind: (kind: ShapeKind) => void;
   setDrawPenKind: (kind: DrawPenKind) => void;
 }
 
 const SUB_TOOLS = [
-  { type: 'draw' as const, kind: 'pen' as DrawPenKind, Icon: Pencil, label: 'Pen', shortcut: 'P' },
-  { type: 'shape' as const, kind: 'rect' as ShapeKind, Icon: Square, label: 'Rectangle', shortcut: 'R' },
-  { type: 'shape' as const, kind: 'ellipse' as ShapeKind, Icon: Circle, label: 'Ellipse', shortcut: 'O' },
-  { type: 'shape' as const, kind: 'line' as ShapeKind, Icon: Slash, label: 'Line / arrow', shortcut: 'L' },
+  {
+    type: "draw" as const,
+    kind: "pen" as DrawPenKind,
+    Icon: Pencil,
+    label: "Pen",
+    shortcut: "P",
+  },
+  {
+    type: "shape" as const,
+    kind: "rect" as ShapeKind,
+    Icon: Square,
+    label: "Rectangle",
+    shortcut: "R",
+  },
+  {
+    type: "shape" as const,
+    kind: "ellipse" as ShapeKind,
+    Icon: Circle,
+    label: "Ellipse",
+    shortcut: "O",
+  },
+  {
+    type: "shape" as const,
+    kind: "line" as ShapeKind,
+    Icon: Slash,
+    label: "Line / arrow",
+    shortcut: "L",
+  },
 ] as const;
 
 export function ShapeToolGroup({
@@ -38,13 +60,13 @@ export function ShapeToolGroup({
   useEffect(() => {
     if (!flyoutOpen) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.stopPropagation();
         setFlyoutOpen(false);
       }
     };
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
   }, [flyoutOpen]);
 
   // Close flyout on outside click.
@@ -55,32 +77,33 @@ export function ShapeToolGroup({
         setFlyoutOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [flyoutOpen]);
 
-  const isGroupActive = activeTool === 'draw' || activeTool === 'shape';
+  const isGroupActive = activeTool === "draw" || activeTool === "shape";
 
   const mainButtonClasses = `flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
     isGroupActive
-      ? 'bg-stone-100 text-stone-900'
-      : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
+      ? "bg-stone-100 text-stone-900"
+      : "text-stone-500 hover:text-stone-800 hover:bg-stone-50"
   }`;
 
   const activateSubTool = (tool: (typeof SUB_TOOLS)[number]) => {
-    if (tool.type === 'draw') {
+    if (tool.type === "draw") {
       setDrawPenKind(tool.kind);
-      setActiveTool('draw');
+      setActiveTool("draw");
     } else {
       setShapeKind(tool.kind);
-      setActiveTool('shape');
+      setActiveTool("shape");
     }
     setFlyoutOpen(false);
   };
 
   const isSubToolActive = (tool: (typeof SUB_TOOLS)[number]) => {
-    if (tool.type === 'draw') return activeTool === 'draw' && drawPenKind === tool.kind;
-    return activeTool === 'shape' && shapeKind === tool.kind;
+    if (tool.type === "draw")
+      return activeTool === "draw" && drawPenKind === tool.kind;
+    return activeTool === "shape" && shapeKind === tool.kind;
   };
 
   return (
@@ -112,12 +135,15 @@ export function ShapeToolGroup({
                     onClick={() => activateSubTool(tool)}
                     className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
                       isSubToolActive(tool)
-                        ? 'bg-stone-100 text-stone-900'
-                        : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
+                        ? "bg-stone-100 text-stone-900"
+                        : "text-stone-500 hover:text-stone-800 hover:bg-stone-50"
                     }`}
                     aria-label={`${tool.label} (${tool.shortcut})`}
                   >
-                    <tool.Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+                    <tool.Icon
+                      className="w-[18px] h-[18px]"
+                      strokeWidth={1.75}
+                    />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
