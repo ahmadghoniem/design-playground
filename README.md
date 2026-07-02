@@ -185,3 +185,24 @@ Check your terminal for error output. You can cancel an in-progress generation f
 
 **Components not discovered**
 Make sure your components are standard React/JSX files. The discovery scan looks for `.tsx` and `.jsx` files with default exports.
+
+
+Alright. Here are a few things that I've noticed. For instance, the /canvas-components dir got one shallow file that's 11 LOC (redundant).
+
+There are a lot of files that goes above 800 LOC and some are even couple of thousands.
+
+For instance, we have in the canvas playground sidebar.
+We have 800 LOC.
+
+there are lots of files living in the main directory, like layout, loading, page, CSS files. And there's the playground canvas, playground client, playground header. They shouldn't live in the source directory.
+
+## decisions yet to be made
+1. featured-skills.ts
+FeaturedSkill are hardcoded values 
+and also i was thinking of the fact that there might be no need to manage the skills from the playground but rather the ai agent like claude code  but that would break how we present to the user that he can create variants based on the skills he adds
+2. PricingCard
+assumption: a component you get to see on the canvas when you first use the playground to test it (iterate on design, etc) before you load your components but i can't do any of that (if that what it does) if it's not accessible i would rather remove it 
+
+your task is to create a highlighy detailed markdown files with tasks for deepseek v4 pro agents to handle those refactors in a /refactor directory  
+## for later
+1.tailwind arbitary classes

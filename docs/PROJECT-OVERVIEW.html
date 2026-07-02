@@ -283,7 +283,6 @@
 │   ├── chat/                       # DockedChatBar + chat icons
 │   ├── modals/                     # Discovery, DesignSystem, ModelSettings, Skills, Shortcuts
 │   │   └── design-system/          # section components + useDesignSystemCli hook
-│   └── BrowseShell.tsx
 │
 ├── nodes/                          # React Flow node types
 │   ├── ComponentNode.tsx  IterationNode.tsx  SkeletonIterationNode.tsx
@@ -496,12 +495,12 @@
       <code>lib/featured-skills.ts</code>, <code>lib/impeccable-skill.ts</code>, and <code>ui/impeccable-skill-picker.tsx</code>. Selected
       skills are formatted into prompts by <code>prompts/shared-sections.ts</code>.</p>
 
-      <h3 id="s6-9">6.9 Model settings, keyboard shortcuts, open-in, presence</h3>
+      <h3 id="s6-9">6.9 Model settings, keyboard shortcuts, open-in</h3>
       <p><code>ModelSettingsModal</code> + <code>model-settings-store.ts</code> + <code>useModelCycle.ts</code> manage model selection;
       <code>KeyboardShortcutsModal</code> + <code>lib/keybindings.ts</code> + <code>stores/keybinding-store.ts</code> manage shortcuts;
-      <code>open-in.ts</code> + <code>hooks/useOpenIn.ts</code> open files in an editor/Finder/GitHub Desktop. A lightweight "presence" layer
-      (<code>components/canvas/CanvasPresenceLayer.tsx</code>, <code>hooks/usePresenceBubbles.ts</code>) renders agent-activity bubbles even
-      though the app is single-player.</p>
+      <code>open-in.ts</code> + <code>hooks/useOpenIn.ts</code> open files in an editor/Finder/GitHub Desktop. (The header/canvas previously
+      had a "presence" layer rendering fake-multiplayer-style bubbles for in-flight generations — removed since the app is single-player;
+      skeleton nodes remain the in-canvas "generating" indicator.)</p>
     </section>
 
     <section id="s7">

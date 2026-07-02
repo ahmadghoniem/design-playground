@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>design-playground — Codebase Audit</title>
+<style>
+  :root{
+    --bg:#0f0f10; --panel:#17181a; --panel2:#1d1e21; --border:#2a2b2f;
+    --text:#e7e5e4; --muted:#9b9a97; --accent:#fbbf24;
+    --green:#4ade80; --yellow:#facc15; --red:#f87171; --blue:#60a5fa;
+    --mono:ui-monospace,'Cascadia Code',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.6 system-ui,'Segoe UI',sans-serif;padding:0 0 80px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+  header{border-bottom:1px solid var(--border);padding:44px 0 28px;margin-bottom:32px}
+  h1{font-size:26px;font-weight:650;letter-spacing:-.02em}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);margin-top:6px;font-size:14px}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  nav a{color:var(--muted);text-decoration:none;font-size:13px;border:1px solid var(--border);border-radius:999px;padding:4px 12px;transition:.15s}
+  nav a:hover{color:var(--text);border-color:var(--muted)}
+  h2{font-size:19px;font-weight:650;margin:44px 0 6px;letter-spacing:-.01em;scroll-margin-top:24px}
+  h2 .n{color:var(--accent);font-family:var(--mono);font-size:15px;margin-right:8px}
+  .lead{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:26px 0 8px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .stat b{display:block;font-size:24px;font-weight:650}
+  .stat span{font-size:12.5px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:13.5px;margin:12px 0}
+  th{background:var(--panel2);text-align:left;padding:9px 13px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  td{padding:9px 13px;border-top:1px solid var(--border);vertical-align:top}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;white-space:nowrap}
+  td code{white-space:normal}
+  .chip{display:inline-block;font-size:11px;font-weight:650;border-radius:999px;padding:2px 10px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+  .del{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+  .keep{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+  .dec{background:rgba(250,204,21,.1);color:var(--yellow);border:1px solid rgba(250,204,21,.3)}
+  .fix{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:12px 0}
+  .card h3{font-size:15px;font-weight:650;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  .card p{font-size:13.5px;color:var(--muted)}
+  .card p strong{color:var(--text)}
+  ul{padding-left:20px;font-size:13.5px}
+  li{margin:5px 0}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .foot{margin-top:52px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>design-playground <span>— codebase audit</span></h1>
+  <div class="sub">Feature inspection before simplification · 2026-07-02 · high-impact claims re-verified by hand · details in <code>audit/01–04 .md</code></div>
+  <nav>
+    <a href="#numbers">Numbers</a><a href="#questions">Your questions answered</a><a href="#routes">Routes &amp; API</a>
+    <a href="#stores">Stores &amp; hooks</a><a href="#highlight">Highlight remnants</a><a href="#icons">Inline SVGs</a>
+    <a href="#constants">Constants</a><a href="#nextisms">Next.js remnants</a><a href="#plan">Simplification batches</a>
+  </nav>
+</header>
+
+<section id="numbers">
+  <div class="stats">
+    <div class="stat"><b>2</b><span>client routes (canvas + isolated preview)</span></div>
+    <div class="stat"><b>13</b><span>server route modules — all alive</span></div>
+    <div class="stat"><b>7</b><span>zustand stores — all consumed</span></div>
+    <div class="stat"><b>32</b><span>hooks — zero orphans</span></div>
+    <div class="stat"><b>28</b><span>inline SVG icons in 13 files</span></div>
+    <div class="stat"><b>11</b><span>files still with <code>"use client"</code></span></div>
+    <div class="stat"><b>2</b><span>orphaned components</span></div>
+    <div class="stat"><b>3</b><span>highlight-tool leftovers</span></div>
+  </div>
+</section>
+
+<section id="questions">
+  <h2><span class="n">Q</span>Your specific questions, answered</h2>
+
+  <div class="card"><h3><code>evals/</code> — what is it? <span class="chip del">delete candidate</span></h3>
+  <p>A CLI-only <strong>LLM-as-judge eval harness for the discovery prompt</strong> (6 files). Not a route, not a panel. <strong>Zero imports</strong> from app/server code, and the documented <code>bun run eval:discovery</code> can't even run — <code>package.json</code> has no <code>scripts</code> field. Keep only if you plan to measure discovery-prompt changes; otherwise delete the folder.</p></div>
+
+  <div class="card"><h3><code>prompts/</code> — what is it? <span class="chip keep">keep</span></h3>
+  <p>Not a UI prompt library — it's the <strong>prompt-builder functions behind every AI feature</strong>. All 16 modules are imported (registry, chat submit, create-page, html/jsx pipelines, discovery route). Deleting anything here breaks generation. Individual files only die if you cut their parent feature.</p></div>
+
+  <div class="card"><h3><code>docs/</code> — does code derive from it? <span class="chip dec">prune, one caveat</span></h3>
+  <p><strong>No code reads or imports docs/ at runtime.</strong> The only coupling: 5 generation prompts contain the literal string "Read the generation guide: <code>docs/iterations/guide.mdc</code>" — the <em>spawned agent</em> reads that file, so deleting it degrades generation quality without breaking code. Everything else (PROJECT-OVERVIEW, AGENT-DESIGN-FRAMEWORK, ui/, conventions/, canvas/, generation/) is referenced by nothing.</p></div>
+
+  <div class="card"><h3><code>dev-store</code> — why does it exist? <span class="chip dec">decide</span></h3>
+  <p><code>stores/dev-mode-store.ts</code>: one persisted boolean. Reached by a <strong>hidden gesture — right-click the "Model settings" sliders button</strong> in the header (<code>PlaygroundHeader.tsx:228-242</code>) → "Dev mode" toggle → reveals extra header buttons (e.g. the Eraser "Clear all", <code>:259-264</code>). Sole consumer is the header. Removal surface: the store, header wiring, <code>DEV_MODE_STORAGE_KEY</code> (<code>lib/constants.ts:95</code>).</p></div>
+
+  <div class="card"><h3>Highlight tool remnants <span class="chip fix">3 leftovers</span></h3>
+  <p>The highlighter pen itself is gone (<code>DrawPenKind = 'pen'</code> only). Left behind: a <strong>dead CSS block</strong> <code>playground-global.css:413-423</code> (<code>[data-draw-kind="highlight"]</code> can never match), a stale comment at <code>:397</code>, and a done-already TODO at <code>README.md:201</code>. Note: <code>ElementHighlight.tsx</code> is <em>unrelated</em> — it's the live alt+click element-selection overlay. Keep it.</p></div>
+
+  <div class="card"><h3><code>"use client"</code> removal — complete? <span class="chip fix">11 missed</span></h3>
+  <p>11 files still carry the directive: <code>BrowseShell</code>, <code>PlaygroundCanvasDrawLayer</code>, <code>lib/canvas-flow.tsx</code>, and 8 <code>components/ui/*</code> shadcn primitives (accordion, alert-dialog, dialog, dropdown-menu, inline-reference ×2, sonner, tooltip). Plus stale comments in <code>lib/jsx-utils.ts:24-45</code> claiming the directive is still prepended, and a prompt at <code>lib/jsx-prompts.ts:58</code> telling the model to keep it.</p></div>
+</section>
+
+<section id="routes">
+  <h2><span class="n">01</span>Routes &amp; API surface</h2>
+  <p class="lead">Only two client routes: <code>/</code> (the whole canvas app) and <code>/iterations/:slug</code> (isolated preview) — table in <code>dev-entry.tsx:9-18</code>. All 13 server modules are called by the client; one dead handler.</p>
+  <table><tr><th>Server module</th><th>Purpose</th><th>Status</th></tr>
+    <tr><td><code>generate.ts</code></td><td>Core AI generation: spawn run, SSE, cancel</td><td><span class="chip keep">core</span></td></tr>
+    <tr><td><code>design.ts</code></td><td>Design-system CLI (init/generate/lint/diff/export + showcase)</td><td><span class="chip keep">live</span></td></tr>
+    <tr><td><code>discover.ts</code></td><td>discovery.json CRUD + agent codebase scan</td><td><span class="chip keep">live</span></td></tr>
+    <tr><td><code>html-pages.ts</code> · <code>iterations.ts</code> · <code>oncanvas-components.ts</code> · <code>images.ts</code></td><td>Canvas content CRUD</td><td><span class="chip keep">live</span></td></tr>
+    <tr><td><code>models.ts</code> · <code>skills.ts</code> · <code>open-in.ts</code> · <code>pages.ts</code> · <code>project-id.ts</code></td><td>Models list, skills catalog, editor open, page delete, project id</td><td><span class="chip keep">live</span></td></tr>
+    <tr><td><code>screenshot.ts</code></td><td>Canvas screenshots — client uses POST only</td><td><span class="chip fix">GET @25 dead</span></td></tr>
+  </table>
+</section>
+
+<section id="stores">
+  <h2><span class="n">02</span>Stores &amp; hooks</h2>
+  <p class="lead">All 7 stores and all 32 hooks are consumed — nothing is orphaned. But hooks cluster by feature: cut a feature and its cluster goes with it.</p>
+  <table><tr><th>Feature cluster</th><th>Hooks / stores that die with it</th></tr>
+    <tr><td>Canvas core</td><td>14 <code>useCanvas*</code> hooks + <code>useDynamicBackground</code>, <code>useNodeSelection</code></td></tr>
+    <tr><td>Generation / iteration</td><td><code>useGenerationCoordination/Lifecycle</code>, <code>useIterationScan/Adoption/Screenshot</code> (screenshot is used <em>only</em> by adoption), <code>useDragToIterate</code>, <code>useChatSubmit</code></td></tr>
+    <tr><td>Chat dock</td><td><code>useSkills</code>, <code>useModelCycle</code>, <code>useImpeccableSkillPicker</code>, <code>useChatAttachments</code>, <code>useChatDockProximity</code></td></tr>
+    <tr><td>Presence bubbles <span class="chip dec">odd for single-player</span></td><td><code>usePresenceBubbles</code> (header) + <code>useCanvasPresenceBubbles</code> (canvas) + <code>CanvasPresenceLayer</code>, <code>PlaygroundHeaderPresence</code></td></tr>
+    <tr><td>Draw tool</td><td><code>useCanvasDrawTool</code>, <code>playground-draw-store</code>, draw layer + stroke components</td></tr>
+    <tr><td>Dev mode</td><td><code>dev-mode-store</code> + header wiring only</td></tr>
+  </table>
+  <p class="lead">Known break: <code>hooks/useOpenIn.ts</code> imports the missing asset <code>../assets/cursor-icon.svg</code> (gone since <code>055acbd</code>).</p>
+</section>
+
+<section id="highlight">
+  <h2><span class="n">03</span>Highlight-tool remnants</h2>
+  <table><tr><th>Where</th><th>What</th><th>Verdict</th></tr>
+    <tr><td><code>styles/playground-global.css:413-423</code></td><td>unreachable <code>[data-draw-kind="highlight"]</code> cursor block</td><td><span class="chip del">delete</span></td></tr>
+    <tr><td><code>styles/playground-global.css:397</code></td><td>stale "(P/H) … pen vs highlighter" comment</td><td><span class="chip fix">fix</span></td></tr>
+    <tr><td><code>README.md:201</code></td><td>TODO for an already-done removal</td><td><span class="chip del">strike</span></td></tr>
+    <tr><td><code>components/canvas/ElementHighlight.tsx</code></td><td>alt+click element-selection overlay — <em>unrelated feature</em></td><td><span class="chip keep">keep</span></td></tr>
+    <tr><td><code>inline-reference.tsx:402,426</code>, css <code>:761</code></td><td>chip "highlight before backspace-delete" state</td><td><span class="chip keep">keep</span></td></tr>
+  </table>
+</section>
+
+<section id="icons">
+  <h2><span class="n">04</span>Inline SVG icons — 28 across 13 files</h2>
+  <p class="lead"><code>lucide-react</code> is already imported in 28 files and <code>components/ui/playground-nav-icons.tsx</code> exists as the icon home — yet icons are hand-rolled inline everywhere, with 4 exact duplications.</p>
+  <div class="cols">
+    <div class="card"><h3>Worst offenders</h3><ul>
+      <li><code>ui/chat-bits.tsx</code> — 6 (Bracket, Frame, Edit, Explore, SendArrow, dragger)</li>
+      <li><code>canvas/PlaygroundCanvasContextMenu.tsx</code> — 4 corner glyphs (already imports lucide!)</li>
+      <li><code>canvas/PlaygroundCanvasToolbar.tsx</code> — 3</li>
+      <li><code>ComponentNode</code> / <code>IterationNode</code> — 2 each</li>
+      <li><code>chat-icons.tsx</code>, <code>iterate-dialog/icons.tsx</code> — 2 each</li>
+    </ul></div>
+    <div class="card"><h3>Exact duplicates (quick wins)</h3><ul>
+      <li><code>VariationStackIcon</code> ≡ raw SVG in <code>IterationCountDragger</code> (identical path)</li>
+      <li><code>ArrowUpIcon</code> ≡ <code>SendArrowIcon</code></li>
+      <li>Play triangle copy-pasted in ComponentNode:517 + IterationNode:477</li>
+      <li><code>FrameIcon</code> reimplements lucide <code>Frame</code></li>
+    </ul></div>
+  </div>
+  <p class="lead">Not icons — leave alone: <code>DrawStrokePaths</code>, <code>PlaygroundCanvasDrawLayer</code> (user strokes), <code>ShapeNode</code> (real shapes), <code>dom-engine.ts</code> (pill markup).</p>
+</section>
+
+<section id="constants">
+  <h2><span class="n">05</span><code>lib/constants.ts</code> — 807 lines, ~130 exports</h2>
+  <table><tr><th>Cluster</th><th>Assessment</th></tr>
+    <tr><td>Event names (L11-71), storage keys (L80-116), regexes (L461-528), <code>SIZE_CONFIG</code> (L245)</td><td><span class="chip keep">genuine constants</span> multi-consumer / must stay in sync</td></tr>
+    <tr><td><code>STYLING_MODE_OPTIONS</code> (L295)</td><td><span class="chip del">dead</span> zero usages; "for future UI dropdown"</td></tr>
+    <tr><td><code>DRAG_OVERLAY_PADDING_X/_Y</code> (L604-605)</td><td><span class="chip del">both = 0</span> named zeroes, pure indirection</td></tr>
+    <tr><td><code>ARRANGE_*</code> family (L159-207, ~15 consts)</td><td><span class="chip fix">relocate</span> used only by <code>lib/canvas-auto-arrange.ts</code> — move them there</td></tr>
+    <tr><td>Timing block (L351-369)</td><td><span class="chip fix">inline</span> single-use magic-number wrappers</td></tr>
+  </table>
+</section>
+
+<section id="nextisms">
+  <h2><span class="n">06</span>Next.js remnants</h2>
+  <ul>
+    <li><span class="chip fix">strip</span> 11 <code>"use client"</code> directives (8 shadcn ui primitives + <code>BrowseShell</code>, <code>PlaygroundCanvasDrawLayer</code>, <code>canvas-flow.tsx</code>)</li>
+    <li><span class="chip del">orphans</span> <code>components/BrowseShell.tsx</code> (zero imports) and <code>app/loading.tsx</code> (Next loading convention, never imported)</li>
+    <li><span class="chip fix">vestigial</span> <code>app/layout.tsx</code> is a no-op <code>&lt;&gt;{children}&lt;/&gt;</code> — inline into <code>dev-entry.tsx</code></li>
+    <li><span class="chip fix">stale</span> <code>lib/jsx-utils.ts:24-45</code> comments describe removed 'use client' prepending; <code>lib/jsx-prompts.ts:58</code> tells the model to keep the directive</li>
+  </ul>
+</section>
+
+<section id="plan">
+  <h2><span class="n">07</span>Simplification batches (full detail in <code>04-simplification-plan.md</code>)</h2>
+  <div class="card"><h3>S1 — Zero-risk deletions <span class="chip del">safe now</span></h3>
+  <p>BrowseShell, app/loading.tsx, dead highlight CSS, <code>STYLING_MODE_OPTIONS</code>, zero-padding constants, stale README section, 11 <code>"use client"</code> directives, jsx-utils comments, screenshot GET handler.</p></div>
+  <div class="card"><h3>S2 — Feature decisions <span class="chip dec">you choose</span></h3>
+  <p>Delete <code>evals/</code>? Kill <strong>dev mode</strong>? Kill <strong>presence bubbles</strong> (single-player app)? Prune <code>docs/</code> (keep <code>iterations/guide.mdc</code>)? Keep draw tool? Keep skills catalog? — each row in the MD lists the full removal surface.</p></div>
+  <div class="card"><h3>S3 — Icon consolidation <span class="chip fix">hygiene</span></h3>
+  <p>Delete 4 duplicate sets, swap lucide equivalents, move custom glyphs into <code>playground-nav-icons.tsx</code>. Removes ~10 of 28 inline SVGs outright.</p></div>
+  <div class="card"><h3>S4 — Constants right-sizing <span class="chip fix">hygiene</span></h3>
+  <p>Move <code>ARRANGE_*</code> into canvas-auto-arrange; inline single-use timing constants.</p></div>
+  <div class="card"><h3>S5 — Structural tidy <span class="chip fix">optional</span></h3>
+  <p>Fold <code>IterateDialogParts.tsx</code> into <code>iterate-dialog/</code>; inline no-op layout; fix dangling <code>cursor-icon.svg</code> import; consolidate the two presence hooks.</p></div>
+</section>
+
+<div class="foot">Generated 2026-07-02 · verification per batch: git-grep gates + host <code>bun dev</code> → <code>/playground</code> smoke test · companion files: <code>audit/README.md</code>, <code>01–04 .md</code></div>
+</div>
+</body>
+</html>

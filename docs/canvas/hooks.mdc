@@ -21,7 +21,6 @@ All hooks live in `hooks/` (embedded at `src/app/playground/hooks/` in the host)
 | `useCanvasAutoArrange.ts` | Bento auto-arrange event shell | `PlaygroundCanvas.tsx` |
 | `useCanvasPaste.ts` | Clipboard paste I/O (image/JSX/URL/HTML) | `PlaygroundCanvas.tsx` |
 | `useCanvasDragDrop.ts` | Sidebar DnD + file drop + iteration attach | `PlaygroundCanvas.tsx` |
-| `useCanvasPresenceBubbles.ts` | Canvas presence bubble state + pan/fit listeners | `PlaygroundCanvas.tsx` |
 | `useCanvasPersistence.ts` | localStorage save + beforeunload viewport | `PlaygroundCanvas.tsx` |
 | `useCanvasNodeDelete.ts` | Delete dialog + cascade/reparent API | `PlaygroundCanvas.tsx` |
 | `useCanvasFrameOps.ts` | Group/ungroup, z-order, helper-line drag | `PlaygroundCanvas.tsx` |

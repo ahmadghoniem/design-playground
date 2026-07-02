@@ -125,7 +125,6 @@ design-playground/
 │   ├── chat/                       # DockedChatBar + chat icons
 │   ├── modals/                     # Discovery, DesignSystem, ModelSettings, Skills, Shortcuts
 │   │   └── design-system/          # section components + useDesignSystemCli hook
-│   └── BrowseShell.tsx
 │
 ├── nodes/                          # React Flow node types
 │   ├── ComponentNode.tsx  IterationNode.tsx  SkeletonIterationNode.tsx
@@ -373,13 +372,14 @@ Bundled "skills" (reusable design directives) live under `skills/<name>/SKILL.md
 `lib/impeccable-skill.ts`, and `ui/impeccable-skill-picker.tsx`. Selected skills
 are formatted into prompts by `prompts/shared-sections.ts`.
 
-### 6.9 Model settings, keyboard shortcuts, open-in, presence
+### 6.9 Model settings, keyboard shortcuts, open-in
 `ModelSettingsModal` + `model-settings-store.ts` + `useModelCycle.ts` manage model
 selection; `KeyboardShortcutsModal` + `lib/keybindings.ts` +
 `stores/keybinding-store.ts` manage shortcuts; `open-in.ts` + `hooks/useOpenIn.ts`
-open files in an editor/Finder/GitHub Desktop. A lightweight "presence" layer
-(`components/canvas/CanvasPresenceLayer.tsx`, `hooks/usePresenceBubbles.ts`)
-renders agent-activity bubbles even though the app is single-player.
+open files in an editor/Finder/GitHub Desktop. (The header/canvas previously had a
+"presence" layer rendering fake-multiplayer-style bubbles for in-flight
+generations — removed since the app is single-player; skeleton nodes remain the
+in-canvas "generating" indicator.)
 
 ---
 
