@@ -1,45 +1,44 @@
-'use client';
-
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { useReactFlow } from '@xyflow/react';
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { useReactFlow } from "@xyflow/react";
+import { ArrowUp, Image as ImageIcon, Scan } from "lucide-react";
 import {
   InlineReference,
   InlineReferenceInput,
   InlineReferenceContent,
   type Segment,
   type InlineReferenceHandle,
-} from '../../ui/inline-reference';
-import type { PlaygroundSkill } from '../../skills';
-import { ImpeccableSkillPicker } from '../../ui/impeccable-skill-picker';
-import { ImpeccableDemoteMenu } from '../../ui/impeccable-demote-menu';
-import { useImpeccableSkillPicker } from '../../hooks/useImpeccableSkillPicker';
-import { impeccablePromptFromSegment } from '../../lib/impeccable-skill';
-import { useAvailableModels } from '../../nodes/shared/IterateDialogParts';
-import { useModelCycle } from '../../hooks/useModelCycle';
-import { useSkills } from '../../hooks/useSkills';
-import { getModelIconConfig } from '../../lib/model-icons';
+} from "../ui/inline-reference";
+import type { PlaygroundSkill } from "../../skills";
+import { ImpeccableSkillPicker } from "../ui/impeccable-skill-picker";
+import { ImpeccableDemoteMenu } from "../ui/impeccable-demote-menu";
+import { useImpeccableSkillPicker } from "../../hooks/useImpeccableSkillPicker";
+import { impeccablePromptFromSegment } from "../../lib/impeccable-skill";
+import { useAvailableModels } from "../../nodes/shared/iterate-dialog/parts";
+import { useModelCycle } from "../../hooks/useModelCycle";
+import { useSkills } from "../../hooks/useSkills";
+import { getModelIconConfig } from "../../lib/model-icons";
 import {
   CHAT_DEFAULT_COUNT,
   ENABLE_FREEFORM_CHAT,
   canSubmitReferenceOnlyChat,
   type ChatSubmitPayload,
-} from '../../lib/constants';
-import { matchesAction, formatKeyCombo, getCombo } from '../../lib/keybindings';
-import type { SelectedElement } from '../../lib/element-context';
-import type { SelectedNodeContext } from '../../hooks/useNodeSelection';
-import { useModelSettingsStore } from '../../stores/model-settings-store';
+} from "../../lib/constants";
+import { matchesAction, formatKeyCombo, getCombo } from "../../lib/keybindings";
+import type { SelectedElement } from "../../lib/element-context";
+import type { SelectedNodeContext } from "../../hooks/useNodeSelection";
+import { useModelSettingsStore } from "../../stores/model-settings-store";
+import {
+  PillLeadingRemoveSlot,
+  IterationCountDragger,
+} from "../ui/chat-bits";
 import {
   EditIcon,
   ExploreIcon,
-  FrameIcon,
   BracketIcon,
-  PillLeadingRemoveSlot,
-  IterationCountDragger,
-  SendArrowIcon,
-} from '../../ui/chat-bits';
-import { ImageRefIcon, NodeRefIcon } from './chat-icons';
-import { useChatAttachments } from '../../hooks/useChatAttachments';
-import { useChatDockProximity } from '../../hooks/useChatDockProximity';
+  NodeRefIcon,
+} from "../ui/playground-nav-icons";
+import { useChatAttachments } from "../../hooks/useChatAttachments";
+import { useChatDockProximity } from "../../hooks/useChatDockProximity";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -76,7 +75,7 @@ export default function DockedChatBar({
 }: DockedChatBarProps) {
   const [segments, setSegments] = useState<Segment[]>([]);
   const skills = useSkills();
-  const [chatMode, setChatMode] = useState<'edit' | 'explore'>('edit');
+  const [chatMode, setChatMode] = useState<"edit" | "explore">("edit");
   const [iterationCount, setIterationCount] = useState(CHAT_DEFAULT_COUNT);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -135,7 +134,9 @@ export default function DockedChatBar({
   const hasContent = useMemo(
     () =>
       segments.some(
-        (s) => (s.type === 'text' && s.value.trim().length > 0) || s.type === 'reference',
+        (s) =>
+          (s.type === "text" && s.value.trim().length > 0) ||
+          s.type === "reference",
       ),
     [segments],
   );
@@ -145,13 +146,16 @@ export default function DockedChatBar({
   const heldOpen = hasContent || hasSelection;
 
   const isFreeformMode = !hasSelection && ENABLE_FREEFORM_CHAT;
-  const effectiveChatMode: 'edit' | 'explore' | 'raw' =
-    canEditOrExplore ? chatMode : (isFreeformMode ? 'raw' : 'explore');
+  const effectiveChatMode: "edit" | "explore" | "raw" = canEditOrExplore
+    ? chatMode
+    : isFreeformMode
+      ? "raw"
+      : "explore";
   const showModeToggle = canEditOrExplore;
   const canReferenceOnlySubmit =
     !editTarget &&
     referenceNodes.length > 0 &&
-    segments.some((s) => s.type === 'reference' && s.trigger === '/');
+    segments.some((s) => s.type === "reference" && s.trigger === "/");
   const canSubmit =
     hasContent &&
     (editTarget != null ||
@@ -164,10 +168,11 @@ export default function DockedChatBar({
   // Proximity (mouse only — desktop)
   // -------------------------------------------------------------------------
 
-  const { expanded, setExpanded, dismissedRef, clearDwell } = useChatDockProximity({
-    rootRef,
-    heldOpen,
-  });
+  const { expanded, setExpanded, dismissedRef, clearDwell } =
+    useChatDockProximity({
+      rootRef,
+      heldOpen,
+    });
 
   const shouldExpandFinal = expanded || heldOpen;
   const showModeToggleFinal = shouldExpandFinal && showModeToggle;
@@ -193,7 +198,10 @@ export default function DockedChatBar({
 
   const computeCanvasPosition = useCallback(() => {
     try {
-      return screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      return screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
     } catch {
       return { x: 0, y: 0 };
     }
@@ -205,14 +213,14 @@ export default function DockedChatBar({
     const skillIds: string[] = [];
 
     for (const segment of segments) {
-      if (segment.type === 'text') {
+      if (segment.type === "text") {
         const trimmed = segment.value.trim();
         if (trimmed) textParts.push(trimmed);
-      } else if (segment.type === 'reference') {
+      } else if (segment.type === "reference") {
         skillIds.push(segment.value);
         const impeccablePrompt = impeccablePromptFromSegment(
           segment,
-          skillsById.get('impeccable')?.skillPath,
+          skillsById.get("impeccable")?.skillPath,
         );
         if (impeccablePrompt) {
           skillPrompts.push(impeccablePrompt);
@@ -224,7 +232,7 @@ export default function DockedChatBar({
       }
     }
 
-    return { text: textParts.join('\n').trim(), skillPrompts, skillIds };
+    return { text: textParts.join("\n").trim(), skillPrompts, skillIds };
   }, [segments, skillsById]);
 
   const handleSubmit = useCallback(async () => {
@@ -244,7 +252,9 @@ export default function DockedChatBar({
       return;
     }
 
-    const mode: 'edit' | 'explore' | 'raw' = canEditOrExplore ? chatMode : 'raw';
+    const mode: "edit" | "explore" | "raw" = canEditOrExplore
+      ? chatMode
+      : "raw";
 
     const payload: ChatSubmitPayload = {
       text,
@@ -257,9 +267,9 @@ export default function DockedChatBar({
       targetComponentName: editTarget?.componentName ?? null,
       targetType: editTarget?.type ?? null,
       sourceFilename: editTarget?.sourceFilename,
-      iterationCount: mode === 'explore' ? iterationCount : 1,
+      iterationCount: mode === "explore" ? iterationCount : 1,
       canvasPosition: computeCanvasPosition(),
-      editMode: mode === 'edit',
+      editMode: mode === "edit",
       chatMode: mode,
       renderMode: editTarget?.renderMode,
       htmlPageSlug: editTarget?.htmlPageSlug,
@@ -275,7 +285,7 @@ export default function DockedChatBar({
     setSegments([]);
     const el = getInputEl();
     if (el) {
-      el.textContent = '';
+      el.textContent = "";
       el.blur();
     }
     onClearElements?.();
@@ -309,14 +319,14 @@ export default function DockedChatBar({
     (e: React.KeyboardEvent) => {
       // Esc: clear + minimise. Suppress proximity re-expand until the cursor
       // leaves the halo so it doesn't immediately re-pop while still hovering.
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         if (pickerOpen()) return;
         e.preventDefault();
         e.stopPropagation();
         setSegments([]);
         const el = getInputEl();
         if (el) {
-          el.textContent = '';
+          el.textContent = "";
           el.blur();
         }
         clearDwell();
@@ -326,7 +336,7 @@ export default function DockedChatBar({
       }
 
       // Cycle model (default Shift+Tab). Defer to the picker (Tab accepts an item).
-      if (matchesAction(e.nativeEvent, 'chat.cycle-model')) {
+      if (matchesAction(e.nativeEvent, "chat.cycle-model")) {
         if (pickerOpen()) return;
         e.preventDefault();
         cycleModel();
@@ -334,21 +344,29 @@ export default function DockedChatBar({
       }
 
       // Toggle Edit/Explore (default Cmd+E).
-      if (matchesAction(e.nativeEvent, 'chat.toggle-edit-mode')) {
+      if (matchesAction(e.nativeEvent, "chat.toggle-edit-mode")) {
         e.preventDefault();
-        setChatMode((prev) => (prev === 'edit' ? 'explore' : 'edit'));
+        setChatMode((prev) => (prev === "edit" ? "explore" : "edit"));
         return;
       }
 
       // Enter: submit (unless the picker is open — then Enter accepts an item).
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey) {
         if (pickerOpen()) return;
         e.preventDefault();
         handleSubmit();
         return;
       }
     },
-    [pickerOpen, getInputEl, cycleModel, handleSubmit, clearDwell, dismissedRef, setExpanded],
+    [
+      pickerOpen,
+      getInputEl,
+      cycleModel,
+      handleSubmit,
+      clearDwell,
+      dismissedRef,
+      setExpanded,
+    ],
   );
 
   // -------------------------------------------------------------------------
@@ -356,33 +374,34 @@ export default function DockedChatBar({
   // -------------------------------------------------------------------------
 
   const shortModelName = useMemo(() => {
-    if (isLoadingModels) return 'AI';
+    if (isLoadingModels) return "AI";
     const found = models.find((m) => m.value === model);
     const label = found?.label || model;
     const cleaned = label
-      .replace(/^Claude\s+\d+(\.\d+)?\s*/i, '')
-      .replace(/^GPT-?\s*/i, '')
-      .replace(/^Gemini\s+\d*\s*/i, '')
-      .replace(/\(.*?\)/g, '')
+      .replace(/^Claude\s+\d+(\.\d+)?\s*/i, "")
+      .replace(/^GPT-?\s*/i, "")
+      .replace(/^Gemini\s+\d*\s*/i, "")
+      .replace(/\(.*?\)/g, "")
       .trim();
     return cleaned || label;
   }, [models, model, isLoadingModels]);
 
   const currentConfig = getModelIconConfig(model, activeProvider);
-  const nextConfig = nextModel ? getModelIconConfig(nextModel, activeProvider) : currentConfig;
+  const nextConfig = nextModel
+    ? getModelIconConfig(nextModel, activeProvider)
+    : currentConfig;
 
-  const placeholder =
-    isFreeformMode
-      ? 'Ask anything, or / for skills…'
-      : !hasSelection
-        ? 'Select a frame to edit or explore'
-        : !editTarget && referenceNodes.length > 0
-          ? 'Type /visualise-plan or another skill…'
-          : effectiveChatMode === 'edit'
-            ? 'Describe edits…'
-            : editTarget
-              ? 'Describe variations…'
-              : `Explore, using ${shortModelName}`;
+  const placeholder = isFreeformMode
+    ? "Ask anything, or / for skills…"
+    : !hasSelection
+      ? "Select a frame to edit or explore"
+      : !editTarget && referenceNodes.length > 0
+        ? "Type /visualise-plan or another skill…"
+        : effectiveChatMode === "edit"
+          ? "Describe edits…"
+          : editTarget
+            ? "Describe variations…"
+            : `Explore, using ${shortModelName}`;
 
   // -------------------------------------------------------------------------
   // Render
@@ -392,11 +411,17 @@ export default function DockedChatBar({
     <>
       <span
         className="bubble-face bubble-face--current"
-        style={{ backgroundColor: currentConfig.bg, backgroundImage: `url(${currentConfig.src})` }}
+        style={{
+          backgroundColor: currentConfig.bg,
+          backgroundImage: `url(${currentConfig.src})`,
+        }}
       />
       <span
         className="bubble-face bubble-face--next"
-        style={{ backgroundColor: nextConfig.bg, backgroundImage: `url(${nextConfig.src})` }}
+        style={{
+          backgroundColor: nextConfig.bg,
+          backgroundImage: `url(${nextConfig.src})`,
+        }}
       />
     </>
   );
@@ -408,7 +433,7 @@ export default function DockedChatBar({
       role="region"
       aria-label="AI chat"
       className="fixed bottom-6 left-1/2 z-[9998] flex -translate-x-1/2 flex-col items-center"
-      style={{ pointerEvents: 'none' }}
+      style={{ pointerEvents: "none" }}
     >
       {!shouldExpandFinal ? (
         <button
@@ -419,275 +444,317 @@ export default function DockedChatBar({
           className="docked-chat-minimized pointer-events-auto"
         />
       ) : (
-      <div
-        className="docked-chat-expand-anim relative text-sm duration-150 animate-in fade-in-0 zoom-in-95"
-        style={{ width: 'min(520px, calc(100vw - 32px))', pointerEvents: 'auto' }}
-      >
-        {/* Floating model bubble — top-left */}
-        {shouldExpandFinal && (
-          <div
-            className="absolute left-1.5 flex items-center gap-1.5"
-            style={{ bottom: 'calc(100% + 10px)' }}
-          >
-            <button
-              type="button"
-              aria-hidden
-              tabIndex={-1}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={cycleModel}
-              className={`chat-bubble inline-block border-0 bg-transparent p-0 ${isSwitching ? 'is-switching' : ''}`}
-              style={{ width: 16, height: 16 }}
-            >
-              {bubbleFaces}
-            </button>
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={cycleModel}
-              aria-label="Switch model"
-              title={`Switch model (${formatKeyCombo(getCombo('chat.cycle-model'))})`}
-              className="select-none whitespace-nowrap text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-600"
-            >
-              {shortModelName}
-            </button>
-          </div>
-        )}
-
-        {/* Floating Edit / Explore cluster — top-right, only with a selection */}
-        {showModeToggleFinal && (
-          <div
-            className="absolute right-1.5 inline-flex items-center gap-0.5 rounded-full border border-stone-200/70 bg-white/95 px-0.5 py-0.5 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] backdrop-blur"
-            style={{ bottom: 'calc(100% + 10px)' }}
-          >
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setChatMode('edit')}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                effectiveChatMode === 'edit'
-                  ? 'bg-stone-100 text-stone-900'
-                  : 'text-stone-500 hover:text-stone-800'
-              }`}
-              aria-pressed={effectiveChatMode === 'edit'}
-              title={`Edit design (${formatKeyCombo(getCombo('chat.toggle-edit-mode'))})`}
-            >
-              <EditIcon className="flex-shrink-0" />
-              <span>Edit</span>
-            </button>
+        <div
+          className="docked-chat-expand-anim relative text-sm duration-150 animate-in fade-in-0 zoom-in-95"
+          style={{
+            width: "min(520px, calc(100vw - 32px))",
+            pointerEvents: "auto",
+          }}
+        >
+          {/* Floating model bubble — top-left */}
+          {shouldExpandFinal && (
             <div
-              className={`inline-flex items-center gap-1 rounded-full transition-colors ${
-                effectiveChatMode === 'explore' ? 'bg-stone-100 pr-1' : ''
-              }`}
+              className="absolute left-1.5 flex items-center gap-1.5"
+              style={{ bottom: "calc(100% + 10px)" }}
+            >
+              <button
+                type="button"
+                aria-hidden
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={cycleModel}
+                className={`chat-bubble inline-block border-0 bg-transparent p-0 ${isSwitching ? "is-switching" : ""}`}
+                style={{ width: 16, height: 16 }}
+              >
+                {bubbleFaces}
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={cycleModel}
+                aria-label="Switch model"
+                title={`Switch model (${formatKeyCombo(getCombo("chat.cycle-model"))})`}
+                className="select-none whitespace-nowrap text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-600"
+              >
+                {shortModelName}
+              </button>
+            </div>
+          )}
+
+          {/* Floating Edit / Explore cluster — top-right, only with a selection */}
+          {showModeToggleFinal && (
+            <div
+              className="absolute right-1.5 inline-flex items-center gap-0.5 rounded-full border border-stone-200/70 bg-white/95 px-0.5 py-0.5 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] backdrop-blur"
+              style={{ bottom: "calc(100% + 10px)" }}
             >
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setChatMode('explore')}
-                className={`inline-flex items-center gap-1 rounded-full pl-2.5 text-[11px] font-medium transition-colors ${
-                  effectiveChatMode === 'explore' ? 'py-1 pr-0 text-stone-900' : 'py-1 pr-2.5 text-stone-500 hover:text-stone-800'
+                onClick={() => setChatMode("edit")}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  effectiveChatMode === "edit"
+                    ? "bg-stone-100 text-stone-900"
+                    : "text-stone-500 hover:text-stone-800"
                 }`}
-                aria-pressed={effectiveChatMode === 'explore'}
-                title={`Explore (${formatKeyCombo(getCombo('chat.toggle-edit-mode'))})`}
+                aria-pressed={effectiveChatMode === "edit"}
+                title={`Edit design (${formatKeyCombo(getCombo("chat.toggle-edit-mode"))})`}
               >
-                <ExploreIcon className="flex-shrink-0" />
-                <span>Explore</span>
+                <EditIcon className="flex-shrink-0" />
+                <span>Edit</span>
               </button>
-              {effectiveChatMode === 'explore' && (
-                <IterationCountDragger count={iterationCount} onChange={setIterationCount} />
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* The pill */}
-        <div
-          className="docked-chat-pill"
-          data-generating={isGenerating || undefined}
-          style={{ borderRadius: showPillsRowFinal ? 22 : 9999 }}
-        >
-          {isGenerating && <span className="docked-chat-pill__glow" aria-hidden />}
-
-          <div
-            className="docked-chat-pill__surface flex flex-col"
-            onMouseDown={(e) => {
-              // Clicking empty pill chrome focuses the input; let buttons and the
-              // input itself handle their own clicks.
-              const target = e.target as HTMLElement;
-              if (target.closest('button') || target.closest('[data-slot="inline-reference-input"]')) {
-                return;
-              }
-              e.preventDefault();
-              openAndFocus();
-            }}
-          >
-            {/* Selection pills row */}
-            {showPillsRowFinal && (
-              <div className="flex flex-wrap items-center gap-1 px-3.5 pt-2.5">
-                {/* Target chip (only when no element selection) */}
-                {editTarget && (!selectedElements || selectedElements.length === 0) && (
-                  <div
-                    className="group flex select-none items-center gap-1 px-2.5 py-1.5"
-                    style={{
-                      background: 'rgb(250, 250, 249)',
-                      border: '1px solid rgb(147, 197, 253)',
-                      borderRadius: '50px',
-                      color: 'rgb(59, 130, 246)',
-                      fontSize: '10px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <PillLeadingRemoveSlot
-                      icon={<FrameIcon />}
-                      onRemove={onRemoveNode ? () => onRemoveNode(editTarget.nodeId) : undefined}
-                    />
-                    <span>{editTarget.componentName}</span>
-                  </div>
+              <div
+                className={`inline-flex items-center gap-1 rounded-full transition-colors ${
+                  effectiveChatMode === "explore" ? "bg-stone-100 pr-1" : ""
+                }`}
+              >
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setChatMode("explore")}
+                  className={`inline-flex items-center gap-1 rounded-full pl-2.5 text-[11px] font-medium transition-colors ${
+                    effectiveChatMode === "explore"
+                      ? "py-1 pr-0 text-stone-900"
+                      : "py-1 pr-2.5 text-stone-500 hover:text-stone-800"
+                  }`}
+                  aria-pressed={effectiveChatMode === "explore"}
+                  title={`Explore (${formatKeyCombo(getCombo("chat.toggle-edit-mode"))})`}
+                >
+                  <ExploreIcon className="flex-shrink-0" />
+                  <span>Explore</span>
+                </button>
+                {effectiveChatMode === "explore" && (
+                  <IterationCountDragger
+                    count={iterationCount}
+                    onChange={setIterationCount}
+                  />
                 )}
-
-                {/* Element chips */}
-                {selectedElements &&
-                  selectedElements.length > 0 &&
-                  selectedElements.map((sel, i) => (
-                    <div
-                      key={i}
-                      className="group flex select-none items-center gap-1 px-2.5 py-1.5"
-                      style={{
-                        background: 'rgb(239, 246, 255)',
-                        border: '1px solid rgb(147, 197, 253)',
-                        borderRadius: '50px',
-                        color: 'rgb(59, 130, 246)',
-                        fontSize: '10px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      <PillLeadingRemoveSlot
-                        icon={<BracketIcon />}
-                        onRemove={onRemoveElement ? () => onRemoveElement(i) : undefined}
-                      />
-                      <span>
-                        &lt;{sel.context.tagName}&gt; {sel.componentName}
-                      </span>
-                    </div>
-                  ))}
-
-                {/* Node reference chips */}
-                {referenceNodes.map((node) => (
-                  <div
-                    key={node.nodeId}
-                    className="group flex select-none items-center gap-1 px-2.5 py-1.5"
-                    style={
-                      node.type === 'image'
-                        ? {
-                            background: 'rgb(245, 243, 255)',
-                            border: '1px solid rgb(167, 139, 250)',
-                            borderRadius: '50px',
-                            color: 'rgb(109, 40, 217)',
-                            fontSize: '9px',
-                            fontWeight: 500,
-                          }
-                        : {
-                            background: 'rgb(236, 253, 245)',
-                            border: '1px solid rgb(110, 231, 183)',
-                            borderRadius: '50px',
-                            color: 'rgb(5, 150, 105)',
-                            fontSize: '10px',
-                            fontWeight: 500,
-                          }
-                    }
-                  >
-                    <PillLeadingRemoveSlot
-                      slotClassName="h-2.5 w-2.5"
-                      icon={node.type === 'image' ? <ImageRefIcon /> : <NodeRefIcon />}
-                      onRemove={onRemoveNode ? () => onRemoveNode(node.nodeId) : undefined}
-                    />
-                    <span>{node.componentName}</span>
-                  </div>
-                ))}
               </div>
+            </div>
+          )}
+
+          {/* The pill */}
+          <div
+            className="docked-chat-pill"
+            data-generating={isGenerating || undefined}
+            style={{ borderRadius: showPillsRowFinal ? 22 : 9999 }}
+          >
+            {isGenerating && (
+              <span className="docked-chat-pill__glow" aria-hidden />
             )}
 
-            {/* Input row */}
             <div
-              ref={inlineRefContainerRef}
-              className="flex items-center gap-2 px-3.5 py-2.5"
-              onKeyDownCapture={handleKeyDownCapture}
+              className="docked-chat-pill__surface flex flex-col"
+              onMouseDown={(e) => {
+                // Clicking empty pill chrome focuses the input; let buttons and the
+                // input itself handle their own clicks.
+                const target = e.target as HTMLElement;
+                if (
+                  target.closest("button") ||
+                  target.closest('[data-slot="inline-reference-input"]')
+                ) {
+                  return;
+                }
+                e.preventDefault();
+                openAndFocus();
+              }}
             >
-              <InlineReference
-                ref={inlineRefHandle}
-                value={segments}
-                onValueChange={setSegments}
-                onSelectItem={handleSelectItem}
-                onImpeccableCommandCleared={(pillEl) => {
-                  handleImpeccableCommandCleared(pillEl, inlineRefContainerRef.current);
-                }}
-                onSkillPillPendingDelete={() => closeDemoteMenu()}
-                className="w-full cursor-chat-inline-input"
+              {/* Selection pills row */}
+              {showPillsRowFinal && (
+                <div className="flex flex-wrap items-center gap-1 px-3.5 pt-2.5">
+                  {/* Target chip (only when no element selection) */}
+                  {editTarget &&
+                    (!selectedElements || selectedElements.length === 0) && (
+                      <div
+                        className="group flex select-none items-center gap-1 px-2.5 py-1.5"
+                        style={{
+                          background: "rgb(250, 250, 249)",
+                          border: "1px solid rgb(147, 197, 253)",
+                          borderRadius: "50px",
+                          color: "rgb(59, 130, 246)",
+                          fontSize: "10px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        <PillLeadingRemoveSlot
+                          icon={<Scan size={12} strokeWidth={2} />}
+                          onRemove={
+                            onRemoveNode
+                              ? () => onRemoveNode(editTarget.nodeId)
+                              : undefined
+                          }
+                        />
+                        <span>{editTarget.componentName}</span>
+                      </div>
+                    )}
+
+                  {/* Element chips */}
+                  {selectedElements &&
+                    selectedElements.length > 0 &&
+                    selectedElements.map((sel, i) => (
+                      <div
+                        key={i}
+                        className="group flex select-none items-center gap-1 px-2.5 py-1.5"
+                        style={{
+                          background: "rgb(239, 246, 255)",
+                          border: "1px solid rgb(147, 197, 253)",
+                          borderRadius: "50px",
+                          color: "rgb(59, 130, 246)",
+                          fontSize: "10px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        <PillLeadingRemoveSlot
+                          icon={<BracketIcon />}
+                          onRemove={
+                            onRemoveElement
+                              ? () => onRemoveElement(i)
+                              : undefined
+                          }
+                        />
+                        <span>
+                          &lt;{sel.context.tagName}&gt; {sel.componentName}
+                        </span>
+                      </div>
+                    ))}
+
+                  {/* Node reference chips */}
+                  {referenceNodes.map((node) => (
+                    <div
+                      key={node.nodeId}
+                      className="group flex select-none items-center gap-1 px-2.5 py-1.5"
+                      style={
+                        node.type === "image"
+                          ? {
+                              background: "rgb(245, 243, 255)",
+                              border: "1px solid rgb(167, 139, 250)",
+                              borderRadius: "50px",
+                              color: "rgb(109, 40, 217)",
+                              fontSize: "9px",
+                              fontWeight: 500,
+                            }
+                          : {
+                              background: "rgb(236, 253, 245)",
+                              border: "1px solid rgb(110, 231, 183)",
+                              borderRadius: "50px",
+                              color: "rgb(5, 150, 105)",
+                              fontSize: "10px",
+                              fontWeight: 500,
+                            }
+                      }
+                    >
+                      <PillLeadingRemoveSlot
+                        slotClassName="h-2.5 w-2.5"
+                        icon={
+                          node.type === "image" ? (
+                            <ImageIcon
+                              size={10}
+                              strokeWidth={1.5}
+                              className="flex-shrink-0"
+                            />
+                          ) : (
+                            <NodeRefIcon />
+                          )
+                        }
+                        onRemove={
+                          onRemoveNode
+                            ? () => onRemoveNode(node.nodeId)
+                            : undefined
+                        }
+                      />
+                      <span>{node.componentName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input row */}
+              <div
+                ref={inlineRefContainerRef}
+                className="flex items-center gap-2 px-3.5 py-2.5"
+                onKeyDownCapture={handleKeyDownCapture}
               >
-                <InlineReferenceInput
-                  placeholder={placeholder}
-                  aria-label="Chat prompt"
-                  className="w-full rounded-none border-none px-0 py-1 text-left leading-[1.4] shadow-none outline-none ring-0 focus-visible:border-none focus-visible:ring-0"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    color: 'rgb(41, 37, 36)',
-                    caretColor: 'rgb(87, 83, 78)',
+                <InlineReference
+                  ref={inlineRefHandle}
+                  value={segments}
+                  onValueChange={setSegments}
+                  onSelectItem={handleSelectItem}
+                  onImpeccableCommandCleared={(pillEl) => {
+                    handleImpeccableCommandCleared(
+                      pillEl,
+                      inlineRefContainerRef.current,
+                    );
                   }}
-                />
-                <InlineReferenceContent
-                  trigger="/"
-                  items={skillPickerItems}
-                  filterFn={skillPickerFilterFn}
-                  placement="top"
-                  className="rounded-xl border border-stone-200 shadow-lg"
+                  onSkillPillPendingDelete={() => closeDemoteMenu()}
+                  className="w-full cursor-chat-inline-input"
                 >
-                  <ImpeccableSkillPicker
-                    impeccableSubMenuOpen={impeccableSubMenuOpen}
-                    onBackFromSubMenu={() => setImpeccableSubMenuOpen(false)}
-                    showAddSkillButton={false}
-                  />
-                </InlineReferenceContent>
-
-                {demoteState && (
-                  <ImpeccableDemoteMenu
-                    demoteState={demoteState}
-                    onSelect={(command) => {
-                      inlineRefHandle.current?.updateImpeccablePill(demoteState.pillEl, command);
-                      closeDemoteMenu();
+                  <InlineReferenceInput
+                    placeholder={placeholder}
+                    aria-label="Chat prompt"
+                    className="w-full rounded-none border-none px-0 py-1 text-left leading-[1.4] shadow-none outline-none ring-0 focus-visible:border-none focus-visible:ring-0"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      boxShadow: "none",
+                      color: "rgb(41, 37, 36)",
+                      caretColor: "rgb(87, 83, 78)",
                     }}
-                    onClose={closeDemoteMenu}
                   />
-                )}
-              </InlineReference>
+                  <InlineReferenceContent
+                    trigger="/"
+                    items={skillPickerItems}
+                    filterFn={skillPickerFilterFn}
+                    placement="top"
+                    className="rounded-xl border border-stone-200 shadow-lg"
+                  >
+                    <ImpeccableSkillPicker
+                      impeccableSubMenuOpen={impeccableSubMenuOpen}
+                      onBackFromSubMenu={() => setImpeccableSubMenuOpen(false)}
+                      showAddSkillButton={false}
+                    />
+                  </InlineReferenceContent>
 
-              {/* Send button */}
-              <button
-                type="button"
-                disabled={!canSubmit}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSubmit();
-                }}
-                className="flex flex-shrink-0 items-center justify-center transition-colors hover:bg-stone-700 disabled:cursor-default disabled:hover:bg-[rgb(41,37,36)]"
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: 'rgb(41, 37, 36)',
-                  color: 'white',
-                  opacity: canSubmit ? 1 : 0.4,
-                }}
-                aria-label="Send"
-              >
-                <SendArrowIcon />
-              </button>
+                  {demoteState && (
+                    <ImpeccableDemoteMenu
+                      demoteState={demoteState}
+                      onSelect={(command) => {
+                        inlineRefHandle.current?.updateImpeccablePill(
+                          demoteState.pillEl,
+                          command,
+                        );
+                        closeDemoteMenu();
+                      }}
+                      onClose={closeDemoteMenu}
+                    />
+                  )}
+                </InlineReference>
+
+                {/* Send button */}
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSubmit();
+                  }}
+                  className="flex flex-shrink-0 items-center justify-center transition-colors hover:bg-stone-700 disabled:cursor-default disabled:hover:bg-[rgb(41,37,36)]"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "rgb(41, 37, 36)",
+                    color: "white",
+                    opacity: canSubmit ? 1 : 0.4,
+                  }}
+                  aria-label="Send"
+                >
+                  <ArrowUp size={14} strokeWidth={1.5} className="flex-shrink-0" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );

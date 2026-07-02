@@ -1,19 +1,40 @@
-'use client';
+import {
+  memo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type ComponentType,
+  type MouseEvent,
+} from "react";
+import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
+import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
+import { resolveRegistryItem } from "../registry";
+import {
+  ResizeGripIcon,
+  PlayButtonIcon,
+} from "../components/ui/playground-nav-icons";
+import IterateDialog from "./shared/IterateDialog";
+import { SizeButtons } from "./shared/SizeButtons";
+import { NodeLabel, useInverseZoom } from "./shared/NodeLabel";
+import { loadOnCanvasComponentModule } from "./oncanvas-loader";
 
-import { memo, useState, useCallback, useRef, useEffect, type ComponentType, type MouseEvent } from 'react';
-import { useNodeId, useReactFlow, NodeResizeControl } from '@xyflow/react';
-import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { resolveRegistryItem } from '../registry';
-import IterateDialog from './shared/IterateDialog';
-import { SizeButtons } from './shared/SizeButtons';
-import { NodeLabel, useInverseZoom } from './shared/NodeLabel';
-import { loadOnCanvasComponentModule } from './oncanvas-loader';
-
-import { useAsyncProps, useScrollCapture, useHtmlContent } from '../hooks/useNodeShared';
-import ComponentErrorBoundary from './ComponentErrorBoundary';
-import { useInteractiveNodeStore, useIsInteractiveNode } from '../stores/interactive-node-store';
-import { useFrameHoverHint } from './shared/FrameHoverHint';
+import {
+  useAsyncProps,
+  useScrollCapture,
+  useHtmlContent,
+} from "../hooks/useNodeShared";
+import ComponentErrorBoundary from "./ComponentErrorBoundary";
+import {
+  useInteractiveNodeStore,
+  useIsInteractiveNode,
+} from "../stores/interactive-node-store";
+import { useFrameHoverHint } from "./shared/FrameHoverHint";
 import {
   COMPONENT_SIZE_CHANGE_EVENT,
   GENERATION_START_EVENT,
@@ -28,7 +49,7 @@ import {
   RESIZE_MIN_WIDTH,
   RESIZE_MIN_HEIGHT,
   type ComponentSize,
-} from '../lib/constants';
+} from "../lib/constants";
 
 interface ComponentNodeProps {
   data: {
@@ -38,7 +59,7 @@ interface ComponentNodeProps {
     /** Whether this node has been freeform-resized */
     customResized?: boolean;
     /** Render mode: 'react' (default), 'html' for saved HTML, 'jsx' for pasted TSX, 'embed' for pasted URLs, 'design-system' for the generated showcase */
-    renderMode?: 'react' | 'html' | 'jsx' | 'embed' | 'design-system';
+    renderMode?: "react" | "html" | "jsx" | "embed" | "design-system";
     /** HTML page folder name (when renderMode is 'html') */
     htmlFolder?: string;
     /** On-canvas JSX component filename in canvas-components/ (when renderMode is 'jsx') */
@@ -55,24 +76,29 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   // layout slot (14 + 6 gap) so it doesn't visually overlap the label.
   const hidePlayButton = labelInvScale * 14 > 14 + 6;
   const componentId = data.componentId;
-  const isHtml = data.renderMode === 'html';
-  const isJsx = data.renderMode === 'jsx';
-  const isEmbed = data.renderMode === 'embed';
-  const isDesignSystem = data.renderMode === 'design-system';
-  const registryItem = isHtml || isJsx || isEmbed || isDesignSystem ? null : resolveRegistryItem(componentId);
+  const isHtml = data.renderMode === "html";
+  const isJsx = data.renderMode === "jsx";
+  const isEmbed = data.renderMode === "embed";
+  const isDesignSystem = data.renderMode === "design-system";
+  const registryItem =
+    isHtml || isJsx || isEmbed || isDesignSystem
+      ? null
+      : resolveRegistryItem(componentId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
   const [iframeKey, setIframeKey] = useState(() => Date.now());
 
   // On-canvas JSX component — loaded dynamically, updates when HMR re-evaluates index.ts
-  const [JsxComponent, setJsxComponent] = useState<ComponentType<any> | null>(null);
+  const [JsxComponent, setJsxComponent] = useState<ComponentType<any> | null>(
+    null,
+  );
   const [jsxError, setJsxError] = useState<string | null>(null);
   const [jsxLoadAttempt, setJsxLoadAttempt] = useState(0);
 
   // Re-trigger load when a new JSX component is written to disk
   useEffect(() => {
     if (!isJsx) return;
-    const handler = () => setJsxLoadAttempt(n => n + 1);
+    const handler = () => setJsxLoadAttempt((n) => n + 1);
     window.addEventListener(JSX_COMPONENT_ADDED_EVENT, handler);
     return () => window.removeEventListener(JSX_COMPONENT_ADDED_EVENT, handler);
   }, [isJsx]);
@@ -87,7 +113,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     // freshly pasted frames stay stuck on "Loading component…" until refresh.
     const attempt = (delay: number) => {
       loadOnCanvasComponentModule()
-        .then(mod => {
+        .then((mod) => {
           if (cancelled) return;
           const comp = mod.getOnCanvasComponent(data.jsxFile!);
           if (comp) {
@@ -96,10 +122,13 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
             return;
           }
           if (delay <= 8000) {
-            timer = setTimeout(() => attempt(Math.min(delay * 1.5, 2000)), delay);
+            timer = setTimeout(
+              () => attempt(Math.min(delay * 1.5, 2000)),
+              delay,
+            );
           }
         })
-        .catch(err => {
+        .catch((err) => {
           if (!cancelled) setJsxError(String(err));
         });
     };
@@ -112,14 +141,16 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   }, [isJsx, data.jsxFile, jsxLoadAttempt]);
 
   const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(
-    isHtml || isJsx || isEmbed || isDesignSystem ? '' : componentId,
+    isHtml || isJsx || isEmbed || isDesignSystem ? "" : componentId,
   );
   const handleWheel = useScrollCapture(scrollContainerRef);
 
   const nodeId = useNodeId();
   const { updateNodeData, setNodes, getNode } = useReactFlow();
   const isInteractive = useIsInteractiveNode(nodeId);
-  const setInteractiveNodeId = useInteractiveNodeStore((s) => s.setInteractiveNodeId);
+  const setInteractiveNodeId = useInteractiveNodeStore(
+    (s) => s.setInteractiveNodeId,
+  );
 
   const handleFrameDoubleClick = useCallback(() => {
     if (nodeId) setInteractiveNodeId(nodeId);
@@ -137,43 +168,49 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   useEffect(() => {
     if (!isInteractive) return;
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setInteractiveNodeId(null);
+      if (e.key === "Escape") setInteractiveNodeId(null);
     };
-    window.addEventListener('keydown', handleEsc);
+    window.addEventListener("keydown", handleEsc);
     const iframe = iframeRef.current;
     let innerDoc: Document | null = null;
     try {
       innerDoc = iframe?.contentDocument ?? null;
-      innerDoc?.addEventListener('keydown', handleEsc);
+      innerDoc?.addEventListener("keydown", handleEsc);
     } catch {
       // cross-origin iframe — skip
     }
     return () => {
-      window.removeEventListener('keydown', handleEsc);
-      try { innerDoc?.removeEventListener('keydown', handleEsc); } catch { /* noop */ }
+      window.removeEventListener("keydown", handleEsc);
+      try {
+        innerDoc?.removeEventListener("keydown", handleEsc);
+      } catch {
+        /* noop */
+      }
     };
   }, [isInteractive, setInteractiveNodeId]);
 
   // Prefer the persisted size from node data (survives reload), then registry default
   const [size, setSize] = useState<ComponentSize>(
-    data.size || registryItem?.size || (isHtml || isEmbed || isDesignSystem ? 'laptop' : 'default'),
+    data.size ||
+      registryItem?.size ||
+      (isHtml || isEmbed || isDesignSystem ? "laptop" : "default"),
   );
   const [isResizing, setIsResizing] = useState(false);
   const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
   const [isRenamingHtml, setIsRenamingHtml] = useState(false);
-  const [htmlRenameValue, setHtmlRenameValue] = useState('');
+  const [htmlRenameValue, setHtmlRenameValue] = useState("");
   const htmlRenameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const on  = () => setIsGlobalGenerating(true);
+    const on = () => setIsGlobalGenerating(true);
     const off = () => setIsGlobalGenerating(false);
-    window.addEventListener(GENERATION_START_EVENT,    on);
+    window.addEventListener(GENERATION_START_EVENT, on);
     window.addEventListener(GENERATION_COMPLETE_EVENT, off);
-    window.addEventListener(GENERATION_ERROR_EVENT,    off);
+    window.addEventListener(GENERATION_ERROR_EVENT, off);
     return () => {
-      window.removeEventListener(GENERATION_START_EVENT,    on);
+      window.removeEventListener(GENERATION_START_EVENT, on);
       window.removeEventListener(GENERATION_COMPLETE_EVENT, off);
-      window.removeEventListener(GENERATION_ERROR_EVENT,    off);
+      window.removeEventListener(GENERATION_ERROR_EVENT, off);
     };
   }, []);
 
@@ -192,13 +229,14 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
 
   const handleResizeStart = useCallback(() => {
     setIsResizing(true);
-    setSize('default');
+    setSize("default");
   }, []);
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
     setIsCustomResized(true);
-    if (nodeId) updateNodeData(nodeId, { customResized: true, size: 'default' });
+    if (nodeId)
+      updateNodeData(nodeId, { customResized: true, size: "default" });
   }, [nodeId, updateNodeData]);
 
   const handleSizeChange = (newSize: ComponentSize) => {
@@ -210,21 +248,28 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       setNodes((nds) =>
         nds.map((n) =>
           n.id === nodeId
-            ? { ...n, width: undefined, height: undefined, style: { ...n.style, width: undefined, height: undefined } }
+            ? {
+                ...n,
+                width: undefined,
+                height: undefined,
+                style: { ...n.style, width: undefined, height: undefined },
+              }
             : n,
         ),
       );
     }
-    window.dispatchEvent(new CustomEvent(COMPONENT_SIZE_CHANGE_EVENT, {
-      detail: { nodeId, size: newSize },
-    }));
+    window.dispatchEvent(
+      new CustomEvent(COMPONENT_SIZE_CHANGE_EVENT, {
+        detail: { nodeId, size: newSize },
+      }),
+    );
   };
 
   const htmlSrc = isHtml
     ? `/${data.htmlFolder}/index.html?t=${iframeKey}`
     : isDesignSystem
       ? `${DESIGN_SYSTEM_SHOWCASE_RAW_URL}&t=${iframeKey}`
-      : '';
+      : "";
   const htmlContent = useHtmlContent(htmlSrc, isHtml || isDesignSystem);
 
   // Refresh the design-system iframe when a new showcase is generated.
@@ -232,45 +277,52 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     if (!isDesignSystem) return;
     const handler = () => setIframeKey(Date.now());
     window.addEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
-    return () => window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
+    return () =>
+      window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
   }, [isDesignSystem]);
 
   const embedUrlLabel = (() => {
-    if (!isEmbed || !data.embedUrl) return 'Embed';
-    const withoutScheme = data.embedUrl.replace(/^https?:\/\//i, '').trim();
-    const noTrailingSlash = withoutScheme.replace(/\/+$/, '');
-    return noTrailingSlash || 'Embed';
+    if (!isEmbed || !data.embedUrl) return "Embed";
+    const withoutScheme = data.embedUrl.replace(/^https?:\/\//i, "").trim();
+    const noTrailingSlash = withoutScheme.replace(/\/+$/, "");
+    return noTrailingSlash || "Embed";
   })();
 
   const Component = isJsx ? JsxComponent : registryItem?.Component;
   const props = registryItem?.props;
   const label = isHtml
-    ? (data.htmlFolder || componentId)
+    ? data.htmlFolder || componentId
     : isJsx
-      ? (data.jsxFile?.replace('.tsx', '') || componentId)
+      ? data.jsxFile?.replace(".tsx", "") || componentId
       : isEmbed
         ? embedUrlLabel
         : isDesignSystem
-          ? 'Design System'
-          : (registryItem?.label || componentId);
-  const effectiveProps = (resolvedProps ?? props ?? {}) as Record<string, unknown>;
+          ? "Design System"
+          : registryItem?.label || componentId;
+  const effectiveProps = (resolvedProps ?? props ?? {}) as Record<
+    string,
+    unknown
+  >;
   const config = SIZE_CONFIG[size];
-  const isPreset = size !== 'default';
+  const isPreset = size !== "default";
   const isFillMode = isResizing || isCustomResized;
   const isLargeComponent = isPreset || isFillMode;
   const displayDims = getDisplayDimensions(size);
 
-  const beginHtmlRename = useCallback((e: MouseEvent<HTMLSpanElement>) => {
-    if (!isHtml) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setHtmlRenameValue(data.htmlFolder || componentId);
-    setIsRenamingHtml(true);
-  }, [isHtml, data.htmlFolder, componentId]);
+  const beginHtmlRename = useCallback(
+    (e: MouseEvent<HTMLSpanElement>) => {
+      if (!isHtml) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setHtmlRenameValue(data.htmlFolder || componentId);
+      setIsRenamingHtml(true);
+    },
+    [isHtml, data.htmlFolder, componentId],
+  );
 
   const cancelHtmlRename = useCallback(() => {
     setIsRenamingHtml(false);
-    setHtmlRenameValue('');
+    setHtmlRenameValue("");
   }, []);
 
   const commitHtmlRename = useCallback(async () => {
@@ -287,23 +339,26 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     }
 
     try {
-      const res = await fetch('/playground/api/html-pages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/playground/api/html-pages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageFolder: oldFolder, newName: nextName }),
       });
       const result = await res.json().catch(() => ({ success: false }));
       if (!res.ok || !result?.success || !result?.page?.folder) {
-        toast.error(result?.error || 'Failed to rename design');
+        toast.error(result?.error || "Failed to rename design");
         return;
       }
 
       const newFolder = result.page.folder as string;
       setNodes((nds) =>
         nds.map((n) => {
-          if (n.type === 'component') {
-            const nodeData = n.data as ComponentNodeProps['data'];
-            if (nodeData.renderMode === 'html' && nodeData.htmlFolder === oldFolder) {
+          if (n.type === "component") {
+            const nodeData = n.data as ComponentNodeProps["data"];
+            if (
+              nodeData.renderMode === "html" &&
+              nodeData.htmlFolder === oldFolder
+            ) {
               return {
                 ...n,
                 data: {
@@ -316,9 +371,12 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
             return n;
           }
 
-          if (n.type === 'iteration') {
+          if (n.type === "iteration") {
             const nodeData = n.data as Record<string, unknown>;
-            if (nodeData.renderMode === 'html' && nodeData.htmlFolder === oldFolder) {
+            if (
+              nodeData.renderMode === "html" &&
+              nodeData.htmlFolder === oldFolder
+            ) {
               return {
                 ...n,
                 data: {
@@ -332,10 +390,10 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           return n;
         }),
       );
-      window.dispatchEvent(new CustomEvent('playground:html-pages-updated'));
+      window.dispatchEvent(new CustomEvent("playground:html-pages-updated"));
       cancelHtmlRename();
     } catch {
-      toast.error('Failed to rename design');
+      toast.error("Failed to rename design");
     }
   }, [isHtml, data.htmlFolder, htmlRenameValue, setNodes, cancelHtmlRename]);
 
@@ -358,11 +416,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
 
   return (
     <div
-      className={`flex flex-col ${isLargeComponent ? '' : 'min-w-[200px]'}`}
+      className={`flex flex-col ${isLargeComponent ? "" : "min-w-[200px]"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
-        ...(isFillMode ? { width: '100%', height: '100%' } : {}),
-        fontFamily: 'var(--pg-font-sans)',
+        ...(isFillMode ? { width: "100%", height: "100%" } : {}),
+        fontFamily: "var(--pg-font-sans)",
       }}
     >
       {/* Resize handle — bottom-right corner, only when selected */}
@@ -373,22 +431,18 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         onResizeStart={handleResizeStart}
         onResizeEnd={handleResizeEnd}
         style={{
-          background: 'transparent',
-          border: 'none',
+          background: "transparent",
+          border: "none",
           width: 10,
           height: 10,
           bottom: 2,
           right: 2,
           opacity: selected ? 1 : 0,
-          pointerEvents: selected ? 'auto' : 'none',
-          cursor: 'nwse-resize',
+          pointerEvents: selected ? "auto" : "none",
+          cursor: "nwse-resize",
         }}
       >
-        <svg width="10" height="10" viewBox="0 0 10 10" className="text-stone-300 hover:text-stone-500 transition-colors">
-          <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.2" />
-          <line x1="9" y1="4" x2="4" y2="9" stroke="currentColor" strokeWidth="1.2" />
-          <line x1="9" y1="7" x2="7" y2="9" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
+        <ResizeGripIcon className="text-stone-300 hover:text-stone-500 transition-colors" />
       </NodeResizeControl>
 
       {/* ── Top bar — always visible label, controls only when selected ── */}
@@ -405,44 +459,61 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                       : isHtml
                         ? `/${data.htmlFolder}/index.html`
                         : `/playground/iterations/${componentId}`;
-                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                    if (url) window.open(url, "_blank", "noopener,noreferrer");
                   }}
                   className="nodrag shrink-0 p-0 leading-none rounded-[5px] transition-colors"
                   style={{
                     color: selected
-                      ? (isHtml ? '#F97316' : isEmbed ? '#0D9488' : '#0B99FF')
-                      : '#A8A29E',
-                    display: 'inline-block',
+                      ? isHtml
+                        ? "#F97316"
+                        : isEmbed
+                          ? "#0D9488"
+                          : "#0B99FF"
+                      : "#A8A29E",
+                    display: "inline-block",
                     transform: `scale(${labelInvScale})`,
-                    transformOrigin: 'left bottom',
-                    willChange: 'transform',
-                    visibility: hidePlayButton ? 'hidden' : 'visible',
-                    pointerEvents: hidePlayButton ? 'none' : undefined,
+                    transformOrigin: "left bottom",
+                    willChange: "transform",
+                    visibility: hidePlayButton ? "hidden" : "visible",
+                    pointerEvents: hidePlayButton ? "none" : undefined,
                   }}
                   aria-label="Open in new tab"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <rect x="2" y="2" width="20" height="20" rx="5" fill="currentColor" />
-                    <path d="M10 8 L16 12 L10 16 Z" fill="white" />
-                  </svg>
+                  <PlayButtonIcon />
                 </button>
               </TooltipTrigger>
-              <TooltipContent><p>Open in new tab</p></TooltipContent>
+              <TooltipContent>
+                <p>Open in new tab</p>
+              </TooltipContent>
             </Tooltip>
           )}
-          <NodeLabel color={isHtml ? '#F97316' : isJsx ? '#7C3AED' : isEmbed ? '#0D9488' : isDesignSystem ? '#C026D3' : '#0B99FF'}>
+          <NodeLabel
+            color={
+              isHtml
+                ? "#F97316"
+                : isJsx
+                  ? "#7C3AED"
+                  : isEmbed
+                    ? "#0D9488"
+                    : isDesignSystem
+                      ? "#C026D3"
+                      : "#0B99FF"
+            }
+          >
             {isHtml ? (
               isRenamingHtml ? (
                 <input
                   ref={htmlRenameInputRef}
                   value={htmlRenameValue}
                   onChange={(e) => setHtmlRenameValue(e.target.value)}
-                  onBlur={() => { void commitHtmlRename(); }}
+                  onBlur={() => {
+                    void commitHtmlRename();
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       void commitHtmlRename();
-                    } else if (e.key === 'Escape') {
+                    } else if (e.key === "Escape") {
                       e.preventDefault();
                       cancelHtmlRename();
                     }
@@ -467,35 +538,45 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         </div>
 
         {/* Right: size controls — invisible when not selected */}
-        <div className={`flex items-center gap-1.5 transition-opacity nodrag ${selected ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div
+          className={`flex items-center gap-1.5 transition-opacity nodrag ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        >
           <SizeButtons currentSize={size} onSizeChange={handleSizeChange} />
         </div>
       </div>
 
       {/* ── Frame + right-side vertical toolbar ── */}
-      <div className={`relative flex items-start ${isFillMode ? 'flex-1 min-h-0' : ''}`}>
+      <div
+        className={`relative flex items-start ${isFillMode ? "flex-1 min-h-0" : ""}`}
+      >
         {/* Component frame */}
         <div
           data-screenshot-target
-          data-interactive={isInteractive ? 'true' : undefined}
+          data-interactive={isInteractive ? "true" : undefined}
           onDoubleClick={handleFrameDoubleClick}
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
-          className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? '' : 'transition-all'} ${
+          className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
             selected
-              ? `ring-2 ${isHtml ? 'ring-orange-400' : isJsx ? 'ring-purple-400' : isEmbed ? 'ring-teal-400' : isDesignSystem ? 'ring-fuchsia-400' : 'ring-[#0B99FF]'}`
-              : ''
-          } ${isInteractive ? 'ring-offset-2' : ''} ${isFillMode ? 'w-full h-full' : ''}`}
-          style={isJsx ? { contain: 'paint' } : undefined}
+              ? `ring-2 ${isHtml ? "ring-orange-400" : isJsx ? "ring-purple-400" : isEmbed ? "ring-teal-400" : isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
+              : ""
+          } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? "w-full h-full" : ""}`}
+          style={isJsx ? { contain: "paint" } : undefined}
         >
           {isHtml || isEmbed || isDesignSystem ? (
             <div
               className="relative"
-              style={isPreset
-                ? { width: displayDims.width, height: displayDims.height }
-                : isFillMode
-                  ? { width: '100%', height: '100%' }
-                  : { minWidth: '400px', minHeight: '300px', width: isPreset ? displayDims.width : undefined, height: isPreset ? displayDims.height : undefined }
+              style={
+                isPreset
+                  ? { width: displayDims.width, height: displayDims.height }
+                  : isFillMode
+                    ? { width: "100%", height: "100%" }
+                    : {
+                        minWidth: "400px",
+                        minHeight: "300px",
+                        width: isPreset ? displayDims.width : undefined,
+                        height: isPreset ? displayDims.height : undefined,
+                      }
               }
             >
               <iframe
@@ -503,26 +584,37 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                 key={isEmbed ? data.embedUrl : iframeKey}
                 {...(isEmbed
                   ? { src: data.embedUrl }
-                  : { srcDoc: htmlContent || undefined, src: htmlContent ? undefined : htmlSrc })}
+                  : {
+                      srcDoc: htmlContent || undefined,
+                      src: htmlContent ? undefined : htmlSrc,
+                    })}
                 className="w-full h-full border-0"
-                style={isPreset
-                  ? { width: config.width, height: config.height, transform: `scale(${config.scale})`, transformOrigin: 'top left' }
-                  : { width: '100%', height: '100%' }
+                style={
+                  isPreset
+                    ? {
+                        width: config.width,
+                        height: config.height,
+                        transform: `scale(${config.scale})`,
+                        transformOrigin: "top left",
+                      }
+                    : { width: "100%", height: "100%" }
                 }
                 sandbox={
                   isEmbed
-                    ? 'allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads'
-                    : 'allow-scripts allow-same-origin'
+                    ? "allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads"
+                    : "allow-scripts allow-same-origin"
                 }
                 title={isEmbed ? label : data.htmlFolder}
               />
-              {!isInteractive && <div className="absolute inset-0" data-iframe-overlay />}
+              {!isInteractive && (
+                <div className="absolute inset-0" data-iframe-overlay />
+              )}
             </div>
           ) : isFillMode ? (
             /* Freeform / active resize: fill the node with centered content */
             <div
               ref={scrollContainerRef}
-              className={`grid place-items-center p-[5%] overflow-auto w-full h-full ${isInteractive ? 'nodrag nowheel nopan' : ''}`}
+              className={`grid place-items-center p-[5%] overflow-auto w-full h-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
               onWheel={isInteractive ? handleWheel : undefined}
             >
               {jsxError ? (
@@ -530,7 +622,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
                 <div className="text-xs text-gray-500">Loading live data…</div>
               ) : propsError && !Object.keys(effectiveProps).length ? (
-                <div className="text-xs text-red-600">Failed to load data: {propsError}</div>
+                <div className="text-xs text-red-600">
+                  Failed to load data: {propsError}
+                </div>
               ) : Component ? (
                 <ComponentErrorBoundary componentName={label}>
                   <Component {...effectiveProps} />
@@ -543,41 +637,55 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
             /* Preset mode (Desktop/Mobile): fixed viewport with zoom scaling */
             <div
               ref={scrollContainerRef}
-              className={`bg-gray-100 overflow-x-hidden overflow-y-auto ${isInteractive ? 'nodrag nowheel nopan' : ''}`}
+              className={`bg-gray-100 overflow-x-hidden overflow-y-auto ${isInteractive ? "nodrag nowheel nopan" : ""}`}
               style={{ width: displayDims.width, height: displayDims.height }}
               onWheel={isInteractive ? handleWheel : undefined}
             >
               <div
-                className={isJsx ? 'bg-white' : 'bg-background'}
-                style={{ width: config.width, minHeight: config.height, zoom: config.scale }}
+                className={isJsx ? "bg-white" : "bg-background"}
+                style={{
+                  width: config.width,
+                  minHeight: config.height,
+                  zoom: config.scale,
+                }}
               >
                 {jsxError ? (
                   <div className="p-6 text-xs text-red-500">{jsxError}</div>
                 ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
-                  <div className="p-6 text-xs text-gray-500">Loading live data…</div>
+                  <div className="p-6 text-xs text-gray-500">
+                    Loading live data…
+                  </div>
                 ) : propsError && !Object.keys(effectiveProps).length ? (
-                  <div className="p-6 text-xs text-red-600">Failed to load data: {propsError}</div>
+                  <div className="p-6 text-xs text-red-600">
+                    Failed to load data: {propsError}
+                  </div>
                 ) : Component ? (
                   <ComponentErrorBoundary componentName={label}>
                     <Component {...effectiveProps} />
                   </ComponentErrorBoundary>
                 ) : isJsx ? (
-                  <div className="p-6 text-xs text-stone-400">Loading component…</div>
+                  <div className="p-6 text-xs text-stone-400">
+                    Loading component…
+                  </div>
                 ) : null}
               </div>
             </div>
           ) : (
             /* Auto mode: intrinsic sizing */
             <div
-              className={`grid place-items-center p-4 ${isInteractive ? 'nodrag nowheel nopan' : ''}`}
-              style={isJsx ? { minWidth: '400px', minHeight: '400px' } : undefined}
+              className={`grid place-items-center p-4 ${isInteractive ? "nodrag nowheel nopan" : ""}`}
+              style={
+                isJsx ? { minWidth: "400px", minHeight: "400px" } : undefined
+              }
             >
               {jsxError ? (
                 <div className="text-xs text-red-500">{jsxError}</div>
               ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
                 <div className="text-xs text-gray-500">Loading live data…</div>
               ) : propsError && !Object.keys(effectiveProps).length ? (
-                <div className="text-xs text-red-600">Failed to load data: {propsError}</div>
+                <div className="text-xs text-red-600">
+                  Failed to load data: {propsError}
+                </div>
               ) : Component ? (
                 <ComponentErrorBoundary componentName={label}>
                   <Component {...effectiveProps} />
@@ -593,28 +701,36 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               keep their own scoped overlay) but harmless. Element-select
               mode disables this via `[data-iframe-overlay] { pointer-events:
               none !important }` in playground-global.css. */}
-          {!isInteractive && <div className="absolute inset-0" data-iframe-overlay />}
+          {!isInteractive && (
+            <div className="absolute inset-0" data-iframe-overlay />
+          )}
         </div>
 
         {hoverHint.tooltip}
 
         {/* Right-side vertical action toolbar — always in DOM, invisible when not selected */}
-        <div className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                {!isEmbed && !isDesignSystem ? (
-                  <IterateDialog
-                    componentId={componentId}
-                    componentName={isHtml ? (data.htmlFolder || componentId) : label.replace(/\s*\(.*\)/, '')}
-                    parentNodeId={nodeId ?? ''}
-                    isGlobalGenerating={isGlobalGenerating}
-                    renderMode={data.renderMode as 'react' | 'html' | 'jsx' | undefined}
-                    htmlFolder={data.htmlFolder}
-                    jsxFile={data.jsxFile}
-                  />
-                ) : null}
-
-          </div>
+        <div
+          className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        >
+          {!isEmbed && !isDesignSystem ? (
+            <IterateDialog
+              componentId={componentId}
+              componentName={
+                isHtml
+                  ? data.htmlFolder || componentId
+                  : label.replace(/\s*\(.*\)/, "")
+              }
+              parentNodeId={nodeId ?? ""}
+              isGlobalGenerating={isGlobalGenerating}
+              renderMode={
+                data.renderMode as "react" | "html" | "jsx" | undefined
+              }
+              htmlFolder={data.htmlFolder}
+              jsxFile={data.jsxFile}
+            />
+          ) : null}
+        </div>
       </div>
-
     </div>
   );
 }

@@ -1,11 +1,12 @@
-'use client';
-
-import { useState, useRef, useEffect } from 'react';
-import { Check } from 'lucide-react';
-import { getModelIconConfig } from '../../../lib/model-icons';
-import { useModelSettingsStore } from '../../../stores/model-settings-store';
-import { ITERATION_COUNT_OPTIONS, type ModelOption } from '../../../lib/constants';
-import { VariationStackIcon } from './icons';
+import { useState, useRef, useEffect } from "react";
+import { Check } from "lucide-react";
+import { getModelIconConfig } from "../../../lib/model-icons";
+import { useModelSettingsStore } from "../../../stores/model-settings-store";
+import {
+  ITERATION_COUNT_OPTIONS,
+  type ModelOption,
+} from "../../../lib/constants";
+import { VariationStackIcon } from "../../../components/ui/playground-nav-icons";
 
 // ---------------------------------------------------------------------------
 // ModelPillDropdown — rounded pill button that opens a model selector
@@ -27,24 +28,28 @@ export function ModelPillDropdown({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const activeProvider = useModelSettingsStore((s) => s.activeProvider);
-  const currentLabel = models.find(m => m.value === model)?.label || model || 'Default';
+  const currentLabel =
+    models.find((m) => m.value === model)?.label || model || "Default";
   const currentConfig = getModelIconConfig(model, activeProvider);
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         className="inline-flex h-9 max-w-[220px] items-center gap-2 rounded-full bg-stone-100/80 pl-2 pr-3 text-[15px] font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-800"
         aria-label="Select model"
       >
@@ -53,11 +58,11 @@ export function ModelPillDropdown({
           style={{
             backgroundColor: currentConfig.bg,
             backgroundImage: `url(${currentConfig.src})`,
-            backgroundSize: '72%',
+            backgroundSize: "72%",
           }}
         />
         <span className="truncate">
-          {isLoading ? 'Loading...' : currentLabel}
+          {isLoading ? "Loading..." : currentLabel}
         </span>
       </button>
 
@@ -74,7 +79,7 @@ export function ModelPillDropdown({
                   setOpen(false);
                 }}
                 className={`flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-stone-700 transition-colors hover:bg-stone-100 ${
-                  model === option.value ? 'bg-stone-50' : ''
+                  model === option.value ? "bg-stone-50" : ""
                 }`}
               >
                 <span className="flex min-w-0 items-center gap-2">
@@ -83,12 +88,14 @@ export function ModelPillDropdown({
                     style={{
                       backgroundColor: config.bg,
                       backgroundImage: `url(${config.src})`,
-                      backgroundSize: '72%',
+                      backgroundSize: "72%",
                     }}
                   />
                   <span className="truncate">{option.label}</span>
                 </span>
-                {model === option.value && <Check className="size-3.5 flex-shrink-0 text-stone-500" />}
+                {model === option.value && (
+                  <Check className="size-3.5 flex-shrink-0 text-stone-500" />
+                )}
               </button>
             );
           })}
@@ -114,20 +121,23 @@ export function VariationCountDropdown({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stone-200/70 bg-stone-50/90 px-2.5 text-[14px] font-semibold text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
         aria-label="Select variation count"
       >
@@ -146,11 +156,13 @@ export function VariationCountDropdown({
                 setOpen(false);
               }}
               className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:bg-stone-100 ${
-                count === option ? 'bg-stone-50' : ''
+                count === option ? "bg-stone-50" : ""
               }`}
             >
               <span>{option}x</span>
-              {count === option && <Check className="size-3.5 text-stone-500" />}
+              {count === option && (
+                <Check className="size-3.5 text-stone-500" />
+              )}
             </button>
           ))}
         </div>
