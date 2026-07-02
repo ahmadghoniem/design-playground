@@ -1,12 +1,20 @@
-'use client';
-
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import type { PlaygroundSkill } from '../../../skills';
-import { useImpeccableSkillPicker } from '../../../hooks/useImpeccableSkillPicker';
-import { impeccablePromptFromSegment } from '../../../lib/impeccable-skill';
-import { SKILLS_CHANGED_EVENT, DEFAULT_EMPTY_ITERATION_INSTRUCTIONS } from '../../../lib/constants';
-import type { Segment, InlineReferenceHandle } from '../../../ui/inline-reference';
-import { loadSelectedModel, saveSelectedModel, useAvailableModels } from './parts';
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import type { PlaygroundSkill } from "../../../skills";
+import { useImpeccableSkillPicker } from "../../../hooks/useImpeccableSkillPicker";
+import { impeccablePromptFromSegment } from "../../../lib/impeccable-skill";
+import {
+  SKILLS_CHANGED_EVENT,
+  DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
+} from "../../../lib/constants";
+import type {
+  Segment,
+  InlineReferenceHandle,
+} from "../../../components/ui/inline-reference";
+import {
+  loadSelectedModel,
+  saveSelectedModel,
+  useAvailableModels,
+} from "./parts";
 
 // ---------------------------------------------------------------------------
 // useIterateDialogState
@@ -23,7 +31,7 @@ export interface IterateDialogFormState {
   // Model
   selectedModel: string;
   handleModelChange: (model: string) => void;
-  models: ReturnType<typeof useAvailableModels>['models'];
+  models: ReturnType<typeof useAvailableModels>["models"];
   isLoadingModels: boolean;
 
   // Count
@@ -43,13 +51,25 @@ export interface IterateDialogFormState {
   // ImpeccableSkillPicker passthrough
   impeccableSubMenuOpen: boolean;
   setImpeccableSubMenuOpen: (v: boolean) => void;
-  demoteState: ReturnType<typeof useImpeccableSkillPicker>['demoteState'];
-  skillPickerItems: ReturnType<typeof useImpeccableSkillPicker>['skillPickerItems'];
-  skillPickerFilterFn: ReturnType<typeof useImpeccableSkillPicker>['skillPickerFilterFn'];
-  handleSelectItem: ReturnType<typeof useImpeccableSkillPicker>['handleSelectItem'];
-  handleImpeccableCommandCleared: ReturnType<typeof useImpeccableSkillPicker>['handleImpeccableCommandCleared'];
-  closeDemoteMenu: ReturnType<typeof useImpeccableSkillPicker>['closeDemoteMenu'];
-  resetImpeccablePicker: ReturnType<typeof useImpeccableSkillPicker>['resetImpeccablePicker'];
+  demoteState: ReturnType<typeof useImpeccableSkillPicker>["demoteState"];
+  skillPickerItems: ReturnType<
+    typeof useImpeccableSkillPicker
+  >["skillPickerItems"];
+  skillPickerFilterFn: ReturnType<
+    typeof useImpeccableSkillPicker
+  >["skillPickerFilterFn"];
+  handleSelectItem: ReturnType<
+    typeof useImpeccableSkillPicker
+  >["handleSelectItem"];
+  handleImpeccableCommandCleared: ReturnType<
+    typeof useImpeccableSkillPicker
+  >["handleImpeccableCommandCleared"];
+  closeDemoteMenu: ReturnType<
+    typeof useImpeccableSkillPicker
+  >["closeDemoteMenu"];
+  resetImpeccablePicker: ReturnType<
+    typeof useImpeccableSkillPicker
+  >["resetImpeccablePicker"];
 
   // Refs exposed so JSX can wire them up
   inlineRefHandle: React.MutableRefObject<InlineReferenceHandle | null>;
@@ -88,7 +108,7 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
   // When the provider changes, auto-select the first enabled model if the
   // current selection isn't valid for the new provider.
   useEffect(() => {
-    if (models.length > 0 && !models.some(m => m.value === selectedModel)) {
+    if (models.length > 0 && !models.some((m) => m.value === selectedModel)) {
       handleModelChange(models[0].value);
     }
   }, [models, selectedModel, handleModelChange]);
@@ -97,7 +117,7 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
   const refetchSkills = useCallback(async () => {
     setIsLoadingSkills(true);
     try {
-      const response = await fetch('/playground/api/skills');
+      const response = await fetch("/playground/api/skills");
       if (!response.ok) return;
       const data = (await response.json()) as { skills?: PlaygroundSkill[] };
       if (Array.isArray(data.skills)) {
@@ -116,7 +136,9 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
   }, [open, skills.length, refetchSkills]);
 
   useEffect(() => {
-    const handler = () => { refetchSkills(); };
+    const handler = () => {
+      refetchSkills();
+    };
     window.addEventListener(SKILLS_CHANGED_EVENT, handler);
     return () => window.removeEventListener(SKILLS_CHANGED_EVENT, handler);
   }, [refetchSkills]);
@@ -132,7 +154,10 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
   const getDefaultSkillPrompt = useCallback(
     (skillMap: Map<string, PlaygroundSkill>): string | undefined => {
       if (skillMap.size === 0) return undefined;
-      const DEFAULT_SKILL_IDS = ['design-variations', 'frontend-design'] as const;
+      const DEFAULT_SKILL_IDS = [
+        "design-variations",
+        "frontend-design",
+      ] as const;
       const parts: string[] = [];
       for (const id of DEFAULT_SKILL_IDS) {
         const skill = skillMap.get(id);
@@ -140,7 +165,7 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
         if (sp) parts.push(sp);
       }
       if (!parts.length) return undefined;
-      return parts.join('\n\n');
+      return parts.join("\n\n");
     },
     [],
   );
@@ -154,15 +179,15 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
 
     if (hasSegments) {
       for (const segment of segments) {
-        if (segment.type === 'text') {
+        if (segment.type === "text") {
           const trimmed = segment.value.trim();
           if (trimmed) {
             textParts.push(trimmed);
           }
-        } else if (segment.type === 'reference') {
+        } else if (segment.type === "reference") {
           const impeccablePrompt = impeccablePromptFromSegment(
             segment,
-            skillsById.get('impeccable')?.skillPath,
+            skillsById.get("impeccable")?.skillPath,
           );
           if (impeccablePrompt) {
             skillSections.push(impeccablePrompt);
@@ -175,11 +200,9 @@ export function useIterateDialogState(open: boolean): IterateDialogFormState {
       }
     }
 
-    let customInstructionsText =
-      textParts.join('\n').trim() || undefined;
+    let customInstructionsText = textParts.join("\n").trim() || undefined;
 
-    let skillPromptText =
-      skillSections.join('\n\n').trim() || undefined;
+    let skillPromptText = skillSections.join("\n\n").trim() || undefined;
 
     // When the inline reference area is empty (no text, no explicit skills),
     // automatically apply the default design skills.

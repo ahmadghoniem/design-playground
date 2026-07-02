@@ -1,11 +1,12 @@
-'use client';
-
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { loadSelectedModel, saveSelectedModel } from '../nodes/shared/IterateDialogParts';
-import { resolveAgentModel } from '../lib/resolve-agent-model';
-import { useModelSettingsStore } from '../stores/model-settings-store';
-import type { ProviderId } from '../lib/providers/types';
-import type { ModelOption } from '../nodes/shared/IterateDialogParts';
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  loadSelectedModel,
+  saveSelectedModel,
+} from "../nodes/shared/iterate-dialog/parts";
+import { resolveAgentModel } from "../lib/resolve-agent-model";
+import { useModelSettingsStore } from "../stores/model-settings-store";
+import type { ProviderId } from "../lib/providers/types";
+import type { ModelOption } from "../nodes/shared/iterate-dialog/parts";
 
 // ---------------------------------------------------------------------------
 // useModelCycle
@@ -25,8 +26,9 @@ export interface UseModelCycleReturn {
 
 export function useModelCycle(models: ModelOption[]): UseModelCycleReturn {
   const [model, setModel] = useState(() => {
-    const provider = useModelSettingsStore.getState().activeProvider as ProviderId;
-    return resolveAgentModel(provider, loadSelectedModel()) ?? 'auto';
+    const provider = useModelSettingsStore.getState()
+      .activeProvider as ProviderId;
+    return resolveAgentModel(provider, loadSelectedModel()) ?? "auto";
   });
 
   const [isSwitching, setIsSwitching] = useState(false);

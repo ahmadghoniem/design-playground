@@ -82,20 +82,6 @@ export function computeDragGridRaw(
   return { rawCols, rawRows };
 }
 
-/**
- * Convert screen-space overlay padding into flow-space padding (zoom-aware).
- * Padding is the offset from the parent node's top-left at which the ghost
- * bounding overlay begins.
- */
-export function flowPaddingFromScreen(
-  screenToFlowPosition: CoordTransform,
-  paddingX: number,
-  paddingY: number,
-): { padX: number; padY: number } {
-  const flowZero = screenToFlowPosition({ x: 0, y: 0 });
-  const flowPad = screenToFlowPosition({ x: paddingX, y: paddingY });
-  return { padX: flowPad.x - flowZero.x, padY: flowPad.y - flowZero.y };
-}
 
 /**
  * Build the single `drag-ghost` bounding-node descriptor placed behind the

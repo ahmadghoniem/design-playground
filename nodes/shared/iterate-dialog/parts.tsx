@@ -1,29 +1,23 @@
-'use client';
-
 /**
  * Shared utilities for the IterateDialog:
  *   - loadSelectedModel / saveSelectedModel (localStorage, provider-scoped)
  *   - useAvailableModels hook
- *
- * This file is the canonical home for these exports.
- * `nodes/shared/IterateDialogParts.tsx` re-exports everything from here
- * so existing import paths keep working.
  */
 
-import { useEffect } from 'react';
-import { SELECTED_MODEL_STORAGE_KEY } from '../../../lib/constants';
-import { useModelSettingsStore } from '../../../stores/model-settings-store';
-import { getProvider } from '../../../lib/providers/registry';
-import { resolveAgentModel } from '../../../lib/resolve-agent-model';
+import { useEffect } from "react";
+import { SELECTED_MODEL_STORAGE_KEY } from "../../../lib/constants";
+import { useModelSettingsStore } from "../../../stores/model-settings-store";
+import { getProvider } from "../../../lib/providers/registry";
+import { resolveAgentModel } from "../../../lib/resolve-agent-model";
 import {
   migrateModelId,
   isModelEnabled,
   normalizeAutoModelId,
-} from '../../../lib/model-catalog';
-import type { ProviderId } from '../../../lib/providers/types';
+} from "../../../lib/model-catalog";
+import type { ProviderId } from "../../../lib/providers/types";
 
 // Re-export ModelOption for consumers
-export type { ModelOption } from '../../../lib/constants';
+export type { ModelOption } from "../../../lib/constants";
 
 // Build a provider-scoped localStorage key for the selected model
 function selectedModelKey(): string {
@@ -33,15 +27,15 @@ function selectedModelKey(): string {
 
 // Load last selected model from localStorage (scoped to the active provider)
 export function loadSelectedModel(): string {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === "undefined") return "";
   try {
     const { activeProvider } = useModelSettingsStore.getState();
     const providerKey = `${SELECTED_MODEL_STORAGE_KEY}-${activeProvider}`;
 
     // Try provider-scoped key first, fall back to legacy unscoped key
-    let model = localStorage.getItem(providerKey) || '';
+    let model = localStorage.getItem(providerKey) || "";
     if (!model) {
-      model = localStorage.getItem(SELECTED_MODEL_STORAGE_KEY) || '';
+      model = localStorage.getItem(SELECTED_MODEL_STORAGE_KEY) || "";
     }
 
     const rawModel = model;
@@ -55,7 +49,7 @@ export function loadSelectedModel(): string {
         ? ps.enabledModels
         : config.defaultEnabledModels;
       if (!isModelEnabled(activeProvider as ProviderId, model, enabledModels)) {
-        model = enabledModels[0] || '';
+        model = enabledModels[0] || "";
       }
     }
 
@@ -65,19 +59,19 @@ export function loadSelectedModel(): string {
 
     return resolveAgentModel(activeProvider as ProviderId, model) ?? model;
   } catch {
-    return '';
+    return "";
   }
 }
 
 // Save selected model to localStorage (scoped to the active provider)
 export function saveSelectedModel(model: string) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(selectedModelKey(), model);
     // Also write to legacy key for backward compat
     localStorage.setItem(SELECTED_MODEL_STORAGE_KEY, model);
   } catch (e) {
-    console.error('[Models] Error saving selected model:', e);
+    console.error("[Models] Error saving selected model:", e);
   }
 }
 
@@ -88,7 +82,9 @@ export function saveSelectedModel(model: string) {
 export function useAvailableModels() {
   const hasHydrated = useModelSettingsStore((s) => s.hasHydrated);
   const activeProvider = useModelSettingsStore((s) => s.activeProvider);
-  const providerState = useModelSettingsStore((s) => s.providerState[s.activeProvider]);
+  const providerState = useModelSettingsStore(
+    (s) => s.providerState[s.activeProvider],
+  );
   const isLoading = useModelSettingsStore((s) => s.isLoadingModels);
   const fetchModels = useModelSettingsStore((s) => s.fetchModels);
 
@@ -102,17 +98,18 @@ export function useAvailableModels() {
 
   // Filter by enabled models — fall back to provider defaults if empty
   const config = getProvider(activeProvider);
-  const models = enabledModels.length === 0
-    ? availableModels.filter((m) =>
-        config.defaultEnabledModels.some((id) =>
-          activeProvider === 'cursor'
-            ? normalizeAutoModelId(id) === normalizeAutoModelId(m.value)
-            : id === m.value,
-        ),
-      )
-    : availableModels.filter((m) =>
-        isModelEnabled(activeProvider, m.value, enabledModels),
-      );
+  const models =
+    enabledModels.length === 0
+      ? availableModels.filter((m) =>
+          config.defaultEnabledModels.some((id) =>
+            activeProvider === "cursor"
+              ? normalizeAutoModelId(id) === normalizeAutoModelId(m.value)
+              : id === m.value,
+          ),
+        )
+      : availableModels.filter((m) =>
+          isModelEnabled(activeProvider, m.value, enabledModels),
+        );
 
   return { models, allModels: availableModels, isLoading };
 }

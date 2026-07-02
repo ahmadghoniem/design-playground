@@ -28,15 +28,6 @@ export const GENERATION_COMPLETE_EVENT = 'playground:generation-complete';
 /** Fired when generation encounters an error */
 export const GENERATION_ERROR_EVENT = 'playground:generation-error';
 
-/** Fired when a generation request is queued behind an in-progress generation */
-export const GENERATION_QUEUED_EVENT = 'playground:generation-queued';
-
-/**
- * Live Claude Code assistant text accumulated from stream-json (forwarded from SSE).
- * Used for presence bubble tooltips during generation.
- */
-export const GENERATION_AGENT_PREVIEW_EVENT = 'playground:generation-agent-preview';
-
 /** Fired when an adoption completes successfully */
 export const ADOPTION_COMPLETE_EVENT = 'playground:adoption-complete';
 
@@ -48,9 +39,6 @@ export const PAN_TO_POSITION_EVENT = 'playground:pan-to-position';
 
 /** Fired to fit the viewport around all nodes for a given component */
 export const FIT_COMPONENT_NODES_EVENT = 'playground:fit-component-nodes';
-
-/** Fired to dismiss a generation presence bubble across header + canvas layers */
-export const PRESENCE_BUBBLE_DISMISS_EVENT = 'playground:presence-bubble-dismiss';
 
 /** Fired to trigger auto-arrange of canvas nodes */
 export const PLAYGROUND_AUTO_ARRANGE_EVENT = 'PLAYGROUND_AUTO_ARRANGE';
@@ -91,9 +79,6 @@ export const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
 /** Key for persisting user keybinding overrides */
 export const KEYBINDINGS_STORAGE_KEY = 'playground-keybindings';
 
-/** Key for persisting the dev-mode toggle (gates Refresh/Clear in the header) */
-export const DEV_MODE_STORAGE_KEY = 'playground-dev-mode';
-
 /** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
 export const PREVIEW_COLOR_SCHEME_STORAGE_KEY = 'playground-preview-color-scheme';
 
@@ -105,9 +90,6 @@ export const DESIGN_SYSTEM_SHOWCASE_RAW_URL = '/playground/api/design/preview-sh
 
 /** Fires after a successful design-system showcase generation */
 export const DESIGN_SYSTEM_GENERATED_EVENT = 'playground:design-system-generated';
-
-/** Key for persisting presence bubbles across page reloads */
-export const PRESENCE_BUBBLES_STORAGE_KEY = 'playground-presence-bubbles';
 
 /** Key for persisting generation info across page reloads */
 export const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
@@ -155,56 +137,8 @@ export const NODE_LABEL_MAX_INV_SCALE = 7;
 // Canvas Layout Constants
 // ---------------------------------------------------------------------------
 
-/** Starting X position for auto-arranged nodes */
-export const ARRANGE_START_X = 50;
-
-/** Starting Y position for auto-arranged nodes */
-export const ARRANGE_START_Y = 50;
-
-/** Vertical gap between nodes within a component group (px) */
-export const ARRANGE_VERTICAL_GAP = 80;
-
-/** Extra vertical gap between component groups (px) */
-export const ARRANGE_GROUP_GAP = 100;
-
 /** Horizontal gap between the component column and iteration column (px) */
 export const ARRANGE_HORIZONTAL_GAP = 80;
-
-/** Horizontal gap between tiles inside a bento cluster (px) */
-export const ARRANGE_BENTO_TILE_GAP_X = 48;
-
-/** Vertical gap between tiles inside a bento cluster (px) */
-export const ARRANGE_BENTO_TILE_GAP_Y = 48;
-
-/** Maximum width before wrapping tiles inside a bento cluster (px) */
-export const ARRANGE_BENTO_CLUSTER_MAX_WIDTH = 2200;
-
-/** Horizontal gap between component clusters in global bento layout (px) */
-export const ARRANGE_BENTO_CLUSTER_GAP_X = 140;
-
-/** Vertical gap between component clusters in global bento layout (px) */
-export const ARRANGE_BENTO_CLUSTER_GAP_Y = 140;
-
-/** Maximum width before wrapping to a new row of clusters (px) */
-export const ARRANGE_BENTO_CLUSTER_ROW_MAX_WIDTH = 5200;
-
-/** Base horizontal label padding used when zoom scaling enlarges node labels */
-export const ARRANGE_LABEL_PADDING_X_BASE = 18;
-
-/** Base vertical label padding used when zoom scaling enlarges node labels */
-export const ARRANGE_LABEL_PADDING_Y_BASE = 14;
-
-/** Minimum gap preserved between effective node footprints during collision pass (px) */
-export const ARRANGE_COLLISION_MIN_SEPARATION = 16;
-
-/** Maximum number of deterministic collision-resolution passes */
-export const ARRANGE_COLLISION_MAX_PASSES = 12;
-
-/** Horizontal spacing between iteration nodes when placed below parent */
-export const ITERATION_HORIZONTAL_SPACING = 420;
-
-/** Vertical offset below parent for iteration nodes */
-export const ITERATION_VERTICAL_OFFSET = 350;
 
 // ---------------------------------------------------------------------------
 // Default Node Dimensions (estimated, used when measured size is unavailable)
@@ -291,12 +225,6 @@ export type StylingMode = 'tailwind' | 'inline-css';
 /** Default styling mode when no skill overrides it */
 export const DEFAULT_STYLING_MODE: StylingMode = 'tailwind';
 
-/** Styling mode options (for future UI dropdown) */
-export const STYLING_MODE_OPTIONS: { key: StylingMode; label: string }[] = [
-  { key: 'tailwind', label: 'Design System (Tailwind)' },
-  { key: 'inline-css', label: 'Creative (Inline CSS)' },
-];
-
 // ---------------------------------------------------------------------------
 // Provider Types (re-exported from providers module)
 // ---------------------------------------------------------------------------
@@ -353,20 +281,8 @@ export const FULLSCREEN_ENTER_DELAY = 350;
 /** Delay before fitting view after exiting fullscreen */
 export const FULLSCREEN_EXIT_DELAY = 100;
 
-/** Delay before fitting view after auto-arrange */
-export const ARRANGE_FITVIEW_DELAY = 50;
-
 /** Delay after generation completes before scanning for iterations */
 export const POST_GENERATION_SCAN_DELAY = 1000;
-
-/** Delay after scan before auto-arrange */
-export const POST_GENERATION_ARRANGE_DELAY = 200;
-
-/** Delay before dispatching auto-arrange after skeleton nodes are added */
-export const SKELETON_ARRANGE_DELAY = 100;
-
-/** Duration to show "Copied!" feedback (ms) */
-export const COPIED_FEEDBACK_DURATION = 2000;
 
 // ---------------------------------------------------------------------------
 // Edge Styles
@@ -600,10 +516,6 @@ export const DRAG_ITERATE_MAX_ROWS = 4;
 /** Gap between ghost boxes in flow coordinates (px) */
 export const DRAG_GHOST_GAP = 20;
 
-/** Screen-pixel padding around the selection overlay so it visually encompasses the original node */
-export const DRAG_OVERLAY_PADDING_X = 0;
-export const DRAG_OVERLAY_PADDING_Y = 0;
-
 // ---------------------------------------------------------------------------
 // Tree Layout Constants
 // ---------------------------------------------------------------------------
@@ -712,13 +624,13 @@ export interface GenerationStartPayload {
     rows: number;
     cols: number;
   };
-  /** Model used for this generation (for presence bubbles) */
+  /** Model used for this generation */
   model?: string;
   /** Provider used for this generation */
   provider?: import('./providers/types').ProviderId;
   /** Flow-space position where the generation was initiated */
   flowPosition?: { x: number; y: number };
-  /** Node the presence bubble is anchored to, when dropped on a frame */
+  /** Node this generation is anchored to, when dropped on a frame */
   targetNodeId?: string | null;
   /** Render mode for generated nodes */
   renderMode?: 'react' | 'html' | 'jsx';
@@ -728,8 +640,6 @@ export interface GenerationStartPayload {
   jsxFile?: string;
   /** When true, this is an edit-in-place operation — no skeleton nodes should be created */
   editMode?: boolean;
-  /** When true, this is an adoption operation — presence bubbles show green spinner */
-  adoptionMode?: boolean;
 }
 
 /** Payload for GENERATION_COMPLETE_EVENT */
@@ -744,29 +654,6 @@ export interface GenerationErrorPayload {
   componentId: string;
   parentNodeId: string;
   error: string;
-}
-
-/** Payload for GENERATION_QUEUED_EVENT */
-export interface GenerationQueuedPayload {
-  componentId: string;
-  model: string;
-  provider?: import('./providers/types').ProviderId;
-  flowPosition: { x: number; y: number } | null;
-  /** Node the queued presence bubble is anchored to, when dropped on a frame */
-  targetNodeId?: string | null;
-}
-
-/** Payload for GENERATION_AGENT_PREVIEW_EVENT (Claude Code stream-json assistant text) */
-export interface GenerationAgentPreviewPayload {
-  componentId: string;
-  text: string;
-}
-
-/** Payload for PRESENCE_BUBBLE_DISMISS_EVENT */
-export interface PresenceBubbleDismissPayload {
-  componentId: string;
-  flowPosition?: { x: number; y: number } | null;
-  targetNodeId?: string | null;
 }
 
 /** Payload for DRAG_ITERATE_EVENT */

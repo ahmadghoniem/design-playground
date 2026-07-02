@@ -1,13 +1,16 @@
-'use client';
-
-import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
-import type { Edge, FitViewOptions, Node, Viewport } from '@xyflow/react';
-import { computeAutoArrangePositions } from '../lib/canvas-auto-arrange';
+import {
+  useCallback,
+  useEffect,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
+import type { Edge, FitViewOptions, Node, Viewport } from "@xyflow/react";
+import { computeAutoArrangePositions } from "../lib/canvas-auto-arrange";
 import {
   PLAYGROUND_AUTO_ARRANGE_EVENT,
   FITVIEW_AFTER_ARRANGE,
-  ARRANGE_FITVIEW_DELAY,
-} from '../lib/constants';
+} from "../lib/constants";
 
 export interface UseCanvasAutoArrangeParams {
   nodes: Node[];
@@ -30,40 +33,50 @@ export function useCanvasAutoArrange({
   fitView,
   getViewport,
 }: UseCanvasAutoArrangeParams): UseCanvasAutoArrangeResult {
-  const autoArrangeNodes = useCallback((andFitView: boolean = false) => {
-    const zoom = Math.max(getViewport().zoom, 0.0001);
-    const positionMap = computeAutoArrangePositions(
-      nodes,
-      edges,
-      collapsedNodeIdsRef.current,
-      zoom,
-    );
+  const autoArrangeNodes = useCallback(
+    (andFitView: boolean = false) => {
+      const zoom = Math.max(getViewport().zoom, 0.0001);
+      const positionMap = computeAutoArrangePositions(
+        nodes,
+        edges,
+        collapsedNodeIdsRef.current,
+        zoom,
+      );
 
-    setNodes(currentNodes =>
-      currentNodes.map(node => {
-        const newPosition = positionMap.get(node.id);
-        if (newPosition) {
-          return { ...node, position: newPosition };
-        }
-        return node;
-      }),
-    );
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          const newPosition = positionMap.get(node.id);
+          if (newPosition) {
+            return { ...node, position: newPosition };
+          }
+          return node;
+        }),
+      );
 
-    if (andFitView) {
-      setTimeout(() => {
-        fitView(FITVIEW_AFTER_ARRANGE);
-      }, ARRANGE_FITVIEW_DELAY);
-    }
-  }, [nodes, edges, setNodes, fitView, getViewport, collapsedNodeIdsRef]);
+      if (andFitView) {
+        // Small delay so the arranged positions commit before fitting.
+        setTimeout(() => {
+          fitView(FITVIEW_AFTER_ARRANGE);
+        }, 50);
+      }
+    },
+    [nodes, edges, setNodes, fitView, getViewport, collapsedNodeIdsRef],
+  );
 
   useEffect(() => {
     const handleAutoArrange = (e: CustomEvent<{ fitView: boolean }>) => {
       autoArrangeNodes(e.detail.fitView);
     };
 
-    window.addEventListener(PLAYGROUND_AUTO_ARRANGE_EVENT, handleAutoArrange as EventListener);
+    window.addEventListener(
+      PLAYGROUND_AUTO_ARRANGE_EVENT,
+      handleAutoArrange as EventListener,
+    );
     return () => {
-      window.removeEventListener(PLAYGROUND_AUTO_ARRANGE_EVENT, handleAutoArrange as EventListener);
+      window.removeEventListener(
+        PLAYGROUND_AUTO_ARRANGE_EVENT,
+        handleAutoArrange as EventListener,
+      );
     };
   }, [autoArrangeNodes]);
 
