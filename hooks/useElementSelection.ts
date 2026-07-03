@@ -6,7 +6,7 @@ import {
   type SelectedElement,
   type ElementContext,
 } from '../lib/element-context';
-import { connectToIframe } from '../lib/iframe-bridge';
+import { connectToIframe, setIframeBridgeHandlers } from '../lib/iframe-bridge';
 import type { BridgeElementContext } from '../lib/iframe-bridge-types';
 
 // Selectors for playground chrome that should be excluded from element selection
@@ -98,8 +98,8 @@ export function useElementSelection(): UseElementSelectionReturn {
   // -----------------------------------------------------------------------
 
   const bridgeFor = useCallback(
-    (iframe: HTMLIFrameElement) =>
-      connectToIframe(iframe, {
+    (iframe: HTMLIFrameElement) => {
+      setIframeBridgeHandlers(iframe, {
         onHover: (ctx: BridgeElementContext) => {
           const pageRect = iframeRectToPage(ctx.rect, iframe);
           setHoveredElement(iframe);
@@ -144,10 +144,11 @@ export function useElementSelection(): UseElementSelectionReturn {
             return [newElement];
           });
         },
-        onConsoleError: () => {
-          // Transport exists; surfacing (error badges) lands in a later chunk.
-        },
-      }),
+        // onConsoleError is registered by the node components (error badges),
+        // not by selection — the handler registry merges both.
+      });
+      return connectToIframe(iframe);
+    },
     [getNodes],
   );
 

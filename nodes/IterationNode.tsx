@@ -9,7 +9,7 @@ import {
   type ComponentType,
 } from "react";
 import { useReactFlow, NodeResizeControl } from "@xyflow/react";
-import { GitMerge, Trash2, Loader2, ChevronRight } from "lucide-react";
+import { GitMerge, Trash2, Loader2, ChevronRight, AlertTriangle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -59,12 +59,16 @@ import {
   useInteractiveNodeStore,
   useIsInteractiveNode,
 } from "../stores/interactive-node-store";
+import { useIframeErrorStore } from "../stores/iframe-error-store";
+import { connectToIframe, setIframeBridgeHandlers } from "../lib/iframe-bridge";
 import { useFrameHoverHint } from "./shared/FrameHoverHint";
 import { useIterationAdoption } from "../hooks/useIterationAdoption";
 import {
   componentNameToRegistryId,
   iterationPageName as deriveIterationPageName,
 } from "../lib/iteration-filename";
+
+const EMPTY_ERRORS: string[] = [];
 
 interface IterationNodeProps {
   id: string;
@@ -155,6 +159,31 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     ? `/${data.htmlFolder}/${data.htmlIterationFolder}/index.html?t=${iframeKey}`
     : "";
   const htmlContent = useHtmlContent(iterationHtmlUrl, isHtml);
+
+  // Eagerly connect the iframe bridge so console/window errors inside the
+  // preview surface as a badge. Each document swap (srcdoc change) starts a
+  // fresh error slate; queueMicrotask lets the bridge's own load-teardown run
+  // before we reconnect.
+  const iframeErrors = useIframeErrorStore((s) => s.errors[id] ?? EMPTY_ERRORS);
+  const addIframeError = useIframeErrorStore((s) => s.addError);
+  const clearIframeErrors = useIframeErrorStore((s) => s.clearErrors);
+  useEffect(() => {
+    if (!isHtml) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    setIframeBridgeHandlers(iframe, {
+      onConsoleError: (text) => addIframeError(id, text),
+    });
+    const connectFresh = () => {
+      queueMicrotask(() => {
+        clearIframeErrors(id);
+        connectToIframe(iframe);
+      });
+    };
+    iframe.addEventListener("load", connectFresh);
+    connectFresh();
+    return () => iframe.removeEventListener("load", connectFresh);
+  }, [isHtml, htmlContent, id, addIframeError, clearIframeErrors]);
 
   const IterationComponent = useMemo(
     () => (isHtml || isJsx ? null : getIterationComponent(data.filename)),
@@ -546,6 +575,15 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
               />
               {!isInteractive && (
                 <div className="absolute inset-0" data-iframe-overlay />
+              )}
+              {iframeErrors.length > 0 && (
+                <div
+                  className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-full bg-red-500/90 text-white text-[11px] font-medium px-2 py-0.5 shadow-sm"
+                  title={iframeErrors.slice(0, 5).join("\n")}
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  {iframeErrors.length}
+                </div>
               )}
             </div>
           ) : isFillMode ? (

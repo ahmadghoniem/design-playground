@@ -45,15 +45,31 @@ interface BridgeEntry {
 const connections = new WeakMap<HTMLIFrameElement, BridgeEntry>();
 
 /**
- * Get (or establish) the typed RPC connection to an iframe. `parentMethods`
- * is captured per connection, so callbacks carry the iframe identity via
- * closure — no more matching e.source against every iframe on the page.
+ * Handler registry, decoupled from connection lifetime: the selection hook
+ * registers hover/select handlers, node components register onConsoleError —
+ * whoever connects first, the other's handlers still land once registered.
+ */
+export type IframeBridgeHandlers = Partial<PlaygroundParentMethods>;
+
+const handlerMaps = new WeakMap<HTMLIFrameElement, IframeBridgeHandlers>();
+
+export function setIframeBridgeHandlers(
+  iframe: HTMLIFrameElement,
+  handlers: IframeBridgeHandlers,
+): void {
+  handlerMaps.set(iframe, { ...handlerMaps.get(iframe), ...handlers });
+}
+
+/**
+ * Get (or establish) the typed RPC connection to an iframe. Parent-side
+ * callbacks dispatch to the handlers currently registered for that iframe
+ * (see setIframeBridgeHandlers) — the iframe identity travels via closure,
+ * no matching of e.source against every iframe on the page.
  *
  * Returns null when the iframe has no contentWindow (detached).
  */
 export function connectToIframe(
   iframe: HTMLIFrameElement,
-  parentMethods: PlaygroundParentMethods,
 ): Promise<RemoteOf<PlaygroundChildMethods>> | null {
   const existing = connections.get(iframe);
   if (existing) return existing.remote;
@@ -61,9 +77,16 @@ export function connectToIframe(
   const remoteWindow = iframe.contentWindow;
   if (!remoteWindow) return null;
 
+  const dispatch: PlaygroundParentMethods = {
+    onHover: (ctx) => handlerMaps.get(iframe)?.onHover?.(ctx),
+    onHoverClear: () => handlerMaps.get(iframe)?.onHoverClear?.(),
+    onSelect: (ctx) => handlerMaps.get(iframe)?.onSelect?.(ctx),
+    onConsoleError: (text) => handlerMaps.get(iframe)?.onConsoleError?.(text),
+  };
+
   const connection = connect({
     messenger: new WindowMessenger({ remoteWindow }),
-    methods: parentMethods as unknown as Record<string, (...args: never[]) => unknown>,
+    methods: dispatch as unknown as Record<string, (...args: never[]) => unknown>,
     timeout: CONNECT_TIMEOUT_MS,
   });
 
