@@ -90,7 +90,7 @@ export function useHtmlContent(htmlUrl: string, isHtml: boolean) {
         if (cancelled) return;
         // Dynamically import to keep the bridge module out of the initial bundle
         // when not needed (non-HTML nodes)
-        import("../lib/iframe-selection-bridge").then(
+        import("../lib/iframe-bridge").then(
           ({ injectBridgeScript }) => {
             if (cancelled) return;
             setHtmlContent(injectBridgeScript(html));

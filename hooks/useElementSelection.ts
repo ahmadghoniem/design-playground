@@ -6,6 +6,8 @@ import {
   type SelectedElement,
   type ElementContext,
 } from '../lib/element-context';
+import { connectToIframe } from '../lib/iframe-bridge';
+import type { BridgeElementContext } from '../lib/iframe-bridge-types';
 
 // Selectors for playground chrome that should be excluded from element selection
 const EXCLUDE_SELECTORS = [
@@ -33,17 +35,6 @@ function getNodeIframes(): HTMLIFrameElement[] {
   return Array.from(
     document.querySelectorAll<HTMLIFrameElement>('.react-flow__node iframe[sandbox]'),
   );
-}
-
-/** Send a message to all node iframes */
-function broadcastToIframes(type: string) {
-  for (const iframe of getNodeIframes()) {
-    try {
-      iframe.contentWindow?.postMessage({ type }, '*');
-    } catch {
-      // cross-origin or detached — ignore
-    }
-  }
 }
 
 /** Resolve which ReactFlow node an iframe belongs to */
@@ -101,6 +92,77 @@ export function useElementSelection(): UseElementSelectionReturn {
   const { getNodes } = useReactFlow();
 
   // -----------------------------------------------------------------------
+  // Per-iframe typed bridge (penpal RPC). The iframe identity travels via
+  // closure in the parent methods, so hover/select callbacks don't need to
+  // match message sources against every iframe on the page.
+  // -----------------------------------------------------------------------
+
+  const bridgeFor = useCallback(
+    (iframe: HTMLIFrameElement) =>
+      connectToIframe(iframe, {
+        onHover: (ctx: BridgeElementContext) => {
+          const pageRect = iframeRectToPage(ctx.rect, iframe);
+          setHoveredElement(iframe);
+          setHoveredRect(pageRect);
+          setHoveredInfo({
+            tagName: ctx.tagName,
+            displayName: ctx.displayName || ctx.tagName,
+          });
+        },
+        onHoverClear: () => {
+          setHoveredElement(null);
+          setHoveredRect(null);
+          setHoveredInfo(null);
+        },
+        onSelect: (ctx: BridgeElementContext) => {
+          const nodeInfo = resolveNodeFromIframe(
+            iframe,
+            getNodes as () => Array<{ id: string; data: Record<string, unknown> }>,
+          );
+          if (!nodeInfo) return;
+
+          const context: ElementContext = createHtmlElementContext(ctx);
+
+          const newElement: SelectedElement = {
+            element: iframe,
+            context,
+            nodeId: nodeInfo.nodeId,
+            componentName: nodeInfo.componentName,
+            iframeRect: ctx.rect,
+          };
+
+          setSelectedElements((prev) => {
+            // For iframe elements, toggle by matching cssSelector + nodeId
+            const existingIndex = prev.findIndex(
+              (s) => s.nodeId === nodeInfo.nodeId && s.context.cssSelector === context.cssSelector,
+            );
+            if (existingIndex !== -1) {
+              return prev.filter((_, i) => i !== existingIndex);
+            }
+            // Shift state isn't observable from the child click, so iframe
+            // selections always replace (single select) — same as before.
+            return [newElement];
+          });
+        },
+        onConsoleError: () => {
+          // Transport exists; surfacing (error badges) lands in a later chunk.
+        },
+      }),
+    [getNodes],
+  );
+
+  const setSelectModeAll = useCallback(
+    (enter: boolean) => {
+      for (const iframe of getNodeIframes()) {
+        bridgeFor(iframe)
+          ?.then((child) => (enter ? child.enterSelectMode() : child.exitSelectMode()))
+          .catch(() => {});
+      }
+    },
+    [bridgeFor],
+  );
+
+  // -----------------------------------------------------------------------
   // Alt key tracking + iframe bridge enter/exit
   // -----------------------------------------------------------------------
 
@@ -112,7 +174,7 @@ export function useElementSelection(): UseElementSelectionReturn {
         altRef.current = true;
         setIsAltHeld(true);
         document.documentElement.classList.add('element-select-mode');
-        broadcastToIframes('element-select:enter');
+        setSelectModeAll(true);
       }
     };
 
@@ -123,7 +185,7 @@ export function useElementSelection(): UseElementSelectionReturn {
       setHoveredRect(null);
       setHoveredInfo(null);
       document.documentElement.classList.remove('element-select-mode');
-      broadcastToIframes('element-select:exit');
+      setSelectModeAll(false);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -141,7 +203,7 @@ export function useElementSelection(): UseElementSelectionReturn {
       window.removeEventListener('blur', handleBlur);
       document.documentElement.classList.remove('element-select-mode');
     };
-  }, []);
+  }, [setSelectModeAll]);
 
   // -----------------------------------------------------------------------
   // Resolve ReactFlow node from a DOM element
@@ -211,13 +273,9 @@ export function useElementSelection(): UseElementSelectionReturn {
         if (iframe) {
           const bounds = iframe.getBoundingClientRect();
           const scale = iframe.offsetWidth > 0 ? bounds.width / iframe.offsetWidth : 1;
-          try {
-            iframe.contentWindow?.postMessage({
-              type: 'element-select:hover-at',
-              x: (e.clientX - bounds.left) / scale,
-              y: (e.clientY - bounds.top) / scale,
-            }, '*');
-          } catch { /* cross-origin */ }
+          const x = (e.clientX - bounds.left) / scale;
+          const y = (e.clientY - bounds.top) / scale;
+          bridgeFor(iframe)?.then((child) => child.hoverAt(x, y)).catch(() => {});
         }
         return;
       }
@@ -249,7 +307,7 @@ export function useElementSelection(): UseElementSelectionReturn {
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [bridgeFor]);
 
   // -----------------------------------------------------------------------
   // Click handling (when Alt is held) — React components only
@@ -285,13 +343,9 @@ export function useElementSelection(): UseElementSelectionReturn {
         if (iframe) {
           const bounds = iframe.getBoundingClientRect();
           const scale = iframe.offsetWidth > 0 ? bounds.width / iframe.offsetWidth : 1;
-          try {
-            iframe.contentWindow?.postMessage({
-              type: 'element-select:click-at',
-              x: (e.clientX - bounds.left) / scale,
-              y: (e.clientY - bounds.top) / scale,
-            }, '*');
-          } catch { /* cross-origin */ }
+          const x = (e.clientX - bounds.left) / scale;
+          const y = (e.clientY - bounds.top) / scale;
+          bridgeFor(iframe)?.then((child) => child.clickAt(x, y)).catch(() => {});
         }
         return;
       }
@@ -329,73 +383,7 @@ export function useElementSelection(): UseElementSelectionReturn {
 
     window.addEventListener('mousedown', handleMouseDown, true);
     return () => window.removeEventListener('mousedown', handleMouseDown, true);
-  }, [resolveNode]);
-
-  // -----------------------------------------------------------------------
-  // Iframe postMessage bridge — hover & click from HTML iframes
-  // -----------------------------------------------------------------------
-
-  useEffect(() => {
-    const handleMessage = (e: MessageEvent) => {
-      const msg = e.data;
-      if (!msg || typeof msg.type !== 'string') return;
-      if (!msg.type.startsWith('element-select:')) return;
-
-      // Find which iframe sent this message
-      const sourceWindow = e.source as Window | null;
-      if (!sourceWindow) return;
-
-      const iframes = getNodeIframes();
-      const iframe = iframes.find((f) => {
-        try { return f.contentWindow === sourceWindow; }
-        catch { return false; }
-      });
-      if (!iframe) return;
-
-      if (msg.type === 'element-select:hover' && msg.data) {
-        const pageRect = iframeRectToPage(msg.data.rect, iframe);
-        setHoveredElement(iframe);
-        setHoveredRect(pageRect);
-        setHoveredInfo({
-          tagName: msg.data.tagName,
-          displayName: msg.data.displayName || msg.data.tagName,
-        });
-      } else if (msg.type === 'element-select:hover-clear') {
-        setHoveredElement(null);
-        setHoveredRect(null);
-        setHoveredInfo(null);
-      } else if (msg.type === 'element-select:click' && msg.data) {
-        const nodeInfo = resolveNodeFromIframe(iframe, getNodes as () => Array<{ id: string; data: Record<string, unknown> }>);
-        if (!nodeInfo) return;
-
-        const context: ElementContext = createHtmlElementContext(msg.data);
-
-        const newElement: SelectedElement = {
-          element: iframe,
-          context,
-          nodeId: nodeInfo.nodeId,
-          componentName: nodeInfo.componentName,
-          iframeRect: msg.data.rect,
-        };
-
-        setSelectedElements((prev) => {
-          // For iframe elements, toggle by matching cssSelector + nodeId
-          const existingIndex = prev.findIndex(
-            (s) => s.nodeId === nodeInfo.nodeId && s.context.cssSelector === context.cssSelector,
-          );
-          if (existingIndex !== -1) {
-            return prev.filter((_, i) => i !== existingIndex);
-          }
-          // Check if shift is held via a flag we can't directly access from postMessage,
-          // so always replace for iframe selections (single select)
-          return [newElement];
-        });
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [getNodes]);
+  }, [resolveNode, bridgeFor]);
 
   // -----------------------------------------------------------------------
   // Stale element cleanup + rect refresh
