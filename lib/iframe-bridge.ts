@@ -61,14 +61,14 @@ export function connectToIframe(
   const remoteWindow = iframe.contentWindow;
   if (!remoteWindow) return null;
 
-  const connection = connect<PlaygroundChildMethods>({
+  const connection = connect({
     messenger: new WindowMessenger({ remoteWindow }),
     methods: parentMethods as unknown as Record<string, (...args: never[]) => unknown>,
     timeout: CONNECT_TIMEOUT_MS,
   });
 
   const entry: BridgeEntry = {
-    remote: connection.promise as Promise<RemoteOf<PlaygroundChildMethods>>,
+    remote: connection.promise as unknown as Promise<RemoteOf<PlaygroundChildMethods>>,
     destroy: connection.destroy,
   };
   connections.set(iframe, entry);

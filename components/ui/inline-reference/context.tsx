@@ -20,7 +20,7 @@ export type InlineReferenceItemData = {
 export type OnSelectItemResult = {
   preventDefault?: boolean
   overrideItem?: InlineReferenceItemData
-} | void
+} | undefined
 
 export type InlineReferenceContextValue = {
   segments: Segment[]

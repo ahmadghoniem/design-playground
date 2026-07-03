@@ -161,12 +161,12 @@ const methods: PlaygroundChildMethods = {
 
 // ── Connect (srcdoc iframes share the parent origin, so defaults apply) ──
 
-const connection = connect<PlaygroundParentMethods>({
+const connection = connect({
   messenger: new WindowMessenger({ remoteWindow: window.parent }),
   methods: methods as unknown as Record<string, (...args: never[]) => unknown>,
 });
 
-connection.promise
+(connection.promise as unknown as Promise<RemoteOf<PlaygroundParentMethods>>)
   .then((remote) => {
     parentRemote = remote;
     for (const msg of errorBuffer.splice(0)) {

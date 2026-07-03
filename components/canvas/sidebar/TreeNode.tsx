@@ -13,6 +13,9 @@ import type { PendingChild } from "../../../app/PlaygroundClient";
 import { useFocusNode } from "../../../hooks/useFocusNode";
 import type { PageContextPayload } from "./ComponentPreviewCard";
 
+// Re-exported for consumers that import it alongside TreeNode (PlaygroundSidebar)
+export type { PageContextPayload } from "./ComponentPreviewCard";
+
 interface TreeNodeProps {
   item: RegistryItem;
   depth?: number;

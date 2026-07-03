@@ -12,7 +12,6 @@ import { resolveAgentModel } from "../../../lib/resolve-agent-model";
 import {
   migrateModelId,
   isModelEnabled,
-  normalizeAutoModelId,
 } from "../../../lib/model-catalog";
 import type { ProviderId } from "../../../lib/providers/types";
 
@@ -101,11 +100,7 @@ export function useAvailableModels() {
   const models =
     enabledModels.length === 0
       ? availableModels.filter((m) =>
-          config.defaultEnabledModels.some((id) =>
-            activeProvider === "cursor"
-              ? normalizeAutoModelId(id) === normalizeAutoModelId(m.value)
-              : id === m.value,
-          ),
+          config.defaultEnabledModels.some((id) => id === m.value),
         )
       : availableModels.filter((m) =>
           isModelEnabled(activeProvider, m.value, enabledModels),

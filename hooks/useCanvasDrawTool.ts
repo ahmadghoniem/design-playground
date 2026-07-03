@@ -190,9 +190,10 @@ export function useCanvasDrawTool({
       };
       startFlow = null;
       startScreen = null;
-      setNodes((nds) =>
-        nds.map((n) => ({ ...n, selected: false })).concat(newNode),
-      );
+      setNodes((nds) => [
+        ...nds.map((n) => ({ ...n, selected: false })),
+        newNode,
+      ]);
       setActiveTool("select");
     };
 

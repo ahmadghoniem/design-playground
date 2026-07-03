@@ -27,12 +27,14 @@ import {
 } from "./inline-reference/context"
 
 // Re-export public types consumed by external modules (e.g. DockedChatBar)
-export type { OnSelectItemResult } from "./inline-reference/context"
+export type {
+  OnSelectItemResult,
+  InlineReferenceItemData,
+} from "./inline-reference/context"
 export type {
   Segment,
   TextSegment,
   ReferenceSegment,
-  InlineReferenceItemData,
 } from "./inline-reference/dom-engine"
 
 // ---------------------------------------------------------------------------

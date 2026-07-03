@@ -161,6 +161,7 @@ export default function PlaygroundHeader({
             <TooltipContent side="bottom">
               <p>Refresh variations</p>
             </TooltipContent>
+          </Tooltip>
         </div>
       </header>
 
