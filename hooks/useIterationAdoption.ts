@@ -19,7 +19,6 @@ import {
   type AdoptionCompletePayload,
   type AdoptionErrorPayload,
 } from "../lib/constants";
-import { useIterationScreenshot } from "./useIterationScreenshot";
 import { jsxIterationToBaseFile } from "../lib/iteration-filename";
 
 // ---------------------------------------------------------------------------
@@ -27,7 +26,6 @@ import { jsxIterationToBaseFile } from "../lib/iteration-filename";
 //
 // Owns the full adoption lifecycle for an iteration node:
 //   - open/close the confirm dialog
-//   - capture thumbnail on open
 //   - POST to /playground/api/generate with the adopt prompt
 //   - dispatch ADOPTION_COMPLETE / ADOPTION_ERROR events
 //   - update node data + toast
@@ -38,7 +36,6 @@ import { jsxIterationToBaseFile } from "../lib/iteration-filename";
 //   adoptionStatus        — 'idle' | 'adopting' | 'adopted' | 'error'
 //   showAdoptConfirm      — whether the dialog is open
 //   setShowAdoptConfirm   — close the dialog
-//   adoptThumbnail        — data-URL for the preview img (or null)
 // ---------------------------------------------------------------------------
 
 export interface UseIterationAdoptionParams {
@@ -71,19 +68,12 @@ export function useIterationAdoption({
     "idle" | "adopting" | "adopted" | "error"
   >(() => (data.adopted ? "adopted" : "idle"));
   const [showAdoptConfirm, setShowAdoptConfirm] = useState(false);
-  const [adoptThumbnail, setAdoptThumbnail] = useState<string | null>(null);
 
   const { updateNodeData } = useReactFlow();
-  const { capture } = useIterationScreenshot();
 
   const openAdoptConfirm = useCallback(() => {
     setShowAdoptConfirm(true);
-    setAdoptThumbnail(null);
-    // Capture thumbnail asynchronously — dialog renders immediately
-    capture(id).then((url) => {
-      if (url) setAdoptThumbnail(url);
-    });
-  }, [id, capture]);
+  }, []);
 
   const handleAdoptConfirm = useCallback(async () => {
     setShowAdoptConfirm(false);
@@ -256,7 +246,6 @@ export function useIterationAdoption({
     adoptionStatus,
     showAdoptConfirm,
     setShowAdoptConfirm,
-    adoptThumbnail,
     openAdoptConfirm,
     handleAdoptConfirm,
   };

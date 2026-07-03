@@ -28,7 +28,6 @@ import {
   HTML_ID_PREFIX,
   JSX_ID_PREFIX,
   DELETE_FRAME_EVENT,
-  CREATE_DESIGN_EVENT,
 } from "../../lib/constants";
 import type { PendingChild } from "../../app/PlaygroundClient";
 import DesignSystemModal from "../modals/DesignSystemModal";
@@ -420,15 +419,6 @@ export default function PlaygroundSidebar({
                 <span className="uppercase tracking-[0.08em] text-[10px]">
                   Design
                 </span>
-              </button>
-              <button
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent(CREATE_DESIGN_EVENT))
-                }
-                className="flex items-center justify-center w-[24px] h-[24px] rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors shrink-0 mr-1"
-                aria-label="Create a new design"
-              >
-                <Plus className="w-[14px] h-[14px]" />
               </button>
             </div>
             {htmlExpanded &&

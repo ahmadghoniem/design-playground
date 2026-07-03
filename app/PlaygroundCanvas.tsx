@@ -10,9 +10,6 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  MiniMap,
-  addEdge,
-  Connection,
   useReactFlow,
   Node,
   SelectionMode,
@@ -32,7 +29,7 @@ import PlaygroundCanvasToolbar from "../components/canvas/PlaygroundCanvasToolba
 import PlaygroundCanvasDialogs from "../components/canvas/PlaygroundCanvasDialogs";
 import PlaygroundCanvasContextMenu from "../components/canvas/PlaygroundCanvasContextMenu";
 import { usePlaygroundDrawStore } from "../stores/playground-draw-store";
-import { type DrawPenKind, type DrawStroke } from "../lib/draw-types";
+import { type DrawStroke } from "../lib/draw-types";
 import { useCanvasDrawTool } from "../hooks/useCanvasDrawTool";
 import { useCanvasPersistence } from "../hooks/useCanvasPersistence";
 import { useCanvasDragDrop } from "../hooks/useCanvasDragDrop";
@@ -41,12 +38,10 @@ import { useGenerationCoordination } from "../hooks/useGenerationCoordination";
 import { useGenerationLifecycle } from "../hooks/useGenerationLifecycle";
 import { useIterationScan } from "../hooks/useIterationScan";
 import { useChatSubmit } from "../hooks/useChatSubmit";
-import { useCanvasKeyboard } from "../hooks/useCanvasKeyboard";
 import { useCanvasFrameOps } from "../hooks/useCanvasFrameOps";
 import { useCanvasNodeDelete } from "../hooks/useCanvasNodeDelete";
 import { useCanvasAutoArrange } from "../hooks/useCanvasAutoArrange";
 import { useCanvasCreatePage } from "../hooks/useCanvasCreatePage";
-import { useCanvasClipboard } from "../hooks/useCanvasClipboard";
 import { useCanvasClear } from "../hooks/useCanvasClear";
 import { useDragIterateEventHandler } from "../hooks/useDragToIterate";
 
@@ -63,6 +58,8 @@ import HelperLines from "../nodes/shared/HelperLines";
 import {
   CANVAS_BACKGROUND_COLOR,
   BACKGROUND_COLOR,
+  BACKGROUND_GAP,
+  BACKGROUND_DOT_SIZE,
   CANVAS_MAX_ZOOM,
   CANVAS_MIN_ZOOM,
   ITERATION_COLLAPSE_TOGGLE_EVENT,
@@ -73,7 +70,6 @@ import ElementHighlight from "../components/canvas/ElementHighlight";
 import { useElementSelection } from "../hooks/useElementSelection";
 import { useNodeSelection } from "../hooks/useNodeSelection";
 import { useInteractiveNodeStore } from "../stores/interactive-node-store";
-import { useDynamicBackground } from "../hooks/useDynamicBackground";
 import { computeVisibleNodes } from "../lib/canvas-visibility";
 
 const nodeTypes = {
@@ -87,26 +83,8 @@ const nodeTypes = {
   frame: FrameNode,
 };
 
-/** Minimap dot color by node type — keeps the overview readable at a glance. */
-const MINIMAP_NODE_COLORS: Record<string, string> = {
-  component: "#a8a29e",
-  iteration: "#34d399",
-  skeleton: "#e7e5e4",
-  image: "#60a5fa",
-  text: "#d6d3d1",
-  shape: "#fbbf24",
-  frame: "#c4b5fd",
-};
-function getMinimapNodeColor(node: Node): string {
-  return (node.type && MINIMAP_NODE_COLORS[node.type]) || "#d6d3d1";
-}
-
 // Re-export event names so existing imports keep working
 export {
-  ITERATION_PROMPT_COPIED_EVENT,
-  ITERATION_FETCH_EVENT,
-} from "../lib/constants";
-import {
   ITERATION_PROMPT_COPIED_EVENT,
   ITERATION_FETCH_EVENT,
 } from "../lib/constants";
@@ -127,7 +105,6 @@ export default function PlaygroundCanvas({
   onHideSidebar,
   projectId,
 }: PlaygroundCanvasProps) {
-  const dynamicBg = useDynamicBackground();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const sidebarOpenedByButtonHoverRef = useRef(false);
@@ -145,9 +122,10 @@ export default function PlaygroundCanvas({
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(
     new Set(initialState?.collapsedNodeIds || []),
   );
-  const collapsedNodeIdsRef = useRef<Set<string>>(
-    new Set(initialState?.collapsedNodeIds || []),
-  );
+  const collapsedNodeIdsRef = useRef<Set<string>>(null!);
+  if (collapsedNodeIdsRef.current === null) {
+    collapsedNodeIdsRef.current = new Set(initialState?.collapsedNodeIds || []);
+  }
 
   // Node ID counter as a ref (survives re-renders, initialized from localStorage)
   const nodeIdCounterRef = useRef<number>(initialState?.nodeIdCounter || 0);
@@ -226,8 +204,6 @@ export default function PlaygroundCanvas({
     edges,
     setEdges,
     onEdgesChange,
-    undo,
-    redo,
   } = useCanvasFlow();
   const coord = useGenerationCoordination({
     nodes,
@@ -284,7 +260,7 @@ export default function PlaygroundCanvas({
       }
       onNodesChange(changes);
     },
-    [onNodesChange],
+    [onNodesChange, coord.getNodes, coord.removeKnownIterations],
   );
 
   useEffect(() => {
@@ -416,7 +392,6 @@ export default function PlaygroundCanvas({
     creatingPage,
     newPageInputRef,
     handleCreatePage,
-    handleCreateHtmlPageAt,
     openCreatePageDialog,
   } = useCanvasCreatePage({
     screenToFlowPosition,
@@ -424,13 +399,6 @@ export default function PlaygroundCanvas({
     setNodes,
     reactFlowWrapper,
   });
-
-  const { handleCopyNodes, handlePasteNodes, handleDuplicateNodes } =
-    useCanvasClipboard({
-      coord,
-      getNodeId,
-      setNodes,
-    });
 
   useGenerationLifecycle({
     coord,
@@ -500,11 +468,6 @@ export default function PlaygroundCanvas({
     window.addEventListener(FIT_COMPONENT_NODES_EVENT, handler);
     return () => window.removeEventListener(FIT_COMPONENT_NODES_EVENT, handler);
   }, [coord, fitView]);
-
-  const onConnect = useCallback(
-    (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges],
-  );
 
   const { onDragOver, onDrop } = useCanvasDragDrop({
     coord,
@@ -706,35 +669,6 @@ export default function PlaygroundCanvas({
     [screenToFlowPosition, getNodeId, setNodes],
   );
 
-  const toggleDrawPenKind = useCallback(
-    (kind: DrawPenKind) => {
-      if (activeTool === "draw" && drawPenKind === kind) {
-        setActiveTool("select");
-      } else {
-        setDrawPenKind(kind);
-        setActiveTool("draw");
-      }
-    },
-    [activeTool, drawPenKind, setDrawPenKind],
-  );
-
-  useCanvasKeyboard({
-    setActiveTool,
-    activeTool,
-    shapeKind,
-    setShapeKind,
-    toggleDrawPenKind,
-    setCanvasDrawings,
-    handleZOrder,
-    handleGroupSelection,
-    handleUngroupFrame,
-    undo,
-    redo,
-    handleDuplicateNodes,
-    handleCopyNodes,
-    handlePasteNodes,
-  });
-
   const handleSidebarButtonMouseEnter = useCallback(() => {
     sidebarOpenedByButtonHoverRef.current = !sidebarVisible;
     onShowSidebar();
@@ -759,7 +693,6 @@ export default function PlaygroundCanvas({
           onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onNodesDelete={onNodesDelete}
-          onConnect={onConnect}
           onDragOver={onDragOver}
           onDrop={onDrop}
           onNodeDrag={onNodeDrag}
@@ -802,22 +735,10 @@ export default function PlaygroundCanvas({
           />
           <Background
             variant={BackgroundVariant.Dots}
-            gap={dynamicBg.gap}
-            size={dynamicBg.size}
+            gap={BACKGROUND_GAP}
+            size={BACKGROUND_DOT_SIZE}
             bgColor={CANVAS_BACKGROUND_COLOR}
             color={BACKGROUND_COLOR}
-          />
-          <MiniMap
-            position="bottom-right"
-            pannable
-            zoomable
-            ariaLabel="Canvas minimap"
-            className="!bottom-6 !right-6 !m-0 overflow-hidden rounded-xl border border-stone-200 bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.06)] backdrop-blur"
-            style={{ width: 200, height: 140 }}
-            maskColor="rgba(120,113,108,0.12)"
-            nodeColor={getMinimapNodeColor}
-            nodeStrokeColor="transparent"
-            nodeBorderRadius={4}
           />
           <HelperLines
             vertical={helperLines.vertical}
@@ -892,7 +813,6 @@ export default function PlaygroundCanvas({
           contextMenu={contextMenu}
           nodes={nodes}
           onClose={() => setContextMenu(null)}
-          onCreateDesign={handleCreateHtmlPageAt}
           onCreatePage={openCreatePageDialog}
           onOrganize={() => autoArrangeNodes(true)}
           onGroup={handleGroupSelection}

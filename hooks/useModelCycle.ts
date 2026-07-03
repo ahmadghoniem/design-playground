@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   loadSelectedModel,
   saveSelectedModel,
@@ -12,16 +12,13 @@ import type { ModelOption } from "../nodes/shared/iterate-dialog/parts";
 // useModelCycle
 // ---------------------------------------------------------------------------
 // The model-selection slice used by the docked chat bar: it owns the selected
-// model, persists it, and cycles to the next available model with a 350ms flip
-// animation (mirrors the .chat-bubble.is-switching CSS).
+// model, persists it, and cycles to the next available model.
 // ---------------------------------------------------------------------------
 
 export interface UseModelCycleReturn {
   model: string;
   setModel: (value: string) => void;
   cycleModel: () => void;
-  isSwitching: boolean;
-  nextModel: string | null;
 }
 
 export function useModelCycle(models: ModelOption[]): UseModelCycleReturn {
@@ -31,33 +28,15 @@ export function useModelCycle(models: ModelOption[]): UseModelCycleReturn {
     return resolveAgentModel(provider, loadSelectedModel()) ?? "auto";
   });
 
-  const [isSwitching, setIsSwitching] = useState(false);
-  const [nextModel, setNextModel] = useState<string | null>(null);
-  const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const cycleModel = useCallback(() => {
-    if (models.length === 0 || isSwitching) return;
+    if (models.length === 0) return;
     const currentIdx = models.findIndex((m) => m.value === model);
     const nextIdx = (currentIdx + 1) % models.length;
     const next = models[nextIdx].value;
 
-    setNextModel(next);
-    setIsSwitching(true);
+    setModel(next);
+    saveSelectedModel(next);
+  }, [models, model]);
 
-    switchTimeoutRef.current = setTimeout(() => {
-      setModel(next);
-      saveSelectedModel(next);
-      setIsSwitching(false);
-      setNextModel(null);
-    }, 350);
-  }, [models, model, isSwitching]);
-
-  // Clean up the in-flight flip timeout on unmount.
-  useEffect(() => {
-    return () => {
-      if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
-    };
-  }, []);
-
-  return { model, setModel, cycleModel, isSwitching, nextModel };
+  return { model, setModel, cycleModel };
 }

@@ -767,23 +767,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
                     : "This will replace the original component's UI with this variation's layout and styling. Props, hooks, and logic will be preserved."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              {/* Iteration preview thumbnail */}
-              {adoption.adoptThumbnail ? (
-                <div className="rounded-lg border border-stone-200 overflow-hidden bg-stone-50">
-                  <img
-                    src={adoption.adoptThumbnail}
-                    alt={`Preview of ${iterationLabel}`}
-                    className="w-full max-h-[240px] object-contain object-top"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-24 rounded-lg border border-dashed border-stone-200 bg-stone-50">
-                  <span className="text-xs text-stone-400">
-                    Capturing preview…
-                  </span>
-                </div>
-              )}
-              <p className="text-xs text-stone-500 text-center -mt-1">
+              <p className="text-xs text-stone-500 text-center">
                 {iterationLabel}
               </p>
               <AlertDialogFooter>

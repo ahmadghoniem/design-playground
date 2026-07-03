@@ -9,9 +9,7 @@ import DiscoveryModal, {
 } from "../components/modals/DiscoveryModal";
 import SkillsCatalogModal from "../components/modals/SkillsCatalogModal";
 import { getProviderFields } from "../lib/generation-body";
-import { matchesAction } from "../lib/keybindings";
 import {
-  ADD_ALL_QUEUE_STORAGE_KEY,
   OPEN_SKILLS_CATALOG_EVENT,
   SKILLS_CHANGED_EVENT,
   STORAGE_KEY,
@@ -30,29 +28,28 @@ export interface PendingChild {
   status: "pending" | "analyzing" | "done" | "error";
 }
 
-function getSidebarVisibilityStorageKey(projectId?: string) {
-  return `${projectId ? `${STORAGE_KEY}:${projectId}` : STORAGE_KEY}:sidebar-visible`;
+function useProjectId() {
+  const [projectId, setProjectId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/playground/api/project-id")
+      .then((res) => res.json())
+      .then((data: { projectId: string }) => {
+        if (!cancelled) setProjectId(data.projectId);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectId("unknown-project");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return projectId;
 }
 
-function loadSidebarVisibility(storageKey: string) {
-  if (typeof window === "undefined") return true;
-  try {
-    const stored = window.localStorage.getItem(storageKey);
-    return stored == null ? true : stored === "1";
-  } catch {
-    return true;
-  }
-}
-
-export default function PlaygroundClient({
-  projectId,
-}: {
-  projectId?: string;
-} = {}) {
-  const sidebarVisibilityStorageKey = getSidebarVisibilityStorageKey(projectId);
-  const [sidebarVisible, setSidebarVisible] = useState<boolean>(() =>
-    loadSidebarVisibility(sidebarVisibilityStorageKey),
-  );
+export default function PlaygroundClient() {
+  const projectId = useProjectId();
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   /** Whether sidebar was opened via hover (auto-hide) vs click (sticky). */
   const sidebarHoverRef = useRef(false);
   const sidebarHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -64,17 +61,6 @@ export default function PlaygroundClient({
   const [pendingChildren, setPendingChildren] = useState<
     Map<string, PendingChild[]>
   >(new Map());
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        sidebarVisibilityStorageKey,
-        sidebarVisible ? "1" : "0",
-      );
-    } catch {
-      // Ignore storage failures and keep runtime behavior unchanged.
-    }
-  }, [sidebarVisibilityStorageKey, sidebarVisible]);
 
   const cancelSidebarHideTimer = useCallback(() => {
     if (sidebarHideTimerRef.current) {
@@ -142,18 +128,6 @@ export default function PlaygroundClient({
       }
     };
   }, []);
-
-  // Sidebar toggle keybinding
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (matchesAction(e, "sidebar.toggle")) {
-        e.preventDefault();
-        handleToggleSidebar();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [handleToggleSidebar]);
 
   // Listen for requests to open the Skills catalog
   useEffect(() => {
@@ -297,171 +271,6 @@ export default function PlaygroundClient({
     })();
   }, [analyzeChildren]);
 
-  // ---------------------------------------------------------------------------
-  // "Add All" — persisted in sessionStorage so it survives HMR remounts.
-  // When the analyze API's agent modifies registry.tsx, Next.js fires HMR which
-  // remounts this component. A plain async loop would be killed. Instead we
-  // persist the queue in sessionStorage and resume from a useEffect on mount.
-  // ---------------------------------------------------------------------------
-
-  interface AddAllQueue {
-    entries: Pick<DiscoveryEntry, "id" | "name" | "path" | "type">[];
-    currentIndex: number;
-    successCount: number;
-    failCount: number;
-  }
-
-  const addAllProcessingRef = useRef(false);
-
-  const processAddAllQueue = useCallback(async () => {
-    // Prevent concurrent runs (e.g. useEffect + handleAddAll both calling this)
-    if (addAllProcessingRef.current) return;
-    addAllProcessingRef.current = true;
-
-    try {
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const raw = sessionStorage.getItem(ADD_ALL_QUEUE_STORAGE_KEY);
-        if (!raw) return;
-
-        const queue: AddAllQueue = JSON.parse(raw);
-        const { entries, currentIndex, successCount, failCount } = queue;
-
-        if (currentIndex === 0) {
-        }
-
-        if (currentIndex >= entries.length) {
-          // Done — show summary toast and clean up
-          sessionStorage.removeItem(ADD_ALL_QUEUE_STORAGE_KEY);
-          toast.dismiss("add-all-progress");
-          if (failCount === 0) {
-            toast.success(
-              `Added ${successCount} component${successCount !== 1 ? "s" : ""} to playground`,
-              { duration: 5000 },
-            );
-          } else {
-            toast.warning(
-              `Added ${successCount} of ${entries.length} — ${failCount} failed`,
-              { duration: 5000 },
-            );
-          }
-          return;
-        }
-
-        const entry = entries[currentIndex];
-        toast.loading(
-          `Setting up "${entry.name}"… (${currentIndex + 1}/${entries.length})`,
-          {
-            id: "add-all-progress",
-            duration: Infinity,
-            closeButton: true,
-            dismissible: true,
-          },
-        );
-
-        let success = false;
-        try {
-          const res = await fetch("/playground/api/discover/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: entry.id,
-              path: entry.path,
-              name: entry.name,
-              type: entry.type,
-              ...getProviderFields(),
-            }),
-          });
-          const data = await res.json();
-
-          if (data.success && data.entry) {
-            success = true;
-            notifySidebar();
-            const children: { id: string; name: string; path: string }[] =
-              data.childEntries || [];
-            if (children.length > 0) {
-              const parentRegistryId =
-                data.entry.analysis?.registryId || entry.id;
-              analyzeChildren(parentRegistryId, children);
-            }
-          }
-        } catch {
-          // fail — counted below
-        }
-
-        // Persist progress BEFORE state updates (HMR may fire any moment)
-        const updatedQueue: AddAllQueue = {
-          entries,
-          currentIndex: currentIndex + 1,
-          successCount: successCount + (success ? 1 : 0),
-          failCount: failCount + (success ? 0 : 1),
-        };
-        sessionStorage.setItem(
-          ADD_ALL_QUEUE_STORAGE_KEY,
-          JSON.stringify(updatedQueue),
-        );
-
-        setAddingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(entry.id);
-          return next;
-        });
-
-        // Loop continues to process next entry. If HMR kills us here,
-        // the useEffect below will resume from updatedQueue on remount.
-      }
-    } finally {
-      addAllProcessingRef.current = false;
-    }
-  }, [notifySidebar, analyzeChildren]);
-
-  // Start "Add All" — saves queue to sessionStorage then processes
-  const handleAddAll = useCallback(
-    (entries: DiscoveryEntry[]) => {
-      const queue: AddAllQueue = {
-        entries: entries.map((e) => ({
-          id: e.id,
-          name: e.name,
-          path: e.path,
-          type: e.type,
-        })),
-        currentIndex: 0,
-        successCount: 0,
-        failCount: 0,
-      };
-      sessionStorage.setItem(ADD_ALL_QUEUE_STORAGE_KEY, JSON.stringify(queue));
-
-      setAddingIds((prev) => {
-        const next = new Set(prev);
-        entries.forEach((e) => next.add(e.id));
-        return next;
-      });
-
-      processAddAllQueue();
-    },
-    [processAddAllQueue],
-  );
-
-  // Resume "Add All" on mount (HMR recovery)
-  useEffect(() => {
-    const raw = sessionStorage.getItem(ADD_ALL_QUEUE_STORAGE_KEY);
-    if (!raw) return;
-
-    const queue: AddAllQueue = JSON.parse(raw);
-    const remaining = queue.entries.slice(queue.currentIndex);
-    if (remaining.length > 0) {
-      setAddingIds((prev) => {
-        const next = new Set(prev);
-        remaining.forEach((e) => next.add(e.id));
-        return next;
-      });
-      processAddAllQueue();
-    } else {
-      // Queue was complete — clean up
-      sessionStorage.removeItem(ADD_ALL_QUEUE_STORAGE_KEY);
-    }
-  }, [processAddAllQueue]);
-
   // Add a component — runs at the PlaygroundClient level so it persists across modal open/close
   const handleAddComponent = useCallback(
     async (entry: DiscoveryEntry) => {
@@ -533,6 +342,8 @@ export default function PlaygroundClient({
     usePreviewColorSchemeStore((s) => s.scheme),
   );
 
+  if (!projectId) return null;
+
   const body = (
     <ReactFlowProvider>
       <div
@@ -595,7 +406,6 @@ export default function PlaygroundClient({
         onOpenChange={setDiscoveryOpen}
         addingIds={addingIds}
         onAdd={handleAddComponent}
-        onAddAll={handleAddAll}
       />
 
       {/* Skills catalog modal */}

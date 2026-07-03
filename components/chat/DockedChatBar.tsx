@@ -23,7 +23,7 @@ import {
   canSubmitReferenceOnlyChat,
   type ChatSubmitPayload,
 } from "../../lib/constants";
-import { matchesAction, formatKeyCombo, getCombo } from "../../lib/keybindings";
+
 import type { SelectedElement } from "../../lib/element-context";
 import type { SelectedNodeContext } from "../../hooks/useNodeSelection";
 import { useModelSettingsStore } from "../../stores/model-settings-store";
@@ -84,7 +84,7 @@ export default function DockedChatBar({
 
   const { screenToFlowPosition } = useReactFlow();
   const { models, isLoading: isLoadingModels } = useAvailableModels();
-  const { model, cycleModel, isSwitching, nextModel } = useModelCycle(models);
+  const { model, cycleModel } = useModelCycle(models);
   const activeProvider = useModelSettingsStore((s) => s.activeProvider);
 
   const {
@@ -335,21 +335,6 @@ export default function DockedChatBar({
         return;
       }
 
-      // Cycle model (default Shift+Tab). Defer to the picker (Tab accepts an item).
-      if (matchesAction(e.nativeEvent, "chat.cycle-model")) {
-        if (pickerOpen()) return;
-        e.preventDefault();
-        cycleModel();
-        return;
-      }
-
-      // Toggle Edit/Explore (default Cmd+E).
-      if (matchesAction(e.nativeEvent, "chat.toggle-edit-mode")) {
-        e.preventDefault();
-        setChatMode((prev) => (prev === "edit" ? "explore" : "edit"));
-        return;
-      }
-
       // Enter: submit (unless the picker is open — then Enter accepts an item).
       if (e.key === "Enter" && !e.shiftKey) {
         if (pickerOpen()) return;
@@ -361,7 +346,6 @@ export default function DockedChatBar({
     [
       pickerOpen,
       getInputEl,
-      cycleModel,
       handleSubmit,
       clearDwell,
       dismissedRef,
@@ -387,9 +371,6 @@ export default function DockedChatBar({
   }, [models, model, isLoadingModels]);
 
   const currentConfig = getModelIconConfig(model, activeProvider);
-  const nextConfig = nextModel
-    ? getModelIconConfig(nextModel, activeProvider)
-    : currentConfig;
 
   const placeholder = isFreeformMode
     ? "Ask anything, or / for skills…"
@@ -408,22 +389,13 @@ export default function DockedChatBar({
   // -------------------------------------------------------------------------
 
   const bubbleFaces = (
-    <>
-      <span
-        className="bubble-face bubble-face--current"
-        style={{
-          backgroundColor: currentConfig.bg,
-          backgroundImage: `url(${currentConfig.src})`,
-        }}
-      />
-      <span
-        className="bubble-face bubble-face--next"
-        style={{
-          backgroundColor: nextConfig.bg,
-          backgroundImage: `url(${nextConfig.src})`,
-        }}
-      />
-    </>
+    <span
+      className="bubble-face bubble-face--current"
+      style={{
+        backgroundColor: currentConfig.bg,
+        backgroundImage: `url(${currentConfig.src})`,
+      }}
+    />
   );
 
   return (
@@ -463,7 +435,7 @@ export default function DockedChatBar({
                 tabIndex={-1}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={cycleModel}
-                className={`chat-bubble inline-block border-0 bg-transparent p-0 ${isSwitching ? "is-switching" : ""}`}
+                className="chat-bubble inline-block border-0 bg-transparent p-0"
                 style={{ width: 16, height: 16 }}
               >
                 {bubbleFaces}
@@ -473,7 +445,7 @@ export default function DockedChatBar({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={cycleModel}
                 aria-label="Switch model"
-                title={`Switch model (${formatKeyCombo(getCombo("chat.cycle-model"))})`}
+                title="Switch model"
                 className="select-none whitespace-nowrap text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-600"
               >
                 {shortModelName}
@@ -497,7 +469,7 @@ export default function DockedChatBar({
                     : "text-stone-500 hover:text-stone-800"
                 }`}
                 aria-pressed={effectiveChatMode === "edit"}
-                title={`Edit design (${formatKeyCombo(getCombo("chat.toggle-edit-mode"))})`}
+                title="Edit design"
               >
                 <EditIcon className="flex-shrink-0" />
                 <span>Edit</span>
@@ -517,7 +489,7 @@ export default function DockedChatBar({
                       : "py-1 pr-2.5 text-stone-500 hover:text-stone-800"
                   }`}
                   aria-pressed={effectiveChatMode === "explore"}
-                  title={`Explore (${formatKeyCombo(getCombo("chat.toggle-edit-mode"))})`}
+                  title="Explore"
                 >
                   <ExploreIcon className="flex-shrink-0" />
                   <span>Explore</span>

@@ -6,12 +6,10 @@ import {
   type SelectedElement,
   type ElementContext,
 } from '../lib/element-context';
-import { getHoldKey } from '../lib/keybindings';
 
 // Selectors for playground chrome that should be excluded from element selection
 const EXCLUDE_SELECTORS = [
   '.react-flow__controls',
-  '.react-flow__minimap',
   '[data-playground-header]',
   '.react-flow__attribution',
 ];
@@ -107,7 +105,7 @@ export function useElementSelection(): UseElementSelectionReturn {
   // -----------------------------------------------------------------------
 
   useEffect(() => {
-    const holdKey = getHoldKey('element-select.hold');
+    const holdKey = "Alt";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === holdKey) {

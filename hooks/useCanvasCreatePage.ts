@@ -22,7 +22,6 @@ import {
   GENERATION_START_EVENT,
   GENERATION_COMPLETE_EVENT,
   GENERATION_ERROR_EVENT,
-  CREATE_DESIGN_EVENT,
   DEFAULT_STYLING_MODE,
   type GenerationStartPayload,
   type GenerationCompletePayload,
@@ -54,83 +53,6 @@ export function useCanvasCreatePage({
   const [createPageError, setCreatePageError] = useState("");
   const [creatingPage, setCreatingPage] = useState(false);
   const newPageInputRef = useRef<HTMLTextAreaElement>(null);
-
-  const getNextUntitledDesignName = useCallback(async (): Promise<string> => {
-    try {
-      const res = await fetch("/playground/api/html-pages");
-      if (!res.ok) return "Untitled-1";
-      const data = (await res.json()) as { pages?: { folder: string }[] };
-      const pages = Array.isArray(data.pages) ? data.pages : [];
-      let max = 0;
-      for (const page of pages) {
-        const m = page.folder.match(/^untitled-(\d+)$/i);
-        if (!m) continue;
-        const n = Number(m[1]);
-        if (Number.isFinite(n) && n > max) max = n;
-      }
-      return `Untitled-${max + 1}`;
-    } catch {
-      return "Untitled-1";
-    }
-  }, []);
-
-  const handleCreateHtmlPageAt = useCallback(
-    async (screenX: number, screenY: number) => {
-      try {
-        const name = await getNextUntitledDesignName();
-        const res = await fetch("/playground/api/html-pages", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          toast.error(data?.error || "Failed to create design");
-          return;
-        }
-
-        const position = screenToFlowPosition({ x: screenX, y: screenY });
-        const pageId = data.page.id as string;
-        const folder = data.page.folder as string;
-        const newNode: Node = {
-          id: getNodeId(),
-          type: "component",
-          position,
-          data: {
-            componentId: pageId,
-            renderMode: "html" as const,
-            htmlFolder: folder,
-          },
-        };
-        setNodes((nds) => nds.concat(newNode));
-        window.dispatchEvent(new CustomEvent("playground:html-pages-updated"));
-      } catch {
-        toast.error("Failed to create design");
-      }
-    },
-    [getNextUntitledDesignName, screenToFlowPosition, getNodeId, setNodes],
-  );
-
-  useEffect(() => {
-    const handleCreateDesign = () => {
-      const wrapper = reactFlowWrapper.current;
-      if (wrapper) {
-        const rect = wrapper.getBoundingClientRect();
-        void handleCreateHtmlPageAt(
-          rect.left + rect.width / 2,
-          rect.top + rect.height / 2,
-        );
-      } else {
-        void handleCreateHtmlPageAt(
-          window.innerWidth / 2,
-          window.innerHeight / 2,
-        );
-      }
-    };
-    window.addEventListener(CREATE_DESIGN_EVENT, handleCreateDesign);
-    return () =>
-      window.removeEventListener(CREATE_DESIGN_EVENT, handleCreateDesign);
-  }, [handleCreateHtmlPageAt, reactFlowWrapper]);
 
   useEffect(() => {
     if (createPageDialog && newPageInputRef.current) {
@@ -243,7 +165,6 @@ export function useCanvasCreatePage({
     creatingPage,
     newPageInputRef,
     handleCreatePage,
-    handleCreateHtmlPageAt,
     openCreatePageDialog,
   };
 }

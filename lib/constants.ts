@@ -76,8 +76,6 @@ export const SELECTED_MODEL_STORAGE_KEY = 'playground-selected-model';
 /** Key for persisting enabled model selections in settings */
 export const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
 
-/** Key for persisting user keybinding overrides */
-export const KEYBINDINGS_STORAGE_KEY = 'playground-keybindings';
 
 /** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
 export const PREVIEW_COLOR_SCHEME_STORAGE_KEY = 'playground-preview-color-scheme';
@@ -93,9 +91,6 @@ export const DESIGN_SYSTEM_GENERATED_EVENT = 'playground:design-system-generated
 
 /** Key for persisting generation info across page reloads */
 export const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
-
-/** Key for persisting the add-all queue in sessionStorage */
-export const ADD_ALL_QUEUE_STORAGE_KEY = 'playground-add-all-queue';
 
 // ---------------------------------------------------------------------------
 // Timing Constants
@@ -302,28 +297,6 @@ export const SKELETON_EDGE_STYLE = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// MiniMap Colors
-// ---------------------------------------------------------------------------
-
-/** MiniMap node color for skeleton nodes */
-export const MINIMAP_SKELETON_COLOR = '#f59e0b';
-
-/** MiniMap node color for iteration nodes */
-export const MINIMAP_ITERATION_COLOR = '#6b7280';
-
-/** MiniMap node color for component nodes */
-export const MINIMAP_COMPONENT_COLOR = '#3b82f6';
-
-/** MiniMap node color for image nodes */
-export const MINIMAP_IMAGE_COLOR = '#a78bfa';
-
-/** MiniMap node color for text nodes */
-export const MINIMAP_TEXT_COLOR = '#f472b6';
-
-/** MiniMap mask color */
-export const MINIMAP_MASK_COLOR = 'rgba(0, 0, 0, 0.08)';
-
-// ---------------------------------------------------------------------------
 // ReactFlow Background
 // ---------------------------------------------------------------------------
 
@@ -338,21 +311,6 @@ export const BACKGROUND_DOT_SIZE = 1;
 
 /** Color of background dots */
 export const BACKGROUND_COLOR = '#efefef';
-
-/** Minimum computed gap in flow coordinates (at max zoom-in) */
-export const BACKGROUND_MIN_GAP = 10;
-
-/** Maximum computed gap in flow coordinates (at max zoom-out) */
-export const BACKGROUND_MAX_GAP = 300;
-
-/** Minimum computed dot size in flow coordinates */
-export const BACKGROUND_MIN_DOT_SIZE = 1;
-
-/** Maximum computed dot size in flow coordinates */
-export const BACKGROUND_MAX_DOT_SIZE = 30;
-
-/** Number of discrete zoom steps for background dot scaling */
-export const BACKGROUND_ZOOM_STEPS = 6;
 
 // ---------------------------------------------------------------------------
 // Server-Side API Constants (used in route handlers)
@@ -466,9 +424,6 @@ export interface JsxIterationInfo {
 
 /** Fired to delete a frame and its canvas nodes */
 export const DELETE_FRAME_EVENT = 'playground:delete-frame';
-
-/** Fired to create a new untitled HTML design (same as canvas right-click → Create a new design) */
-export const CREATE_DESIGN_EVENT = 'playground:create-design';
 
 // ---------------------------------------------------------------------------
 // Edit Mode Constants

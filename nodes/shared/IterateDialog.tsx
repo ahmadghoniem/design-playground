@@ -29,7 +29,6 @@ import {
 } from "../../components/ui/inline-reference";
 import { ImpeccableSkillPicker } from "../../components/ui/impeccable-skill-picker";
 import { ImpeccableDemoteMenu } from "../../components/ui/impeccable-demote-menu";
-import { matchesAction } from "../../lib/keybindings";
 import { getProviderFields } from "../../lib/generation-body";
 import {
   GENERATION_START_EVENT,
@@ -202,7 +201,7 @@ export default function IterateDialog({
         ghostNode,
       ]);
     },
-    [getParentCellSize, screenToFlowPosition, setNodes],
+    [getParentCellSize, setNodes],
   );
 
   const closePanel = useCallback(() => {
@@ -761,11 +760,7 @@ export default function IterateDialog({
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") closePanel();
-      if (matchesAction(e, "iterate.copy-prompt")) {
-        e.preventDefault();
-        handleCopyPrompt(generatedPrompt);
-      }
-      if (matchesAction(e, "iterate.run") && canRun) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && canRun) {
         e.preventDefault();
         handleRunWithCursor();
       }

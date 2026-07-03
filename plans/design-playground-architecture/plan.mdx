@@ -1,0 +1,194 @@
+---
+# Visual plan: open https://plan.agent-native.com/plans/local-design-playground-architecture in a browser for the canvas and review UI.
+visualUrl: "https://plan.agent-native.com/plans/local-design-playground-architecture"
+title: "How Design-Playground Works, End to End"
+brief: "A visual architecture walkthrough of design-playground: how it embeds into a host Vite dev server, how the canvas and agent generation loop work, and how the codebase is layered."
+version: 2
+---
+
+# How Design-Playground Works, End to End
+
+<RichText id="mental-model" title="The Mental Model">
+
+Design-playground is a **local-dev-only design canvas** that is _dropped into a host React + Vite app_ at `src/app/playground/`. It is never built in CI or production — it only runs inside the host's dev server. You drag components onto an infinite canvas (`@xyflow/react`), then use an agent CLI (Claude Code is the default and only visible provider) to generate AI layout and style variations, which render back onto the canvas as iterations.
+
+Two design constraints shape everything: **zero dependency diff for the host** (the playground's deps install nested under its own `node_modules/`, and `react`/`vite`/`tailwindcss` are peerDependencies provided by the host) and **single embedded process** (the backend is a Hono app mounted into the host's Vite dev server via a plugin — there is no second server to run).
+
+</RichText>
+
+<Diagram id="embedding" title="How It Embeds Into the Host" caption={"The Vite plugin is a connect-style middleware that routes /playground/api/* to Hono, serves the playground.html entry for /playground deep links, and lets every other request fall through to the host."}>
+
+```html
+<div class="diagram-panel embed-diagram">
+<div class="diagram-card host" data-rough><strong>Host Vite dev server</strong><span>bun dev — the host's own app + connect middleware stack</span></div>
+<div class="arrow">registers</div>
+<div class="diagram-card plugin" data-rough><strong>designPlaygroundPlugin()</strong><span>server/vite-plugin.ts — configureServer hook</span></div>
+<div class="arrow">splits traffic</div>
+<div class="diagram-col">
+  <div class="diagram-card api" data-rough><strong>/playground/api/*</strong><span>getRequestListener(Hono.fetch) → embedded Hono app (server/index.ts)</span></div>
+  <div class="diagram-card mpa" data-rough><strong>/playground[/*]</strong><span>internally rewritten to playground.html MPA entry → React app</span></div>
+  <div class="diagram-card next" data-rough><strong>everything else</strong><span>next() — falls through to the host's own pages</span></div>
+</div>
+</div>
+```
+
+```css
+
+.embed-diagram{display:flex;flex-direction:column;gap:12px;padding:16px;}
+.embed-diagram .diagram-card{display:flex;flex-direction:column;gap:6px;padding:14px;background:var(--wf-card);}
+.embed-diagram .diagram-card span{color:var(--wf-muted);font-size:.9rem;line-height:1.35;}
+.embed-diagram .diagram-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.embed-diagram .arrow{color:var(--wf-muted);font-size:.85rem;text-align:center;}
+.embed-diagram .host{background:var(--wf-accent-soft);}
+@media (max-width:900px){.embed-diagram .diagram-col{grid-template-columns:1fr;}}
+```
+
+</Diagram>
+
+## The End-to-End Generation Loop
+
+<RichText id="loop-intro" title="From Dropped Component to AI Iteration">
+
+The core value is the generation loop. A component dropped onto the canvas becomes a node; the user asks for variations through the docked chat; the server spawns the agent CLI as a child process; the agent writes iteration artifacts (HTML frames and/or `.tsx` files) to disk; the server streams progress back; and the canvas renders each iteration as a new node. State is single-player and lives in `zustand` stores.
+
+</RichText>
+
+<Diagram id="gen-loop" title="The Generation Loop" caption={"Callback/spawn-driven routes wrap the child-process close/error events in a Promise<Response>; streaming uses hono/streaming (streamSSE for generate, streamText for design)."}>
+
+```html
+<div class="diagram-panel gen-diagram">
+<div class="diagram-card" data-rough><strong>1. Canvas</strong><span>Drag a component → ComponentNode (@xyflow/react). DockedChatBar collects the prompt + references.</span></div>
+<div class="arrow">POST /playground/api/...</div>
+<div class="diagram-card" data-rough><strong>2. Hono route</strong><span>generate.ts (SSE) / design.ts (streamText) build the prompt from prompts/*.prompt.ts</span></div>
+<div class="arrow">spawn child process</div>
+<div class="diagram-card" data-rough><strong>3. Agent CLI</strong><span>lib/providers/spawn-agent.ts runs Claude Code; it writes iterations/ and HTML frames to disk</span></div>
+<div class="arrow">stream events</div>
+<div class="diagram-card" data-rough><strong>4. Render back</strong><span>SSE events → store → canvas shows IterationNode / FrameNode per variation</span></div>
+</div>
+```
+
+```css
+
+.gen-diagram{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:10px;align-items:stretch;padding:16px;}
+.gen-diagram .diagram-card{display:flex;flex-direction:column;gap:6px;min-height:120px;padding:14px;background:var(--wf-card);}
+.gen-diagram .diagram-card span{color:var(--wf-muted);font-size:.88rem;line-height:1.35;}
+.gen-diagram .arrow{display:flex;align-items:center;justify-content:center;color:var(--wf-muted);font-size:.78rem;text-align:center;white-space:normal;}
+@media (max-width:900px){.gen-diagram{grid-template-columns:1fr;}.gen-diagram .arrow{min-height:22px;}}
+```
+
+</Diagram>
+
+## The Architectural Layers
+
+<Table
+  id="layers"
+  title="Ten Layers (from the knowledge graph)"
+  columns={["Layer", "Where", "What lives here"]}
+  rows={[
+    [
+      "App Shell & Entry",
+      "app/, dev-entry.tsx, registry.tsx",
+      "page/layout/loading, PlaygroundClient/Canvas/Header, react-router mount, node/component registry",
+    ],
+    [
+      "Canvas & Nodes",
+      "components/canvas/, nodes/",
+      "toolbar, sidebar, context menu, draw layer; ComponentNode, IterationNode, FrameNode, ShapeNode",
+    ],
+    [
+      "Chat & UI",
+      "components/chat/, components/ui/",
+      "DockedChatBar plus the shadcn primitives (button, dialog, tooltip, …)",
+    ],
+    [
+      "Modals",
+      "components/modals/",
+      "design-system, discovery, model-settings, skills-catalog, keyboard-shortcuts dialogs",
+    ],
+    [
+      "Hooks",
+      "hooks/",
+      "canvas manipulation, clipboard, drag-drop, frame ops, iteration, keyboard shortcuts",
+    ],
+    [
+      "Libraries & State",
+      "lib/, stores/",
+      "provider configs, model catalog, helpers, plugin registry; 7 zustand stores",
+    ],
+    [
+      "Server & API",
+      "server/",
+      "Hono router, vite-plugin embedding, 13 route modules, lockfile/recovery state",
+    ],
+    [
+      "AI Prompts",
+      "prompts/",
+      "prompt templates for discovery, iteration, element edit, HTML generation, adopt",
+    ],
+    ["Evaluations", "evals/", "agent eval scripts and structural verification"],
+    [
+      "Documentation",
+      "docs/, \\*.md",
+      "architecture docs, setup guides, refactor notes",
+    ],
+  ]}
+  density="compact"
+/>
+
+## Key Files to Read First
+
+<FileTree
+  id="key-files"
+  title="The Load-Bearing Surfaces"
+  title="The Load-Bearing Surfaces"
+  entries={[
+    {
+      path: "server/vite-plugin.ts",
+      note: "designPlaygroundPlugin() — bridges Hono into Vite middleware via getRequestListener; the whole embedding hinges on this.",
+    },
+    {
+      path: "server/index.ts",
+      note: "createPlaygroundRouter() mounts route modules; createPlaygroundServer() adds cors + 50MB bodyLimit; standalone serve() on PORT 4319.",
+    },
+    {
+      path: "server/routes/generate.ts",
+      note: "SSE generation endpoint — the heart of the iteration loop.",
+    },
+    {
+      path: "lib/providers/spawn-agent.ts",
+      note: "Spawns the agent CLI child process; provider config in lib/providers/registry.ts (SHOW_ALL_PROVIDERS gate).",
+    },
+    {
+      path: "app/page.tsx",
+      note: "React entry; layout.tsx wraps it; dev-entry.tsx mounts react-router with basename /playground.",
+    },
+    {
+      path: "registry.tsx",
+      note: "Node/component registry imported widely; stays at repo root by tooling convention.",
+    },
+  ]}
+/>
+
+<Code
+  id="route-shape"
+  title="Route Conventions (Hono)"
+  language="ts"
+  caption={
+    "Express-to-Hono mapping used across server/routes/*.ts — each module exports a xxxRoutes() factory returning a Hono sub-app."
+  }
+  code={
+    "// req.body            -> await readJson(c)        (server/lib/hono-helpers.ts)\n// req.query.X         -> c.req.query('X')\n// res.status(n).json  -> return c.json(o, n)\n// streaming           -> streamSSE / streamText from 'hono/streaming'\n// spawn-driven close   -> return await new Promise<Response>((resolve) => { ... })"
+  }
+/>
+
+<Callout id="constraints" title="The Two Constraints That Explain the Odd Choices" tone="decision">
+
+If a design decision looks unusual, it traces back to one of these: (1) **Zero host config diff** — no root `tsconfig`, peerDependencies for react/vite/tailwind, nested `node_modules`, imports stay relative (no `@` alias), and there is no shadcn `components.json`. (2) **One embedded process** — the Hono app must only answer paths it owns (`/playground/api/*`) and `next()` everything else, or it would 404 the host's own pages. `@hono/node-server`'s `getRequestListener` is mandatory for this bridge regardless of runtime.
+
+</Callout>
+
+<Callout id="scope-note" title="Scope of this document" tone="info">
+
+This is a descriptive architecture walkthrough, not a change proposal — there are no open questions or pending decisions. It mirrors the project's CLAUDE.md and the 720-node knowledge graph in `.understand-anything/`.
+
+</Callout>

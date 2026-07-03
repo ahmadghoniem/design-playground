@@ -18,7 +18,6 @@ export interface PlaygroundCanvasContextMenuProps {
   contextMenu: CanvasContextMenuState;
   nodes: Node[];
   onClose: () => void;
-  onCreateDesign: (screenX: number, screenY: number) => void;
   onCreatePage: (screenX: number, screenY: number) => void;
   onOrganize: () => void;
   onGroup: () => void;
@@ -30,7 +29,6 @@ export default function PlaygroundCanvasContextMenu({
   contextMenu,
   nodes,
   onClose,
-  onCreateDesign,
   onCreatePage,
   onOrganize,
   onGroup,
@@ -59,20 +57,6 @@ export default function PlaygroundCanvasContextMenu({
       className="playground-canvas-context-menu fixed z-50 min-w-[180px] bg-[#1C1C1E] rounded-2xl shadow-2xl py-2 px-2 animate-in fade-in-0 zoom-in-95 duration-100"
       style={{ left: contextMenu.x, top: contextMenu.y }}
     >
-      <button
-        className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[13px] text-stone-200 hover:bg-white/10 transition-colors text-left rounded-lg"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-          void onCreateDesign(contextMenu.x, contextMenu.y);
-        }}
-      >
-        <Frame
-          className="w-3.5 h-3.5 text-stone-500 shrink-0"
-          strokeWidth={1.5}
-        />
-        Create a new design
-      </button>
       <button
         className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[13px] text-stone-200 hover:bg-white/10 transition-colors text-left rounded-lg"
         onClick={(e) => {
