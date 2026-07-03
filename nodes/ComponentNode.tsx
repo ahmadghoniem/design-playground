@@ -36,10 +36,10 @@ import {
 } from "../stores/interactive-node-store";
 import { useFrameHoverHint } from "./shared/FrameHoverHint";
 import {
+  generationEvents,
+} from "../lib/generation-events";
+import {
   COMPONENT_SIZE_CHANGE_EVENT,
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
   EDIT_COMPLETE_EVENT,
   JSX_COMPONENT_ADDED_EVENT,
   DESIGN_SYSTEM_GENERATED_EVENT,
@@ -204,13 +204,13 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   useEffect(() => {
     const on = () => setIsGlobalGenerating(true);
     const off = () => setIsGlobalGenerating(false);
-    window.addEventListener(GENERATION_START_EVENT, on);
-    window.addEventListener(GENERATION_COMPLETE_EVENT, off);
-    window.addEventListener(GENERATION_ERROR_EVENT, off);
+    const offStart = generationEvents.start.on(on);
+    const offComplete = generationEvents.complete.on(off);
+    const offError = generationEvents.error.on(off);
     return () => {
-      window.removeEventListener(GENERATION_START_EVENT, on);
-      window.removeEventListener(GENERATION_COMPLETE_EVENT, off);
-      window.removeEventListener(GENERATION_ERROR_EVENT, off);
+      offStart();
+      offComplete();
+      offError();
     };
   }, []);
 

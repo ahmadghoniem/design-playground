@@ -35,9 +35,9 @@ import {
   getScreenshotFilename,
 } from "../lib/captureAndSaveScreenshot";
 import {
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
+  generationEvents,
+} from "../lib/generation-events";
+import {
   POST_GENERATION_SCAN_DELAY,
   DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
   DEFAULT_STYLING_MODE,
@@ -238,31 +238,27 @@ export function useChatSubmit({
           editProvider,
           payload.model,
         );
-        // Dispatch GENERATION_START_EVENT to kick off generation tracking
-        window.dispatchEvent(
-          new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-            detail: {
-              componentId: editComponentId,
-              componentName: editComponentName,
-              parentNodeId: payload.targetNodeId,
-              iterationCount: 0,
-              model: editResolvedModel,
-              provider: editPf.provider as GenerationStartPayload["provider"],
-              flowPosition: payload.canvasPosition,
-              targetNodeId: payload.targetNodeId,
-              editMode: true,
-              ...(isHtmlEdit
-                ? {
-                    renderMode: "html" as const,
-                    htmlFolder: payload.htmlPageSlug,
-                  }
-                : {}),
-              ...(isJsxEdit && payload.jsxFile
-                ? { renderMode: "jsx" as const, jsxFile: payload.jsxFile }
-                : {}),
-            },
-          }),
-        );
+        // Dispatch generation start to kick off generation tracking
+        generationEvents.start.emit({
+          componentId: editComponentId,
+          componentName: editComponentName,
+          parentNodeId: payload.targetNodeId,
+          iterationCount: 0,
+          model: editResolvedModel,
+          provider: editPf.provider as GenerationStartPayload["provider"],
+          flowPosition: payload.canvasPosition,
+          targetNodeId: payload.targetNodeId,
+          editMode: true,
+          ...(isHtmlEdit
+            ? {
+                renderMode: "html" as const,
+                htmlFolder: payload.htmlPageSlug,
+              }
+            : {}),
+          ...(isJsxEdit && payload.jsxFile
+            ? { renderMode: "jsx" as const, jsxFile: payload.jsxFile }
+            : {}),
+        });
 
         try {
           const response = await fetch("/playground/api/generate", {
@@ -294,15 +290,11 @@ export function useChatSubmit({
             toast.error(data?.error || `Edit failed (${response.status})`, {
               duration: 6000,
             });
-            window.dispatchEvent(
-              new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-                detail: {
-                  componentId: editComponentId,
-                  parentNodeId: payload.targetNodeId,
-                  error: data?.error || "Edit failed",
-                },
-              }),
-            );
+            generationEvents.error.emit({
+              componentId: editComponentId,
+              parentNodeId: payload.targetNodeId,
+              error: data?.error || "Edit failed",
+            });
           } else {
             if (isHtmlEdit) {
               // Dispatch edit complete to refresh iframes
@@ -314,33 +306,22 @@ export function useChatSubmit({
             } else if (isJsxEdit) {
               window.dispatchEvent(new Event(JSX_COMPONENT_ADDED_EVENT));
             }
-            window.dispatchEvent(
-              new CustomEvent<GenerationCompletePayload>(
-                GENERATION_COMPLETE_EVENT,
-                {
-                  detail: {
-                    componentId: editComponentId,
-                    parentNodeId: payload.targetNodeId,
-                    output: "",
-                  },
-                },
-              ),
-            );
+            generationEvents.complete.emit({
+              componentId: editComponentId,
+              parentNodeId: payload.targetNodeId,
+              output: "",
+            });
           }
         } catch (err) {
           console.error("[EditMode] Error:", err);
           toast.error(err instanceof Error ? err.message : "Unknown error", {
             duration: 6000,
           });
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: {
-                componentId: editComponentId,
-                parentNodeId: payload.targetNodeId,
-                error: String(err),
-              },
-            }),
-          );
+          generationEvents.error.emit({
+            componentId: editComponentId,
+            parentNodeId: payload.targetNodeId,
+            error: String(err),
+          });
         }
         return;
       }
@@ -645,31 +626,27 @@ export function useChatSubmit({
         }
 
         // Dispatch generation start (creates skeleton nodes)
-        window.dispatchEvent(
-          new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-            detail: {
-              componentId,
-              componentName,
-              parentNodeId: targetNodeId,
-              iterationCount,
-              startNumber,
-              model: resolvedModel,
-              provider:
-                canvasGenPf.provider as GenerationStartPayload["provider"],
-              flowPosition: payload.canvasPosition,
-              targetNodeId,
-              ...(isHtmlTarget
-                ? {
-                    renderMode: "html" as const,
-                    htmlFolder: payload.htmlPageSlug,
-                  }
-                : {}),
-              ...(isJsxTarget && payload.jsxFile
-                ? { renderMode: "jsx" as const, jsxFile: payload.jsxFile }
-                : {}),
-            },
-          }),
-        );
+        generationEvents.start.emit({
+          componentId,
+          componentName,
+          parentNodeId: targetNodeId,
+          iterationCount,
+          startNumber,
+          model: resolvedModel,
+          provider:
+            canvasGenPf.provider as GenerationStartPayload["provider"],
+          flowPosition: payload.canvasPosition,
+          targetNodeId,
+          ...(isHtmlTarget
+            ? {
+                renderMode: "html" as const,
+                htmlFolder: payload.htmlPageSlug,
+              }
+            : {}),
+          ...(isJsxTarget && payload.jsxFile
+            ? { renderMode: "jsx" as const, jsxFile: payload.jsxFile }
+            : {}),
+        });
 
         // Call the generate API
         try {
@@ -695,15 +672,11 @@ export function useChatSubmit({
           try {
             data = await response.json();
           } catch {
-            window.dispatchEvent(
-              new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-                detail: {
-                  componentId,
-                  parentNodeId: targetNodeId,
-                  error: "Failed to parse response",
-                },
-              }),
-            );
+            generationEvents.error.emit({
+              componentId,
+              parentNodeId: targetNodeId,
+              error: "Failed to parse response",
+            });
             return;
           }
 
@@ -712,32 +685,25 @@ export function useChatSubmit({
               typeof data?.error === "string"
                 ? data.error
                 : "Generation failed";
-            window.dispatchEvent(
-              new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-                detail: { componentId, parentNodeId: targetNodeId, error },
-              }),
-            );
+            generationEvents.error.emit({
+              componentId,
+              parentNodeId: targetNodeId,
+              error,
+            });
           } else {
-            window.dispatchEvent(
-              new CustomEvent<GenerationCompletePayload>(
-                GENERATION_COMPLETE_EVENT,
-                {
-                  detail: {
-                    componentId,
-                    parentNodeId: targetNodeId,
-                    output: "",
-                  },
-                },
-              ),
-            );
+            generationEvents.complete.emit({
+              componentId,
+              parentNodeId: targetNodeId,
+              output: "",
+            });
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Unknown error";
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: { componentId, parentNodeId: targetNodeId, error: msg },
-            }),
-          );
+          generationEvents.error.emit({
+            componentId,
+            parentNodeId: targetNodeId,
+            error: msg,
+          });
         }
       } else if (payload.skillIds?.includes("visualise-plan")) {
         // --- VISUALISE PLAN: create HTML frame on canvas, then edit in place ---
@@ -809,24 +775,20 @@ export function useChatSubmit({
           referenceNodesSection: referenceNodesSection || undefined,
         });
 
-        window.dispatchEvent(
-          new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-            detail: {
-              componentId: pageId,
-              componentName: folder,
-              parentNodeId: newNodeId,
-              iterationCount: 0,
-              model: resolvedModel,
-              provider:
-                canvasGenPf.provider as GenerationStartPayload["provider"],
-              flowPosition: payload.canvasPosition ?? undefined,
-              targetNodeId: newNodeId,
-              editMode: true,
-              renderMode: "html" as const,
-              htmlFolder: folder,
-            },
-          }),
-        );
+        generationEvents.start.emit({
+          componentId: pageId,
+          componentName: folder,
+          parentNodeId: newNodeId,
+          iterationCount: 0,
+          model: resolvedModel,
+          provider:
+            canvasGenPf.provider as GenerationStartPayload["provider"],
+          flowPosition: payload.canvasPosition ?? undefined,
+          targetNodeId: newNodeId,
+          editMode: true,
+          renderMode: "html" as const,
+          htmlFolder: folder,
+        });
 
         try {
           const response = await fetch("/playground/api/generate", {
@@ -848,67 +810,48 @@ export function useChatSubmit({
             toast.error(data?.error || "Plan visualisation failed", {
               duration: 6000,
             });
-            window.dispatchEvent(
-              new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-                detail: {
-                  componentId: pageId,
-                  parentNodeId: newNodeId,
-                  error: data?.error || "Generation failed",
-                },
-              }),
-            );
+            generationEvents.error.emit({
+              componentId: pageId,
+              parentNodeId: newNodeId,
+              error: data?.error || "Generation failed",
+            });
           } else {
             window.dispatchEvent(
               new CustomEvent(EDIT_COMPLETE_EVENT, {
                 detail: { nodeId: newNodeId },
               }),
             );
-            window.dispatchEvent(
-              new CustomEvent<GenerationCompletePayload>(
-                GENERATION_COMPLETE_EVENT,
-                {
-                  detail: {
-                    componentId: pageId,
-                    parentNodeId: newNodeId,
-                    output: "",
-                  },
-                },
-              ),
-            );
+            generationEvents.complete.emit({
+              componentId: pageId,
+              parentNodeId: newNodeId,
+              output: "",
+            });
           }
         } catch (err) {
           console.error("[VisualisePlan] Generation error:", err);
           const msg = err instanceof Error ? err.message : "Unknown error";
           toast.error(msg, { duration: 6000 });
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: {
-                componentId: pageId,
-                parentNodeId: newNodeId,
-                error: msg,
-              },
-            }),
-          );
+          generationEvents.error.emit({
+            componentId: pageId,
+            parentNodeId: newNodeId,
+            error: msg,
+          });
         }
       } else {
         // --- FREEFORM (no target) ---
         const freeformComponentId = "chat-freeform";
 
         // Dispatch start event — creates skeleton node
-        window.dispatchEvent(
-          new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-            detail: {
-              componentId: freeformComponentId,
-              componentName: "Freeform",
-              parentNodeId: "",
-              iterationCount: 0,
-              model: resolvedModel,
-              provider:
-                canvasGenPf.provider as GenerationStartPayload["provider"],
-              flowPosition: payload.canvasPosition ?? undefined,
-            },
-          }),
-        );
+        generationEvents.start.emit({
+          componentId: freeformComponentId,
+          componentName: "Freeform",
+          parentNodeId: "",
+          iterationCount: 0,
+          model: resolvedModel,
+          provider:
+            canvasGenPf.provider as GenerationStartPayload["provider"],
+          flowPosition: payload.canvasPosition ?? undefined,
+        });
 
         // Build prompt — freeform-reference template or raw text
         let freeformPrompt: string;
@@ -959,43 +902,28 @@ export function useChatSubmit({
           const data = await response.json().catch(() => ({ success: false }));
           if (!response.ok || !data.success) {
             console.error("[Chat] Freeform generation failed:", data?.error);
-            window.dispatchEvent(
-              new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-                detail: {
-                  componentId: freeformComponentId,
-                  parentNodeId: "",
-                  error: data?.error || "Generation failed",
-                },
-              }),
-            );
+            generationEvents.error.emit({
+              componentId: freeformComponentId,
+              parentNodeId: "",
+              error: data?.error || "Generation failed",
+            });
           } else {
-            window.dispatchEvent(
-              new CustomEvent<GenerationCompletePayload>(
-                GENERATION_COMPLETE_EVENT,
-                {
-                  detail: {
-                    componentId: freeformComponentId,
-                    parentNodeId: "",
-                    output: "",
-                  },
-                },
-              ),
-            );
+            generationEvents.complete.emit({
+              componentId: freeformComponentId,
+              parentNodeId: "",
+              output: "",
+            });
           }
         } catch (err) {
           console.error("[Chat] Freeform generation error:", err);
           const msg = err instanceof Error ? err.message : "Unknown error";
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: {
-                componentId: freeformComponentId,
-                parentNodeId: "",
-                error: msg,
-              },
-            }),
-          );
+          generationEvents.error.emit({
+            componentId: freeformComponentId,
+            parentNodeId: "",
+            error: msg,
+          });
         } finally {
-          // State cleanup and queue draining handled by GENERATION_COMPLETE/ERROR event handlers
+          // State cleanup and queue draining handled by generationEvents.complete/error handlers
           // Only clear state here as a safety net if events didn't fire (e.g. network error before dispatch)
           if (coord.getGenerationInfo()?.componentId === freeformComponentId) {
             coord.clearGenerationEager();
@@ -1018,11 +946,11 @@ export function useChatSubmit({
       }, POST_GENERATION_SCAN_DELAY + 500);
     };
 
-    window.addEventListener(GENERATION_COMPLETE_EVENT, drainQueue);
-    window.addEventListener(GENERATION_ERROR_EVENT, drainQueue);
+    const offComplete = generationEvents.complete.on(drainQueue);
+    const offError = generationEvents.error.on(drainQueue);
     return () => {
-      window.removeEventListener(GENERATION_COMPLETE_EVENT, drainQueue);
-      window.removeEventListener(GENERATION_ERROR_EVENT, drainQueue);
+      offComplete();
+      offError();
     };
   }, [handleChatSubmit]);
 

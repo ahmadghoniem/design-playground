@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../ui/dialog";
-import { useDesignSystemStore } from "../../stores/design-system-store";
 import { useModelSettingsStore } from "../../stores/model-settings-store";
 import { getProvider } from "../../lib/providers/registry";
 import {
@@ -34,6 +33,15 @@ import SpecSection from "./design-system/SpecSection";
 
 type Section =
   "home" | "preview" | "edit" | "check" | "history" | "export" | "spec";
+
+/**
+ * The `pg-design-inject` cookie is the single source of truth for the
+ * "always use the DS with AI" toggle — the server reads it per generation
+ * request (see server/routes/generate.ts).
+ */
+function readDesignInjectCookie(): boolean {
+  return /(?:^|;\s*)pg-design-inject=1(?:;|$)/.test(document.cookie);
+}
 
 interface DesignSystemModalProps {
   open: boolean;
@@ -86,12 +94,7 @@ export default function DesignSystemModal({
   const [section, setSection] = useState<Section>("home");
   const [aiNotes, setAiNotes] = useState("");
 
-  const injectIntoGeneration = useDesignSystemStore(
-    (s) => s.injectIntoGeneration,
-  );
-  const setInjectIntoGeneration = useDesignSystemStore(
-    (s) => s.setInjectIntoGeneration,
-  );
+  const [injectIntoGeneration, setInjectIntoGeneration] = useState(readDesignInjectCookie);
   const activeProvider = useModelSettingsStore((s) => s.activeProvider);
   const enabledModels = useModelSettingsStore(
     (s) => s.providerState[s.activeProvider]?.enabledModels ?? [],

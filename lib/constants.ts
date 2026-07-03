@@ -19,15 +19,6 @@ export const FULLSCREEN_NODE_EVENT = 'playground:fullscreen-node';
 /** Fired when a ComponentNode changes its viewport size */
 export const COMPONENT_SIZE_CHANGE_EVENT = 'playground:component-size-change';
 
-/** Fired when generation starts (skeleton nodes are created) */
-export const GENERATION_START_EVENT = 'playground:generation-start';
-
-/** Fired when generation completes successfully */
-export const GENERATION_COMPLETE_EVENT = 'playground:generation-complete';
-
-/** Fired when generation encounters an error */
-export const GENERATION_ERROR_EVENT = 'playground:generation-error';
-
 /** Fired when an adoption completes successfully */
 export const ADOPTION_COMPLETE_EVENT = 'playground:adoption-complete';
 
@@ -566,7 +557,7 @@ export interface ChatSubmitPayload {
 // Generation Event Payload Types
 // ---------------------------------------------------------------------------
 
-/** Payload for GENERATION_START_EVENT */
+/** Payload for generation start event */
 export interface GenerationStartPayload {
   componentId: string;
   componentName: string;
@@ -597,14 +588,14 @@ export interface GenerationStartPayload {
   editMode?: boolean;
 }
 
-/** Payload for GENERATION_COMPLETE_EVENT */
+/** Payload for generation complete event */
 export interface GenerationCompletePayload {
   componentId: string;
   parentNodeId: string;
   output: string;
 }
 
-/** Payload for GENERATION_ERROR_EVENT */
+/** Payload for generation error event */
 export interface GenerationErrorPayload {
   componentId: string;
   parentNodeId: string;

@@ -18,14 +18,14 @@ import {
   generateIterationFromIterationPrompt,
 } from "../registry";
 import {
+  generationEvents,
+} from "../lib/generation-events";
+import {
   DRAG_ITERATE_THRESHOLD_PX,
   DRAG_ITERATE_MAX_TOTAL,
   DRAG_ITERATE_MAX_COLS,
   DRAG_ITERATE_MAX_ROWS,
   DRAG_ITERATE_EVENT,
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
   DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
   type DragIteratePayload,
   type GenerationStartPayload,
@@ -391,43 +391,35 @@ export function useDragIterateEventHandler(): void {
 
       // Guard: prompt must be non-empty before we proceed
       if (!prompt) {
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: {
-              componentId,
-              parentNodeId,
-              error: isDragHtml
-                ? `HTML page "${dragHtmlFolder}" not found.`
-                : isDragJsx
-                  ? "Could not build prompt for this JSX frame (missing jsxFile or canvas-components data)."
-                  : `Component "${componentId}" is not registered. Add it to the registry or re-run discovery before iterating.`,
-            },
-          }),
-        );
+        generationEvents.error.emit({
+          componentId,
+          parentNodeId,
+          error: isDragHtml
+            ? `HTML page "${dragHtmlFolder}" not found.`
+            : isDragJsx
+              ? "Could not build prompt for this JSX frame (missing jsxFile or canvas-components data)."
+              : `Component "${componentId}" is not registered. Add it to the registry or re-run discovery before iterating.`,
+        });
         return;
       }
 
       const dragPf = getProviderFields();
       // Dispatch generation start (creates skeleton nodes in grid layout)
-      window.dispatchEvent(
-        new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-          detail: {
-            componentId,
-            componentName,
-            parentNodeId,
-            iterationCount,
-            startNumber,
-            model: model || undefined,
-            provider: dragPf.provider as GenerationStartPayload["provider"],
-            gridLayout: { rows: e.detail.rows, cols: e.detail.cols },
-            ...(isDragHtml
-              ? { renderMode: "html" as const, htmlFolder: dragHtmlFolder }
-              : isDragJsx && dragJsxFile
-                ? { renderMode: "jsx" as const, jsxFile: dragJsxFile }
-                : {}),
-          },
-        }),
-      );
+      generationEvents.start.emit({
+        componentId,
+        componentName,
+        parentNodeId,
+        iterationCount,
+        startNumber,
+        model: model || undefined,
+        provider: dragPf.provider as GenerationStartPayload["provider"],
+        gridLayout: { rows: e.detail.rows, cols: e.detail.cols },
+        ...(isDragHtml
+          ? { renderMode: "html" as const, htmlFolder: dragHtmlFolder }
+          : isDragJsx && dragJsxFile
+            ? { renderMode: "jsx" as const, jsxFile: dragJsxFile }
+            : {}),
+      });
 
       // Call the generate API
       try {
@@ -450,41 +442,36 @@ export function useDragIterateEventHandler(): void {
         try {
           data = await response.json();
         } catch {
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: {
-                componentId,
-                parentNodeId,
-                error: "Failed to parse response",
-              },
-            }),
-          );
+          generationEvents.error.emit({
+            componentId,
+            parentNodeId,
+            error: "Failed to parse response",
+          });
           return;
         }
 
         if (!response.ok || !data.success) {
           const error =
             typeof data?.error === "string" ? data.error : "Generation failed";
-          window.dispatchEvent(
-            new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-              detail: { componentId, parentNodeId, error },
-            }),
-          );
+          generationEvents.error.emit({
+            componentId,
+            parentNodeId,
+            error,
+          });
         } else {
-          window.dispatchEvent(
-            new CustomEvent<GenerationCompletePayload>(
-              GENERATION_COMPLETE_EVENT,
-              { detail: { componentId, parentNodeId, output: "" } },
-            ),
-          );
+          generationEvents.complete.emit({
+            componentId,
+            parentNodeId,
+            output: "",
+          });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: { componentId, parentNodeId, error: msg },
-          }),
-        );
+        generationEvents.error.emit({
+          componentId,
+          parentNodeId,
+          error: msg,
+        });
       }
     };
 

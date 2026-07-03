@@ -6,9 +6,9 @@ import { generateHtmlAdoptPrompt } from "../lib/html-prompts";
 import { generateJsxAdoptPrompt } from "../lib/jsx-prompts";
 import { getProviderFields } from "../lib/generation-body";
 import {
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
+  generationEvents,
+} from "../lib/generation-events";
+import {
   EDIT_COMPLETE_EVENT,
   ADOPTION_COMPLETE_EVENT,
   ADOPTION_ERROR_EVENT,
@@ -102,24 +102,20 @@ export function useIterationAdoption({
         : registryId;
 
     // Dispatch start event (editMode prevents skeleton nodes)
-    window.dispatchEvent(
-      new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-        detail: {
-          componentId,
-          componentName: data.componentName,
-          parentNodeId: data.parentNodeId,
-          iterationCount: 0,
-          editMode: true,
-          ...(isHtml
-            ? { renderMode: "html" as const, htmlFolder: data.htmlFolder }
-            : {}),
-          ...(getProviderFields() as Pick<
-            GenerationStartPayload,
-            "model" | "provider"
-          >),
-        },
-      }),
-    );
+    generationEvents.start.emit({
+      componentId,
+      componentName: data.componentName,
+      parentNodeId: data.parentNodeId,
+      iterationCount: 0,
+      editMode: true,
+      ...(isHtml
+        ? { renderMode: "html" as const, htmlFolder: data.htmlFolder }
+        : {}),
+      ...(getProviderFields() as Pick<
+        GenerationStartPayload,
+        "model" | "provider"
+      >),
+    });
 
     try {
       const response = await fetch("/playground/api/generate", {
@@ -140,15 +136,11 @@ export function useIterationAdoption({
 
       if (!response.ok || !result.success) {
         const errorMsg = result?.error || "Adoption failed";
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: {
-              componentId,
-              parentNodeId: data.parentNodeId,
-              error: errorMsg,
-            },
-          }),
-        );
+        generationEvents.error.emit({
+          componentId,
+          parentNodeId: data.parentNodeId,
+          error: errorMsg,
+        });
         window.dispatchEvent(
           new CustomEvent<AdoptionErrorPayload>(ADOPTION_ERROR_EVENT, {
             detail: {
@@ -174,18 +166,11 @@ export function useIterationAdoption({
             }),
           );
         }
-        window.dispatchEvent(
-          new CustomEvent<GenerationCompletePayload>(
-            GENERATION_COMPLETE_EVENT,
-            {
-              detail: {
-                componentId,
-                parentNodeId: data.parentNodeId,
-                output: result.output || "",
-              },
-            },
-          ),
-        );
+        generationEvents.complete.emit({
+          componentId,
+          parentNodeId: data.parentNodeId,
+          output: result.output || "",
+        });
         window.dispatchEvent(
           new CustomEvent<AdoptionCompletePayload>(ADOPTION_COMPLETE_EVENT, {
             detail: {
@@ -214,15 +199,11 @@ export function useIterationAdoption({
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Network error";
-      window.dispatchEvent(
-        new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-          detail: {
-            componentId,
-            parentNodeId: data.parentNodeId,
-            error: errorMsg,
-          },
-        }),
-      );
+      generationEvents.error.emit({
+        componentId,
+        parentNodeId: data.parentNodeId,
+        error: errorMsg,
+      });
       window.dispatchEvent(
         new CustomEvent<AdoptionErrorPayload>(ADOPTION_ERROR_EVENT, {
           detail: {

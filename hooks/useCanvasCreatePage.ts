@@ -19,9 +19,9 @@ import {
   RESERVED_TOP_LEVEL_SLUGS,
 } from "../prompts/create-page.prompt";
 import {
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
+  generationEvents,
+} from "../lib/generation-events";
+import {
   DEFAULT_STYLING_MODE,
   type GenerationStartPayload,
   type GenerationCompletePayload,
@@ -83,18 +83,14 @@ export function useCanvasCreatePage({
 
     toast.loading("Creating new page…", { id: toastId, duration: Infinity });
 
-    window.dispatchEvent(
-      new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-        detail: {
-          componentId,
-          componentName: "New Page",
-          parentNodeId: "",
-          iterationCount: 0,
-          model: undefined,
-          provider: pf.provider as GenerationStartPayload["provider"],
-        },
-      }),
-    );
+    generationEvents.start.emit({
+      componentId,
+      componentName: "New Page",
+      parentNodeId: "",
+      iterationCount: 0,
+      model: undefined,
+      provider: pf.provider as GenerationStartPayload["provider"],
+    });
 
     try {
       const response = await fetch("/playground/api/generate", {
@@ -114,33 +110,33 @@ export function useCanvasCreatePage({
           data?.error || `Page creation failed (${response.status})`;
         toast.error(errMsg, { id: toastId, duration: 6000 });
         setCreatePageError(errMsg);
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: { componentId, parentNodeId: "", error: errMsg },
-          }),
-        );
+        generationEvents.error.emit({
+          componentId,
+          parentNodeId: "",
+          error: errMsg,
+        });
         return;
       }
       toast.success("Page created — drag from sidebar to canvas", {
         id: toastId,
         duration: 5000,
       });
-      window.dispatchEvent(
-        new CustomEvent<GenerationCompletePayload>(GENERATION_COMPLETE_EVENT, {
-          detail: { componentId, parentNodeId: "", output: "" },
-        }),
-      );
+      generationEvents.complete.emit({
+        componentId,
+        parentNodeId: "",
+        output: "",
+      });
       setCreatePageDialog(null);
       setNewPageDescription("");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg, { id: toastId, duration: 6000 });
       setCreatePageError(msg);
-      window.dispatchEvent(
-        new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-          detail: { componentId, parentNodeId: "", error: msg },
-        }),
-      );
+      generationEvents.error.emit({
+        componentId,
+        parentNodeId: "",
+        error: msg,
+      });
     } finally {
       setCreatingPage(false);
     }

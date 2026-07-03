@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  GENERATION_COMPLETE_EVENT,
+  generationEvents,
+} from "../../../lib/generation-events";
+import {
   JSX_COMPONENT_ADDED_EVENT,
   DESIGN_SYSTEM_GENERATED_EVENT,
 } from "../../../lib/constants";
@@ -10,7 +12,7 @@ import type { HtmlPageInfo, JsxComponentInfo } from "../../../lib/constants";
  * Owns the sidebar's "react to discovery" surface: fetching HTML pages /
  * JSX components, fetching the generated design-system showcase, and the
  * window-event listeners that trigger a refresh (`playground:html-pages-updated`,
- * `GENERATION_COMPLETE_EVENT`, `JSX_COMPONENT_ADDED_EVENT`, `DESIGN_SYSTEM_GENERATED_EVENT`).
+ * `generationEvents.complete`, `JSX_COMPONENT_ADDED_EVENT`, `DESIGN_SYSTEM_GENERATED_EVENT`).
  * The sidebar shell no longer inlines this event plumbing.
  */
 export function useSidebarDiscoverySync() {
@@ -49,21 +51,15 @@ export function useSidebarDiscoverySync() {
     const refresh = () => {
       void fetchHtmlPages();
     };
+    const offComplete = generationEvents.complete.on(refresh);
     window.addEventListener("playground:html-pages-updated", refresh);
-    window.addEventListener(
-      GENERATION_COMPLETE_EVENT,
-      refresh as EventListener,
-    );
     window.addEventListener(
       JSX_COMPONENT_ADDED_EVENT,
       refresh as EventListener,
     );
     return () => {
+      offComplete();
       window.removeEventListener("playground:html-pages-updated", refresh);
-      window.removeEventListener(
-        GENERATION_COMPLETE_EVENT,
-        refresh as EventListener,
-      );
       window.removeEventListener(
         JSX_COMPONENT_ADDED_EVENT,
         refresh as EventListener,

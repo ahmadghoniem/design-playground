@@ -42,11 +42,6 @@ export interface GenerationCoordination {
   };
   markScanQueued: (override?: GenerationInfo | null) => void;
 
-  resetInactiveStreak: () => void;
-  bumpInactiveStreak: () => number;
-  getInactiveStreak: () => number;
-  getGenerationStartedAt: () => number;
-  setGenerationStartedAt: (ms: number) => void;
 }
 
 /**
@@ -73,8 +68,7 @@ export function useGenerationCoordination({
   );
   const scanLockRef = useRef(false);
   const scanQueuedRef = useRef(false);
-  const generationStartedAtMsRef = useRef(0);
-  const inactiveStatusStreakRef = useRef(0);
+
 
   useEffect(() => {
     isGeneratingRef.current = isGenerating;
@@ -175,29 +169,6 @@ export function useGenerationCoordination({
     return { queued, override };
   }, []);
 
-  const resetInactiveStreak = useCallback(() => {
-    inactiveStatusStreakRef.current = 0;
-  }, []);
-
-  const bumpInactiveStreak = useCallback(() => {
-    inactiveStatusStreakRef.current += 1;
-    return inactiveStatusStreakRef.current;
-  }, []);
-
-  const getInactiveStreak = useCallback(
-    () => inactiveStatusStreakRef.current,
-    [],
-  );
-
-  const getGenerationStartedAt = useCallback(
-    () => generationStartedAtMsRef.current,
-    [],
-  );
-
-  const setGenerationStartedAt = useCallback((ms: number) => {
-    generationStartedAtMsRef.current = ms;
-  }, []);
-
   return {
     isGenerating,
     generationInfo,
@@ -218,10 +189,5 @@ export function useGenerationCoordination({
     tryAcquireScanLock,
     releaseScanLock,
     markScanQueued,
-    resetInactiveStreak,
-    bumpInactiveStreak,
-    getInactiveStreak,
-    getGenerationStartedAt,
-    setGenerationStartedAt,
   };
 }

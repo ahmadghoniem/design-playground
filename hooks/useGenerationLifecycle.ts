@@ -14,9 +14,9 @@ import {
 } from "../lib/iteration-scan";
 import type { GenerationCoordination } from "./useGenerationCoordination";
 import {
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
+  generationEvents,
+} from "../lib/generation-events";
+import {
   DRAG_GHOST_GAP,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
@@ -113,94 +113,9 @@ export function useGenerationLifecycle({
     coord.clearGenerationEager,
   ]);
 
-  // Reconcile UI loading state with backend generation status in case events are missed
-  useEffect(() => {
-    if (!isGenerating) return;
-
-    let cancelled = false;
-    const STARTUP_GRACE_MS = 2000;
-    const REQUIRED_INACTIVE_POLLS = 2;
-
-    const pollStatus = async () => {
-      if (cancelled) return;
-
-      try {
-        const response = await fetch("/playground/api/generate?action=status");
-        if (!response.ok) return;
-
-        const data = (await response.json()) as {
-          success: boolean;
-          isGenerating: boolean;
-          hasProcess: boolean;
-          lockfilePresent?: boolean;
-          lockPid?: number | null;
-          lockPidAlive?: boolean;
-          generationActive?: boolean;
-        };
-
-        const generationActive = data.generationActive ?? data.isGenerating;
-        if (generationActive) {
-          coord.resetInactiveStreak();
-        } else if (coord.getGenerationInfo()) {
-          const now = Date.now();
-          const generationStartedAt =
-            coord.getGenerationStartedAt() ||
-            coord.getGenerationInfo()!.startTime;
-          const stillInStartupGrace =
-            now - generationStartedAt < STARTUP_GRACE_MS;
-          if (!stillInStartupGrace) {
-            coord.bumpInactiveStreak();
-          }
-        }
-
-        // If backend confirms generation is inactive for consecutive polls,
-        // force-complete to clear any lingering skeletons.
-        if (
-          coord.getInactiveStreak() >= REQUIRED_INACTIVE_POLLS &&
-          coord.getGenerationInfo()
-        ) {
-          const info = coord.getGenerationInfo()!;
-          window.dispatchEvent(
-            new CustomEvent<GenerationCompletePayload>(
-              GENERATION_COMPLETE_EVENT,
-              {
-                detail: {
-                  componentId: info.componentId,
-                  parentNodeId: info.parentNodeId,
-                  output: "",
-                },
-              },
-            ),
-          );
-          coord.resetInactiveStreak();
-          return;
-        }
-      } catch {
-        // Best-effort reconciliation only; ignore polling errors.
-      }
-
-      // Continue polling while the UI still believes generation is active.
-      if (!cancelled && isGenerating) {
-        setTimeout(pollStatus, 5000);
-      }
-    };
-
-    pollStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isGenerating,
-    coord.resetInactiveStreak,
-    coord.getGenerationInfo,
-    coord.getGenerationStartedAt,
-    coord.bumpInactiveStreak,
-    coord.getInactiveStreak,
-  ]);
-
   // SSE helpers for progressive iteration detection during generation.
-  // The server watches tree.json via fs.watch and pushes events when it changes.
+  // The server parses the agent's stream-json tool events and pushes an
+  // event per written file (the fs-watcher remains as a silent fallback).
   const stopGenerationEventSource = useCallback(() => {
     if (generationEventSourceRef.current) {
       generationEventSourceRef.current.close();
@@ -216,6 +131,7 @@ export function useGenerationLifecycle({
         const data = JSON.parse(event.data);
         if (data.type === "iteration-added") {
           const ctx = coord.getGenerationInfo();
+          // data.filePath / data.iterationNumber identify the exact file written (from the agent's tool events)
           scanForIterations(false, ctx ?? undefined);
         } else if (data.type === "done") {
           es.close();
@@ -340,7 +256,7 @@ export function useGenerationLifecycle({
       return rects;
     };
 
-    const handleGenerationStart = (e: CustomEvent<GenerationStartPayload>) => {
+    const handleGenerationStart = (payload: GenerationStartPayload) => {
       const {
         componentId,
         componentName,
@@ -352,9 +268,7 @@ export function useGenerationLifecycle({
         jsxFile: genJsxFile,
         editMode: isEditMode,
         startNumber: genStartNumber,
-      } = e.detail;
-      coord.setGenerationStartedAt(Date.now());
-      coord.resetInactiveStreak();
+      } = payload;
 
       // Edit mode: no skeleton nodes are created
       if (isEditMode) {
@@ -377,7 +291,7 @@ export function useGenerationLifecycle({
 
       // Freeform generations have no parent — create a standalone skeleton
       if (!parentNodeId) {
-        const flowPos = e.detail.flowPosition ?? { x: 400, y: 200 };
+        const flowPos = payload.flowPosition ?? { x: 400, y: 200 };
         const skeletonId = getNodeId();
         const skeletonNode: Node = {
           id: skeletonId,
@@ -524,7 +438,7 @@ export function useGenerationLifecycle({
       setEdges((eds) => [...eds, ...skeletonEdges]);
 
       // Update generation state — sync ref eagerly so that a fast
-      // GENERATION_COMPLETE_EVENT can read the skeleton IDs before React
+      // generationEvents.complete can read the skeleton IDs before React
       // renders and the useEffect-based ref sync fires.
       const newInfo: GenerationInfo = {
         componentId,
@@ -554,7 +468,7 @@ export function useGenerationLifecycle({
       startGenerationEventSource();
     };
 
-    const handleGenerationComplete = (): void => {
+    const handleGenerationComplete = (_payload: GenerationCompletePayload): void => {
       stopGenerationEventSource();
 
       const info = coord.getGenerationInfo();
@@ -571,8 +485,6 @@ export function useGenerationLifecycle({
 
       const savedPositions = info?.skeletonPositions ?? info?.gridPositions;
       const savedParentNodeId = info?.parentNodeId;
-
-      coord.resetInactiveStreak();
 
       setTimeout(async () => {
         const nodesBefore = new Set(coord.getNodes().map((n) => n.id));
@@ -674,19 +586,18 @@ export function useGenerationLifecycle({
       }, POST_GENERATION_SCAN_DELAY);
     };
 
-    const handleGenerationError = (e: CustomEvent<GenerationErrorPayload>) => {
+    const handleGenerationError = (payload: GenerationErrorPayload) => {
       // Close the SSE connection for progressive iteration detection
       stopGenerationEventSource();
 
-      const detail = e.detail || {};
-      const errorMessage = detail.error || "Unknown error occurred";
-      const componentId = detail.componentId || "unknown";
-      const parentNodeId = detail.parentNodeId || "unknown";
+      const errorMessage = payload.error || "Unknown error occurred";
+      const componentId = payload.componentId || "unknown";
+      const parentNodeId = payload.parentNodeId || "unknown";
       const logPayload = {
         error: errorMessage,
         componentId,
         parentNodeId,
-        fullDetail: detail,
+        fullDetail: payload,
       };
 
       // Use ref to get latest generation info to distinguish dialog vs drag-to-iterate flows.
@@ -723,35 +634,16 @@ export function useGenerationLifecycle({
 
       // Reset generation state — eagerly sync ref
       coord.clearGenerationEager();
-      coord.resetInactiveStreak();
     };
 
-    window.addEventListener(
-      GENERATION_START_EVENT,
-      handleGenerationStart as EventListener,
-    );
-    window.addEventListener(
-      GENERATION_COMPLETE_EVENT,
-      handleGenerationComplete as EventListener,
-    );
-    window.addEventListener(
-      GENERATION_ERROR_EVENT,
-      handleGenerationError as EventListener,
-    );
+    const offStart = generationEvents.start.on(handleGenerationStart);
+    const offComplete = generationEvents.complete.on(handleGenerationComplete);
+    const offError = generationEvents.error.on(handleGenerationError);
 
     return () => {
-      window.removeEventListener(
-        GENERATION_START_EVENT,
-        handleGenerationStart as EventListener,
-      );
-      window.removeEventListener(
-        GENERATION_COMPLETE_EVENT,
-        handleGenerationComplete as EventListener,
-      );
-      window.removeEventListener(
-        GENERATION_ERROR_EVENT,
-        handleGenerationError as EventListener,
-      );
+      offStart();
+      offComplete();
+      offError();
       stopGenerationEventSource();
     };
   }, [
@@ -761,8 +653,6 @@ export function useGenerationLifecycle({
     scanForIterations,
     startGenerationEventSource,
     stopGenerationEventSource,
-    coord.setGenerationStartedAt,
-    coord.resetInactiveStreak,
     coord.setIsGeneratingEager,
     coord.setGenerationInfoEager,
     coord.getNodes,

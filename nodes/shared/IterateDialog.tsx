@@ -31,9 +31,9 @@ import { ImpeccableSkillPicker } from "../../components/ui/impeccable-skill-pick
 import { ImpeccableDemoteMenu } from "../../components/ui/impeccable-demote-menu";
 import { getProviderFields } from "../../lib/generation-body";
 import {
-  GENERATION_START_EVENT,
-  GENERATION_COMPLETE_EVENT,
-  GENERATION_ERROR_EVENT,
+  generationEvents,
+} from "../../lib/generation-events";
+import {
   ITERATION_PROMPT_COPIED_EVENT,
   HTML_ID_PREFIX,
   JSX_ID_PREFIX,
@@ -418,15 +418,11 @@ export default function IterateDialog({
     if (isFromIteration && startNumber === null) return;
 
     if (!generatedPrompt) {
-      window.dispatchEvent(
-        new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-          detail: {
-            componentId,
-            parentNodeId,
-            error: `Component "${componentId}" is not registered. Add it to the registry before iterating.`,
-          },
-        }),
-      );
+      generationEvents.error.emit({
+        componentId,
+        parentNodeId,
+        error: `Component "${componentId}" is not registered. Add it to the registry before iterating.`,
+      });
       return;
     }
 
@@ -511,33 +507,29 @@ export default function IterateDialog({
     }
 
     const providerFields = getProviderFields();
-    window.dispatchEvent(
-      new CustomEvent<GenerationStartPayload>(GENERATION_START_EVENT, {
-        detail: {
-          componentId,
-          componentName,
-          parentNodeId,
-          iterationCount,
-          startNumber: startNumber ?? 1,
-          model: selectedModel || undefined,
-          provider:
-            providerFields.provider as GenerationStartPayload["provider"],
-          ...(pendingDragGrid
-            ? {
-                gridLayout: {
-                  rows: pendingDragGrid.rows,
-                  cols: pendingDragGrid.cols,
-                },
-              }
-            : {}),
-          ...(isJsxMode
-            ? { renderMode: "jsx" as const, jsxFile: resolvedJsxFile }
-            : isHtmlMode
-              ? { renderMode: "html" as const, htmlFolder: resolvedHtmlFolder }
-              : {}),
-        },
-      }),
-    );
+    generationEvents.start.emit({
+      componentId,
+      componentName,
+      parentNodeId,
+      iterationCount,
+      startNumber: startNumber ?? 1,
+      model: selectedModel || undefined,
+      provider:
+        providerFields.provider as GenerationStartPayload["provider"],
+      ...(pendingDragGrid
+        ? {
+            gridLayout: {
+              rows: pendingDragGrid.rows,
+              cols: pendingDragGrid.cols,
+            },
+          }
+        : {}),
+      ...(isJsxMode
+        ? { renderMode: "jsx" as const, jsxFile: resolvedJsxFile }
+        : isHtmlMode
+          ? { renderMode: "html" as const, htmlFolder: resolvedHtmlFolder }
+          : {}),
+    });
 
     closePanel();
 
@@ -565,11 +557,11 @@ export default function IterateDialog({
         data = await response.json();
       } catch (jsonError) {
         const msg = `Failed to parse response: ${jsonError instanceof Error ? jsonError.message : "Unknown JSON error"}`;
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: { componentId, parentNodeId, error: msg },
-          }),
-        );
+        generationEvents.error.emit({
+          componentId,
+          parentNodeId,
+          error: msg,
+        });
         return;
       }
 
@@ -582,31 +574,28 @@ export default function IterateDialog({
             : JSON.stringify(rawError);
 
         // Delegate all error handling to PlaygroundCanvas via the generation error event
-        window.dispatchEvent(
-          new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-            detail: { componentId, parentNodeId, error: normalizedError },
-          }),
-        );
+        generationEvents.error.emit({
+          componentId,
+          parentNodeId,
+          error: normalizedError,
+        });
       } else {
-        window.dispatchEvent(
-          new CustomEvent<GenerationCompletePayload>(
-            GENERATION_COMPLETE_EVENT,
-            {
-              detail: { componentId, parentNodeId, output: "" },
-            },
-          ),
-        );
+        generationEvents.complete.emit({
+          componentId,
+          parentNodeId,
+          output: "",
+        });
       }
     } catch (error) {
       const msg =
         error instanceof Error
           ? error.message
           : String(error) || "Unknown error";
-      window.dispatchEvent(
-        new CustomEvent<GenerationErrorPayload>(GENERATION_ERROR_EVENT, {
-          detail: { componentId, parentNodeId, error: msg },
-        }),
-      );
+      generationEvents.error.emit({
+        componentId,
+        parentNodeId,
+        error: msg,
+      });
     }
   };
 

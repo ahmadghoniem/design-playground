@@ -27,6 +27,7 @@ import { startGenerationTimer, clearGenerationTimer, GENERATION_TIMEOUT_MS } fro
 import {
   shouldStreamJsonForPreview,
   appendAssistantTextFromClaudeJsonlLines,
+  extractToolEventsFromClaudeJsonlLines,
   extractStreamJsonError,
   formatAgentErrorMessage,
 } from '../lib/claude-jsonl';
@@ -196,6 +197,12 @@ export function generateRoutes() {
       isGenerating = true;
 
       try {
+        // Tool-event tracking for this run: tool_use id → file path, plus a
+        // flag the fs-watcher fallback checks so it stays silent while
+        // authoritative tool events are flowing.
+        const pendingToolUses = new Map<string, string>();
+        let toolEventSeenThisRun = false;
+
         currentProcess = spawnAgent(providerId, {
           model,
           effort: body.effort as 'low' | 'medium' | 'high' | 'max' | undefined,
@@ -209,7 +216,7 @@ export function generateRoutes() {
         }
 
         startFileWatcher(
-          () => generationEvents.emit('iteration-added'),
+          () => { if (!toolEventSeenThisRun) generationEvents.emit('iteration-added', {}); },
           undefined,
           body.htmlFolder,
           body.jsxFile,
@@ -253,6 +260,15 @@ export function generateRoutes() {
             agentSessionId = parsed.sessionId;
             currentLogStream?.write(`\nClaude Session ID: ${agentSessionId}\n`);
           }
+          const toolEvents = extractToolEventsFromClaudeJsonlLines(parts, pendingToolUses);
+          for (const evt of toolEvents) {
+            toolEventSeenThisRun = true;
+            const numMatch = /iteration-(\d+)/.exec(evt.filePath);
+            generationEvents.emit('iteration-added', {
+              filePath: evt.filePath,
+              iterationNumber: numMatch ? Number(numMatch[1]) : undefined,
+            });
+          }
         });
 
         currentProcess.stderr?.on('data', (data: Buffer) => {
@@ -272,6 +288,15 @@ export function generateRoutes() {
             if (!agentSessionId && parsed.sessionId) {
               agentSessionId = parsed.sessionId;
               currentLogStream?.write(`\nClaude Session ID: ${agentSessionId}\n`);
+            }
+            const closeToolEvents = extractToolEventsFromClaudeJsonlLines([stdoutLineBuf], pendingToolUses);
+            for (const evt of closeToolEvents) {
+              toolEventSeenThisRun = true;
+              const numMatch = /iteration-(\d+)/.exec(evt.filePath);
+              generationEvents.emit('iteration-added', {
+                filePath: evt.filePath,
+                iterationNumber: numMatch ? Number(numMatch[1]) : undefined,
+              });
             }
             stdoutLineBuf = '';
           }
@@ -421,8 +446,8 @@ export function generateRoutes() {
         }
 
         await new Promise<void>((resolve) => {
-          const onIteration = () => {
-            stream.writeSSE({ data: '{"type":"iteration-added"}' }).catch(() => {});
+          const onIteration = (payload?: { filePath?: string; iterationNumber?: number }) => {
+            stream.writeSSE({ data: JSON.stringify({ type: 'iteration-added', filePath: payload?.filePath, iterationNumber: payload?.iterationNumber }) }).catch(() => {});
           };
 
           const onDone = () => {

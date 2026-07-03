@@ -133,6 +133,75 @@ export function extractStreamJsonError(lines: string[]): string | null {
   return null;
 }
 
+export interface ToolFileEvent { filePath: string; }
+
+/**
+ * Extract file-write events from Claude stream-json lines.
+ *
+ * A `Write`/`Edit`/`MultiEdit` tool_use records its target path in
+ * `pendingToolUses` (keyed by tool_use id); the matching successful
+ * tool_result emits the event — the file only exists after the tool ran.
+ * Pure over its inputs; the caller owns the pending map's lifetime (one per run).
+ */
+export function extractToolEventsFromClaudeJsonlLines(
+  lines: string[],
+  pendingToolUses: Map<string, string>,
+): ToolFileEvent[] {
+  const events: ToolFileEvent[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || !trimmed.startsWith('{')) continue;
+    if (trimmed.length > JSONL_PARSE_MAX_LINE_CHARS) continue;
+
+    try {
+      const obj = JSON.parse(trimmed) as {
+        type?: string;
+        message?: {
+          content?: Array<{
+            type?: string;
+            name?: string;
+            id?: string;
+            input?: { file_path?: string };
+            tool_use_id?: string;
+            is_error?: boolean;
+          }>;
+        };
+      };
+      if (obj.type === 'assistant' && Array.isArray(obj.message?.content)) {
+        for (const block of obj.message.content) {
+          if (
+            block?.type === 'tool_use' &&
+            typeof block.name === 'string' &&
+            ['Write', 'Edit', 'MultiEdit'].includes(block.name) &&
+            typeof block.id === 'string' &&
+            typeof block.input?.file_path === 'string'
+          ) {
+            pendingToolUses.set(block.id, block.input.file_path);
+          }
+        }
+      }
+      if (obj.type === 'user' && Array.isArray(obj.message?.content)) {
+        for (const block of obj.message.content) {
+          if (
+            block?.type === 'tool_result' &&
+            typeof block.tool_use_id === 'string' &&
+            pendingToolUses.has(block.tool_use_id) &&
+            block.is_error !== true
+          ) {
+            events.push({ filePath: pendingToolUses.get(block.tool_use_id)! });
+            pendingToolUses.delete(block.tool_use_id);
+          }
+        }
+      }
+    } catch {
+      /* ignore non-JSON or unexpected shape */
+    }
+  }
+
+  return events;
+}
+
 export function formatAgentErrorMessage(
   stderr: string,
   streamError: string | null,
