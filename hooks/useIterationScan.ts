@@ -554,10 +554,15 @@ export function useIterationScan({
     };
   }, [startPolling, stopPolling, scanForIterations]);
 
+  // Initial scan on mount. scanForIterations changes identity every render
+  // (it closes over `coord`), so guard with a ref to keep this run-once while
+  // still listing the real dependency.
+  const didInitialScanRef = useRef(false);
   useEffect(() => {
+    if (didInitialScanRef.current) return;
+    didInitialScanRef.current = true;
     scanForIterations(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scanForIterations]);
 
   useEffect(() => {
     if (!isGenerating) {

@@ -1,4 +1,8 @@
 {
   "version": 1,
-  "entries": {}
+  "entries": {
+    "Card.iteration-1.tsx": { "parent": "card" },
+    "Card.iteration-2.tsx": { "parent": "card" },
+    "Card.iteration-3.tsx": { "parent": "card" }
+  }
 }

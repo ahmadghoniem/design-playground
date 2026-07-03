@@ -253,7 +253,7 @@ export function useCanvasFrameOps({
       }
     }
     setHelperLines({ vertical, horizontal });
-  }, []);
+  }, [coord.getNodes]);
 
   const clearHelperLines = useCallback(() => setHelperLines({}), []);
 

@@ -265,5 +265,5 @@ export function useCanvasPaste({
 
     wrapper.addEventListener("paste", handlePaste);
     return () => wrapper.removeEventListener("paste", handlePaste);
-  }, [screenToFlowPosition, getNodeId, setNodes]);
+  }, [reactFlowWrapper, screenToFlowPosition, getNodeId, setNodes]);
 }

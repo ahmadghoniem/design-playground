@@ -120,9 +120,8 @@ export default function DesignSystemModal({
   useEffect(() => {
     if (!status) return;
     if (!ready) setSection("home");
-    else if (section === "home") setSection("preview");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, statusLoading]);
+    else setSection((prev) => (prev === "home" ? "preview" : prev));
+  }, [ready, statusLoading, status]);
 
   const generateFromCodebase = useCallback(
     () =>

@@ -17,8 +17,7 @@ export default function SpecSection({
     if (installed && !result && !running) {
       onRun();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [installed]);
+  }, [installed, result, running, onRun]);
 
   return (
     <SectionShell

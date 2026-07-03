@@ -1003,7 +1003,7 @@ export function useChatSubmit({
         }
       }
     },
-    [coord, getNodeId, setNodes, scanForIterations],
+    [coord, getNodeId, setNodes],
   );
 
   // Also drain queue after normal generation completes

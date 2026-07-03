@@ -56,6 +56,7 @@ export function useGenerationLifecycle({
   resumeGenerationInfo,
 }: UseGenerationLifecycleParams): void {
   const generationEventSourceRef = useRef<EventSource | null>(null);
+  const hasResumedRef = useRef(false);
   const [, setLastGenerationDuration] = useState<string | null>(null);
   const [, setElapsedTime] = useState<string>("0m:00s");
 
@@ -103,7 +104,14 @@ export function useGenerationLifecycle({
       clearInterval(intervalId);
       clearTimeout(safetyTimeout);
     };
-  }, [isGenerating, generationInfo?.startTime, setNodes, setEdges]);
+  }, [
+    isGenerating,
+    generationInfo?.startTime,
+    setNodes,
+    setEdges,
+    coord.getGenerationInfo,
+    coord.clearGenerationEager,
+  ]);
 
   // Reconcile UI loading state with backend generation status in case events are missed
   useEffect(() => {
@@ -182,10 +190,24 @@ export function useGenerationLifecycle({
     return () => {
       cancelled = true;
     };
-  }, [isGenerating]);
+  }, [
+    isGenerating,
+    coord.resetInactiveStreak,
+    coord.getGenerationInfo,
+    coord.getGenerationStartedAt,
+    coord.bumpInactiveStreak,
+    coord.getInactiveStreak,
+  ]);
 
   // SSE helpers for progressive iteration detection during generation.
   // The server watches tree.json via fs.watch and pushes events when it changes.
+  const stopGenerationEventSource = useCallback(() => {
+    if (generationEventSourceRef.current) {
+      generationEventSourceRef.current.close();
+      generationEventSourceRef.current = null;
+    }
+  }, []);
+
   const startGenerationEventSource = useCallback(() => {
     stopGenerationEventSource();
     const es = new EventSource("/playground/api/generate?action=events");
@@ -208,18 +230,14 @@ export function useGenerationLifecycle({
       es.close();
     };
     generationEventSourceRef.current = es;
-  }, [scanForIterations]);
-
-  const stopGenerationEventSource = useCallback(() => {
-    if (generationEventSourceRef.current) {
-      generationEventSourceRef.current.close();
-      generationEventSourceRef.current = null;
-    }
-  }, []);
+  }, [scanForIterations, stopGenerationEventSource, coord.getGenerationInfo]);
 
   // Resume generation after page reload — restore persisted generationInfo,
   // keep skeleton nodes on canvas, and reconnect SSE.
   useEffect(() => {
+    // Resume is a one-time restore after page reload; guard so re-runs
+    // (from dependency changes) never re-trigger it.
+    if (hasResumedRef.current) return;
     const persisted = resumeGenerationInfo;
     if (!persisted) return;
 
@@ -232,6 +250,8 @@ export function useGenerationLifecycle({
       );
     if (currentSkeletons.length === 0) return;
 
+    hasResumedRef.current = true;
+
     // Restore generation state
     coord.setGenerationInfoEager(persisted);
     coord.setIsGeneratingEager(true);
@@ -240,8 +260,14 @@ export function useGenerationLifecycle({
     // iterations that landed while the page was reloading
     startGenerationEventSource();
     scanForIterations(false, persisted);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    resumeGenerationInfo,
+    coord.getNodes,
+    coord.setGenerationInfoEager,
+    coord.setIsGeneratingEager,
+    startGenerationEventSource,
+    scanForIterations,
+  ]);
 
   // Handle generation lifecycle events
   useEffect(() => {
@@ -728,12 +754,19 @@ export function useGenerationLifecycle({
       );
       stopGenerationEventSource();
     };
-    // Using refs for nodes and generationInfo so we don't need them in deps
   }, [
     getNodeId,
     setNodes,
     setEdges,
     scanForIterations,
     startGenerationEventSource,
+    stopGenerationEventSource,
+    coord.setGenerationStartedAt,
+    coord.resetInactiveStreak,
+    coord.setIsGeneratingEager,
+    coord.setGenerationInfoEager,
+    coord.getNodes,
+    coord.getGenerationInfo,
+    coord.clearGenerationEager,
   ]);
 }

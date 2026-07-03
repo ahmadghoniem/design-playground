@@ -60,10 +60,30 @@ export function isLeaf(item: RegistryItem): item is RegistryLeafItem {
 // Mock data imports
 // ---------------------------------------------------------------------------
 
+import { mockData as footerMockData } from './data/Footer.mockData';
+import { mockData as settingsDashboardMockData } from './data/SettingsDashboard.mockData';
+import { mockData as cardMockData } from './data/Card.mockData';
+import { mockData as profitTargetConfigCardMockData } from './data/ProfitTargetConfigCard.mockData';
+import { mockData as drawdownConfigCardMockData } from './data/DrawdownConfigCard.mockData';
+import { mockData as tradingDaysConfigCardMockData } from './data/TradingDaysConfigCard.mockData';
+import { mockData as consistencyRuleConfigCardMockData } from './data/ConsistencyRuleConfigCard.mockData';
+import { mockData as balanceAndRealizedPnlCardMockData } from './data/BalanceAndRealizedPnlCard.mockData';
+import { mockData as separatorMockData } from './data/Separator.mockData';
 
 // ---------------------------------------------------------------------------
 // Dynamic component imports
 // ---------------------------------------------------------------------------
+
+import Footer from '@/components/layout/Footer';
+import PricingSection from '@/app/pricing-section/page';
+import SettingsDashboard from '@/app/SettingsDashboard';
+import { Card } from '@/components/ui/card';
+import ProfitTargetConfigCard from '@/features/challenge-configuration/components/ProfitTargetConfigCard';
+import DrawdownConfigCard from '@/features/challenge-configuration/components/DrawdownConfigCard';
+import TradingDaysConfigCard from '@/features/challenge-configuration/components/TradingDaysConfigCard';
+import ConsistencyRuleConfigCard from '@/features/challenge-configuration/components/ConsistencyRuleConfigCard';
+import BalanceAndRealizedPnlCard from '@/features/performance-metrics/components/BalanceAndRealizedPnlCard';
+import { Separator } from '@/components/ui/separator';
 
 
 // ---------------------------------------------------------------------------
@@ -79,7 +99,138 @@ export const registry: RegistryItem[] = [
   {
     id: 'pages',
     label: 'Pages',
-    children: [],
+    children: [
+      {
+        id: 'balance-and-realized-pnl-card',
+        label: 'Balance And Realized Pnl Card',
+        Component: BalanceAndRealizedPnlCard as unknown as ComponentType<Record<string, unknown>>,
+        props: balanceAndRealizedPnlCardMockData as Record<string, unknown>,
+        sourcePath: 'src/features/performance-metrics/components/BalanceAndRealizedPnlCard.tsx',
+        size: 'default',
+        propsInterface: `interface BalanceAndRealizedPnlCardProps {
+  displayData: Session // { id, balance, realizedPnL, capital, lastUpdated }
+  className?: string
+}`,
+      },
+      {
+        id: 'card',
+        label: 'Card',
+        Component: Card as unknown as ComponentType<Record<string, unknown>>,
+        props: cardMockData as Record<string, unknown>,
+        sourcePath: 'src/components/ui/card.tsx',
+        size: 'default',
+        propsInterface: `interface CardProps {
+  className?: string
+  children: React.ReactNode
+}`,
+        parentId: 'balance-and-realized-pnl-card',
+      },
+      {
+        id: 'consistency-rule-config-card',
+        label: 'ConsistencyRuleConfigCard',
+        Component: ConsistencyRuleConfigCard as unknown as ComponentType<Record<string, unknown>>,
+        props: consistencyRuleConfigCardMockData as Record<string, unknown>,
+        sourcePath: 'src/features/challenge-configuration/components/ConsistencyRuleConfigCard.tsx',
+        size: 'default',
+        propsInterface: `// ConsistencyRuleConfigCard takes no props — it reads
+// config.consistencyRule from the Zustand app store (useAppStore).
+type ConsistencyRuleConfigCardProps = Record<string, never>`,
+        childComponents: ['NumberInput'],
+        parentId: 'settings-dashboard',
+      },
+      {
+        id: 'drawdown-config-card',
+        label: 'DrawdownConfigCard',
+        Component: DrawdownConfigCard as unknown as ComponentType<Record<string, unknown>>,
+        props: drawdownConfigCardMockData as Record<string, unknown>,
+        sourcePath: 'src/features/challenge-configuration/components/DrawdownConfigCard.tsx',
+        size: 'default',
+        propsInterface: `// DrawdownConfigCard takes no props — it reads
+// config.dailyDrawdown, config.maxDrawdown, and config.maxDrawdownType
+// from the Zustand app store (useAppStore).
+type DrawdownConfigCardProps = Record<string, never>`,
+        childComponents: ['NumberInput', 'DrawdownTypeSelector'],
+        parentId: 'settings-dashboard',
+      },
+      {
+        id: 'footer',
+        label: 'Footer',
+        Component: Footer as unknown as ComponentType<Record<string, unknown>>,
+        props: footerMockData as Record<string, unknown>,
+        sourcePath: 'src/components/layout/Footer.tsx',
+        size: 'default',
+        propsInterface: `interface FooterProps {
+  className?: string
+}`,
+      },
+      {
+        id: 'pricing-section',
+        label: 'Pricing Section',
+        Component: PricingSection as unknown as ComponentType<Record<string, unknown>>,
+        sourcePath: 'src/app/pricing-section/page.tsx',
+        size: 'default' as ComponentSize,
+        propsInterface: '// PricingSection takes no props — content is internal',
+      },
+      {
+        id: 'profit-target-config-card',
+        label: 'ProfitTargetConfigCard',
+        Component: ProfitTargetConfigCard as unknown as ComponentType<Record<string, unknown>>,
+        props: profitTargetConfigCardMockData as Record<string, unknown>,
+        sourcePath: 'src/features/challenge-configuration/components/ProfitTargetConfigCard.tsx',
+        size: 'default',
+        propsInterface: `// ProfitTargetConfigCard takes no props — it reads
+// config.profitTarget from the Zustand app store (useAppStore).
+type ProfitTargetConfigCardProps = Record<string, never>`,
+        childComponents: ['NumberInput'],
+        parentId: 'settings-dashboard',
+      },
+      {
+        id: 'separator',
+        label: 'Separator',
+        Component: Separator as unknown as ComponentType<Record<string, unknown>>,
+        props: separatorMockData as Record<string, unknown>,
+        sourcePath: 'src/components/ui/separator.tsx',
+        size: 'default',
+        propsInterface: `interface SeparatorProps
+  extends React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root> {
+  orientation?: 'horizontal' | 'vertical'
+  decorative?: boolean
+  className?: string
+}`,
+        parentId: 'balance-and-realized-pnl-card',
+      },
+      {
+        id: 'settings-dashboard',
+        label: 'Settings Dashboard',
+        Component: SettingsDashboard as unknown as ComponentType<Record<string, unknown>>,
+        props: settingsDashboardMockData as Record<string, unknown>,
+        sourcePath: 'src/app/SettingsDashboard.tsx',
+        size: 'default',
+        propsInterface: `// SettingsDashboard takes no props — child config cards
+// read their state from the Zustand app store (useAppStore).
+type SettingsDashboardProps = Record<string, never>`,
+        childComponents: [
+          'ProfitTargetConfigCard',
+          'DrawdownConfigCard',
+          'TradingDaysConfigCard',
+          'ConsistencyRuleConfigCard',
+        ],
+      },
+      {
+        id: 'trading-days-config-card',
+        label: 'TradingDaysConfigCard',
+        Component: TradingDaysConfigCard as unknown as ComponentType<Record<string, unknown>>,
+        props: tradingDaysConfigCardMockData as Record<string, unknown>,
+        sourcePath: 'src/features/challenge-configuration/components/TradingDaysConfigCard.tsx',
+        size: 'default',
+        propsInterface: `// TradingDaysConfigCard takes no props — it reads
+// config.minTradingDays and config.requireProfitableDays
+// from the Zustand app store (useAppStore).
+type TradingDaysConfigCardProps = Record<string, never>`,
+        childComponents: ['NumberInput'],
+        parentId: 'settings-dashboard',
+      },
+    ],
   },
 ];
 

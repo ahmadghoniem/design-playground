@@ -68,7 +68,7 @@ export function useCanvasNodeDelete({
         }
       }
     },
-    [edges],
+    [edges, setKnownIterations],
   );
 
   // Handle cascade or reparent deletion
@@ -171,7 +171,15 @@ export function useCanvasNodeDelete({
         setDeleteDialogNode(null);
       }
     },
-    [deleteDialogNode, nodes, edges, setNodes, setEdges],
+    [
+      deleteDialogNode,
+      nodes,
+      edges,
+      setNodes,
+      setEdges,
+      setKnownIterations,
+      setCollapsedNodeIds,
+    ],
   );
 
   return {

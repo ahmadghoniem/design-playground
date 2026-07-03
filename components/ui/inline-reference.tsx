@@ -271,7 +271,10 @@ function InlineReferenceInput({
 
   const itemsMapRef = React.useRef<
     Map<string, InlineReferenceItemData[]>
-  >(new Map())
+  >(null!)
+  if (itemsMapRef.current === null) {
+    itemsMapRef.current = new Map()
+  }
 
   React.useEffect(() => {
     const el = inputRef.current

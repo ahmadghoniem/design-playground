@@ -52,6 +52,9 @@ export function useCanvasPersistence({
     canvasDrawings,
     getViewport,
     storageKey,
+    nodeIdCounterRef,
+    coord.getGenerationInfo,
+    canvasDrawingsRef,
   ]);
 
   // Save viewport on page unload (captures pan/zoom changes that don't trigger node updates)
@@ -71,5 +74,15 @@ export function useCanvasPersistence({
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [edges, getViewport, storageKey]);
+  }, [
+    edges,
+    getViewport,
+    storageKey,
+    coord.getNodes,
+    nodeIdCounterRef,
+    coord.getKnownIterations,
+    collapsedNodeIdsRef,
+    coord.getGenerationInfo,
+    canvasDrawingsRef,
+  ]);
 }
