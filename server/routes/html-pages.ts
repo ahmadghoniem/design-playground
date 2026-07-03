@@ -4,6 +4,7 @@ import path from 'path';
 import { HTML_TREE_DIR, HTML_TREE_FILENAME } from '../../lib/constants';
 import type { HtmlPageInfo } from '../../lib/constants';
 import { syncPublicFrameGitignoreSafe } from '../../lib/sync-host-gitignore';
+import { ensureHtmlFileStamped } from '../../lib/oid-stamp';
 import { readJson } from '../lib/hono-helpers';
 
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
@@ -68,6 +69,10 @@ function scanHtmlPages(): HtmlPageInfo[] {
 
     if (!fs.existsSync(indexPath)) continue;
 
+    // Element selection references elements by data-pg-oid; stamp on-disk
+    // files (idempotently) so served DOM ids exist in the source the agent edits.
+    ensureHtmlFileStamped(indexPath);
+
     const iterations: { folder: string; number: number }[] = [];
     try {
       const subEntries = fs.readdirSync(pageDir, { withFileTypes: true });
@@ -77,6 +82,7 @@ function scanHtmlPages(): HtmlPageInfo[] {
         if (match) {
           const iterIndex = path.join(pageDir, sub.name, 'index.html');
           if (fs.existsSync(iterIndex)) {
+            ensureHtmlFileStamped(iterIndex);
             iterations.push({ folder: sub.name, number: parseInt(match[1], 10) });
           }
         }

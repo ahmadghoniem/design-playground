@@ -59,6 +59,7 @@ function extractContext(el: HTMLElement): BridgeElementContext {
   const html = el.outerHTML;
   const rect = el.getBoundingClientRect();
   return {
+    oid: el.getAttribute('data-pg-oid') ?? undefined,
     tagName: tag,
     displayName: tag,
     textContent: raw.length > 150 ? raw.slice(0, 150) + '…' : raw,

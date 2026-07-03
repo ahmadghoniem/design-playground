@@ -69,6 +69,7 @@ export function useChatAttachments({
     () => (): ChatSubmitPayload['elementSelections'] => {
       if (!selectedElements || selectedElements.length === 0) return undefined;
       return selectedElements.map((sel) => ({
+        oid: sel.context.oid,
         tagName: sel.context.tagName,
         displayName: sel.context.displayName,
         textContent: sel.context.textContent,

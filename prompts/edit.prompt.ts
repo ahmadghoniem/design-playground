@@ -9,6 +9,7 @@ export interface EditPromptOptions {
   screenshotPath?: string;
   referenceNodesSection?: string;
   elementSelections?: Array<{
+    oid?: string;
     tagName: string;
     displayName?: string;
     textContent?: string;
@@ -52,6 +53,10 @@ export function editPrompt(opts: EditPromptOptions): string {
   if (opts.elementSelections && opts.elementSelections.length > 0) {
     const selLines = opts.elementSelections.map((el) => {
       const parts = [`- **${el.displayName || el.tagName}**`];
+      if (el.oid)
+        parts.push(
+          `  Locate: search the file for \`data-pg-oid="${el.oid}"\` — that attribute uniquely identifies this exact element in the source.`,
+        );
       if (el.cssSelector) parts.push(`  Selector: \`${el.cssSelector}\``);
       if (el.textContent)
         parts.push(`  Text: "${el.textContent.slice(0, 200)}"`);

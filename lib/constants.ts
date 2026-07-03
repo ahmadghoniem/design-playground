@@ -515,6 +515,8 @@ export interface ChatSubmitPayload {
   iterationCount?: number;
   canvasPosition: { x: number; y: number };
   elementSelections?: {
+    /** data-pg-oid from stamped HTML iterations — exact grep target for the agent. */
+    oid?: string;
     tagName: string;
     displayName: string;
     textContent: string;

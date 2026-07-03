@@ -183,6 +183,7 @@ export function formatReferenceNodesSection(
 
 export function formatElementSelectionsSection(
   elements?: {
+    oid?: string;
     tagName: string;
     displayName: string;
     textContent: string;
@@ -204,6 +205,10 @@ export function formatElementSelectionsSection(
   for (let i = 0; i < elements.length; i++) {
     const el = elements[i];
     lines.push(`Element ${i + 1}: <${el.tagName}> in ${el.componentName}`);
+
+    if (el.oid) {
+      lines.push(`- Locate: search the file for data-pg-oid="${el.oid}" — that attribute uniquely identifies this exact element in the source.`);
+    }
 
     if (el.textContent) {
       lines.push(`- Text: "${el.textContent}"`);
