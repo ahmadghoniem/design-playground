@@ -1,14 +1,13 @@
 import type { Node } from "@xyflow/react";
 import { LayoutGrid, Frame } from "lucide-react";
 import {
-  PageDocumentIcon,
   BringToFrontIcon,
   BringForwardIcon,
   SendBackwardIcon,
   SendToBackIcon,
 } from "../ui/playground-nav-icons";
 
-export type CanvasContextMenuState = {
+type CanvasContextMenuState = {
   x: number;
   y: number;
   nodeId?: string;
@@ -18,7 +17,6 @@ export interface PlaygroundCanvasContextMenuProps {
   contextMenu: CanvasContextMenuState;
   nodes: Node[];
   onClose: () => void;
-  onCreatePage: (screenX: number, screenY: number) => void;
   onOrganize: () => void;
   onGroup: () => void;
   onUngroup: (frameId?: string) => void;
@@ -29,7 +27,6 @@ export default function PlaygroundCanvasContextMenu({
   contextMenu,
   nodes,
   onClose,
-  onCreatePage,
   onOrganize,
   onGroup,
   onUngroup,
@@ -57,18 +54,6 @@ export default function PlaygroundCanvasContextMenu({
       className="playground-canvas-context-menu fixed z-50 min-w-[180px] bg-[#1C1C1E] rounded-2xl shadow-2xl py-2 px-2 animate-in fade-in-0 zoom-in-95 duration-100"
       style={{ left: contextMenu.x, top: contextMenu.y }}
     >
-      <button
-        className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[13px] text-stone-200 hover:bg-white/10 transition-colors text-left rounded-lg"
-        onClick={(e) => {
-          e.stopPropagation();
-          onCreatePage(contextMenu.x, contextMenu.y);
-          onClose();
-        }}
-      >
-        <PageDocumentIcon className="text-stone-500 shrink-0" size={14} />
-        Create a new page
-      </button>
-      <div className="my-1 h-px bg-white/10" />
       <button
         className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[13px] text-stone-200 hover:bg-white/10 transition-colors text-left rounded-lg"
         onClick={(e) => {

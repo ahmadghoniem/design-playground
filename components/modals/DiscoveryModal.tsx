@@ -4,7 +4,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  FileText,
   Layers,
   X,
 } from "lucide-react";
@@ -27,8 +26,7 @@ export interface DiscoveryEntry {
   id: string;
   name: string;
   path: string;
-  type: "page" | "component";
-  route?: string;
+  type: "component";
   description: string;
   status: "discovered" | "adding" | "added";
   parentId?: string;
@@ -85,17 +83,10 @@ function DiscoveryCard({
           <span className="text-[13px] font-semibold text-stone-800">
             {entry.name}
           </span>
-          {entry.route && (
-            <span className="text-[10px] font-medium text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded-full">
-              {entry.route}
-            </span>
-          )}
         </div>
-        {!entry.route && (
-          <p className="text-[11px] text-stone-400 font-mono">
-            {formatBreadcrumb(entry.path)}
-          </p>
-        )}
+        <p className="text-[11px] text-stone-400 font-mono">
+          {formatBreadcrumb(entry.path)}
+        </p>
         {entry.description && (
           <p className="text-[12px] text-stone-500 mt-1.5 leading-relaxed">
             {entry.description}
@@ -138,32 +129,6 @@ function DiscoveryCard({
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Section header
-// ---------------------------------------------------------------------------
-
-function SectionHeader({
-  icon: Icon,
-  label,
-  count,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  count: number;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-1 pt-4 pb-2">
-      <Icon className="w-3.5 h-3.5 text-stone-400" />
-      <span className="text-[11px] font-semibold tracking-wider uppercase text-stone-400 select-none">
-        {label}
-      </span>
-      <span className="text-[10px] text-stone-300 bg-stone-100 px-1.5 py-0.5 rounded-full font-medium">
-        {count}
-      </span>
     </div>
   );
 }
@@ -229,14 +194,8 @@ export default function DiscoveryModal({
         if (data.status === "complete" && data.entries) {
           setIsScanning(false);
           setEntries(data.entries);
-          const pages = data.entries.filter(
-            (e: DiscoveryEntry) => e.type === "page",
-          );
-          const components = data.entries.filter(
-            (e: DiscoveryEntry) => e.type === "component",
-          );
           toast.success(
-            `Found ${pages.length} page${pages.length !== 1 ? "s" : ""} and ${components.length} component${components.length !== 1 ? "s" : ""}`,
+            `Found ${data.entries.length} component${data.entries.length !== 1 ? "s" : ""}`,
             { duration: 4000 },
           );
         } else if (data.status === "scanning") {
@@ -270,15 +229,12 @@ export default function DiscoveryModal({
     setIsRefreshing(true);
     setError(null);
     try {
-      const providerFields = getProviderFields();
-
       const res = await fetch("/playground/api/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...getProviderFields() }),
       });
       if (res.status === 409) {
-        // A scan is already running — switch to scanning state and poll
         setIsScanning(true);
         return;
       }
@@ -295,7 +251,6 @@ export default function DiscoveryModal({
     }
   };
 
-  // Merge server entries with the parent's addingIds for display
   const mergedEntries = useMemo(
     () =>
       entries.map((e) =>
@@ -306,21 +261,14 @@ export default function DiscoveryModal({
     [entries, addingIds],
   );
 
-  // Filter out child entries — they appear nested under their parent, not as top-level items
   const topLevelEntries = mergedEntries.filter((e) => !e.parentId);
-  // Filter
   const lowerSearch = search.toLowerCase();
   const filtered = topLevelEntries.filter(
     (e) =>
       e.name.toLowerCase().includes(lowerSearch) ||
       e.description?.toLowerCase().includes(lowerSearch),
   );
-  // Total counts across all discovered entries (excluding children)
-  const pages = topLevelEntries.filter((e) => e.type === "page");
-  const components = topLevelEntries.filter((e) => e.type === "component");
-  // Filtered lists for display based on search
-  const filteredPages = filtered.filter((e) => e.type === "page");
-  const filteredComponents = filtered.filter((e) => e.type === "component");
+  const componentCount = topLevelEntries.length;
   const isEmpty = entries.length === 0 && !isLoading && !isScanning;
 
   return (
@@ -329,7 +277,6 @@ export default function DiscoveryModal({
         showCloseButton={false}
         className="sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden !rounded-2xl !p-0"
       >
-        {/* Header area */}
         <div className="px-6 pt-6 pb-4 space-y-4">
           <DialogHeader>
             <div className="flex items-center justify-between">
@@ -357,12 +304,11 @@ export default function DiscoveryModal({
               {isRefreshing || isScanning
                 ? "Scanning your project…"
                 : entries.length > 0
-                  ? `Found ${pages.length} page${pages.length !== 1 ? "s" : ""} and ${components.length} component${components.length !== 1 ? "s" : ""} in your project`
-                  : "Discover components and pages in your project"}
+                  ? `Found ${componentCount} component${componentCount !== 1 ? "s" : ""} in your project`
+                  : "Discover components in your project"}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
             <input
@@ -375,14 +321,12 @@ export default function DiscoveryModal({
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="mx-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100">
             <p className="text-[12px] text-red-600 leading-relaxed">{error}</p>
           </div>
         )}
 
-        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -399,8 +343,8 @@ export default function DiscoveryModal({
                 Scanning your project…
               </p>
               <p className="text-[12px] text-stone-400 text-center max-w-[240px] leading-relaxed">
-                The AI agent is discovering components and pages — this usually
-                takes under a minute
+                The AI agent is discovering components — this usually takes under
+                a minute
               </p>
             </div>
           ) : isEmpty ? (
@@ -412,8 +356,7 @@ export default function DiscoveryModal({
                 No components found
               </p>
               <p className="text-[12px] text-stone-400 text-center max-w-[280px] leading-relaxed">
-                Add pages or components to your project, then scan to discover
-                them
+                Add components to your project, then scan to discover them
               </p>
               <button
                 onClick={handleRefresh}
@@ -425,49 +368,19 @@ export default function DiscoveryModal({
             </div>
           ) : (
             <>
-              {/* Pages section */}
-              {filteredPages.length > 0 && (
-                <div>
-                  <SectionHeader
-                    icon={FileText}
-                    label="Pages"
-                    count={filteredPages.length}
-                  />
-                  <div className="space-y-2">
-                    {filteredPages.map((entry) => (
-                      <DiscoveryCard
-                        key={entry.id}
-                        entry={entry}
-                        isAdding={addingIds.has(entry.id)}
-                        onAdd={onAdd}
-                      />
-                    ))}
-                  </div>
+              {filtered.length > 0 && (
+                <div className="space-y-2">
+                  {filtered.map((entry) => (
+                    <DiscoveryCard
+                      key={entry.id}
+                      entry={entry}
+                      isAdding={addingIds.has(entry.id)}
+                      onAdd={onAdd}
+                    />
+                  ))}
                 </div>
               )}
 
-              {/* Components section */}
-              {filteredComponents.length > 0 && (
-                <div>
-                  <SectionHeader
-                    icon={Layers}
-                    label="Components"
-                    count={filteredComponents.length}
-                  />
-                  <div className="space-y-2">
-                    {filteredComponents.map((entry) => (
-                      <DiscoveryCard
-                        key={entry.id}
-                        entry={entry}
-                        isAdding={addingIds.has(entry.id)}
-                        onAdd={onAdd}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Filtered empty state */}
               {filtered.length === 0 && entries.length > 0 && (
                 <div className="flex flex-col items-center justify-center py-12">
                   <p className="text-[13px] text-stone-400">
@@ -479,7 +392,6 @@ export default function DiscoveryModal({
           )}
         </div>
 
-        {/* Footer */}
         {!isEmpty && !isLoading && !isScanning && !isRefreshing && (
           <div className="px-6 py-3 border-t border-stone-100 bg-stone-50/50">
             <p className="text-[11px] text-stone-400 select-none text-center">

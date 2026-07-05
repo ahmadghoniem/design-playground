@@ -52,7 +52,7 @@ function buildAgentErrorMessage(
 
 const PLAYGROUND_DIR = resolvePlaygroundDir();
 const DISCOVERY_JSON_PATH = path.join(PLAYGROUND_DIR, DISCOVERY_MANIFEST_FILENAME);
-const DATA_DIR = path.join(PLAYGROUND_DIR, 'data');
+const REGISTRY_FILE = path.join(PLAYGROUND_DIR, 'registry.tsx');
 const TEMP_DIR = path.join(process.cwd(), TEMP_DIR_RELATIVE);
 const LOCKFILE_PATH = path.join(TEMP_DIR, DISCOVERY_LOCKFILE_FILENAME);
 
@@ -74,15 +74,110 @@ interface DiscoveryEntry {
   id: string;
   name: string;
   path: string;
-  type: 'page' | 'component';
+  type: 'component';
   status: string;
   parentId?: string;
   childComponents?: { name: string; path: string }[];
   analysis?: {
     discoveredFilename?: string;
     componentName?: string;
+    registryId?: string;
     [key: string]: unknown;
   };
+}
+
+interface PagesGroupBounds {
+  groupOpen: number;
+  childrenOpen: number;
+  childrenClose: number;
+}
+
+function locatePagesGroup(source: string): PagesGroupBounds | null {
+  const groupMatch = /id:\s*['"]pages['"][\s\S]*?children:\s*\[/.exec(source);
+  if (!groupMatch) return null;
+  const groupOpen = groupMatch.index;
+  const childrenOpen = groupMatch.index + groupMatch[0].length;
+
+  let depth = 1;
+  let pos = childrenOpen;
+  while (pos < source.length && depth > 0) {
+    const ch = source[pos];
+    if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') {
+      depth--;
+      if (depth === 0) break;
+    }
+    pos++;
+  }
+  if (depth !== 0) return null;
+  return { groupOpen, childrenOpen, childrenClose: pos };
+}
+
+function findLeafBounds(source: string, registryId: string, bounds: PagesGroupBounds): [number, number] | null {
+  const childrenSlice = source.slice(bounds.childrenOpen, bounds.childrenClose);
+  const idRegex = new RegExp(`id:\\s*['"]${registryId.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}['"]`);
+  const idMatch = idRegex.exec(childrenSlice);
+  if (!idMatch) return null;
+  const idPos = bounds.childrenOpen + idMatch.index;
+
+  let openPos = idPos;
+  let openDepth = 0;
+  while (openPos > bounds.childrenOpen) {
+    openPos--;
+    const ch = source[openPos];
+    if (ch === '}') openDepth++;
+    else if (ch === '{') {
+      if (openDepth === 0) break;
+      openDepth--;
+    }
+  }
+  if (source[openPos] !== '{') return null;
+
+  let closePos = openPos;
+  let closeDepth = 0;
+  while (closePos < bounds.childrenClose) {
+    const ch = source[closePos];
+    if (ch === '{') closeDepth++;
+    else if (ch === '}') {
+      closeDepth--;
+      if (closeDepth === 0) break;
+    }
+    closePos++;
+  }
+  if (source[closePos] !== '}') return null;
+
+  let endPos = closePos + 1;
+  while (endPos < source.length && (source[endPos] === ',' || source[endPos] === ' ' || source[endPos] === '\t')) endPos++;
+  if (source[endPos] === '\n') endPos++;
+
+  let startPos = openPos;
+  while (startPos > 0 && (source[startPos - 1] === ' ' || source[startPos - 1] === '\t')) startPos--;
+
+  return [startPos, endPos];
+}
+
+function removeComponentImportLine(source: string, componentName: string): string {
+  const escaped = componentName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const defaultImport = new RegExp(`^[ \\t]*import\\s+${escaped}\\s+from\\s+['"][^'"]+['"];?\\s*\\n`, 'gm');
+  const namedImport = new RegExp(`^[ \\t]*import\\s*\\{\\s*${escaped}\\s*\\}\\s*from\\s+['"][^'"]+['"];?\\s*\\n`, 'gm');
+  return source.replace(defaultImport, '').replace(namedImport, '');
+}
+
+function stripRegistryEntry(registryId: string, componentName?: string): boolean {
+  if (!fs.existsSync(REGISTRY_FILE)) return false;
+  const source = fs.readFileSync(REGISTRY_FILE, 'utf-8');
+  const bounds = locatePagesGroup(source);
+  if (!bounds) return false;
+
+  const leafBounds = findLeafBounds(source, registryId, bounds);
+  if (!leafBounds) return false;
+
+  let updated = source.slice(0, leafBounds[0]) + source.slice(leafBounds[1]);
+  if (componentName) {
+    updated = removeComponentImportLine(updated, componentName);
+  }
+  fs.writeFileSync(REGISTRY_FILE, updated, 'utf-8');
+  return true;
 }
 
 function toKebabCase(str: string): string {
@@ -387,7 +482,7 @@ export function discoverRoutes() {
       id?: string;
       path?: string;
       name?: string;
-      type?: 'page' | 'component';
+      type?: 'component';
       model?: string;
       parentId?: string;
       provider?: ProviderId;
@@ -409,9 +504,8 @@ export function discoverRoutes() {
       return c.json({ success: false, error: `Analysis already in progress for "${name}"` }, 409);
     }
 
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      analyzeLog(` Created data directory`);
+    if (!fs.existsSync(REGISTRY_FILE)) {
+      analyzeLog(` Registry file not found at ${REGISTRY_FILE}`);
     }
 
     const playgroundRelPath = path.relative(process.cwd(), PLAYGROUND_DIR).replace(/\\/g, '/');
@@ -431,7 +525,6 @@ export function discoverRoutes() {
       id,
       name,
       componentPath,
-      type,
       playgroundDir: playgroundRelPath,
       propsSnapshot,
       parentId,
@@ -489,16 +582,6 @@ export function discoverRoutes() {
         analyzingIds.delete(id);
 
         if (code === 0) {
-          const cleanName = name.replace(/\s+/g, '');
-          const expectedDataFile = path.join(DATA_DIR, `${cleanName}.mockData.ts`);
-          const mockDataExists = fs.existsSync(expectedDataFile);
-          analyzeLog(` Expected mock data file: ${expectedDataFile} — exists=${mockDataExists}`);
-
-          if (fs.existsSync(DATA_DIR)) {
-            const files = fs.readdirSync(DATA_DIR);
-            analyzeLog(` Data dir contents: [${files.join(', ')}]`);
-          }
-
           try {
             const data = JSON.parse(fs.readFileSync(DISCOVERY_JSON_PATH, 'utf-8'));
             const entry = (data.entries || []).find((e: DiscoveryEntry) => e.id === id);
@@ -600,11 +683,14 @@ export function discoverRoutes() {
         return c.json({ success: false, error: `Entry "${id}" not found` }, 404);
       }
 
-      const cleanName = (entry.name as string).replace(/\s+/g, '');
-      const mockDataPath = path.join(DATA_DIR, `${cleanName}.mockData.ts`);
-      if (fs.existsSync(mockDataPath)) {
-        fs.unlinkSync(mockDataPath);
-        analyzeLog(` Deleted mock data file: ${cleanName}.mockData.ts`);
+      const registryId =
+        (entry.analysis?.registryId as string | undefined) || id;
+      const componentName = entry.analysis?.componentName as string | undefined;
+      const stripped = stripRegistryEntry(registryId, componentName);
+      if (stripped) {
+        analyzeLog(` Stripped registry entry "${registryId}" from registry.tsx`);
+      } else {
+        console.warn(`${ANALYZE_LOG_PREFIX} Registry entry "${registryId}" not found — skipping strip`);
       }
 
       entry.status = 'discovered';

@@ -41,7 +41,6 @@ import { useChatSubmit } from "../hooks/useChatSubmit";
 import { useCanvasFrameOps } from "../hooks/useCanvasFrameOps";
 import { useCanvasNodeDelete } from "../hooks/useCanvasNodeDelete";
 import { useCanvasAutoArrange } from "../hooks/useCanvasAutoArrange";
-import { useCanvasCreatePage } from "../hooks/useCanvasCreatePage";
 import { useCanvasClear } from "../hooks/useCanvasClear";
 import { useDragIterateEventHandler } from "../hooks/useDragToIterate";
 
@@ -82,12 +81,6 @@ const nodeTypes = {
   shape: ShapeNode,
   frame: FrameNode,
 };
-
-// Re-export event names so existing imports keep working
-export {
-  ITERATION_PROMPT_COPIED_EVENT,
-  ITERATION_FETCH_EVENT,
-} from "../lib/constants";
 
 interface PlaygroundCanvasProps {
   sidebarVisible: boolean;
@@ -381,24 +374,6 @@ export default function PlaygroundCanvas({
       setCanvasDrawings,
       storageKey,
     });
-
-  const {
-    createPageDialog,
-    setCreatePageDialog,
-    newPageDescription,
-    setNewPageDescription,
-    createPageError,
-    setCreatePageError,
-    creatingPage,
-    newPageInputRef,
-    handleCreatePage,
-    openCreatePageDialog,
-  } = useCanvasCreatePage({
-    screenToFlowPosition,
-    getNodeId,
-    setNodes,
-    reactFlowWrapper,
-  });
 
   useGenerationLifecycle({
     coord,
@@ -798,22 +773,12 @@ export default function PlaygroundCanvas({
           deleteDialogNode={deleteDialogNode}
           setDeleteDialogNode={setDeleteDialogNode}
           handleDeleteWithMode={handleDeleteWithMode}
-          createPageDialog={createPageDialog}
-          setCreatePageDialog={setCreatePageDialog}
-          newPageDescription={newPageDescription}
-          setNewPageDescription={setNewPageDescription}
-          createPageError={createPageError}
-          setCreatePageError={setCreatePageError}
-          creatingPage={creatingPage}
-          newPageInputRef={newPageInputRef}
-          handleCreatePage={handleCreatePage}
         />
 
         <PlaygroundCanvasContextMenu
           contextMenu={contextMenu}
           nodes={nodes}
           onClose={() => setContextMenu(null)}
-          onCreatePage={openCreatePageDialog}
           onOrganize={() => autoArrangeNodes(true)}
           onGroup={handleGroupSelection}
           onUngroup={handleUngroupFrame}
