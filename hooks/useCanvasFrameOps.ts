@@ -12,7 +12,7 @@ import {
 import type { HelperLineState } from "../nodes/shared/HelperLines";
 import type { GenerationCoordination } from "./useGenerationCoordination";
 
-export type CanvasContextMenu = {
+type CanvasContextMenu = {
   x: number;
   y: number;
   nodeId?: string;
