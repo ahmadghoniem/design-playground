@@ -1,71 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  generationEvents,
-} from "../../../lib/generation-events";
-import {
-  JSX_COMPONENT_ADDED_EVENT,
-  DESIGN_SYSTEM_GENERATED_EVENT,
-} from "../../../lib/constants";
-import type { HtmlPageInfo, JsxComponentInfo } from "../../../lib/constants";
+import { DESIGN_SYSTEM_GENERATED_EVENT } from "../../../lib/constants";
 
 /**
- * Owns the sidebar's "react to discovery" surface: fetching HTML pages /
- * JSX components, fetching the generated design-system showcase, and the
- * window-event listeners that trigger a refresh (`playground:html-pages-updated`,
- * `generationEvents.complete`, `JSX_COMPONENT_ADDED_EVENT`, `DESIGN_SYSTEM_GENERATED_EVENT`).
- * The sidebar shell no longer inlines this event plumbing.
+ * Owns the sidebar's "react to discovery" surface: fetching the generated
+ * design-system showcase and re-fetching it when a regeneration completes
+ * (`DESIGN_SYSTEM_GENERATED_EVENT`). The sidebar shell no longer inlines this
+ * event plumbing.
  */
 export function useSidebarDiscoverySync() {
-  const [htmlPages, setHtmlPages] = useState<HtmlPageInfo[]>([]);
-  const [jsxComponents, setJsxComponents] = useState<JsxComponentInfo[]>([]);
-  const [isRefreshingHtml, setIsRefreshingHtml] = useState(false);
   const [designSystemHtml, setDesignSystemHtml] = useState<string | null>(null);
-
-  const fetchHtmlPages = useCallback(async () => {
-    try {
-      setIsRefreshingHtml(true);
-      const [htmlRes, jsxRes] = await Promise.all([
-        fetch("/playground/api/html-pages"),
-        fetch("/playground/api/oncanvas-components"),
-      ]);
-      if (htmlRes.ok) {
-        const data = await htmlRes.json();
-        setHtmlPages(data.pages || []);
-      }
-      if (jsxRes.ok) {
-        const data = await jsxRes.json();
-        setJsxComponents(data.components || []);
-      }
-    } catch {
-      /* ignore */
-    } finally {
-      setIsRefreshingHtml(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchHtmlPages();
-  }, [fetchHtmlPages]);
-
-  useEffect(() => {
-    const refresh = () => {
-      void fetchHtmlPages();
-    };
-    const offComplete = generationEvents.complete.on(refresh);
-    window.addEventListener("playground:html-pages-updated", refresh);
-    window.addEventListener(
-      JSX_COMPONENT_ADDED_EVENT,
-      refresh as EventListener,
-    );
-    return () => {
-      offComplete();
-      window.removeEventListener("playground:html-pages-updated", refresh);
-      window.removeEventListener(
-        JSX_COMPONENT_ADDED_EVENT,
-        refresh as EventListener,
-      );
-    };
-  }, [fetchHtmlPages]);
 
   const fetchDesignSystem = useCallback(async () => {
     try {
@@ -97,10 +40,6 @@ export function useSidebarDiscoverySync() {
   }, [fetchDesignSystem]);
 
   return {
-    htmlPages,
-    jsxComponents,
-    isRefreshingHtml,
-    fetchHtmlPages,
     designSystemHtml,
     fetchDesignSystem,
   };

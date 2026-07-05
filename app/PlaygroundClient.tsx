@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { toast, Toaster } from "sonner";
-import PlaygroundSidebar from "../components/canvas/PlaygroundSidebar";
+import PlaygroundSidebar, {
+  type PendingSidebarAdd,
+} from "../components/canvas/PlaygroundSidebar";
 import PlaygroundCanvas from "./PlaygroundCanvas";
 import PlaygroundHeader from "./PlaygroundHeader";
 import DiscoveryModal, {
@@ -58,6 +60,7 @@ export default function PlaygroundClient() {
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [skillsCatalogOpen, setSkillsCatalogOpen] = useState(false);
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+  const [pendingAdds, setPendingAdds] = useState<PendingSidebarAdd[]>([]);
   const [pendingChildren, setPendingChildren] = useState<
     Map<string, PendingChild[]>
   >(new Map());
@@ -275,6 +278,10 @@ export default function PlaygroundClient() {
   const handleAddComponent = useCallback(
     async (entry: DiscoveryEntry) => {
       setAddingIds((prev) => new Set(prev).add(entry.id));
+      setPendingAdds((prev) => {
+        if (prev.some((p) => p.id === entry.id)) return prev;
+        return [...prev, { id: entry.id, name: entry.name }];
+      });
 
       const toastId = toast.loading(`Setting up "${entry.name}"…`, {
         duration: Infinity,
@@ -329,6 +336,7 @@ export default function PlaygroundClient() {
           next.delete(entry.id);
           return next;
         });
+        setPendingAdds((prev) => prev.filter((p) => p.id !== entry.id));
       }
     },
     [notifySidebar, analyzeChildren],
@@ -378,6 +386,7 @@ export default function PlaygroundClient() {
               }}
               onOpenDiscovery={() => setDiscoveryOpen(true)}
               pendingChildren={pendingChildren}
+              pendingAdds={pendingAdds}
             />
           </div>
 
