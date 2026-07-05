@@ -1,8 +1,13 @@
 {
   "version": 1,
   "entries": {
-    "Card.iteration-1.tsx": { "parent": "card" },
-    "Card.iteration-2.tsx": { "parent": "card" },
-    "Card.iteration-3.tsx": { "parent": "card" }
+    "StatusBadge.iteration-1.tsx": {
+      "parent": "status-badge",
+      "description": "Muted color palette with softer, more professional tones"
+    },
+    "DrawdownConfigCard.iteration-1.tsx": {
+      "parent": "drawdown-config-card",
+      "description": "Compact layout with Daily Drawdown and Max Drawdown side-by-side in a 2-column grid; Max Drawdown Type below"
+    }
   }
 }

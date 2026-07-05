@@ -1,17 +1,14 @@
 // Auto-generated index for iteration components
 // This file maps iteration filenames to their components
 
-import { ComponentType, lazy } from 'react';
-
-const CardIteration1 = lazy(() => import('./Card.iteration-1'));
-const CardIteration2 = lazy(() => import('./Card.iteration-2'));
-const CardIteration3 = lazy(() => import('./Card.iteration-3'));
+import { ComponentType } from 'react';
+import StatusBadgeIteration1 from './StatusBadge.iteration-1';
+import DrawdownConfigCardIteration1 from './DrawdownConfigCard.iteration-1';
 
 // Map of filename to component
 export const iterationComponents: Record<string, ComponentType<any>> = {
-  'Card.iteration-1.tsx': CardIteration1,
-  'Card.iteration-2.tsx': CardIteration2,
-  'Card.iteration-3.tsx': CardIteration3,
+  'StatusBadge.iteration-1.tsx': StatusBadgeIteration1,
+  'DrawdownConfigCard.iteration-1.tsx': DrawdownConfigCardIteration1,
 };
 
 export function getIterationComponent(filename: string): ComponentType<any> | undefined {
