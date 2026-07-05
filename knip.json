@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "dev-entry.tsx",
+    "app/page.tsx",
+    "registry.tsx",
+    "server/index.ts",
+    "server/vite-plugin.ts",
+    "setup.mjs",
+    "link.mjs",
+    "iterations/index.ts"
+  ],
+  "project": ["**/*.{ts,tsx,js,mjs}"],
+  "ignore": ["iterations/**", "docs/**"]
+}
