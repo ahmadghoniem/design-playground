@@ -21,7 +21,7 @@ function hashToIndex(input: string, modulo: number): number {
   return hash % modulo;
 }
 
-export function getSkillBubbleColor(skillId: string): string {
+function getSkillBubbleColor(skillId: string): string {
   return PASTEL_COLORS[hashToIndex(skillId, PASTEL_COLORS.length)];
 }
 

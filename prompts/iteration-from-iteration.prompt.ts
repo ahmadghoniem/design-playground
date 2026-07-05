@@ -34,7 +34,6 @@ Depth: {{depthLabel}}
 {{childrenSection}}
 Props interface (DO NOT MODIFY):
 {{propsInterface}}
-{{screenshotSection}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -89,7 +88,6 @@ export interface IterationFromIterationPromptVars {
   iterationNumbersList: string;
   sourceIterationFilename: string;
   stylingConstraint: string;
-  screenshotSection?: string;
   referenceNodesSection?: string;
 }
 

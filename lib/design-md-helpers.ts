@@ -45,7 +45,7 @@ export function isPackageInstalled(): { installed: boolean; version?: string } {
   }
 }
 
-export function extractFrontMatter(md: string): string | null {
+function extractFrontMatter(md: string): string | null {
   const match = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   return match ? match[1] : null;
 }

@@ -17,7 +17,7 @@ export function getProvider(id: ProviderId): ProviderConfig {
 }
 
 /** Get all registered provider configs. */
-export function getAllProviders(): ProviderConfig[] {
+function getAllProviders(): ProviderConfig[] {
   return Array.from(PROVIDERS.values());
 }
 

@@ -11,7 +11,7 @@ import { ResizeGripIcon } from "../components/ui/playground-nav-icons";
 import { RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT } from "../lib/constants";
 import { NodeLabel } from "./shared/NodeLabel";
 
-export interface ImageNodeData {
+interface ImageNodeData {
   imagePath: string;
   imageUrl: string;
   filename: string;

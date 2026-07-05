@@ -9,7 +9,7 @@ import {
 import { useReactFlow } from "@xyflow/react";
 import { cn } from "../lib/utils";
 
-export interface TextNodeData {
+interface TextNodeData {
   text: string;
   autofocus?: boolean;
 }

@@ -15,10 +15,10 @@ export interface DrawStroke {
   kind?: DrawPenKind;
 }
 
-export const DEFAULT_DRAW_COLOR = '#1e1e1e';
-export const DEFAULT_DRAW_WIDTH = 2.5;
+const DEFAULT_DRAW_COLOR = '#1e1e1e';
+const DEFAULT_DRAW_WIDTH = 2.5;
 
-export const DRAW_PEN_PRESETS: Record<
+const DRAW_PEN_PRESETS: Record<
   DrawPenKind,
   { color: string; width: number; opacity: number }
 > = {
@@ -41,7 +41,7 @@ export function getStrokeOpacity(stroke: DrawStroke): number {
   return stroke.opacity ?? 1;
 }
 
-export function createStrokeId(): string {
+function createStrokeId(): string {
   return `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 

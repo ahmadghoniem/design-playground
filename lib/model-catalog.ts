@@ -35,7 +35,7 @@ export const CLAUDE_FALLBACK_MODELS: ModelOption[] = [
 ];
 
 /** Minimum Claude Code versions for newer models (for UI hints). */
-export const CLAUDE_MIN_VERSIONS = {
+const CLAUDE_MIN_VERSIONS = {
   opus48: '2.1.154',
   fable5: '2.1.170',
 } as const;
@@ -50,12 +50,12 @@ const CLAUDE_LEGACY_ALIASES: Record<string, string> = {
   'claude-haiku-4-5': 'claude-haiku-4-5-20251001',
 };
 
-export const LEGACY_MODEL_ALIASES: Record<string, string> = {
+const LEGACY_MODEL_ALIASES: Record<string, string> = {
   ...CLAUDE_LEGACY_ALIASES,
 };
 
 /** Treat an empty model id as the Cursor "auto" model. */
-export function normalizeAutoModelId(model: string): string {
+function normalizeAutoModelId(model: string): string {
   return model === '' ? 'auto' : model;
 }
 

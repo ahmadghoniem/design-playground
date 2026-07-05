@@ -44,9 +44,3 @@ export function pickPreviewViewport(size: ComponentSize | undefined): { width: n
     default:       return { width: 720, height: 480 };
   }
 }
-
-/** Extract the page slug from a registry leaf's `src/app/<slug>/page.tsx` source path. */
-export function slugFromSourcePath(sourcePath: string): string | null {
-  const match = sourcePath.match(/^src\/app\/([^/]+)\/page\.tsx$/);
-  return match ? match[1] : null;
-}

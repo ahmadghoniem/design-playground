@@ -1,5 +1,5 @@
 /** Normalize a human title into a public/ HTML frame folder name. */
-export function normalizePlanFrameName(value: string): string {
+function normalizePlanFrameName(value: string): string {
   return value
     .trim()
     .toLowerCase()
@@ -10,7 +10,7 @@ export function normalizePlanFrameName(value: string): string {
 }
 
 /** Derive a slug from plan markdown (YAML `name` or first `#` heading). */
-export function derivePlanFrameBaseName(planText: string): string {
+function derivePlanFrameBaseName(planText: string): string {
   if (!planText.trim()) return '';
 
   const frontmatter = planText.match(/^---\s*\n([\s\S]*?)\n---/);
@@ -31,7 +31,7 @@ export function derivePlanFrameBaseName(planText: string): string {
   return '';
 }
 
-export function resolveUniqueFrameName(baseName: string, existingFolders: string[]): string {
+function resolveUniqueFrameName(baseName: string, existingFolders: string[]): string {
   const normalized = normalizePlanFrameName(baseName) || 'visualise-plan';
   if (!existingFolders.includes(normalized)) return normalized;
   for (let i = 2; i <= 99; i++) {

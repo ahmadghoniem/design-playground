@@ -6,7 +6,6 @@ export interface EditPromptOptions {
   filePath: string;
   customInstructions: string;
   skillPrompt?: string;
-  screenshotPath?: string;
   referenceNodesSection?: string;
   elementSelections?: Array<{
     oid?: string;
@@ -42,12 +41,6 @@ export function editPrompt(opts: EditPromptOptions): string {
 
   if (opts.skillPrompt) {
     sections.push("## Skills\n" + opts.skillPrompt);
-  }
-
-  if (opts.screenshotPath) {
-    sections.push(
-      `## Current Screenshot\nA screenshot of the current state has been saved to: ${opts.screenshotPath}\nUse this as visual reference for what needs to change.`,
-    );
   }
 
   if (opts.elementSelections && opts.elementSelections.length > 0) {

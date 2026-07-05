@@ -11,7 +11,7 @@ import { cn } from "../lib/utils";
 
 export type ShapeKind = "rect" | "ellipse" | "line";
 
-export interface ShapeNodeData {
+interface ShapeNodeData {
   shape: ShapeKind;
   stroke?: string;
   strokeWidth?: number;

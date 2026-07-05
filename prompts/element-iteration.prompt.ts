@@ -31,7 +31,6 @@ Depth: {{depthLabel}}
 {{childrenSection}}
 Props interface (DO NOT MODIFY):
 {{propsInterface}}
-{{screenshotSection}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -98,7 +97,6 @@ export interface ElementIterationPromptVars {
   iterationNumbersList: string;
   iterationSavesBlock: string;
   stylingQualityItem: string;
-  screenshotSection?: string;
   referenceNodesSection?: string;
 }
 
@@ -123,7 +121,6 @@ Depth: {{depthLabel}}
 {{childrenSection}}
 Props interface (DO NOT MODIFY):
 {{propsInterface}}
-{{screenshotSection}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -195,7 +192,6 @@ export interface ElementIterationFromIterationPromptVars {
   treeParent: string;
   sourceIterationFilename: string;
   stylingQualityItem: string;
-  screenshotSection?: string;
   referenceNodesSection?: string;
 }
 

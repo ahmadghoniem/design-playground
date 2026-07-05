@@ -35,7 +35,7 @@ export const IMPECCABLE_COMMANDS: ImpeccableCommand[] = [
 ];
 
 /** Skill prompt injected into the generation prompt when an impeccable command is selected. */
-export function buildImpeccableSkillPrompt(command: string, skillSkillPath?: string): string {
+function buildImpeccableSkillPrompt(command: string, skillSkillPath?: string): string {
   const root = skillSkillPath?.replace(/\/SKILL\.md$/i, '') ?? 'skills/impeccable';
   return `IMPECCABLE SKILL
 Read ${root}/SKILL.md and ${root}/reference/${command}.md.

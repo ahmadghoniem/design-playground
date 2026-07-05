@@ -5,7 +5,7 @@
 
 import { jsxIterationPrompt } from '../prompts/jsx-iteration.prompt';
 import { jsxIterationFromIterationPrompt } from '../prompts/jsx-iteration-from-iteration.prompt';
-import { formatSkillSection, formatCustomInstructionsSection, formatScreenshotSection } from '../prompts/shared-sections';
+import { formatSkillSection, formatCustomInstructionsSection } from '../prompts/shared-sections';
 
 export function generateJsxIterationPrompt(
   baseFilename: string,
@@ -13,7 +13,6 @@ export function generateJsxIterationPrompt(
   startNumber: number,
   customInstructions?: string,
   skillPrompt?: string,
-  screenshotPath?: string,
 ): string {
   const baseName = baseFilename.replace('.tsx', '');
   const numbers = Array.from({ length: iterationCount }, (_, i) => startNumber + i);
@@ -24,7 +23,6 @@ export function generateJsxIterationPrompt(
     baseName,
     iterationCount: String(iterationCount),
     iterationNumbersList: numbers.join(', '),
-    screenshotSection: screenshotPath ? formatScreenshotSection(screenshotPath) : '',
     customInstructionsSection: customInstructions ? formatCustomInstructionsSection(customInstructions) : '',
   });
 }
@@ -36,7 +34,6 @@ export function generateJsxIterationFromIterationPrompt(
   startNumber: number,
   customInstructions?: string,
   skillPrompt?: string,
-  screenshotPath?: string,
 ): string {
   const baseName = baseFilename.replace('.tsx', '');
   const numbers = Array.from({ length: iterationCount }, (_, i) => startNumber + i);
@@ -48,7 +45,6 @@ export function generateJsxIterationFromIterationPrompt(
     sourceFilename,
     iterationCount: String(iterationCount),
     iterationNumbersList: numbers.join(', '),
-    screenshotSection: screenshotPath ? formatScreenshotSection(screenshotPath) : '',
     customInstructionsSection: customInstructions ? formatCustomInstructionsSection(customInstructions) : '',
   });
 }

@@ -2,7 +2,7 @@ import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { NodeResizer, useReactFlow } from "@xyflow/react";
 import { cn } from "../lib/utils";
 
-export interface FrameNodeData {
+interface FrameNodeData {
   label?: string;
 }
 

@@ -77,7 +77,7 @@ export function listPlaygroundDirs(): string[] {
 }
 
 /** All playground roots that exist on disk (both layouts). */
-export function resolveAllPlaygroundDirs(): string[] {
+function resolveAllPlaygroundDirs(): string[] {
   const root = process.cwd();
   return CANDIDATE_RELATIVE_DIRS.map((d) => path.join(root, d)).filter((dir) =>
     fs.existsSync(dir),
@@ -92,6 +92,6 @@ export function resolveIterationsDirs(): string[] {
 }
 
 /** Primary canvas-components directory for the resolved playground root. */
-export function resolveCanvasComponentsDir(): string {
+function resolveCanvasComponentsDir(): string {
   return path.join(resolvePlaygroundDir(), 'canvas-components');
 }

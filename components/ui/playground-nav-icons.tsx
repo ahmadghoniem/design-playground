@@ -22,7 +22,7 @@ export function ProjectBoxIcon({ className, size = 18 }: { className?: string; s
 }
 
 /** Document page — used for canvas designs (formerly "start riffing"). */
-export function PageDocumentIcon({ className, size = 14 }: { className?: string; size?: number }) {
+function PageDocumentIcon({ className, size = 14 }: { className?: string; size?: number }) {
   return (
     <svg
       width={size}

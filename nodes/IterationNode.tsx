@@ -590,7 +590,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
             /* Freeform / active resize: fill the node with centered content */
             <div
               ref={scrollContainerRef}
-              className={`grid place-items-center p-[5%] overflow-auto w-full h-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
+              className={`grid place-items-center overflow-auto w-full h-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
               onWheel={isInteractive ? handleWheel : undefined}
             >
               {RenderComponent ? (
@@ -681,7 +681,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
           ) : (
             /* Auto mode: intrinsic sizing */
             <div
-              className={`grid place-items-center min-h-[100px] p-4 ${isInteractive ? "nodrag nowheel nopan" : ""}`}
+              className={`grid place-items-center min-h-[100px] ${isInteractive ? "nodrag nowheel nopan" : ""}`}
             >
               {RenderComponent ? (
                 <Suspense

@@ -255,7 +255,7 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
 /**
  * Filters a list of models to only those enabled in settings.
  */
-export function filterEnabledModels(allModels: ModelOption[]): ModelOption[] {
+function filterEnabledModels(allModels: ModelOption[]): ModelOption[] {
   const state = useModelSettingsStore.getState();
   const providerId = state.activeProvider;
   const ps = state.providerState[providerId];

@@ -6,7 +6,7 @@
 import { htmlIterationPrompt } from '../prompts/html-iteration.prompt';
 import { htmlIterationFromIterationPrompt } from '../prompts/html-iteration-from-iteration.prompt';
 import { htmlAdoptPrompt } from '../prompts/html-adopt.prompt';
-import { formatSkillSection, formatCustomInstructionsSection, formatScreenshotSection } from '../prompts/shared-sections';
+import { formatSkillSection, formatCustomInstructionsSection } from '../prompts/shared-sections';
 
 export function generateHtmlIterationPrompt(
   pageFolder: string,
@@ -14,7 +14,6 @@ export function generateHtmlIterationPrompt(
   startNumber: number,
   customInstructions?: string,
   skillPrompt?: string,
-  screenshotPath?: string,
 ): string {
   const numbers = Array.from({ length: iterationCount }, (_, i) => startNumber + i);
   return htmlIterationPrompt({
@@ -23,7 +22,6 @@ export function generateHtmlIterationPrompt(
     pageFolder,
     iterationCount: String(iterationCount),
     iterationNumbersList: numbers.join(', '),
-    screenshotSection: screenshotPath ? formatScreenshotSection(screenshotPath) : '',
     customInstructionsSection: customInstructions ? formatCustomInstructionsSection(customInstructions) : '',
   });
 }
@@ -35,7 +33,6 @@ export function generateHtmlIterationFromIterationPrompt(
   startNumber: number,
   customInstructions?: string,
   skillPrompt?: string,
-  screenshotPath?: string,
 ): string {
   const numbers = Array.from({ length: iterationCount }, (_, i) => startNumber + i);
   return htmlIterationFromIterationPrompt({
@@ -45,7 +42,6 @@ export function generateHtmlIterationFromIterationPrompt(
     sourceIterationFolder,
     iterationCount: String(iterationCount),
     iterationNumbersList: numbers.join(', '),
-    screenshotSection: screenshotPath ? formatScreenshotSection(screenshotPath) : '',
     customInstructionsSection: customInstructions ? formatCustomInstructionsSection(customInstructions) : '',
   });
 }

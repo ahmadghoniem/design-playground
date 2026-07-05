@@ -11,8 +11,6 @@ JSX COMPONENT ITERATION REQUEST
 Component: {{componentName}}
 Source: src/app/playground/canvas-components/{{baseFilename}}
 Iterations requested: {{iterationCount}}
-{{screenshotSection}}
-
 INSTRUCTIONS
 
 1. Read the source component at src/app/playground/canvas-components/{{baseFilename}}
@@ -31,10 +29,11 @@ CRITICAL REQUIREMENTS
   • All icons, images, and assets must be inline SVG or CSS-based
 - Preserve the component's core functionality and structure
 - Each variation should be a complete, working React component
+- Output ONLY the component itself, at its natural size. Do NOT wrap it in a page-level container or add any outer centering/padding: no full-viewport wrapper, no minHeight/100vh, no display:'flex' centering, and no large padding around the component's root element. The playground sizes and positions the node — the file must render just the component so it sits flush (small components MUST stay small).
 {{customInstructionsSection}}
 
 CREATIVE LAYOUT & THEME FREEDOM (when iterationCount > 1)
-- Explore bold layouts: asymmetric grids, overlapping elements, creative spacing
+- Explore bold layouts INSIDE the component: asymmetric grids, overlapping elements, creative spacing between the component's own elements — never an outer page wrapper or padding around the whole thing
 - Vary color schemes, typography, and visual hierarchy
 - Each iteration must be structurally and/or visually distinct from the source and other iterations
 
@@ -53,7 +52,6 @@ export interface JsxIterationPromptVars {
   baseName: string;
   iterationCount: string;
   iterationNumbersList: string;
-  screenshotSection?: string;
   customInstructionsSection?: string;
 }
 

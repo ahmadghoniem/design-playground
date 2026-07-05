@@ -11,8 +11,6 @@ HTML PAGE ITERATION REQUEST
 Page: {{pageName}}
 Source: public/{{pageFolder}}/index.html
 Iterations requested: {{iterationCount}}
-{{screenshotSection}}
-
 INSTRUCTIONS
 
 1. Read the source HTML page at public/{{pageFolder}}/index.html
@@ -54,7 +52,6 @@ export interface HtmlIterationPromptVars {
   pageFolder: string;
   iterationCount: string;
   iterationNumbersList: string;
-  screenshotSection?: string;
   customInstructionsSection?: string;
 }
 

@@ -14,7 +14,7 @@
 import fs from 'fs';
 import { parse, serialize } from 'parse5';
 
-export const OID_ATTR = 'data-pg-oid';
+const OID_ATTR = 'data-pg-oid';
 
 /** Tags that never need an oid (non-visual / metadata). */
 const SKIP_TAGS = new Set(['html', 'head', 'meta', 'title', 'link', 'script', 'style', 'base', 'noscript']);
@@ -39,7 +39,7 @@ interface P5Node {
  * Add `data-pg-oid` to every visual element that lacks one.
  * Returns the (possibly rewritten) HTML and whether anything changed.
  */
-export function stampHtmlWithOids(html: string): { html: string; changed: boolean } {
+function stampHtmlWithOids(html: string): { html: string; changed: boolean } {
   const document = parse(html) as unknown as P5Node;
   const taken = new Set<string>();
   const unstamped: P5Node[] = [];

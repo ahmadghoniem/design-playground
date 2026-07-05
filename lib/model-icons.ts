@@ -17,7 +17,7 @@ const MODEL_ICON_CONFIGS: Record<string, ModelIconConfig> = {
   gemini: { src: ICON_SRC(geminiIcon), bg: '#ffffff' },
 };
 
-export function getModelIcon(modelValue: string, providerId?: string): string {
+function getModelIcon(modelValue: string, providerId?: string): string {
   return getModelIconConfig(modelValue, providerId).src;
 }
 

@@ -872,5 +872,4 @@ export {
   InlineReferenceItem,
   InlineReferenceEmpty,
   InlineReferenceGroup,
-  InlineReferenceSeparator,
 }

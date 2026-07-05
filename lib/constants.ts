@@ -14,7 +14,7 @@ export const ITERATION_PROMPT_COPIED_EVENT = 'iteration-prompt-copied';
 export const ITERATION_FETCH_EVENT = 'iteration-fetch-requested';
 
 /** Fired when a component enters/exits fullscreen */
-export const FULLSCREEN_NODE_EVENT = 'playground:fullscreen-node';
+const FULLSCREEN_NODE_EVENT = 'playground:fullscreen-node';
 
 /** Fired when a ComponentNode changes its viewport size */
 export const COMPONENT_SIZE_CHANGE_EVENT = 'playground:component-size-change';
@@ -26,7 +26,7 @@ export const ADOPTION_COMPLETE_EVENT = 'playground:adoption-complete';
 export const ADOPTION_ERROR_EVENT = 'playground:adoption-error';
 
 /** Fired to pan the canvas to a specific flow position */
-export const PAN_TO_POSITION_EVENT = 'playground:pan-to-position';
+const PAN_TO_POSITION_EVENT = 'playground:pan-to-position';
 
 /** Fired to fit the viewport around all nodes for a given component */
 export const FIT_COMPONENT_NODES_EVENT = 'playground:fit-component-nodes';
@@ -48,24 +48,19 @@ export const PLAYGROUND_CLEAR_EVENT = 'playground:clear-requested';
 
 /** Fired when drag-to-iterate releases (triggers toast + generation) */
 export const DRAG_ITERATE_EVENT = 'playground:drag-iterate';
-
-
-
-// ---------------------------------------------------------------------------
-// localStorage Keys
 // ---------------------------------------------------------------------------
 
 /** Key for persisting canvas state (nodes, edges, counter) */
 export const STORAGE_KEY = 'playground-canvas-state';
 
 /** Key for persisting the list of available AI models */
-export const MODELS_STORAGE_KEY = 'playground-ai-models';
+const MODELS_STORAGE_KEY = 'playground-ai-models';
 
 /** Key for persisting the user's last selected AI model */
 export const SELECTED_MODEL_STORAGE_KEY = 'playground-selected-model';
 
 /** Key for persisting enabled model selections in settings */
-export const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
+const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
 
 
 /** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
@@ -81,7 +76,7 @@ export const DESIGN_SYSTEM_SHOWCASE_RAW_URL = '/playground/api/design/preview-sh
 export const DESIGN_SYSTEM_GENERATED_EVENT = 'playground:design-system-generated';
 
 /** Key for persisting generation info across page reloads */
-export const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
+const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
 
 // ---------------------------------------------------------------------------
 // Timing Constants
@@ -187,13 +182,13 @@ export function getDisplayDimensions(size: ComponentSize) {
 export const ITERATION_COUNT_OPTIONS = [1, 2, 3, 4] as const;
 
 /** Default number of iterations to generate */
-export const DEFAULT_ITERATION_COUNT = 3;
+const DEFAULT_ITERATION_COUNT = 3;
 
 /** Default iteration depth */
-export const DEFAULT_DEPTH: 'shell' | '1-level' | 'all' = 'shell';
+const DEFAULT_DEPTH: 'shell' | '1-level' | 'all' = 'shell';
 
 /** Depth option definitions */
-export const DEPTH_OPTIONS: { key: 'shell' | '1-level' | 'all'; label: string }[] = [
+const DEPTH_OPTIONS: { key: 'shell' | '1-level' | 'all'; label: string }[] = [
   { key: 'shell', label: 'Shell only' },
   { key: '1-level', label: '1 level deep' },
   { key: 'all', label: 'All levels' },
@@ -211,17 +206,8 @@ export type StylingMode = 'tailwind' | 'inline-css';
 /** Default styling mode when no skill overrides it */
 export const DEFAULT_STYLING_MODE: StylingMode = 'tailwind';
 
-// ---------------------------------------------------------------------------
-// Provider Types (re-exported from providers module)
-// ---------------------------------------------------------------------------
-
-export type { ProviderId } from './providers/types';
-export { DEFAULT_PROVIDER_ID } from './providers/registry';
-export { DEFAULT_CLAUDE_CODE_OPTIONS } from './providers/types';
-export type { ClaudeCodeOptions } from './providers/types';
-
 /** localStorage key for persisting the active provider selection */
-export const PROVIDER_STORAGE_KEY = 'playground-provider';
+const PROVIDER_STORAGE_KEY = 'playground-provider';
 
 // ---------------------------------------------------------------------------
 // AI Models
@@ -237,7 +223,7 @@ export interface ModelOption {
 // ---------------------------------------------------------------------------
 
 /** FitView config when entering fullscreen on a specific node */
-export const FITVIEW_FULLSCREEN_ENTER = {
+const FITVIEW_FULLSCREEN_ENTER = {
   padding: 0.02,
   duration: 400,
   maxZoom: 2,
@@ -245,7 +231,7 @@ export const FITVIEW_FULLSCREEN_ENTER = {
 } as const;
 
 /** FitView config when exiting fullscreen (show all nodes) */
-export const FITVIEW_FULLSCREEN_EXIT = {
+const FITVIEW_FULLSCREEN_EXIT = {
   padding: 0.2,
   duration: 300,
 } as const;
@@ -262,10 +248,10 @@ export const FITVIEW_AFTER_ARRANGE = {
 // ---------------------------------------------------------------------------
 
 /** Delay before fitting view after entering fullscreen (waits for sidebar animation) */
-export const FULLSCREEN_ENTER_DELAY = 350;
+const FULLSCREEN_ENTER_DELAY = 350;
 
 /** Delay before fitting view after exiting fullscreen */
-export const FULLSCREEN_EXIT_DELAY = 100;
+const FULLSCREEN_EXIT_DELAY = 100;
 
 /** Delay after generation completes before scanning for iterations */
 export const POST_GENERATION_SCAN_DELAY = 1000;
@@ -346,16 +332,16 @@ export const HTML_TREE_FILENAME = 'html-tree.json';
 // ---------------------------------------------------------------------------
 
 /** Start marker for the static playground block in the host .gitignore */
-export const GITIGNORE_STATIC_START = '# BEGIN design-playground';
+const GITIGNORE_STATIC_START = '# BEGIN design-playground';
 
 /** End marker for the static playground block in the host .gitignore */
-export const GITIGNORE_STATIC_END = '# END design-playground';
+const GITIGNORE_STATIC_END = '# END design-playground';
 
 /** Start marker for the dynamic public HTML frames block in the host .gitignore */
-export const GITIGNORE_FRAMES_START = '# BEGIN design-playground-public-frames';
+const GITIGNORE_FRAMES_START = '# BEGIN design-playground-public-frames';
 
 /** End marker for the dynamic public HTML frames block in the host .gitignore */
-export const GITIGNORE_FRAMES_END = '# END design-playground-public-frames';
+const GITIGNORE_FRAMES_END = '# END design-playground-public-frames';
 
 /** Info about a static HTML page discovered in /public */
 export interface HtmlPageInfo {
@@ -366,7 +352,7 @@ export interface HtmlPageInfo {
 }
 
 /** An iteration file within an HTML page directory */
-export interface HtmlIterationFile {
+interface HtmlIterationFile {
   folder: string;       // "iteration-1"
   number: number;
   pageFolder: string;   // "landing"
@@ -413,9 +399,6 @@ export interface JsxIterationInfo {
 // Canvas Events
 // ---------------------------------------------------------------------------
 
-/** Fired to delete a frame and its canvas nodes */
-export const DELETE_FRAME_EVENT = 'playground:delete-frame';
-
 // ---------------------------------------------------------------------------
 // Edit Mode Constants
 // ---------------------------------------------------------------------------
@@ -436,19 +419,19 @@ export const DND_DATA_KEY = 'application/x-playground-component';
 // ---------------------------------------------------------------------------
 
 /** Pixels of drag distance per grid step (row or column) */
-export const DRAG_ITERATE_PX_PER_STEP = 200;
+const DRAG_ITERATE_PX_PER_STEP = 200;
 
 /** Minimum pointer distance (px) to enter drag state (prevents accidental drags) */
 export const DRAG_ITERATE_THRESHOLD_PX = 5;
 
 /** Maximum time (ms) for a pointerdown→pointerup to count as a click */
-export const DRAG_ITERATE_CLICK_TIMEOUT_MS = 150;
+const DRAG_ITERATE_CLICK_TIMEOUT_MS = 150;
 
 /** Duration (ms) of the undo window before generation starts */
-export const DRAG_ITERATE_UNDO_DURATION_MS = 3000;
+const DRAG_ITERATE_UNDO_DURATION_MS = 3000;
 
 /** Duration (ms) for the Sonner toast auto-dismiss */
-export const DRAG_ITERATE_TOAST_DURATION_MS = 4000;
+const DRAG_ITERATE_TOAST_DURATION_MS = 4000;
 
 /** Maximum total new iterations from a single drag */
 export const DRAG_ITERATE_MAX_TOTAL = 8;
@@ -470,7 +453,7 @@ export const DRAG_GHOST_GAP = 20;
 export const TREE_MANIFEST_FILENAME = 'tree.json';
 
 /** Horizontal spacing between depth columns in tree layout (px) */
-export const TREE_COLUMN_WIDTH = 500;
+const TREE_COLUMN_WIDTH = 500;
 
 // ---------------------------------------------------------------------------
 // Chat Constants
@@ -532,27 +515,22 @@ export interface ChatSubmitPayload {
     componentName: string;
     type: 'component' | 'iteration' | 'image' | 'text';
     sourceFilename?: string;
-    screenshotPath?: string;
     imagePath?: string;
     imageUrl?: string;
     textContent?: string;
-    /** Pasted URL embed (reference metadata; componentName is also the URL) */
-    embedUrl?: string;
   }[];
   /** When true, edit the target file in-place instead of creating iterations */
   editMode?: boolean;
   /** Cursor chat behavior mode */
   chatMode?: 'explore' | 'edit' | 'raw';
   /** Render mode of the target node */
-  renderMode?: 'react' | 'html' | 'jsx' | 'embed';
+  renderMode?: 'react' | 'html' | 'jsx';
   /** HTML page folder for the target (when renderMode is 'html') */
   htmlPageSlug?: string;
   /** HTML iteration folder (when targeting an HTML iteration) */
   htmlIterationFolder?: string;
   /** On-canvas JSX filename in canvas-components/ (when renderMode is 'jsx') */
   jsxFile?: string;
-  /** Remote URL (when renderMode is 'embed') */
-  embedUrl?: string;
 }
 
 // ---------------------------------------------------------------------------

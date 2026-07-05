@@ -7,7 +7,7 @@
  * deps — anything the parser doesn't recognise is silently ignored.
  */
 
-export interface ParsedTypography {
+interface ParsedTypography {
   fontFamily?: string;
   fontSize?: string;
   fontWeight?: string | number;
@@ -15,7 +15,7 @@ export interface ParsedTypography {
   letterSpacing?: string;
 }
 
-export interface ParsedComponent {
+interface ParsedComponent {
   backgroundColor?: string;
   textColor?: string;
   typography?: string;

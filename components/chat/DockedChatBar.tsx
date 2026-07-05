@@ -275,7 +275,6 @@ export default function DockedChatBar({
       htmlPageSlug: editTarget?.htmlPageSlug,
       htmlIterationFolder: editTarget?.htmlIterationFolder,
       jsxFile: editTarget?.jsxFile,
-      embedUrl: editTarget?.embedUrl,
       elementSelections: buildElementSelectionsPayload(),
       referenceNodes: buildReferenceNodesPayload(),
     };
