@@ -1,10 +1,11 @@
 # Plan: Event-driven generation pipeline (Tier 3) + Onlook adoptions
 
-**Status:** DONE (2026-07-03, commits a8aa910…8070576) — all approved chunks landed and verified:
-Phases 1+2 (tool-event streaming + client de-scaffold, live-verified end-to-end); fs-watcher demoted to silent fallback (deletion still deferred until burn-in); `design-system-store` inlined; window event bus → typed `lib/generation-events.ts`; penpal bridge (`lib/iframe-bridge*.ts`, inline script deleted); `data-pg-oid` stamping for HTML pages (`lib/oid-stamp.ts`, parse5); iframe error badges (`stores/iframe-error-store.ts`).
+**Status:** DONE (2026-07-03, commits a8aa910…8070576), Phase 3 fs-watcher deletion landed 2026-07-04 — all approved chunks landed and verified:
+Phases 1+2 (tool-event streaming + client de-scaffold, live-verified end-to-end); `design-system-store` inlined; window event bus → typed `lib/generation-events.ts`; penpal bridge (`lib/iframe-bridge*.ts`, inline script deleted); `data-pg-oid` stamping for HTML pages (`lib/oid-stamp.ts`, parse5); iframe error badges (`stores/iframe-error-store.ts`).
+Phase 3: `server/lib/generation-file-watcher.ts` deleted; `startFileWatcher`/`stopFileWatcher` calls removed from `generate.ts`; `syncPublicFrameGitignoreSafe()` moved to the process `close`/`error` handlers. The client's final `scanForIterations` on generation-complete remains as the belt-and-braces catch for files written via `Bash` instead of `Write`/`Edit`.
 Also fixed: 8 type errors surfaced by the first REAL typecheck — Rewynd's `type-check` script checks zero files (solution-style tsconfig without --build); use `npx tsc -p tsconfig.app.json --noEmit`.
 
-**Remaining follow-ups:** delete the fs-watcher after burn-in · JSX (Babel) oid stamping · submit-time oid staleness validation · error badge on ComponentNode HTML frames · manual smoke of Alt+hover selection through the new bridge.
+**Remaining follow-ups:** JSX (Babel) oid stamping · submit-time oid staleness validation · error badge on ComponentNode HTML frames · manual smoke of Alt+hover selection through the new bridge.
 **Decision:** Tier 3 (parse `tool_use`/`tool_result` from the existing `claude` stream-json output) over Tier 2 (ACP adapter). Rationale at the bottom. Tier 2 revisit deferred until main features are solid / multi-provider un-hides.
 
 **Remaining (approved scope):**

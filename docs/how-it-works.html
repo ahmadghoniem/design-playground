@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Playground — How it actually works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbf9f6; --bg2:#f4f1ea; --surface:#ffffff; --surface2:#f7f4ee;
+    --border:#e7e1d6; --border2:#d8d0c1;
+    --text:#26221c; --muted:#6d6459; --faint:#9a9084;
+    --accent:#c2603a; --accent-soft:#f4e2d6;
+    --good:#3f8f6b; --good-soft:#dcefe4;
+    --info:#3a6ea5; --info-soft:#dde8f3;
+    --warn:#b6852a; --warn-soft:#f4ead0;
+    --code-bg:#f0ece3; --code-text:#7a4b2e;
+    --display:'Bricolage Grotesque',system-ui,sans-serif;
+    --sans:'Inter',system-ui,'Segoe UI',sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+    --shadow:0 1px 2px rgba(40,34,26,.04),0 8px 24px -14px rgba(40,34,26,.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1c1a17; --bg2:#211e1a; --surface:#262320; --surface2:#2d2925;
+      --border:#39342d; --border2:#4a443b;
+      --text:#ece6dc; --muted:#a89e90; --faint:#7d7468;
+      --accent:#e08a5f; --accent-soft:#3a2a20;
+      --good:#6cc79a; --good-soft:#22322a;
+      --info:#7fb0e0; --info-soft:#1f2a37;
+      --warn:#e0bd6f; --warn-soft:#332b18;
+      --code-bg:#2f2a24; --code-text:#e0a878;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1a17; --bg2:#211e1a; --surface:#262320; --surface2:#2d2925;
+    --border:#39342d; --border2:#4a443b;
+    --text:#ece6dc; --muted:#a89e90; --faint:#7d7468;
+    --accent:#e08a5f; --accent-soft:#3a2a20;
+    --good:#6cc79a; --good-soft:#22322a;
+    --info:#7fb0e0; --info-soft:#1f2a37;
+    --warn:#e0bd6f; --warn-soft:#332b18;
+    --code-bg:#2f2a24; --code-text:#e0a878;
+  }
+  :root[data-theme="light"]{
+    --bg:#fbf9f6; --bg2:#f4f1ea; --surface:#ffffff; --surface2:#f7f4ee;
+    --border:#e7e1d6; --border2:#d8d0c1;
+    --text:#26221c; --muted:#6d6459; --faint:#9a9084;
+    --accent:#c2603a; --accent-soft:#f4e2d6;
+    --good:#3f8f6b; --good-soft:#dcefe4;
+    --info:#3a6ea5; --info-soft:#dde8f3;
+    --warn:#b6852a; --warn-soft:#f4ead0;
+    --code-bg:#f0ece3; --code-text:#7a4b2e;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);color:var(--code-text);padding:.12em .4em;border-radius:5px;word-break:break-word}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;display:grid;grid-template-columns:230px 1fr;gap:44px}
+  @media (max-width:880px){ .wrap{grid-template-columns:1fr;gap:0} nav.toc{display:none} }
+
+  /* ---- hero ---- */
+  header.hero{border-bottom:1px solid var(--border);background:
+     radial-gradient(1200px 380px at 80% -60%, var(--accent-soft), transparent 60%), var(--bg2)}
+  .hero-inner{max-width:1180px;margin:0 auto;padding:52px 28px 40px}
+  .eyebrow{font:600 12px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,4.4vw,46px);line-height:1.05;letter-spacing:-.02em;margin:0 0 16px}
+  .lede{font-size:18px;color:var(--muted);max-width:680px;margin:0}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 11px;border-radius:999px}
+  .pill b{color:var(--text);font-weight:600}
+
+  /* ---- toc ---- */
+  nav.toc{align-self:start;position:sticky;top:24px;padding:28px 0;font-size:14px}
+  nav.toc .toc-title{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;padding-left:12px}
+  nav.toc a{display:block;color:var(--muted);padding:6px 12px;border-left:2px solid transparent;line-height:1.35}
+  nav.toc a:hover{color:var(--text);text-decoration:none;border-left-color:var(--border2)}
+  nav.toc a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+  nav.toc a small{display:block;font:400 11.5px var(--sans);color:var(--faint)}
+
+  main{padding:40px 0 100px;min-width:0}
+  section{margin-bottom:56px;scroll-margin-top:24px}
+  section > h2{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.015em;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+  section > h2 .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font:700 14px var(--mono);display:grid;place-items:center}
+  section > .sub{color:var(--muted);margin:0 0 22px;font-size:15.5px}
+  h3{font-family:var(--display);font-weight:600;font-size:18px;margin:30px 0 10px;letter-spacing:-.01em}
+  p{margin:0 0 14px}
+  ul,ol{margin:0 0 14px;padding-left:22px}
+  li{margin:6px 0}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow);margin:18px 0}
+
+  /* plain-words callout */
+  .plain{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
+  .plain .tag{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+  .plain p{margin:0;color:var(--text)}
+
+  .note{border-radius:12px;padding:13px 16px;margin:16px 0;font-size:14.5px;border:1px solid var(--border)}
+  .note .tag{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:5px}
+  .note.info{background:var(--info-soft);border-color:transparent} .note.info .tag{color:var(--info)}
+  .note.good{background:var(--good-soft);border-color:transparent} .note.good .tag{color:var(--good)}
+  .note.warn{background:var(--warn-soft);border-color:transparent} .note.warn .tag{color:var(--warn)}
+  .note p:last-child{margin-bottom:0}
+
+  /* step flow */
+  .flow{display:flex;flex-direction:column;gap:0;margin:20px 0}
+  .step{display:grid;grid-template-columns:38px 1fr;gap:16px;position:relative;padding-bottom:22px}
+  .step:not(:last-child)::before{content:"";position:absolute;left:18px;top:36px;bottom:-2px;width:2px;background:var(--border2)}
+  .step .dot{width:38px;height:38px;border-radius:11px;background:var(--surface);border:1.5px solid var(--border2);color:var(--accent);font:700 15px var(--mono);display:grid;place-items:center;z-index:1}
+  .step .body{padding-top:5px}
+  .step h4{margin:0 0 4px;font:600 16px var(--sans)}
+  .step p{margin:0;color:var(--muted);font-size:14.5px}
+  .step .file{font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px;display:inline-block;margin-top:7px}
+
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:12px;padding:15px 17px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:13px;line-height:1.6}
+  pre code{background:none;color:var(--text);padding:0}
+  .cm{color:var(--faint)}
+  .k{color:var(--accent)}
+
+  /* two-column myth/reality */
+  .versus{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+  @media (max-width:640px){ .versus{grid-template-columns:1fr} }
+  .versus .col{border-radius:14px;padding:16px 18px;border:1px solid var(--border)}
+  .versus .col h4{margin:0 0 8px;font:600 14px var(--sans);display:flex;align-items:center;gap:8px}
+  .versus .col.myth{background:var(--warn-soft);border-color:transparent}
+  .versus .col.myth h4{color:var(--warn)}
+  .versus .col.real{background:var(--good-soft);border-color:transparent}
+  .versus .col.real h4{color:var(--good)}
+  .versus .col p{margin:0;font-size:14px;color:var(--text)}
+
+  /* mini sidebar mock */
+  .sbmock{font-family:var(--sans);font-size:13px;border:1px solid var(--border);border-radius:14px;overflow:hidden;max-width:290px;box-shadow:var(--shadow)}
+  .sbmock .row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}
+  .sbmock .row:last-child{border-bottom:none}
+  .sbmock .row.head{background:var(--surface2);font:600 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .sbmock .row.item{color:var(--text)}
+  .sbmock .row .lbl{flex:1}
+  .sbmock .row .badge{font:600 10px var(--mono);padding:1px 7px;border-radius:999px}
+  .badge.rm{background:var(--warn-soft);color:var(--warn)}
+  .badge.keep{background:var(--good-soft);color:var(--good)}
+  .badge.core{background:var(--info-soft);color:var(--info)}
+
+  .glossary dt{font:600 14.5px var(--sans);margin-top:14px;color:var(--text)}
+  .glossary dt code{font-size:13px}
+  .glossary dd{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+
+  .themebtn{position:fixed;top:16px;right:16px;z-index:10;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:7px 11px;font:500 12px var(--sans);cursor:pointer;box-shadow:var(--shadow)}
+  .themebtn:hover{color:var(--text)}
+  footer{border-top:1px solid var(--border);color:var(--faint);font-size:13px;padding:26px 0;text-align:center}
+  .kicker{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:34px 0 -6px}
+</style>
+</head>
+<body>
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark')})()">◐ theme</button>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Design Playground · Field Guide</p>
+    <h1>How it actually works</h1>
+    <p class="lede">A plain-language tour of the parts you asked about — the sidebar, adding pages, the component “traces”, the screenshot step, the empty <code>canvas-components/</code> folder, the <code>data/</code> mock files, why added components lose their styling, and the file-watcher. Written for someone wiring generative AI into a real app for the first time.</p>
+    <div class="hero-meta">
+      <span class="pill">🏠 <b>Host app:</b> Rewynd (Vite + React + Tailwind v4)</span>
+      <span class="pill">🤖 <b>Agent:</b> Claude Code CLI</span>
+      <span class="pill">📁 <b>Mounted at:</b> <code>src/app/playground</code></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc" id="toc">
+    <p class="toc-title">On this page</p>
+    <a href="#model">The mental model<small>What the playground really is</small></a>
+    <a href="#sidebar">The sidebar<small>“Design” vs “Pages”</small></a>
+    <a href="#addpage">Adding a page, A→Z<small>Refresh → scan → Add</small></a>
+    <a href="#traces">The component tree<small>Where the 7 children come from</small></a>
+    <a href="#screenshot">The screenshot step<small>Why it’s not “replicate”</small></a>
+    <a href="#folders">Empty folder &amp; mock data<small>canvas-components/ &amp; data/</small></a>
+    <a href="#styling">Why styling disappears<small>The Tailwind gotcha</small></a>
+    <a href="#watcher">The file-watcher<small>Old way vs new way</small></a>
+    <a href="#glossary">Glossary</a>
+  </nav>
+
+  <main>
+
+  <!-- ================= MODEL ================= -->
+  <section id="model">
+    <h2><span class="num">0</span> The 30-second mental model</h2>
+    <p class="sub">Before any of the details make sense, hold this one idea in your head.</p>
+
+    <p>The Design Playground is <b>not</b> a separate app with its own copy of your components. It is a <b>window that lives inside your real app’s dev server</b>. It renders <em>your actual components</em> on an infinite canvas, and it uses an AI coding agent (the <code>claude</code> command-line tool) to write <em>real files</em> into your project when you ask for variations.</p>
+
+    <div class="plain">
+      <span class="tag">In plain words</span>
+      <p>Think of it as a sketchbook laid over your codebase. The agent is a junior designer who can read your files, take screenshots, and save new files — but everything it does ends up as ordinary code on disk, not magic hidden state.</p>
+    </div>
+
+    <p>Two ideas that will keep coming up:</p>
+    <ul>
+      <li><b>The agent talks to your project through files.</b> The playground writes a prompt, the <code>claude</code> CLI reads/writes files in your repo, and the playground watches for the results. There’s no database.</li>
+      <li><b>Two very different kinds of “thing” live on the canvas.</b> <b>(1) Real components</b> imported straight from your app (styled by your app), and <b>(2) self-contained iterations</b> the AI generates from scratch (HTML or single-file React). Almost every confusing behaviour comes from mixing these two up.</li>
+    </ul>
+  </section>
+
+  <!-- ================= SIDEBAR ================= -->
+  <section id="sidebar">
+    <h2><span class="num">1</span> The sidebar: “Design” vs “Pages”</h2>
+    <p class="sub">You asked to remove “the design” — here’s exactly what each section is, so we remove the right one.</p>
+
+    <p>The left sidebar (<code>components/canvas/PlaygroundSidebar.tsx</code>) stacks three kinds of section:</p>
+
+    <div class="card" style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+      <div class="sbmock">
+        <div class="row head"><span class="lbl">Design system</span><span class="badge rm">feature-y</span></div>
+        <div class="row item"><span class="lbl">🎨 generated showcase card</span></div>
+        <div class="row head"><span class="lbl">Design</span><span class="badge core">frames</span></div>
+        <div class="row item"><span class="lbl">🖼 untitled-16</span></div>
+        <div class="row item"><span class="lbl">🖼 untitled-17</span></div>
+        <div class="row head"><span class="lbl">Pages</span><span class="badge keep">+ add</span></div>
+        <div class="row item"><span class="lbl">📄 Home, Pricing…</span></div>
+        <div class="row head"><span class="lbl">Layout</span></div>
+        <div class="row item"><span class="lbl">🧩 Header (+ 7 children)</span></div>
+      </div>
+      <div style="flex:1;min-width:260px">
+        <p style="margin-top:0"><b>“Design system”</b> — a one-card block near the top showing an AI-generated <em>style showcase</em>, with a <span style="color:var(--accent)">↻ regenerate</span> button. Backed by the <code>/api/design/*</code> routes and the 🎨 palette button. This is the half-finished <b>feature</b> that reads as “should have been removed already”.</p>
+        <p><b>“Design”</b> — despite the name, this section lists your <b>frames</b>: the HTML pages and on-canvas JSX components you’ve created. This is core, live functionality (it’s how you drag a created page onto the canvas).</p>
+        <p><b>“Pages”, “Layout”, “UI”…</b> — these come from the component <b>registry</b> (your real, discovered components). The <b>+</b> next to “Pages” opens the discovery panel.</p>
+      </div>
+    </div>
+
+    <div class="note warn">
+      <span class="tag">⚠ Needs your call before I delete anything</span>
+      <p>Two different things wear the word “design”. Removing the wrong one deletes a feature you use. I’ll confirm which one you mean (the <b>“Design system” showcase</b> — most likely — or the <b>“Design” frames list</b>) before touching code. See the message that accompanies this doc.</p>
+    </div>
+  </section>
+
+  <!-- ================= ADD PAGE ================= -->
+  <section id="addpage">
+    <h2><span class="num">2</span> Adding a page, from A to Z</h2>
+    <p class="sub">What the ↻ Refresh button and the + Add button really do — including which prompt is sent to the AI.</p>
+
+    <p>There are actually <b>two independent buttons</b> people lump together. The <b>↻ Refresh</b> icon just re-reads what’s already on disk. The <b>+ Add</b> button is the one that calls the AI. Here is the full pipeline:</p>
+
+    <div class="flow">
+      <div class="step">
+        <div class="dot">1</div>
+        <div class="body">
+          <h4>You click ↻ Refresh</h4>
+          <p>This does <b>not</b> call the AI. It just re-fetches lists from disk: HTML pages and on-canvas JSX components. Cheap and instant.</p>
+          <span class="file">GET /api/html-pages · GET /api/oncanvas-components</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">2</div>
+        <div class="body">
+          <h4>First time only: “Add my pages” → a discovery <em>scan</em></h4>
+          <p>The playground sends the <code>claude</code> CLI a prompt that says “list every <code>.tsx</code> that renders real UI, classify each as a page or component, and write the results to <code>discovery.json</code>.” The agent greps your repo and writes that one file.</p>
+          <span class="file">POST /api/discover · prompts/discovery.prompt.ts → discovery.json</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">3</div>
+        <div class="body">
+          <h4>The sidebar tree appears</h4>
+          <p><code>discovery.json</code> is now a menu of everything the AI found — this is the “Header → 7 children” tree you’re seeing. Nothing has been added to the canvas yet; it’s just a catalogue.</p>
+          <span class="file">discovery.json (entries[])</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">4</div>
+        <div class="body">
+          <h4>You click + Add on one component</h4>
+          <p>This runs a second, smaller AI task called <b>analyze</b>. Its prompt says: figure out the safe component to import, invent realistic <b>mock props</b> for it, and wire it into the registry. (Full detail in the next section.)</p>
+          <span class="file">POST /api/discover/analyze · prompts/discovery-analyze.prompt.ts</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">5</div>
+        <div class="body">
+          <h4>The agent writes two things</h4>
+          <p><b>(a)</b> a mock-data file at <code>data/&lt;Name&gt;.mockData.ts</code>, and <b>(b)</b> an import + entry in <code>registry.tsx</code> that points at your <em>real</em> component via the <code>@/…</code> alias.</p>
+          <span class="file">data/&lt;Name&gt;.mockData.ts · registry.tsx</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">6</div>
+        <div class="body">
+          <h4>It shows up on the canvas — as the real component</h4>
+          <p>Because <code>registry.tsx</code> literally <code>import</code>s your component, the canvas renders the actual code, fed the mock props. (This is also where the styling surprise comes from — see §6.)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note info">
+      <span class="tag">Key correction</span>
+      <p>Adding a discovered component does <b>not</b> screenshot-and-recreate it. It <b>imports the genuine component</b> from your app and just makes up believable props. The screenshot step you noticed belongs to a <em>different</em> action — generating variations — covered in §4.</p>
+    </div>
+  </section>
+
+  <!-- ================= TRACES ================= -->
+  <section id="traces">
+    <h2><span class="num">3</span> The component tree &amp; its “traces”</h2>
+    <p class="sub">Why “Header” shows a description and 7 nested children.</p>
+
+    <p>Everything in that tree is generated by the <b>discovery scan</b> (step 2 above) and stored in <code>discovery.json</code>. Each entry looks roughly like this:</p>
+
+<pre><code>{
+  <span class="k">"id"</span>: <span class="k">"header"</span>,
+  <span class="k">"name"</span>: <span class="k">"Header"</span>,
+  <span class="k">"path"</span>: <span class="k">"src/components/layout/Header.tsx"</span>,
+  <span class="k">"type"</span>: <span class="k">"component"</span>,
+  <span class="k">"description"</span>: <span class="k">"A sticky top bar with a logo, nav links and a call-to-action."</span>,
+  <span class="k">"status"</span>: <span class="k">"discovered"</span>,
+  <span class="k">"childComponents"</span>: [ <span class="cm">/* Logo, NavLinks, … — 7 of them */</span> ]
+}</code></pre>
+
+    <ul>
+      <li><b>The description</b> is written by the AI during the scan — one sentence about what’s on screen, deliberately avoiding library names.</li>
+      <li><b>The 7 children</b> come from <code>childComponents</code>. The scan notes them “for free” from the <code>import</code> lines it already saw in the file — it does not open every child. When you later <b>Add</b> the parent, the analyze step <em>promotes</em> those children into their own tree entries (that’s the code in <code>discover.ts</code> that pushes <code>childEntries</code>).</li>
+      <li><b>Status</b> moves <code>discovered → added</code> once you add it, and a re-scan preserves anything already <code>added</code>.</li>
+    </ul>
+
+    <div class="plain">
+      <span class="tag">In plain words</span>
+      <p>The tree is just a JSON file the AI filled in by skimming your repo. “7 children” means “this file imports 7 other UI components.” Nothing is rendered or generated until you press Add.</p>
+    </div>
+  </section>
+
+  <!-- ================= SCREENSHOT ================= -->
+  <section id="screenshot">
+    <h2><span class="num">4</span> The screenshot step — what it’s really for</h2>
+    <p class="sub">You saw a screenshot get taken and the AI “replicate” a component. Here’s the honest version.</p>
+
+    <div class="versus">
+      <div class="col myth">
+        <h4>◑ What it looks like</h4>
+        <p>“When I add a component, it screenshots the real one and asks the AI to copy it — instead of just importing the JSX from my app.”</p>
+      </div>
+      <div class="col real">
+        <h4>● What’s actually happening</h4>
+        <p>The screenshot only happens when you <b>generate variations</b> (Iterate / drag-to-iterate) — not when you Add. And the real component <em>is</em> imported (§2). The screenshot is a visual <b>reference</b>, not a replacement.</p>
+      </div>
+    </div>
+
+    <p>When you ask for iterations, the playground:</p>
+    <ol>
+      <li>Takes a PNG of the node on the canvas (<code>captureAndSaveScreenshot.ts</code>, via <code>html-to-image</code>).</li>
+      <li>Puts the image path into the iteration prompt as “here’s what it currently looks like — use it as visual reference.”</li>
+      <li>Asks the agent to write <b>brand-new, self-contained files</b> — each variation is either a complete HTML document (inline CSS only) or a single-file React component whose <b>only allowed import is <code>react</code></b>.</li>
+    </ol>
+
+    <h3>Why generate self-contained copies instead of reusing the import?</h3>
+    <p>Because an iteration has to survive on its own:</p>
+    <ul>
+      <li><b>It must render in isolation.</b> HTML iterations live inside sandboxed <code>&lt;iframe&gt;</code>s; they can’t reach into your app’s CSS or providers.</li>
+      <li><b>It must be safe to write and run.</b> Your real page might do server-only work (database calls, secrets). A from-scratch, dependency-free file can’t drag any of that onto the canvas.</li>
+      <li><b>It must be independently editable.</b> Each variation is its own file you can tweak, adopt, or throw away without touching the original.</li>
+    </ul>
+    <p>The screenshot exists precisely <em>because</em> the agent is writing a fresh file and can’t see your running component — it’s the AI’s eyes. Text-only models would otherwise be guessing at the layout.</p>
+
+    <div class="note info">
+      <span class="tag">So, to answer directly</span>
+      <p>Importing the JSX is exactly what <b>Add</b> does. The screenshot-and-recreate is a deliberate, different tool for making <em>portable variations</em>. Both are working as designed — they just serve different goals.</p>
+    </div>
+  </section>
+
+  <!-- ================= FOLDERS ================= -->
+  <section id="folders">
+    <h2><span class="num">5</span> The empty folder &amp; the mock-data files</h2>
+    <p class="sub">Why <code>canvas-components/</code> is always empty, and what <code>data/*.mockData.ts</code> is.</p>
+
+    <h3><code>canvas-components/</code> — empty is normal</h3>
+    <p>This folder is <b>not</b> where added components go. It holds only <b>freeform on-canvas JSX</b> — files named <code>frame-1.tsx</code>, <code>frame-2.iteration-3.tsx</code>, etc. — created when you generate a brand-new component <em>directly on the canvas</em> (not from a discovered/registry component, and not an HTML page).</p>
+    <p>If everything you’ve done is “add discovered components” and “create HTML pages,” this folder correctly stays empty except for its auto-generated <code>index.ts</code>. The three destinations, side by side:</p>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;font-size:14px">
+        <div style="padding:14px 16px;border-right:1px solid var(--border)">
+          <div style="font:600 12px var(--mono);color:var(--info);margin-bottom:6px">REGISTRY</div>
+          Added / discovered components →<br><code>registry.tsx</code> + <code>data/</code>
+        </div>
+        <div style="padding:14px 16px;border-right:1px solid var(--border)">
+          <div style="font:600 12px var(--mono);color:var(--accent);margin-bottom:6px">HTML PAGES</div>
+          Created pages &amp; their variations →<br><code>public/&lt;slug&gt;/…/index.html</code>
+        </div>
+        <div style="padding:14px 16px">
+          <div style="font:600 12px var(--mono);color:var(--good);margin-bottom:6px">CANVAS JSX</div>
+          Freeform on-canvas components →<br><code>canvas-components/frame-N.tsx</code>
+        </div>
+      </div>
+    </div>
+
+    <h3><code>data/&lt;Name&gt;.mockData.ts</code> — believable props</h3>
+    <p>Your real components expect props (a footer needs links, a card needs numbers). On the canvas there’s no live app feeding them, so the analyze step writes a small file of <b>realistic fake data</b> and passes it in as props:</p>
+<pre><code><span class="cm">/* data/Card.mockData.ts — auto-written, safe to edit */</span>
+<span class="k">export const</span> mockData = {
+  className: <span class="k">'max-w-md px-6'</span>,
+  children: <span class="k">'Your evaluation is on track. You have completed 6 of 10…'</span>,
+};</code></pre>
+    <p>It’s pure serialisable data — no imports, no functions. When the playground can reach your app’s real data source it will use a live snapshot (<code>props-fetchers.server.ts</code>); otherwise the AI invents plausible values. You can edit these files freely to change what the preview shows.</p>
+  </section>
+
+  <!-- ================= STYLING ================= -->
+  <section id="styling">
+    <h2><span class="num">6</span> Why a newly added component loses its styling</h2>
+    <p class="sub">The big one. Short answer: yes, it’s Tailwind — but not for the reason you’d guess.</p>
+
+    <p>Your added component <em>is</em> the real one, rendering the real class names like <code>flex gap-4 rounded-lg shadow</code>. The problem is that <b>those class names were never turned into actual CSS on the <code>/playground</code> page.</p>
+
+    <div class="plain">
+      <span class="tag">In plain words</span>
+      <p>Tailwind doesn’t ship every possible class — it scans your files, sees which classes you use, and generates only those. If the page that renders your component was never scanned, the classes exist as text but have zero CSS behind them. The component shows up “naked.”</p>
+    </div>
+
+    <h3>The exact chain in this project</h3>
+    <ol>
+      <li>The <code>/playground</code> route is served by its own entry, <code>dev-entry.tsx</code>. That file imports only two stylesheets: <code>playground-global.css</code> and <code>playground-tailwind-entry.css</code>.</li>
+      <li><code>playground-tailwind-entry.css</code> scans <b>only the playground’s own folder</b> — <code>@source "./**/*.tsx"</code>. It never scans your app’s <code>src/components</code> or <code>src/features</code>.</li>
+      <li>Your host app’s Tailwind (<code>src/index.css</code>, loaded by <code>main.tsx</code>) <em>does</em> scan those folders — but that stylesheet is loaded on your app’s normal routes, <b>not</b> on the separate <code>playground.html</code> entry.</li>
+      <li><b>Result:</b> on <code>/playground</code>, the only Tailwind present covers playground files. A handful of design tokens (<code>bg-background</code>, <code>text-foreground</code>) are re-mapped by hand in the entry so they survive — which is why the component isn’t <em>totally</em> invisible — but the bulk of utilities (<code>flex</code>, <code>grid</code>, <code>gap-*</code>, <code>p-*</code>, <code>rounded-*</code>, <code>shadow</code>, <code>text-sm</code>…) produce nothing.</li>
+    </ol>
+
+    <div class="note warn">
+      <span class="tag">Why the code “looks” like it should work</span>
+      <p>A comment in the Tailwind entry assumes “the host’s global CSS is loaded on every route, including <code>/playground</code>.” That’s true for a <b>Next.js</b> host (a root layout wraps every route). Rewynd is a <b>plain Vite</b> host where <code>/playground</code> is a standalone HTML entry — so that assumption quietly fails, and host utilities never get compiled.</p>
+    </div>
+
+    <h3>Two ways to fix it</h3>
+    <div class="versus">
+      <div class="col real">
+        <h4>● Load the host CSS (simplest)</h4>
+        <p>Add one line to the host’s <code>dev-entry.tsx</code>:<br><code>import '../../index.css'</code><br>Now the host’s Tailwind (which already scans your components) is present on <code>/playground</code>.</p>
+      </div>
+      <div class="col real">
+        <h4>● Widen the playground scan (portable)</h4>
+        <p>Add host globs to <code>playground-tailwind-entry.css</code>:<br><code>@source "../../components";</code><br><code>@source "../../features";</code><br>so the playground’s own Tailwind compiles host utilities too.</p>
+      </div>
+    </div>
+    <p>Loading the host stylesheet is usually the cleaner choice: it guarantees the preview matches production exactly, including your theme tokens. Say the word and I can wire whichever you prefer.</p>
+  </section>
+
+  <!-- ================= WATCHER ================= -->
+  <section id="watcher">
+    <h2><span class="num">7</span> The file-watcher, explained simply</h2>
+    <p class="sub">What it is, why it existed, and why it’s now just a safety net.</p>
+
+    <p>When the agent generates variations, the new files appear on disk one by one — but the browser has no natural way to know the moment a file lands. The <b>file-watcher</b> was the original answer to “how does the canvas find out a new iteration was written?”</p>
+
+    <h3>The old way — watch the folder</h3>
+    <p><code>server/lib/generation-file-watcher.ts</code> pointed Node’s <code>fs.watch</code> at the folders where iterations get written (the iterations dir, <code>public/&lt;page&gt;/</code>, the canvas dir). Whenever a matching file changed, it waited 500ms (to let a burst settle) and then poked the browser: <em>“something changed, go re-scan.”</em></p>
+
+    <div class="plain">
+      <span class="tag">In plain words</span>
+      <p>Imagine watching a printer’s output tray and shouting “new page!” every time paper appears. It works, but you only know <em>that</em> something arrived — you have to walk over and read it to find out <em>what</em>.</p>
+    </div>
+
+    <p>That “go re-scan” signal carried <b>no detail</b> — not which file, not which iteration number. So the browser had to re-list everything and diff it. And because folder-watching can miss events, there was a second safety loop polling the server every few seconds. Two overlapping mechanisms, both guessing.</p>
+
+    <h3>The new way — listen to the agent directly</h3>
+    <p>The <code>claude</code> CLI already streams a structured play-by-play of what it’s doing, including <em>“I just wrote file X.”</em> The playground now reads that stream and forwards the <b>exact file path and iteration number</b> to the browser the instant it’s written. One authoritative signal, no folder-watching, no polling, no guessing.</p>
+
+    <div class="note good">
+      <span class="tag">✓ Where the watcher stands today</span>
+      <p>The tool-event stream is the primary mechanism. The old <code>fs.watch</code> code was demoted to a <b>silent fallback</b> — it only speaks up if no tool event was seen (e.g. the agent wrote a file via a raw shell command). Once we’re confident the stream covers every case, the watcher can be deleted entirely. It survives for now purely as a belt-and-braces backup.</p>
+    </div>
+
+    <div class="plain">
+      <span class="tag">The takeaway for AI-in-your-app generally</span>
+      <p>If your agent can tell you <em>what it did</em> in a structured stream, prefer that over watching the filesystem for side-effects. Watching the disk tells you something happened; listening to the agent tells you exactly what — with far less code and far fewer race conditions.</p>
+    </div>
+  </section>
+
+  <!-- ================= GLOSSARY ================= -->
+  <section id="glossary">
+    <h2><span class="num">✦</span> Glossary</h2>
+    <p class="sub">The nouns that fly around this codebase.</p>
+    <dl class="glossary">
+      <dt>Discovery scan <code>discovery.json</code></dt>
+      <dd>An AI pass that catalogues your repo’s UI files into a JSON menu. Powers the sidebar tree. Cheap, read-only.</dd>
+      <dt>Analyze / Add</dt>
+      <dd>Turning one catalogue entry into a live canvas component: writes mock data + a real import into <code>registry.tsx</code>.</dd>
+      <dt>Registry <code>registry.tsx</code></dt>
+      <dd>The hand-and-AI-maintained list of real components the canvas can render, each paired with mock props.</dd>
+      <dt>Frame</dt>
+      <dd>Something you created in the playground (an HTML page or a canvas JSX component), as opposed to a discovered component.</dd>
+      <dt>Iteration</dt>
+      <dd>An AI-generated variation. Always a fresh, self-contained file (inline-CSS HTML, or single-file React that imports only <code>react</code>).</dd>
+      <dt>Mock data <code>data/*.mockData.ts</code></dt>
+      <dd>Realistic fake props so a real component can render on the canvas with no live app behind it.</dd>
+      <dt>Tool-event stream</dt>
+      <dd>The structured “I wrote file X” messages from the <code>claude</code> CLI. Now the primary way the canvas learns what was generated.</dd>
+      <dt>File-watcher</dt>
+      <dd>The legacy folder-watching fallback that used to detect new files. Being retired in favour of the tool-event stream.</dd>
+    </dl>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  Design Playground field guide · generated for the Rewynd host · open this file in any browser
+</footer>
+
+<script>
+  // Scrollspy for the TOC
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var map = {};
+  links.forEach(function(a){ var id=a.getAttribute('href').slice(1); var el=document.getElementById(id); if(el) map[id]=a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(l){l.classList.remove('active')});
+        var a=map[e.target.id]; if(a)a.classList.add('active');
+      }
+    });
+  }, { rootMargin:'-20% 0px -70% 0px', threshold:0 });
+  Object.keys(map).forEach(function(id){ obs.observe(document.getElementById(id)); });
+</script>
+</body>
+</html>
