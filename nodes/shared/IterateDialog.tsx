@@ -19,10 +19,6 @@ import {
   generateJsxIterationFromIterationPrompt,
 } from "../../lib/jsx-prompts";
 import {
-  captureAndSaveScreenshot,
-  getScreenshotFilename,
-} from "../../lib/captureAndSaveScreenshot";
-import {
   InlineReference,
   InlineReferenceInput,
   InlineReferenceContent,
@@ -426,86 +422,6 @@ export default function IterateDialog({
       return;
     }
 
-    // Capture screenshot and rebuild prompt with the image path
-    const screenshotFilename = getScreenshotFilename(
-      componentName,
-      sourceFilename,
-    );
-    const screenshotPath = await captureAndSaveScreenshot(
-      parentNodeId,
-      screenshotFilename,
-    );
-
-    // Build a fresh prompt that includes the screenshot path
-    let promptWithScreenshot: string;
-    if (isJsxMode && resolvedJsxFile) {
-      const baseFile = resolvedJsxFile.replace(/\.iteration-\d+\.tsx$/, ".tsx");
-      if (isFromIteration && startNumber !== null) {
-        promptWithScreenshot = generateJsxIterationFromIterationPrompt(
-          baseFile,
-          resolvedJsxFile,
-          iterationCount,
-          startNumber,
-          customInstructionsText,
-          skillPrompt,
-          screenshotPath ?? undefined,
-        );
-      } else {
-        promptWithScreenshot = generateJsxIterationPrompt(
-          baseFile,
-          iterationCount,
-          startNumber ?? 1,
-          customInstructionsText,
-          skillPrompt,
-          screenshotPath ?? undefined,
-        );
-      }
-    } else if (isHtmlMode && resolvedHtmlFolder) {
-      if (isFromIteration && htmlIterationFolder && startNumber !== null) {
-        promptWithScreenshot = generateHtmlIterationFromIterationPrompt(
-          resolvedHtmlFolder,
-          htmlIterationFolder,
-          iterationCount,
-          startNumber,
-          customInstructionsText,
-          skillPrompt,
-          screenshotPath ?? undefined,
-        );
-      } else {
-        promptWithScreenshot = generateHtmlIterationPrompt(
-          resolvedHtmlFolder,
-          iterationCount,
-          startNumber ?? 1,
-          customInstructionsText,
-          skillPrompt,
-          screenshotPath ?? undefined,
-        );
-      }
-    } else if (isFromIteration && startNumber !== null) {
-      promptWithScreenshot = generateIterationFromIterationPrompt(
-        componentId,
-        sourceFilename!,
-        iterationCount,
-        startNumber,
-        depth,
-        customInstructionsText,
-        skillPrompt,
-        undefined,
-        screenshotPath ?? undefined,
-      );
-    } else {
-      promptWithScreenshot = generateIterationPrompt(
-        componentId,
-        iterationCount,
-        startNumber ?? 1,
-        depth,
-        customInstructionsText,
-        skillPrompt,
-        undefined,
-        screenshotPath ?? undefined,
-      );
-    }
-
     const providerFields = getProviderFields();
     generationEvents.start.emit({
       componentId,
@@ -538,7 +454,7 @@ export default function IterateDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: promptWithScreenshot || generatedPrompt,
+          prompt: generatedPrompt,
           componentId,
           iterationCount,
           model: selectedModel || undefined,

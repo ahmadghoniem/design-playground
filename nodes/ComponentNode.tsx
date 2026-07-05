@@ -58,14 +58,12 @@ interface ComponentNodeProps {
     size?: ComponentSize;
     /** Whether this node has been freeform-resized */
     customResized?: boolean;
-    /** Render mode: 'react' (default), 'html' for saved HTML, 'jsx' for pasted TSX, 'embed' for pasted URLs, 'design-system' for the generated showcase */
-    renderMode?: "react" | "html" | "jsx" | "embed" | "design-system";
+    /** Render mode: 'react' (default), 'html' for saved HTML, 'jsx' for pasted TSX, 'design-system' for the generated showcase */
+    renderMode?: "react" | "html" | "jsx" | "design-system";
     /** HTML page folder name (when renderMode is 'html') */
     htmlFolder?: string;
     /** On-canvas JSX component filename in canvas-components/ (when renderMode is 'jsx') */
     jsxFile?: string;
-    /** Remote page URL (when renderMode is 'embed') */
-    embedUrl?: string;
   };
   selected?: boolean;
 }
@@ -78,10 +76,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const componentId = data.componentId;
   const isHtml = data.renderMode === "html";
   const isJsx = data.renderMode === "jsx";
-  const isEmbed = data.renderMode === "embed";
   const isDesignSystem = data.renderMode === "design-system";
   const registryItem =
-    isHtml || isJsx || isEmbed || isDesignSystem
+    isHtml || isJsx || isDesignSystem
       ? null
       : resolveRegistryItem(componentId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -141,7 +138,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   }, [isJsx, data.jsxFile, jsxLoadAttempt]);
 
   const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(
-    isHtml || isJsx || isEmbed || isDesignSystem ? "" : componentId,
+    isHtml || isJsx || isDesignSystem ? "" : componentId,
   );
   const handleWheel = useScrollCapture(scrollContainerRef);
 
@@ -193,7 +190,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const [size, setSize] = useState<ComponentSize>(
     data.size ||
       registryItem?.size ||
-      (isHtml || isEmbed || isDesignSystem ? "laptop" : "default"),
+      (isHtml || isDesignSystem ? "laptop" : "default"),
   );
   const [isResizing, setIsResizing] = useState(false);
   const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
@@ -281,24 +278,15 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
   }, [isDesignSystem]);
 
-  const embedUrlLabel = (() => {
-    if (!isEmbed || !data.embedUrl) return "Embed";
-    const withoutScheme = data.embedUrl.replace(/^https?:\/\//i, "").trim();
-    const noTrailingSlash = withoutScheme.replace(/\/+$/, "");
-    return noTrailingSlash || "Embed";
-  })();
-
   const Component = isJsx ? JsxComponent : registryItem?.Component;
   const props = registryItem?.props;
   const label = isHtml
     ? data.htmlFolder || componentId
     : isJsx
       ? data.jsxFile?.replace(".tsx", "") || componentId
-      : isEmbed
-        ? embedUrlLabel
-        : isDesignSystem
-          ? "Design System"
-          : registryItem?.label || componentId;
+      : isDesignSystem
+        ? "Design System"
+        : registryItem?.label || componentId;
   const effectiveProps = (resolvedProps ?? props ?? {}) as Record<
     string,
     unknown
@@ -390,7 +378,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           return n;
         }),
       );
-      window.dispatchEvent(new CustomEvent("playground:html-pages-updated"));
       cancelHtmlRename();
     } catch {
       toast.error("Failed to rename design");
@@ -406,7 +393,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     }
   }, [isRenamingHtml]);
 
-  if (!isHtml && !isJsx && !isEmbed && !isDesignSystem && !registryItem) {
+  if (!isHtml && !isJsx && !isDesignSystem && !registryItem) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 min-w-[200px]">
         <p className="text-red-600 text-sm">Unknown component: {componentId}</p>
@@ -454,11 +441,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {
-                    const url = isEmbed
-                      ? data.embedUrl
-                      : isHtml
-                        ? `/${data.htmlFolder}/index.html`
-                        : `/playground/iterations/${componentId}`;
+                    const url = isHtml
+                      ? `/${data.htmlFolder}/index.html`
+                      : `/playground/iterations/${componentId}`;
                     if (url) window.open(url, "_blank", "noopener,noreferrer");
                   }}
                   className="nodrag shrink-0 p-0 leading-none rounded-[5px] transition-colors"
@@ -466,9 +451,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                     color: selected
                       ? isHtml
                         ? "#F97316"
-                        : isEmbed
-                          ? "#0D9488"
-                          : "#0B99FF"
+                        : "#0B99FF"
                       : "#A8A29E",
                     display: "inline-block",
                     transform: `scale(${labelInvScale})`,
@@ -493,11 +476,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                 ? "#F97316"
                 : isJsx
                   ? "#7C3AED"
-                  : isEmbed
-                    ? "#0D9488"
-                    : isDesignSystem
-                      ? "#C026D3"
-                      : "#0B99FF"
+                  : isDesignSystem
+                    ? "#C026D3"
+                    : "#0B99FF"
             }
           >
             {isHtml ? (
@@ -558,12 +539,12 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           onMouseLeave={hoverHint.onMouseLeave}
           className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
             selected
-              ? `ring-2 ${isHtml ? "ring-orange-400" : isJsx ? "ring-purple-400" : isEmbed ? "ring-teal-400" : isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
+              ? `ring-2 ${isHtml ? "ring-orange-400" : isJsx ? "ring-purple-400" : isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
               : ""
           } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? "w-full h-full" : ""}`}
           style={isJsx ? { contain: "paint" } : undefined}
         >
-          {isHtml || isEmbed || isDesignSystem ? (
+          {isHtml || isDesignSystem ? (
             <div
               className="relative"
               style={
@@ -581,13 +562,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
             >
               <iframe
                 ref={iframeRef}
-                key={isEmbed ? data.embedUrl : iframeKey}
-                {...(isEmbed
-                  ? { src: data.embedUrl }
-                  : {
-                      srcDoc: htmlContent || undefined,
-                      src: htmlContent ? undefined : htmlSrc,
-                    })}
+                key={iframeKey}
+                srcDoc={htmlContent || undefined}
+                src={htmlContent ? undefined : htmlSrc}
                 className="w-full h-full border-0"
                 style={
                   isPreset
@@ -599,12 +576,8 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                       }
                     : { width: "100%", height: "100%" }
                 }
-                sandbox={
-                  isEmbed
-                    ? "allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads"
-                    : "allow-scripts allow-same-origin"
-                }
-                title={isEmbed ? label : data.htmlFolder}
+                sandbox="allow-scripts allow-same-origin"
+                title={data.htmlFolder}
               />
               {!isInteractive && (
                 <div className="absolute inset-0" data-iframe-overlay />
@@ -671,13 +644,12 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               </div>
             </div>
           ) : (
-            /* Auto mode: intrinsic sizing */
-            <div
-              className={`grid place-items-center p-4 ${isInteractive ? "nodrag nowheel nopan" : ""}`}
-              style={
-                isJsx ? { minWidth: "400px", minHeight: "400px" } : undefined
-              }
-            >
+            /* Auto mode: intrinsic sizing — render flush at the component's
+               natural size. No centering wrapper or min-size box, so small
+               components (e.g. a badge) don't float in a large padded area.
+               The bare div only carries the interaction classes so canvas
+               pan/scroll gestures over an interactive component are gated. */
+            <div className={isInteractive ? "nodrag nowheel nopan" : undefined}>
               {jsxError ? (
                 <div className="text-xs text-red-500">{jsxError}</div>
               ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
@@ -712,7 +684,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         <div
           className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          {!isEmbed && !isDesignSystem ? (
+          {!isDesignSystem ? (
             <IterateDialog
               componentId={componentId}
               componentName={

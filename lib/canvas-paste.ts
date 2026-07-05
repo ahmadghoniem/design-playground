@@ -1,9 +1,8 @@
 import { looksLikeJsx } from './jsx-utils';
-import { parsePastedHttpUrl } from './html-utils';
 
 /**
  * What a clipboard paste onto the canvas resolves to, in priority order:
- * image → JSX source → single-line URL → HTML fragment → nothing.
+ * image → JSX source → HTML fragment → nothing.
  *
  * This is the pure decision seam behind the canvas paste handler: given the
  * raw clipboard payload it decides *which* node a paste should become and
@@ -14,7 +13,6 @@ import { parsePastedHttpUrl } from './html-utils';
 export type PasteIntent =
   | { kind: 'image'; file: File }
   | { kind: 'jsx'; source: string }
-  | { kind: 'url'; url: string }
   | { kind: 'html'; html: string }
   | { kind: 'none' };
 
@@ -25,8 +23,7 @@ const looksLikeHtmlContent = (s: string) => /<[a-z][\s\S]*>/i.test(s);
  * Priority mirrors the original inline handler exactly:
  *  1. an image item takes precedence over everything;
  *  2. JSX is checked before HTML because JSX source also contains HTML tags;
- *  3. a single-line http(s) URL becomes an embed;
- *  4. otherwise an HTML fragment (from text/html, falling back to text/plain).
+ *  3. otherwise an HTML fragment (from text/html, falling back to text/plain).
  * Returns `{ kind: 'none' }` when nothing matches — the caller should then
  * neither `preventDefault` nor act.
  */
@@ -49,14 +46,6 @@ export function classifyClipboard(data: DataTransfer | null): PasteIntent {
   const rawPlain = (data.getData('text/plain') || '').trim();
   if (rawPlain && looksLikeJsx(rawPlain)) {
     return { kind: 'jsx', source: rawPlain };
-  }
-
-  // --- Single-line URL paste → remote iframe embed ---
-  const plainOneLine = rawPlain.replace(/\r\n/g, '\n').trim();
-  const pastedHttpUrl =
-    plainOneLine && !plainOneLine.includes('\n') ? parsePastedHttpUrl(plainOneLine) : null;
-  if (pastedHttpUrl) {
-    return { kind: 'url', url: pastedHttpUrl };
   }
 
   // --- HTML paste ---

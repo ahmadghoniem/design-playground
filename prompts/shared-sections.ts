@@ -40,7 +40,7 @@ export function getQualityChecklist(mode: StylingMode = 'tailwind'): string {
 }
 
 /** Common quality checklist (Tailwind default) — kept for backward compatibility */
-export const QUALITY_CHECKLIST = getQualityChecklist('tailwind');
+const QUALITY_CHECKLIST = getQualityChecklist('tailwind');
 
 /** File registration instructions shared across templates */
 export const FILE_REGISTRATION_INSTRUCTIONS = `IMPORTANT — SEQUENTIAL WORKFLOW: Process iterations ONE AT A TIME. For each iteration, complete ALL of the following steps before starting the next:
@@ -59,7 +59,7 @@ export const PROPS_CONSTRAINT = `- **Props interface**: Keep it IDENTICAL to the
 - **Registry index**: Register every iteration in src/app/playground/iterations/index.ts with a ".tsx" map key.`;
 
 /** Appended to Codex generation prompts to prevent browser-based verification */
-export const NO_BROWSER_INSTRUCTIONS = `ENVIRONMENT CONSTRAINTS
+const NO_BROWSER_INSTRUCTIONS = `ENVIRONMENT CONSTRAINTS
 - Do NOT open a browser (Chrome, Safari, etc.), run \`open\`, or launch any GUI app to preview or verify changes.
 - Do NOT start a dev server or take screenshots to check your work.
 - The playground canvas hot-reloads and renders your files automatically — writing the files correctly IS the verification.`;
@@ -99,26 +99,15 @@ ${skillPrompt.trim()}
 `;
 }
 
-export function formatScreenshotSection(screenshotPath?: string): string {
-  if (!screenshotPath || !screenshotPath.trim()) return '';
-  return `
-CURRENT VISUAL STATE
-Screenshot of the current component: ${screenshotPath.trim()}
-Read this image to understand the current appearance before generating variations.
-`;
-}
-
 export function formatReferenceNodesSection(
   nodes?: {
     componentName: string;
     type: 'component' | 'iteration' | 'image' | 'text';
     sourceFilename?: string;
     sourcePath?: string;
-    screenshotPath?: string;
     imagePath?: string;
     imageUrl?: string;
     textContent?: string;
-    embedUrl?: string;
   }[],
 ): string {
   if (!nodes || nodes.length === 0) return '';
@@ -134,9 +123,6 @@ export function formatReferenceNodesSection(
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    const isUrlEmbed =
-      !!node.embedUrl ||
-      (node.type === 'component' && /^https?:\/\//i.test(node.componentName.trim()));
     const typeLabel =
       node.type === 'text'
         ? 'text note'
@@ -144,9 +130,7 @@ export function formatReferenceNodesSection(
           ? 'image reference'
           : node.type === 'iteration'
             ? 'iteration'
-            : isUrlEmbed
-              ? 'url embed'
-              : 'component';
+            : 'component';
     const path = node.type === 'text' ? undefined : node.type === 'image'
       ? (node.imagePath || node.imageUrl)
       : (node.sourcePath || (node.sourceFilename
@@ -166,17 +150,13 @@ export function formatReferenceNodesSection(
         lines.push(`   Public URL: ${node.imageUrl}`);
       }
       lines.push(`   Read this image to understand the visual design to match.`);
-    } else if (node.screenshotPath) {
-      lines.push(`   Screenshot: ${node.screenshotPath}`);
     }
 
     lines.push('');
   }
 
   lines.push('Maintain visual and structural consistency with these reference components.');
-  lines.push(
-    'Use listed source paths when present; for url embed rows, rely on the URL and screenshot (there is no repo file).',
-  );
+  lines.push('Use listed source paths when present.');
 
   return lines.join('\n');
 }

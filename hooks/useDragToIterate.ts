@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getProviderFields } from "../lib/generation-body";
 import {
-  captureAndSaveScreenshot,
-  getScreenshotFilename,
-} from "../lib/captureAndSaveScreenshot";
-import {
   generateHtmlIterationPrompt,
   generateHtmlIterationFromIterationPrompt,
 } from "../lib/html-prompts";
@@ -296,16 +292,6 @@ export function useDragIterateEventHandler(): void {
         /* use default */
       }
 
-      // Capture screenshot of the source node
-      const screenshotFilename = getScreenshotFilename(
-        componentName,
-        sourceFilename,
-      );
-      const screenshotPath = await captureAndSaveScreenshot(
-        parentNodeId,
-        screenshotFilename,
-      );
-
       if (isDragHtml) {
         // HTML mode prompt
         if (sourceFilename && sourceFilename.includes("iteration-")) {
@@ -317,7 +303,6 @@ export function useDragIterateEventHandler(): void {
             startNumber,
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
           );
         } else {
           prompt = generateHtmlIterationPrompt(
@@ -326,7 +311,6 @@ export function useDragIterateEventHandler(): void {
             startNumber,
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
           );
         }
       } else if (isDragJsx && dragJsxFile) {
@@ -339,7 +323,6 @@ export function useDragIterateEventHandler(): void {
             startNumber,
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
           );
         } else {
           prompt = generateJsxIterationPrompt(
@@ -348,7 +331,6 @@ export function useDragIterateEventHandler(): void {
             startNumber,
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
-            screenshotPath ?? undefined,
           );
         }
       } else if (sourceFilename) {
@@ -361,8 +343,6 @@ export function useDragIterateEventHandler(): void {
             "shell",
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
-            undefined,
-            // screenshotPath ?? undefined,
           );
         } catch {
           prompt = generateIterationPrompt(
@@ -372,8 +352,6 @@ export function useDragIterateEventHandler(): void {
             "shell",
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
-            undefined,
-            // screenshotPath ?? undefined,
           );
         }
       } else {
@@ -384,8 +362,6 @@ export function useDragIterateEventHandler(): void {
           "shell",
           DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
           defaultSkillPrompt || undefined,
-          undefined,
-          // screenshotPath ?? undefined,
         );
       }
 

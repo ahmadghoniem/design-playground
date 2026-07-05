@@ -31,10 +31,6 @@ import {
   generateJsxIterationFromIterationPrompt,
 } from "../lib/jsx-prompts";
 import {
-  captureAndSaveScreenshot,
-  getScreenshotFilename,
-} from "../lib/captureAndSaveScreenshot";
-import {
   generationEvents,
 } from "../lib/generation-events";
 import {
@@ -88,13 +84,6 @@ export function useChatSubmit({
         payload.chatMode ?? (payload.editMode ? "edit" : "explore");
       const isRawMode = chatMode === "raw";
       const rawPrompt = payload.text.trim();
-
-      if (payload.renderMode === "embed" && payload.targetNodeId) {
-        toast.error(
-          "URL embed frames cannot be the chat target. Place chat on a React, HTML, or JSX frame, or use the embed only as a reference (shift-select).",
-        );
-        return;
-      }
 
       const hasFreeformContext =
         payload.skillPrompts.length > 0 ||
@@ -157,16 +146,6 @@ export function useChatSubmit({
           editSkillPrompt = defaultPrompt || undefined;
         }
 
-        // Capture screenshot of the target node
-        const editScreenshotFilename = getScreenshotFilename(
-          editComponentName,
-          payload.sourceFilename,
-        );
-        const editScreenshotPath = await captureAndSaveScreenshot(
-          payload.targetNodeId,
-          editScreenshotFilename,
-        );
-
         // Build reference nodes section
         let editRefSection = "";
         if (payload.referenceNodes && payload.referenceNodes.length > 0) {
@@ -174,51 +153,36 @@ export function useChatSubmit({
             (n) => n.nodeId !== payload.targetNodeId,
           );
           if (refNodes.length > 0) {
-            const refNodesWithScreenshots = await Promise.all(
-              refNodes.map(async (node) => {
-                if (node.type === "text") {
-                  const textNode = coord
-                    .getNodes()
-                    .find((n) => n.id === node.nodeId);
-                  return {
-                    ...node,
-                    textContent:
-                      ((textNode?.data as Record<string, unknown>)
-                        ?.text as string) || "",
-                    screenshotPath: undefined,
-                    sourcePath: undefined,
-                  };
-                }
-                if (node.type === "image") {
-                  return {
-                    ...node,
-                    screenshotPath: node.imagePath,
-                    sourcePath: undefined,
-                  };
-                }
-                const ssFilename = getScreenshotFilename(
-                  node.componentName,
-                  node.sourceFilename,
-                );
-                const ssPath = await captureAndSaveScreenshot(
-                  node.nodeId,
-                  ssFilename,
-                );
-                let sourcePath: string | undefined;
-                if (node.type === "component") {
-                  const regItem = resolveRegistryItem(node.componentId);
-                  sourcePath = regItem?.sourcePath;
-                }
+            const refNodesResolved = refNodes.map((node) => {
+              if (node.type === "text") {
+                const textNode = coord
+                  .getNodes()
+                  .find((n) => n.id === node.nodeId);
                 return {
                   ...node,
-                  screenshotPath: ssPath ?? undefined,
-                  sourcePath,
+                  textContent:
+                    ((textNode?.data as Record<string, unknown>)
+                      ?.text as string) || "",
+                  sourcePath: undefined,
                 };
-              }),
-            );
-            editRefSection = formatReferenceNodesSection(
-              refNodesWithScreenshots,
-            );
+              }
+              if (node.type === "image") {
+                return {
+                  ...node,
+                  sourcePath: undefined,
+                };
+              }
+              let sourcePath: string | undefined;
+              if (node.type === "component") {
+                const regItem = resolveRegistryItem(node.componentId);
+                sourcePath = regItem?.sourcePath;
+              }
+              return {
+                ...node,
+                sourcePath,
+              };
+            });
+            editRefSection = formatReferenceNodesSection(refNodesResolved);
           }
         }
 
@@ -226,7 +190,6 @@ export function useChatSubmit({
           filePath,
           customInstructions: payload.text || "Improve the design",
           skillPrompt: editSkillPrompt,
-          screenshotPath: editScreenshotPath ?? undefined,
           referenceNodesSection: editRefSection || undefined,
           elementSelections: payload.elementSelections,
         });
@@ -371,55 +334,36 @@ export function useChatSubmit({
         );
 
         if (refNodes.length > 0) {
-          // Capture screenshots for each reference node
-          const refNodesWithScreenshots = await Promise.all(
-            refNodes.map(async (node) => {
-              // Text nodes pass their content directly — no screenshot needed
-              if (node.type === "text") {
-                const textNode = coord
-                  .getNodes()
-                  .find((n) => n.id === node.nodeId);
-                return {
-                  ...node,
-                  textContent:
-                    ((textNode?.data as Record<string, unknown>)
-                      ?.text as string) || "",
-                  screenshotPath: undefined,
-                  sourcePath: undefined,
-                };
-              }
-              // Image nodes already have the image — no need to capture a screenshot
-              if (node.type === "image") {
-                return {
-                  ...node,
-                  screenshotPath: node.imagePath,
-                  sourcePath: undefined,
-                };
-              }
-              const screenshotFilename = getScreenshotFilename(
-                node.componentName,
-                node.sourceFilename,
-              );
-              const screenshotPath = await captureAndSaveScreenshot(
-                node.nodeId,
-                screenshotFilename,
-              );
-              // Resolve source path from registry for component nodes
-              let sourcePath: string | undefined;
-              if (node.type === "component") {
-                const item = resolveRegistryItem(node.componentId);
-                sourcePath = item?.sourcePath;
-              }
+          const refNodesResolved = refNodes.map((node) => {
+            if (node.type === "text") {
+              const textNode = coord
+                .getNodes()
+                .find((n) => n.id === node.nodeId);
               return {
                 ...node,
-                screenshotPath: screenshotPath ?? undefined,
-                sourcePath,
+                textContent:
+                  ((textNode?.data as Record<string, unknown>)
+                    ?.text as string) || "",
+                sourcePath: undefined,
               };
-            }),
-          );
-          referenceNodesSection = formatReferenceNodesSection(
-            refNodesWithScreenshots,
-          );
+            }
+            if (node.type === "image") {
+              return {
+                ...node,
+                sourcePath: undefined,
+              };
+            }
+            let sourcePath: string | undefined;
+            if (node.type === "component") {
+              const item = resolveRegistryItem(node.componentId);
+              sourcePath = item?.sourcePath;
+            }
+            return {
+              ...node,
+              sourcePath,
+            };
+          });
+          referenceNodesSection = formatReferenceNodesSection(refNodesResolved);
         }
       }
 
@@ -440,11 +384,8 @@ export function useChatSubmit({
         const componentName = targetComponentName;
         const iterationCount = payload.iterationCount ?? CHAT_DEFAULT_COUNT;
         let startNumber = 1;
-        let screenshotPath: string | undefined;
 
-        if (isRawMode) {
-          prompt = rawPrompt;
-        } else {
+        if (!isRawMode) {
           // Fetch next available iteration number
           try {
             if (isHtmlTarget) {
@@ -505,17 +446,6 @@ export function useChatSubmit({
           } catch {
             /* use default */
           }
-
-          // Capture screenshot of the target node
-          const screenshotFilename = getScreenshotFilename(
-            componentName,
-            sourceFilename,
-          );
-          screenshotPath =
-            (await captureAndSaveScreenshot(
-              targetNodeId,
-              screenshotFilename,
-            )) ?? undefined;
         }
 
         if (!isRawMode && isHtmlTarget && payload.htmlPageSlug) {
@@ -528,7 +458,6 @@ export function useChatSubmit({
               startNumber,
               customInstructions,
               combinedSkillPrompt,
-              screenshotPath,
             );
           } else {
             prompt = generateHtmlIterationPrompt(
@@ -537,7 +466,6 @@ export function useChatSubmit({
               startNumber,
               customInstructions,
               combinedSkillPrompt,
-              screenshotPath,
             );
           }
         } else if (!isRawMode && isJsxTarget && payload.jsxFile) {
@@ -553,7 +481,6 @@ export function useChatSubmit({
               startNumber,
               customInstructions,
               combinedSkillPrompt,
-              screenshotPath,
             );
           } else {
             prompt = generateJsxIterationPrompt(
@@ -562,7 +489,6 @@ export function useChatSubmit({
               startNumber,
               customInstructions,
               combinedSkillPrompt,
-              screenshotPath,
             );
           }
         } else if (!isRawMode && targetType === "iteration" && sourceFilename) {
@@ -578,7 +504,6 @@ export function useChatSubmit({
               customInstructions,
               combinedSkillPrompt,
               stylingMode,
-              screenshotPath,
               referenceNodesSection,
             );
           } else {
@@ -591,7 +516,6 @@ export function useChatSubmit({
               customInstructions,
               combinedSkillPrompt,
               stylingMode,
-              screenshotPath,
               referenceNodesSection,
             );
           }
@@ -607,7 +531,6 @@ export function useChatSubmit({
               customInstructions,
               combinedSkillPrompt,
               stylingMode,
-              screenshotPath,
               referenceNodesSection,
             );
           } else {
@@ -619,7 +542,6 @@ export function useChatSubmit({
               customInstructions,
               combinedSkillPrompt,
               stylingMode,
-              screenshotPath,
               referenceNodesSection,
             );
           }
@@ -761,7 +683,6 @@ export function useChatSubmit({
             },
           }),
         );
-        window.dispatchEvent(new CustomEvent("playground:html-pages-updated"));
 
         const editSkillPrompt = combinedSkillPrompt;
         const visualiseInstructions =

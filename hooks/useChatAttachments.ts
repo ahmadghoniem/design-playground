@@ -44,11 +44,11 @@ export function useChatAttachments({
   selectedNodes,
 }: UseChatAttachmentsOptions): UseChatAttachmentsResult {
   // The edit/explore target is the FIRST selected node that is a valid target
-  // (a React/HTML/JSX component or iteration — not an embed/image/text). The
+  // (a React/HTML/JSX component or iteration — not an image/text). The
   // rest of the selection becomes reference context.
   const editTarget = useMemo<SelectedNodeContext | null>(() => {
     const candidates = (selectedNodes ?? []).filter(
-      (n) => (n.type === 'component' || n.type === 'iteration') && n.renderMode !== 'embed',
+      (n) => n.type === 'component' || n.type === 'iteration',
     );
     return candidates[0] ?? null;
   }, [selectedNodes]);
@@ -92,7 +92,6 @@ export function useChatAttachments({
         componentName: node.componentName,
         type: node.type,
         sourceFilename: node.sourceFilename,
-        ...(node.renderMode === 'embed' && node.embedUrl ? { embedUrl: node.embedUrl } : {}),
         ...(node.type === 'image'
           ? { imagePath: node.imagePath, imageUrl: node.imageUrl }
           : {}),

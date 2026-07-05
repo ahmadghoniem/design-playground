@@ -181,28 +181,6 @@ export function useCanvasPaste({
         return;
       }
 
-      // --- Single-line URL paste → remote iframe embed (no file on disk) ---
-      if (intent.kind === "url") {
-        const position = centerPosition();
-        const embedComponentId = `url-embed:${crypto.randomUUID()}`;
-        const newNode: Node = {
-          id: getNodeId(),
-          type: "component",
-          position,
-          style: {
-            width: DEFAULT_COMPONENT_NODE_WIDTH,
-            height: DEFAULT_COMPONENT_NODE_HEIGHT,
-          },
-          data: {
-            componentId: embedComponentId,
-            renderMode: "embed" as const,
-            embedUrl: intent.url,
-          },
-        };
-        setNodes((nds) => nds.concat(newNode));
-        return;
-      }
-
       // --- HTML paste ---
       try {
         // Determine next frame number by scanning existing HTML pages and JSX components

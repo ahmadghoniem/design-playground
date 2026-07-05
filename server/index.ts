@@ -27,9 +27,7 @@ import { iterationsRoutes } from './routes/iterations';
 import { modelsRoutes } from './routes/models';
 import { oncanvasComponentsRoutes } from './routes/oncanvas-components';
 import { openInRoutes } from './routes/open-in';
-import { pagesRoutes } from './routes/pages';
 import { projectIdRoutes } from './routes/project-id';
-import { screenshotRoutes } from './routes/screenshot';
 import { skillsRoutes } from './routes/skills';
 
 /**
@@ -49,9 +47,7 @@ export function createPlaygroundRouter(): Hono {
   router.route('/', modelsRoutes());
   router.route('/', oncanvasComponentsRoutes());
   router.route('/', openInRoutes());
-  router.route('/', pagesRoutes());
   router.route('/', projectIdRoutes());
-  router.route('/', screenshotRoutes());
   router.route('/', skillsRoutes());
   return router;
 }
