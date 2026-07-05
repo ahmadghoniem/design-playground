@@ -14,7 +14,7 @@ import { TEMP_DIR_RELATIVE, GENERATION_LOCKFILE_FILENAME } from '../../lib/const
 const TEMP_DIR = path.join(process.cwd(), TEMP_DIR_RELATIVE);
 const LOCKFILE_PATH = path.join(TEMP_DIR, GENERATION_LOCKFILE_FILENAME);
 
-export interface LockfileData {
+interface LockfileData {
   pid: number;
   componentId: string;
   startTime: number;
@@ -26,13 +26,13 @@ export interface LockfileStatus {
   lockPidAlive: boolean;
 }
 
-export function ensureTempDir(): void {
+function ensureTempDir(): void {
   if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
   }
 }
 
-export function isPidAlive(pid: number): boolean {
+function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;

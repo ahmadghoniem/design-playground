@@ -13,6 +13,7 @@ import {
   resolveAgentModel,
 } from '../../lib/providers';
 import { readDesignMd, buildSystemPromptAddon } from '../../lib/design-md-helpers';
+import { syncPublicFrameGitignoreSafe } from '../../lib/sync-host-gitignore';
 
 import { resolvePlaygroundDirRelative } from '../../lib/resolve-playground-dir';
 import { readJson } from '../lib/hono-helpers';
@@ -22,7 +23,6 @@ import {
   getLockfileStatus,
   cleanupOrphanedProcess,
 } from '../lib/generation-lockfile';
-import { startFileWatcher, stopFileWatcher } from '../lib/generation-file-watcher';
 import { startGenerationTimer, clearGenerationTimer, GENERATION_TIMEOUT_MS } from '../lib/generation-timer';
 import {
   shouldStreamJsonForPreview,
@@ -197,11 +197,8 @@ export function generateRoutes() {
       isGenerating = true;
 
       try {
-        // Tool-event tracking for this run: tool_use id → file path, plus a
-        // flag the fs-watcher fallback checks so it stays silent while
-        // authoritative tool events are flowing.
+        // Tool-event tracking for this run: tool_use id → file path.
         const pendingToolUses = new Map<string, string>();
-        let toolEventSeenThisRun = false;
 
         currentProcess = spawnAgent(providerId, {
           model,
@@ -214,13 +211,6 @@ export function generateRoutes() {
         if (currentProcess.pid) {
           writeLockfile(currentProcess.pid, componentId);
         }
-
-        startFileWatcher(
-          () => { if (!toolEventSeenThisRun) generationEvents.emit('iteration-added', {}); },
-          undefined,
-          body.htmlFolder,
-          body.jsxFile,
-        );
 
         startGenerationTimer(() => {
           if (currentProcess && !currentProcess.killed) {
@@ -262,7 +252,6 @@ export function generateRoutes() {
           }
           const toolEvents = extractToolEventsFromClaudeJsonlLines(parts, pendingToolUses);
           for (const evt of toolEvents) {
-            toolEventSeenThisRun = true;
             const numMatch = /iteration-(\d+)/.exec(evt.filePath);
             generationEvents.emit('iteration-added', {
               filePath: evt.filePath,
@@ -291,7 +280,6 @@ export function generateRoutes() {
             }
             const closeToolEvents = extractToolEventsFromClaudeJsonlLines([stdoutLineBuf], pendingToolUses);
             for (const evt of closeToolEvents) {
-              toolEventSeenThisRun = true;
               const numMatch = /iteration-(\d+)/.exec(evt.filePath);
               generationEvents.emit('iteration-added', {
                 filePath: evt.filePath,
@@ -303,7 +291,7 @@ export function generateRoutes() {
           currentLogStream?.write(`\n=== Generation ended with code ${code} at ${new Date().toISOString()} ===\n`);
           closeLogStream();
           removeLockfile();
-          stopFileWatcher();
+          syncPublicFrameGitignoreSafe();
           generationEvents.emit('done');
 
           isGenerating = false;
@@ -354,7 +342,7 @@ export function generateRoutes() {
           currentLogStream?.write(`\n=== Error: ${errorMessage} ===\n`);
           closeLogStream();
           removeLockfile();
-          stopFileWatcher();
+          syncPublicFrameGitignoreSafe();
           generationEvents.emit('done');
 
           isGenerating = false;

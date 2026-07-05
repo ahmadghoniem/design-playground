@@ -6,8 +6,8 @@
  * state — safe to unit-test directly with captured sample lines.
  */
 
-export const AGENT_PREVIEW_MAX_CHARS = 14_000;
-export const JSONL_PARSE_MAX_LINE_CHARS = 512_000;
+const AGENT_PREVIEW_MAX_CHARS = 14_000;
+const JSONL_PARSE_MAX_LINE_CHARS = 512_000;
 
 export function shouldStreamJsonForPreview(
   body: { claudeDetailedStdout?: boolean },
@@ -57,7 +57,7 @@ const findSessionId = (value: unknown, depth = 0): string | null => {
   return null;
 };
 
-export function trimAssistantPreview(assistantPreview: { value: string }): void {
+function trimAssistantPreview(assistantPreview: { value: string }): void {
   if (assistantPreview.value.length > AGENT_PREVIEW_MAX_CHARS) {
     assistantPreview.value = assistantPreview.value.slice(-AGENT_PREVIEW_MAX_CHARS);
   }
