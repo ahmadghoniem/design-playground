@@ -7,9 +7,9 @@ TASK: Create `features/generation/` (the agent-generation subsystem) and move it
 - `hooks/useGenerationCoordination.ts` → `features/generation/useGenerationCoordination.ts`
 - `hooks/useGenerationLifecycle.ts`    → `features/generation/useGenerationLifecycle.ts`
 
---- prompts (all 16 templates + shared helpers) ---
+--- prompts (all 13 templates + shared helpers) ---
 `git mv` the ENTIRE `prompts/` directory contents into `features/generation/prompts/`:
-- adopt.prompt.ts, create-page.prompt.ts, discovery-analyze.prompt.ts, discovery.prompt.ts,
+- adopt.prompt.ts, discovery-analyze.prompt.ts, discovery.prompt.ts,
   edit.prompt.ts, element-iteration.prompt.ts, freeform-reference.prompt.ts, html-adopt.prompt.ts,
   html-iteration-from-iteration.prompt.ts, html-iteration.prompt.ts, iteration-from-iteration.prompt.ts,
   iteration.prompt.ts, jsx-iteration-from-iteration.prompt.ts, jsx-iteration.prompt.ts,

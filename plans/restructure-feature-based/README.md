@@ -11,14 +11,14 @@ using a `@/` path alias so imports stay flat. **`server/` is left untouched.**
   by the existing `server/vite-plugin.ts` at mount time — no host edits required.
 - **Server:** `server/` (routes + lib + index + vite-plugin) stays where it is. Only the
   vite-plugin gains the alias injection.
-- **Feature set (8):** `canvas` (incl. draw tool + canvas node primitives), `discovery`,
+- **Feature set (8):** `canvas` (incl. shape tool + canvas node primitives), `discovery`,
   `iterations`, `generation` (split out from iterations), `chat`, `design-system`,
   `skills`, `providers` (its own feature).
 - **Shared layer:** explicit `shared/` — `shared/ui/` (shadcn primitives), `shared/lib/`
   (anything used by 2+ features or framework-generic), `shared/stores/` (cross-feature state).
 - **Nodes:** split by feature — `IterationNode`/`SkeletonIterationNode` → iterations;
   the rest (Component/Image/Text/Shape/Frame/DragGhost + `nodes/shared/*`) → canvas.
-- **Prompts:** all 16 `*.prompt.ts` + `shared-sections.ts` + `utility.ts` → `features/generation/prompts/`.
+- **Prompts:** all 13 `*.prompt.ts` + `shared-sections.ts` + `utility.ts` → `features/generation/prompts/`.
 - **Stores:** split into owning features; only truly cross-feature ones go to `shared/stores/`.
 
 ## The placement rule
@@ -29,12 +29,12 @@ using a `@/` path alias so imports stay flat. **`server/` is left untouched.**
 
 ## Important: server imports client files
 
-`server/routes/*` and `server/lib/*` import ~9 client modules by relative path
+`server/routes/*` and `server/lib/*` import a handful of client modules by relative path
 (`../../lib/constants`, `../../lib/providers`, `../../lib/design-md-helpers`,
 `../../lib/run-design-md-cli`, `../../lib/parse-design-md`, `../../lib/props-fetchers.server`,
-`../../lib/resolve-playground-dir`, `../../lib/sync-host-gitignore`, `../../prompts/discovery.prompt`,
-`../../prompts/discovery-analyze.prompt`). Since these files MOVE, the server's import lines
-must follow them.
+`../../lib/resolve-playground-dir`, `../../lib/sync-host-gitignore`, `../../lib/oid-stamp`,
+`../../prompts/discovery.prompt`, `../../prompts/discovery-analyze.prompt`). Since these files
+MOVE, the server's import lines must follow them.
 
 **Resolution (decided):** server's files, structure, and logic stay exactly as-is. The ONLY
 server edits allowed are (a) plan 00's alias injection in `vite-plugin.ts`, and (b) rewriting
@@ -46,9 +46,9 @@ no server file moves. The `@/` alias resolves in server too (same tsconfig + Vit
 
 ```
 tsconfig.json              # NEW — paths: { "@/*": ["./*"] }
-app/                       # composition shell: PlaygroundClient, PlaygroundHeader, page
+app/                       # composition shell: PlaygroundClient, PlaygroundHeader
 features/
-  canvas/                  # PlaygroundCanvas + canvas hooks/lib/nodes + draw tool
+  canvas/                  # PlaygroundCanvas + canvas hooks/lib/nodes + shape tool
   discovery/               # DiscoveryModal, sidebar, registry-tree
   iterations/              # IterationNode, IterateDialog, scan/adoption
   generation/              # generation coordination/lifecycle + prompts

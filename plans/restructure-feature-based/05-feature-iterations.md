@@ -13,6 +13,7 @@ TASK: Create `features/iterations/` and move the iteration-node + adopt/scan sub
 - `hooks/useIterationAdoption.ts`         → `features/iterations/useIterationAdoption.ts`
 - `hooks/useDragToIterate.ts`             → `features/iterations/useDragToIterate.ts`
 - `lib/iteration-filename.ts`             → `features/iterations/iteration-filename.ts`
+- `stores/iframe-error-store.ts`          → `features/iterations/iframe-error-store.ts`  (only `IterationNode` consumes it)
 
 Then update every reference repo-wide:
 - `@/nodes/IterationNode` → `@/features/iterations/nodes/IterationNode`
@@ -23,6 +24,7 @@ Then update every reference repo-wide:
 - `@/hooks/useIterationAdoption` → `@/features/iterations/useIterationAdoption`
 - `@/hooks/useDragToIterate` → `@/features/iterations/useDragToIterate`
 - `@/lib/iteration-filename` → `@/features/iterations/iteration-filename`
+- `@/stores/iframe-error-store` → `@/features/iterations/iframe-error-store`
 
 CONSTRAINTS:
 - `app/PlaygroundCanvas.tsx` (soon to be `features/canvas/`) imports `useDragToIterate` and the
@@ -32,5 +34,5 @@ CONSTRAINTS:
 - No logic change. `git mv` only.
 
 VERIFY:
-- `grep -rn "@/nodes/IterationNode\|@/nodes/SkeletonIterationNode\|@/nodes/shared/IterateDialog\|@/nodes/shared/iterate-dialog\|@/hooks/useIteration\|@/hooks/useDragToIterate\|@/lib/iteration-filename" --include=*.ts --include=*.tsx .` → no matches.
+- `grep -rn "@/nodes/IterationNode\|@/nodes/SkeletonIterationNode\|@/nodes/shared/IterateDialog\|@/nodes/shared/iterate-dialog\|@/hooks/useIteration\|@/hooks/useDragToIterate\|@/lib/iteration-filename\|@/stores/iframe-error-store" --include=*.ts --include=*.tsx .` → no matches.
 - `ls features/iterations features/iterations/nodes features/iterations/iterate-dialog` shows the moved files.

@@ -4,7 +4,7 @@ TASK: Finalize the restructure — settle the remaining app-shell files, remove 
 
 --- app shell (what stays / what moves) ---
 `app/` keeps the composition shell only:
-- `app/PlaygroundClient.tsx`, `app/PlaygroundHeader.tsx`, `app/page.tsx` STAY in `app/`.
+- `app/PlaygroundClient.tsx`, `app/PlaygroundHeader.tsx` STAY in `app/`.
 - `hooks/useProjectContext.ts` → `git mv` to `app/useProjectContext.ts` (only the header/app shell
   uses it). Update `@/hooks/useProjectContext` → `@/app/useProjectContext` everywhere.
 - If any stray file remains in `hooks/`, `lib/`, `stores/`, `nodes/`, `components/canvas/`,

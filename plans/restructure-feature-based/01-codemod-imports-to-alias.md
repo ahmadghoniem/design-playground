@@ -20,7 +20,7 @@ DO NOT TOUCH in server: any import that stays WITHIN server (`./index`, `./lib/x
 HOW:
 - For each in-scope file, rewrite every import/export specifier that starts with `./` or `../` and resolves to a project file into the equivalent `@/`-absolute path.
   Example: in `app/PlaygroundCanvas.tsx`, `import { X } from "../lib/constants"` → `import { X } from "@/lib/constants"`.
-  Example: in `nodes/shared/IterateDialog.tsx`, `import { Y } from "../../lib/draw-types"` → `import { Y } from "@/lib/draw-types"`.
+  Example: in `nodes/shared/IterateDialog.tsx`, `import { getProviderFields } from "../../lib/generation-body"` → `import { getProviderFields } from "@/lib/generation-body"`.
 - Compute the absolute path by resolving the relative specifier against the importing file's directory, then expressing it from the package root as `@/<path-without-extension>`.
 - Preserve `import type`, default vs named, side-effect imports (`import "./x.css"` → `import "@/styles/x.css"` if it points to a project file), and re-exports (`export { z } from "./z"`).
 - Leave bare/package imports (`react`, `@xyflow/react`, `zustand`, `lucide-react`, etc.) exactly as-is.
