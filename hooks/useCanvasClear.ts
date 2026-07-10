@@ -6,7 +6,6 @@ import {
   type SetStateAction,
 } from "react";
 import type { Edge, Node } from "@xyflow/react";
-import type { DrawStroke } from "../lib/draw-types";
 import { PLAYGROUND_CLEAR_EVENT } from "../lib/constants";
 
 export interface UseCanvasClearParams {
@@ -15,7 +14,6 @@ export interface UseCanvasClearParams {
   setEdges: Dispatch<SetStateAction<Edge[]>>;
   setKnownIterations: Dispatch<SetStateAction<string[]>>;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
-  setCanvasDrawings: Dispatch<SetStateAction<DrawStroke[]>>;
   storageKey: string;
 }
 
@@ -25,7 +23,6 @@ export function useCanvasClear({
   setEdges,
   setKnownIterations,
   setCollapsedNodeIds,
-  setCanvasDrawings,
   storageKey,
 }: UseCanvasClearParams) {
   const [showClearDialog, setShowClearDialog] = useState(false);
@@ -86,7 +83,6 @@ export function useCanvasClear({
     setEdges([]);
     setKnownIterations([]);
     setCollapsedNodeIds(new Set());
-    setCanvasDrawings([]);
 
     localStorage.removeItem(storageKey);
 
@@ -96,7 +92,6 @@ export function useCanvasClear({
     setEdges,
     setKnownIterations,
     setCollapsedNodeIds,
-    setCanvasDrawings,
     stopPolling,
     storageKey,
   ]);

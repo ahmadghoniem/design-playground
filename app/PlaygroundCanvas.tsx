@@ -24,12 +24,9 @@ import {
   pruneKnownIterations,
 } from "../lib/canvas-persistence";
 import { useCanvasFlow } from "../lib/canvas-flow";
-import PlaygroundCanvasDrawLayer from "../components/canvas/PlaygroundCanvasDrawLayer";
 import PlaygroundCanvasToolbar from "../components/canvas/PlaygroundCanvasToolbar";
 import PlaygroundCanvasDialogs from "../components/canvas/PlaygroundCanvasDialogs";
 import PlaygroundCanvasContextMenu from "../components/canvas/PlaygroundCanvasContextMenu";
-import { usePlaygroundDrawStore } from "../stores/playground-draw-store";
-import { type DrawStroke } from "../lib/draw-types";
 import { useCanvasDrawTool } from "../hooks/useCanvasDrawTool";
 import { useCanvasPersistence } from "../hooks/useCanvasPersistence";
 import { useCanvasDragDrop } from "../hooks/useCanvasDragDrop";
@@ -49,7 +46,6 @@ import IterationNode from "../nodes/IterationNode";
 import SkeletonIterationNode from "../nodes/SkeletonIterationNode";
 import DragGhostNode from "../nodes/DragGhostNode";
 import ImageNode from "../nodes/ImageNode";
-import { hitTestStrokes } from "../lib/draw-hit-test";
 import TextNode from "../nodes/TextNode";
 import ShapeNode, { type ShapeKind } from "../nodes/ShapeNode";
 import FrameNode from "../nodes/FrameNode";
@@ -136,10 +132,11 @@ export default function PlaygroundCanvas({
     nodeId?: string;
   } | null>(null);
 
-  // Canvas tool mode: 'select' is default pointer, 'text' is click-to-place text, 'draw' is freehand ink,
-  // 'shape' is drag-to-draw annotation shapes (kind chosen via shapeKind).
+  // Canvas tool mode: 'select' is default pointer, 'text' is click-to-place text,
+  // 'shape' is drag-to-draw annotation shapes (kind chosen via shapeKind), 'hand'
+  // is drag-to-pan the canvas.
   const [activeTool, setActiveTool] = useState<
-    "select" | "text" | "draw" | "shape"
+    "select" | "text" | "shape" | "hand"
   >("select");
   const [shapeKind, setShapeKind] = useState<ShapeKind>("rect");
   // Snap-to-grid is modal like Excalidraw: freeform placement is the default and
@@ -167,23 +164,7 @@ export default function PlaygroundCanvas({
       window.removeEventListener("blur", reset);
     };
   }, []);
-  const [canvasDrawings, setCanvasDrawings] = useState<DrawStroke[]>(
-    initialState?.canvasDrawings ?? [],
-  );
-  const canvasDrawingsRef = useRef<DrawStroke[]>(
-    initialState?.canvasDrawings ?? [],
-  );
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const setDrawToolActive = usePlaygroundDrawStore((s) => s.setDrawToolActive);
-  const setStrokeSelectEnabled = usePlaygroundDrawStore(
-    (s) => s.setStrokeSelectEnabled,
-  );
-  const setStrokeSelection = usePlaygroundDrawStore(
-    (s) => s.setStrokeSelection,
-  );
-  const drawPenKind = usePlaygroundDrawStore((s) => s.drawPenKind);
-  const setDrawPenKind = usePlaygroundDrawStore((s) => s.setDrawPenKind);
-  const strokeSelection = usePlaygroundDrawStore((s) => s.strokeSelection);
 
   if (initialState && !initialized.current) {
     nodeIdCounterRef.current = initialState.nodeIdCounter;
@@ -197,6 +178,8 @@ export default function PlaygroundCanvas({
     edges,
     setEdges,
     onEdgesChange,
+    undo,
+    redo,
   } = useCanvasFlow();
   const coord = useGenerationCoordination({
     nodes,
@@ -205,6 +188,33 @@ export default function PlaygroundCanvas({
   });
   const { isGenerating, generationInfo } = coord;
   const { screenToFlowPosition, fitView, getViewport } = useReactFlow();
+
+  // Undo / redo: Ctrl/⌘+Z undoes, Ctrl/⌘+Y (or Ctrl/⌘+Shift+Z) redoes. Ignored
+  // while typing in an input/textarea/contentEditable so it never eats an edit.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (
+        active &&
+        (active.tagName === "INPUT" ||
+          active.tagName === "TEXTAREA" ||
+          active.isContentEditable)
+      ) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (key === "y" || (key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undo, redo]);
 
   const {
     handleZOrder,
@@ -245,73 +255,10 @@ export default function PlaygroundCanvas({
         coord.removeKnownIterations(removedIterationKeys);
       }
 
-      if (usePlaygroundDrawStore.getState().strokeSelection) {
-        const withoutRemove = changes.filter((c) => c.type !== "remove");
-        if (withoutRemove.length === 0) return;
-        onNodesChange(withoutRemove);
-        return;
-      }
       onNodesChange(changes);
     },
     [onNodesChange, coord.getNodes, coord.removeKnownIterations],
   );
-
-  useEffect(() => {
-    canvasDrawingsRef.current = canvasDrawings;
-  }, [canvasDrawings]);
-
-  useEffect(() => {
-    setDrawToolActive(activeTool === "draw");
-    setStrokeSelectEnabled(activeTool === "select");
-    if (activeTool === "draw") setStrokeSelection(null);
-  }, [
-    activeTool,
-    setDrawToolActive,
-    setStrokeSelectEnabled,
-    setStrokeSelection,
-  ]);
-
-  const CANVAS_DRAW_EXTENT = 8000;
-
-  // Select canvas ink strokes in select mode (complements path hit targets)
-  useEffect(() => {
-    if (activeTool !== "select") return;
-    const wrapper = reactFlowWrapper.current;
-    if (!wrapper) return;
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.button !== 0 || canvasDrawingsRef.current.length === 0) return;
-      if (
-        e.target instanceof Element &&
-        e.target.closest("[data-canvas-draw-stroke]")
-      )
-        return;
-      if (e.target instanceof Element && e.target.closest(".react-flow__node"))
-        return;
-      const pane = wrapper.querySelector(".react-flow__pane");
-      if (!pane?.contains(e.target as globalThis.Node)) return;
-
-      const pt = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      const { zoom } = getViewport();
-      const hit = hitTestStrokes(
-        canvasDrawingsRef.current,
-        pt.x,
-        pt.y,
-        CANVAS_DRAW_EXTENT,
-        CANVAS_DRAW_EXTENT,
-        false,
-        12 / zoom,
-      );
-      if (hit) {
-        e.stopPropagation();
-        setStrokeSelection({ scope: "canvas", strokeId: hit });
-      }
-    };
-
-    wrapper.addEventListener("pointerdown", onPointerDown, true);
-    return () =>
-      wrapper.removeEventListener("pointerdown", onPointerDown, true);
-  }, [activeTool, screenToFlowPosition, getViewport, setStrokeSelection]);
 
   useCanvasPersistence({
     storageKey,
@@ -321,19 +268,16 @@ export default function PlaygroundCanvas({
     knownIterations,
     collapsedNodeIds,
     collapsedNodeIdsRef,
-    canvasDrawings,
-    canvasDrawingsRef,
     nodeIdCounterRef,
     getViewport,
   });
 
-  // Pointer-driven freehand ink + drag-to-draw shapes live behind one seam.
+  // Pointer-driven drag-to-draw shapes live behind one seam.
   useCanvasDrawTool({
     activeTool,
     reactFlowWrapper,
     screenToFlowPosition,
     shapeKind,
-    setCanvasDrawings,
     getNodeId,
     setNodes,
     setActiveTool,
@@ -371,7 +315,6 @@ export default function PlaygroundCanvas({
       setEdges,
       setKnownIterations,
       setCollapsedNodeIds,
-      setCanvasDrawings,
       storageKey,
     });
 
@@ -458,7 +401,6 @@ export default function PlaygroundCanvas({
     (event: React.MouseEvent) => {
       setContextMenu(null);
       useInteractiveNodeStore.getState().setInteractiveNodeId(null);
-      setStrokeSelection(null);
 
       if (activeTool === "text") {
         const position = screenToFlowPosition({
@@ -481,7 +423,7 @@ export default function PlaygroundCanvas({
         });
       }
     },
-    [activeTool, screenToFlowPosition, getNodeId, setNodes, setStrokeSelection],
+    [activeTool, screenToFlowPosition, getNodeId, setNodes],
   );
 
   // Right-click context menu on canvas pane
@@ -658,8 +600,7 @@ export default function PlaygroundCanvas({
     <TooltipProvider>
       <div
         ref={reactFlowWrapper}
-        className={`w-full h-full${activeTool === "text" ? " playground-text-tool" : ""}${activeTool === "draw" ? " playground-draw-tool" : ""}${activeTool === "shape" ? " playground-shape-tool" : ""}`}
-        data-draw-kind={activeTool === "draw" ? drawPenKind : undefined}
+        className={`w-full h-full${activeTool === "text" ? " playground-text-tool" : ""}${activeTool === "hand" ? " playground-hand-tool" : ""}${activeTool === "shape" ? " playground-shape-tool" : ""}`}
       >
         {/* XY Flow reads pane fill from `--xy-background-color`; Tailwind bg-* often loses to `.react-flow` in the cascade. */}
         <ReactFlow
@@ -692,22 +633,18 @@ export default function PlaygroundCanvas({
           panOnScroll
           zoomOnScroll={false}
           zoomOnPinch
-          panOnDrag={[1]}
+          panOnDrag={activeTool === "hand" ? true : [1]}
           panActivationKeyCode={null}
           selectionOnDrag={activeTool === "select"}
           selectionMode={SelectionMode.Partial}
-          nodesDraggable={activeTool !== "draw"}
+          nodesDraggable={activeTool !== "hand"}
           nodesConnectable={false}
           elementsSelectable
-          deleteKeyCode={strokeSelection ? null : ["Delete", "Backspace"]}
+          deleteKeyCode={["Delete", "Backspace"]}
         >
           {/* <Controls
             className="!bg-white !border-stone-200 !rounded-lg !shadow-sm [&>button]:!bg-white [&>button]:!border-stone-200 [&>button]:!text-stone-600 [&>button:hover]:!bg-stone-50"
           /> */}
-          <PlaygroundCanvasDrawLayer
-            strokes={canvasDrawings}
-            wrapperRef={reactFlowWrapper}
-          />
           <Background
             variant={BackgroundVariant.Dots}
             gap={BACKGROUND_GAP}
@@ -740,8 +677,6 @@ export default function PlaygroundCanvas({
           setActiveTool={setActiveTool}
           shapeKind={shapeKind}
           setShapeKind={setShapeKind}
-          drawPenKind={drawPenKind}
-          setDrawPenKind={setDrawPenKind}
           imageInputRef={imageInputRef}
         />
 

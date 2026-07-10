@@ -6,7 +6,6 @@
 
 import type { Node, Edge } from '@xyflow/react';
 import { STORAGE_KEY } from './constants';
-import type { DrawStroke } from './draw-types';
 
 /** Track generation info for status display + resuming after a page reload. */
 export interface GenerationInfo {
@@ -42,8 +41,6 @@ export interface CanvasState {
   generationInfo?: GenerationInfo | null;
   /** Persisted viewport (pan/zoom) */
   viewport?: { x: number; y: number; zoom: number };
-  /** Freehand strokes in flow coordinates on the canvas */
-  canvasDrawings?: DrawStroke[];
 }
 
 /**
@@ -136,7 +133,6 @@ export function saveCanvasState(
   collapsedNodeIds: string[],
   generationInfo?: GenerationInfo | null,
   viewport?: { x: number; y: number; zoom: number },
-  canvasDrawings?: DrawStroke[],
 ) {
   if (typeof window === 'undefined') return;
   try {
@@ -145,7 +141,6 @@ export function saveCanvasState(
       // Only persist generationInfo when skeletons are present
       generationInfo: nodes.some(n => n.type === 'skeleton') ? generationInfo : null,
       viewport,
-      canvasDrawings,
     };
     localStorage.setItem(storageKey, JSON.stringify(state));
   } catch (e) {

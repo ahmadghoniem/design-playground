@@ -6,14 +6,12 @@ import {
   type SetStateAction,
 } from "react";
 import type { Node } from "@xyflow/react";
-import { usePlaygroundDrawStore } from "../stores/playground-draw-store";
-import { createNewStroke, type DrawStroke } from "../lib/draw-types";
 import type { ShapeKind } from "../nodes/ShapeNode";
 
-type CanvasTool = "select" | "text" | "draw" | "shape";
+type CanvasTool = "select" | "text" | "shape" | "hand";
 
 interface UseCanvasDrawToolParams {
-  /** Current canvas tool — the hook's listeners only arm while this is 'draw'/'shape'. */
+  /** Current canvas tool — the hook's listeners only arm while this is 'shape'. */
   activeTool: CanvasTool;
   reactFlowWrapper: RefObject<HTMLDivElement | null>;
   screenToFlowPosition: (pos: { x: number; y: number }) => {
@@ -22,101 +20,33 @@ interface UseCanvasDrawToolParams {
   };
   /** Selected annotation-shape kind for the drag-to-draw shape tool. */
   shapeKind: ShapeKind;
-  setCanvasDrawings: Dispatch<SetStateAction<DrawStroke[]>>;
   getNodeId: () => string;
   setNodes: Dispatch<SetStateAction<Node[]>>;
   setActiveTool: (tool: CanvasTool) => void;
 }
 
 /**
- * Pointer-driven drawing tools for the empty canvas: freehand ink ('draw') and
- * drag-to-draw annotation shapes ('shape'). Both rubber-band in flow coords off
- * the `.react-flow__pane` and ignore drags that start on a node. The shape tool
- * creates a `shape` node sized to the box (or a default-sized one on a click)
- * and returns to the select tool; freehand appends/commits a `DrawStroke`.
+ * Drag-to-draw annotation shapes ('shape') on the empty canvas: rubber-band a
+ * box in flow coords off the `.react-flow__pane`, ignoring drags that start on a
+ * node, then create a `shape` node sized to the box (or a default-sized one on a
+ * click) and return to the select tool.
  *
  * This is a pure listener-shell seam extracted from PlaygroundCanvas: every
  * piece of canvas state it touches is passed in, so it never reaches back into
- * the parent. Behaviour is byte-for-byte identical to the inlined effects.
+ * the parent.
  */
 export function useCanvasDrawTool({
   activeTool,
   reactFlowWrapper,
   screenToFlowPosition,
   shapeKind,
-  setCanvasDrawings,
   getNodeId,
   setNodes,
   setActiveTool,
 }: UseCanvasDrawToolParams) {
-  // Freehand drawing on empty canvas.
-  useEffect(() => {
-    if (activeTool !== "draw") return;
-
-    const wrapper = reactFlowWrapper.current;
-    if (!wrapper) return;
-
-    let currentStrokeId: string | null = null;
-    let drawing = false;
-    let points: DrawStroke["points"] = [];
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.button !== 0) return;
-      const pane = wrapper.querySelector(".react-flow__pane");
-      if (!pane?.contains(e.target as globalThis.Node)) return;
-      if ((e.target as Element).closest(".react-flow__node")) return;
-
-      drawing = true;
-      const pt = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      const kind = usePlaygroundDrawStore.getState().drawPenKind;
-      const stroke = createNewStroke(kind, pt);
-      currentStrokeId = stroke.id;
-      points = stroke.points;
-      setCanvasDrawings((prev) => [...prev, stroke]);
-    };
-
-    const onPointerMove = (e: PointerEvent) => {
-      if (!drawing || !currentStrokeId) return;
-      const pt = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      const last = points.at(-1);
-      if (last) {
-        const dx = pt.x - last.x;
-        const dy = pt.y - last.y;
-        if (dx * dx + dy * dy < 4) return;
-      }
-      points = [...points, pt];
-      const newPoints = points;
-      const id = currentStrokeId;
-      setCanvasDrawings((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, points: newPoints } : s)),
-      );
-    };
-
-    const onPointerUp = () => {
-      if (!drawing || !currentStrokeId) return;
-      if (points.length > 1) {
-      } else {
-        const id = currentStrokeId;
-        setCanvasDrawings((prev) => prev.filter((s) => s.id !== id));
-      }
-      drawing = false;
-      currentStrokeId = null;
-      points = [];
-    };
-
-    wrapper.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    window.addEventListener("pointerup", onPointerUp);
-    return () => {
-      wrapper.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-  }, [activeTool, screenToFlowPosition, reactFlowWrapper, setCanvasDrawings]);
-
-  // Drag-to-draw annotation shapes (rect / ellipse / line) on the empty canvas.
-  // Mirrors the freehand draw handler: rubber-band a box in flow coords, then on
-  // release create a `shape` node sized to that box and return to the select tool.
+  // Drag-to-draw annotation shapes (rect / ellipse / line) on the empty canvas:
+  // rubber-band a box in flow coords, then on release create a `shape` node sized
+  // to that box and return to the select tool.
   const shapeKindRef = useRef<ShapeKind>(shapeKind);
   useEffect(() => {
     shapeKindRef.current = shapeKind;

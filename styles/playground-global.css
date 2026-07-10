@@ -394,20 +394,13 @@ body:has(.playground-iteration-view) {
   outline: none !important;
 }
 
-/* Draw tool (P): scoped pen cursor. */
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane.draggable,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane.dragging,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__pane.selection,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node.selectable,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node.draggable,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__node.draggable.dragging,
-.playground-main-view .playground-draw-tool[data-draw-kind="pen"] .react-flow__nodesselection-rect {
-  cursor:
-    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231c1917' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20l4.1-.8L19 8.3a1.6 1.6 0 0 0 0-2.2l-1.1-1.1a1.6 1.6 0 0 0-2.2 0L4.8 15.9z'/%3E%3Cpath d='M13.8 6.2l4 4'/%3E%3Cpath d='M4 20h5'/%3E%3C/svg%3E")
-    2 20,
-    crosshair;
+/* Hand tool (H): grab / grabbing on the pane so drag-to-pan reads clearly. */
+.playground-main-view .playground-hand-tool .react-flow__pane,
+.playground-main-view .playground-hand-tool .react-flow__pane.draggable {
+  cursor: grab;
+}
+.playground-main-view .playground-hand-tool .react-flow__pane.dragging {
+  cursor: grabbing;
 }
 
 /* Shape tool (R/O/L): crosshair on pane so drag-to-draw reads clearly. */

@@ -5,7 +5,6 @@ import {
   type SetStateAction,
 } from "react";
 import type { Edge, Node } from "@xyflow/react";
-import { usePlaygroundDrawStore } from "../stores/playground-draw-store";
 import { ITERATION_EDGE_STYLE } from "../lib/constants";
 
 export interface UseCanvasNodeDeleteParams {
@@ -30,8 +29,6 @@ export function useCanvasNodeDelete({
   // Handle node deletion - check for children first
   const onNodesDelete = useCallback(
     async (deletedNodes: Node[]) => {
-      if (usePlaygroundDrawStore.getState().strokeSelection) return;
-
       for (const node of deletedNodes) {
         if (node.type === "image" && node.data.filename) {
           try {

@@ -1,6 +1,5 @@
 import { useEffect, type MutableRefObject } from "react";
 import type { Edge, Node, Viewport } from "@xyflow/react";
-import type { DrawStroke } from "../lib/draw-types";
 import { saveCanvasState } from "../lib/canvas-persistence";
 import type { GenerationCoordination } from "./useGenerationCoordination";
 
@@ -12,8 +11,6 @@ export interface UseCanvasPersistenceParams {
   knownIterations: string[];
   collapsedNodeIds: Set<string>;
   collapsedNodeIdsRef: MutableRefObject<Set<string>>;
-  canvasDrawings: DrawStroke[];
-  canvasDrawingsRef: MutableRefObject<DrawStroke[]>;
   nodeIdCounterRef: MutableRefObject<number>;
   getViewport: () => Viewport;
 }
@@ -26,8 +23,6 @@ export function useCanvasPersistence({
   knownIterations,
   collapsedNodeIds,
   collapsedNodeIdsRef,
-  canvasDrawings,
-  canvasDrawingsRef,
   nodeIdCounterRef,
   getViewport,
 }: UseCanvasPersistenceParams): void {
@@ -42,19 +37,16 @@ export function useCanvasPersistence({
       Array.from(collapsedNodeIds),
       coord.getGenerationInfo(),
       getViewport(),
-      canvasDrawingsRef.current,
     );
   }, [
     nodes,
     edges,
     knownIterations,
     collapsedNodeIds,
-    canvasDrawings,
     getViewport,
     storageKey,
     nodeIdCounterRef,
     coord.getGenerationInfo,
-    canvasDrawingsRef,
   ]);
 
   // Save viewport on page unload (captures pan/zoom changes that don't trigger node updates)
@@ -69,7 +61,6 @@ export function useCanvasPersistence({
         Array.from(collapsedNodeIdsRef.current),
         coord.getGenerationInfo(),
         getViewport(),
-        canvasDrawingsRef.current,
       );
     };
     window.addEventListener("beforeunload", handler);
@@ -83,6 +74,5 @@ export function useCanvasPersistence({
     coord.getKnownIterations,
     collapsedNodeIdsRef,
     coord.getGenerationInfo,
-    canvasDrawingsRef,
   ]);
 }

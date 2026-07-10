@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { Hand } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { ShapeToolGroup } from "./ShapeToolGroup";
 import {
@@ -7,7 +8,6 @@ import {
   CanvasTextToolIcon,
   CanvasImageToolIcon,
 } from "../ui/playground-nav-icons";
-import type { DrawPenKind } from "../../lib/draw-types";
 import type { ShapeKind } from "../../nodes/ShapeNode";
 
 export interface PlaygroundCanvasToolbarProps {
@@ -15,21 +15,19 @@ export interface PlaygroundCanvasToolbarProps {
   onSidebarButtonClick: () => void;
   onSidebarButtonMouseEnter: () => void;
   onHideSidebar: () => void;
-  activeTool: "select" | "text" | "draw" | "shape";
+  activeTool: "select" | "text" | "shape" | "hand";
   setActiveTool: (
     tool:
       | "select"
       | "text"
-      | "draw"
       | "shape"
+      | "hand"
       | ((
-          prev: "select" | "text" | "draw" | "shape",
-        ) => "select" | "text" | "draw" | "shape"),
+          prev: "select" | "text" | "shape" | "hand",
+        ) => "select" | "text" | "shape" | "hand"),
   ) => void;
   shapeKind: ShapeKind;
   setShapeKind: (kind: ShapeKind) => void;
-  drawPenKind: DrawPenKind;
-  setDrawPenKind: (kind: DrawPenKind) => void;
   imageInputRef: RefObject<HTMLInputElement | null>;
 }
 
@@ -42,8 +40,6 @@ export default function PlaygroundCanvasToolbar({
   setActiveTool,
   shapeKind,
   setShapeKind,
-  drawPenKind,
-  setDrawPenKind,
   imageInputRef,
 }: PlaygroundCanvasToolbarProps) {
   return (
@@ -86,13 +82,28 @@ export default function PlaygroundCanvasToolbar({
         <TooltipContent side="right">Select (V)</TooltipContent>
       </Tooltip>
 
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setActiveTool("hand")}
+            className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
+              activeTool === "hand"
+                ? "bg-stone-100 text-stone-900"
+                : "text-stone-500 hover:text-stone-800 hover:bg-stone-50"
+            }`}
+            aria-label="Hand tool"
+          >
+            <Hand className="w-[18px] h-[18px]" strokeWidth={1.75} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Hand (H)</TooltipContent>
+      </Tooltip>
+
       <ShapeToolGroup
         activeTool={activeTool}
         shapeKind={shapeKind}
-        drawPenKind={drawPenKind}
         setActiveTool={setActiveTool}
         setShapeKind={setShapeKind}
-        setDrawPenKind={setDrawPenKind}
       />
 
       <Tooltip>
