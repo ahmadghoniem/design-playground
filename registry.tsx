@@ -6,6 +6,7 @@ import SyncButton from "@/features/session-management/components/SyncButton"
 import Footer from "@/components/layout/Footer"
 import Header from "@/components/layout/Header"
 import { Button } from "@/components/ui/button"
+import { ProgressBar } from "@/components/ui/progressbar"
 import { Separator } from "@/components/ui/separator"
 import StatusBadge from "@/components/ui/status-badge"
 import { ThemeToggleButton } from "@/components/ui/ThemeToggleButton"
@@ -259,6 +260,26 @@ type DrawdownConfigCardProps = Record<string, never>`
   decorative?: boolean
 }`,
         parentId: "daily-recap-item"
+      },
+      {
+        id: "progress-bar",
+        label: "Progress Bar",
+        Component: ProgressBar as unknown as ComponentType<Record<string, unknown>>,
+        props: {
+          progress: 0.72,
+          height: 8,
+          filledColor: "bg-primary",
+          emptyColor: "bg-accent"
+        } as Record<string, unknown>,
+        sourcePath: "src/components/ui/progressbar.tsx",
+        size: "default",
+        propsInterface: `interface ProgressBarProps {
+  progress: number
+  height?: number
+  filledColor?: string
+  emptyColor?: string
+  className?: string
+}`
       }
     ]
   }
