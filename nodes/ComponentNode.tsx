@@ -232,9 +232,25 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
     setIsCustomResized(true);
-    if (nodeId)
+    if (nodeId) {
       updateNodeData(nodeId, { customResized: true, size: "default" });
-  }, [nodeId, updateNodeData]);
+      // Width-only for React/JSX components: drop the height the resize control
+      // set so the frame hugs its content vertically (no trapped vertical gap).
+      if (!isHtml && !isDesignSystem) {
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === nodeId
+              ? {
+                  ...n,
+                  height: undefined,
+                  style: { ...n.style, height: undefined },
+                }
+              : n,
+          ),
+        );
+      }
+    }
+  }, [nodeId, updateNodeData, isHtml, isDesignSystem, setNodes]);
 
   const handleSizeChange = (newSize: ComponentSize) => {
     setSize(newSize);
@@ -295,6 +311,10 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const isPreset = size !== "default";
   const isFillMode = isResizing || isCustomResized;
   const isLargeComponent = isPreset || isFillMode;
+  // React/JSX components resize width-only and hug their content height (no
+  // vertical padding). HTML/design-system frames keep full 2D fill so their
+  // iframe fills the resized box.
+  const isAutoHeightFill = isFillMode && !isHtml && !isDesignSystem;
   const displayDims = getDisplayDimensions(size);
 
   const beginHtmlRename = useCallback(
@@ -406,7 +426,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       className={`flex flex-col ${isLargeComponent ? "" : "min-w-[200px]"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
-        ...(isFillMode ? { width: "100%", height: "100%" } : {}),
+        ...(isFillMode
+          ? isAutoHeightFill
+            ? { width: "100%" }
+            : { width: "100%", height: "100%" }
+          : {}),
         fontFamily: "var(--pg-font-sans)",
       }}
     >
@@ -528,7 +552,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
 
       {/* ── Frame + right-side vertical toolbar ── */}
       <div
-        className={`relative flex items-start ${isFillMode ? "flex-1 min-h-0" : ""}`}
+        className={`relative flex items-start ${isFillMode && !isAutoHeightFill ? "flex-1 min-h-0" : ""}`}
       >
         {/* Component frame */}
         <div
@@ -541,7 +565,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
             selected
               ? `ring-2 ${isHtml ? "ring-orange-400" : isJsx ? "ring-purple-400" : isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
               : ""
-          } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? "w-full h-full" : ""}`}
+          } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? (isAutoHeightFill ? "w-full" : "w-full h-full") : ""}`}
           style={isJsx ? { contain: "paint" } : undefined}
         >
           {isHtml || isDesignSystem ? (
@@ -584,10 +608,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               )}
             </div>
           ) : isFillMode ? (
-            /* Freeform / active resize: fill the node with centered content */
+            /* Freeform / active resize: fill the node width; height hugs content
+               (width-only resize) so the frame never traps vertical padding. */
             <div
               ref={scrollContainerRef}
-              className={`grid place-items-center p-[5%] overflow-auto w-full h-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
+              className={`grid place-items-center overflow-auto w-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
               onWheel={isInteractive ? handleWheel : undefined}
             >
               {jsxError ? (
