@@ -16,40 +16,40 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { TooltipProvider } from "../components/ui/tooltip";
+import { TooltipProvider } from "@pg/shared/ui/tooltip";
 import {
   loadCanvasState,
   getCanvasStorageKey,
   getIterationKeyFromNode,
   pruneKnownIterations,
-} from "../lib/canvas-persistence";
-import { useCanvasFlow } from "../lib/canvas-flow";
-import PlaygroundCanvasToolbar from "../components/canvas/PlaygroundCanvasToolbar";
-import PlaygroundCanvasDialogs from "../components/canvas/PlaygroundCanvasDialogs";
-import PlaygroundCanvasContextMenu from "../components/canvas/PlaygroundCanvasContextMenu";
-import { useCanvasDrawTool } from "../hooks/useCanvasDrawTool";
-import { useCanvasPersistence } from "../hooks/useCanvasPersistence";
-import { useCanvasDragDrop } from "../hooks/useCanvasDragDrop";
-import { useCanvasPaste } from "../hooks/useCanvasPaste";
-import { useGenerationCoordination } from "../hooks/useGenerationCoordination";
-import { useGenerationLifecycle } from "../hooks/useGenerationLifecycle";
-import { useIterationScan } from "../hooks/useIterationScan";
-import { useChatSubmit } from "../hooks/useChatSubmit";
-import { useCanvasFrameOps } from "../hooks/useCanvasFrameOps";
-import { useCanvasNodeDelete } from "../hooks/useCanvasNodeDelete";
-import { useCanvasAutoArrange } from "../hooks/useCanvasAutoArrange";
-import { useCanvasClear } from "../hooks/useCanvasClear";
-import { useDragIterateEventHandler } from "../hooks/useDragToIterate";
+} from "@pg/shared/lib/canvas-persistence";
+import { useCanvasFlow } from "@pg/features/canvas/canvas-flow";
+import PlaygroundCanvasToolbar from "@pg/features/canvas/components/PlaygroundCanvasToolbar";
+import PlaygroundCanvasDialogs from "@pg/features/canvas/components/PlaygroundCanvasDialogs";
+import PlaygroundCanvasContextMenu from "@pg/features/canvas/components/PlaygroundCanvasContextMenu";
+import { useCanvasDrawTool } from "@pg/features/canvas/hooks/useCanvasDrawTool";
+import { useCanvasPersistence } from "@pg/features/canvas/hooks/useCanvasPersistence";
+import { useCanvasDragDrop } from "@pg/features/canvas/hooks/useCanvasDragDrop";
+import { useCanvasPaste } from "@pg/features/canvas/hooks/useCanvasPaste";
+import { useGenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+import { useGenerationLifecycle } from "@pg/features/generation/useGenerationLifecycle";
+import { useIterationScan } from "@pg/features/iterations/useIterationScan";
+import { useChatSubmit } from "@pg/app/useChatSubmit";
+import { useCanvasFrameOps } from "@pg/features/canvas/hooks/useCanvasFrameOps";
+import { useCanvasNodeDelete } from "@pg/features/canvas/hooks/useCanvasNodeDelete";
+import { useCanvasAutoArrange } from "@pg/features/canvas/hooks/useCanvasAutoArrange";
+import { useCanvasClear } from "@pg/features/canvas/hooks/useCanvasClear";
+import { useDragIterateEventHandler } from "@pg/shared/lib/useDragToIterate";
 
-import ComponentNode from "../nodes/ComponentNode";
-import IterationNode from "../nodes/IterationNode";
-import SkeletonIterationNode from "../nodes/SkeletonIterationNode";
-import DragGhostNode from "../nodes/DragGhostNode";
-import ImageNode from "../nodes/ImageNode";
-import TextNode from "../nodes/TextNode";
-import ShapeNode, { type ShapeKind } from "../nodes/ShapeNode";
-import FrameNode from "../nodes/FrameNode";
-import HelperLines from "../nodes/shared/HelperLines";
+import ComponentNode from "@pg/features/canvas/nodes/ComponentNode";
+import IterationNode from "@pg/features/iterations/IterationNode";
+import SkeletonIterationNode from "@pg/features/iterations/SkeletonIterationNode";
+import DragGhostNode from "@pg/features/canvas/nodes/DragGhostNode";
+import ImageNode from "@pg/features/canvas/nodes/ImageNode";
+import TextNode from "@pg/features/canvas/nodes/TextNode";
+import ShapeNode, { type ShapeKind } from "@pg/features/canvas/nodes/ShapeNode";
+import FrameNode from "@pg/features/canvas/nodes/FrameNode";
+import HelperLines from "@pg/features/canvas/nodes/HelperLines";
 import {
   CANVAS_BACKGROUND_COLOR,
   BACKGROUND_COLOR,
@@ -59,13 +59,13 @@ import {
   CANVAS_MIN_ZOOM,
   ITERATION_COLLAPSE_TOGGLE_EVENT,
   FIT_COMPONENT_NODES_EVENT,
-} from "../lib/constants";
-import DockedChatBar from "../components/chat/DockedChatBar";
-import ElementHighlight from "../components/canvas/ElementHighlight";
-import { useElementSelection } from "../hooks/useElementSelection";
-import { useNodeSelection } from "../hooks/useNodeSelection";
-import { useInteractiveNodeStore } from "../stores/interactive-node-store";
-import { computeVisibleNodes } from "../lib/canvas-visibility";
+} from "@pg/shared/lib/constants";
+import DockedChatBar from "@pg/features/chat/DockedChatBar";
+import ElementHighlight from "@pg/features/canvas/components/ElementHighlight";
+import { useElementSelection } from "@pg/features/canvas/hooks/useElementSelection";
+import { useNodeSelection } from "@pg/features/chat/useNodeSelection";
+import { useInteractiveNodeStore } from "@pg/shared/stores/interactive-node-store";
+import { computeVisibleNodes } from "@pg/features/canvas/canvas-visibility";
 
 const nodeTypes = {
   component: ComponentNode,

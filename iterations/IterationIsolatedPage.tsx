@@ -1,8 +1,8 @@
 import { useParams } from 'react-router-dom';
-import { flatRegistry } from '../registry';
+import { flatRegistry } from '@pg/registry';
 import { getIterationComponent } from '.';
-import type { ComponentSize } from '../lib/constants';
-import { previewSchemeClass, usePreviewColorSchemeStore } from '../stores/preview-color-scheme-store';
+import type { ComponentSize } from '@pg/shared/lib/constants';
+import { previewSchemeClass, usePreviewColorSchemeStore } from '@pg/shared/stores/preview-color-scheme-store';
 
 function getRegistryItemForIteration(filename: string) {
   const baseName = filename.replace(/\.tsx$/, '').split('.')[0]; // e.g. "PricingCard"

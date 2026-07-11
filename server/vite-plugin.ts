@@ -1,6 +1,11 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 import { getRequestListener } from '@hono/node-server';
 import { createPlaygroundServer } from './index';
+
+// This file lives in `server/`, so the package root is one directory up.
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * Mounts the design-playground Hono app directly into Vite's dev server
@@ -17,6 +22,16 @@ import { createPlaygroundServer } from './index';
 export function designPlaygroundPlugin(): Plugin {
   return {
     name: 'design-playground',
+    // Register the `@pg/` package-root alias in ARRAY form so Vite's
+    // mergeConfig APPENDS it to (rather than clobbers) the host's own
+    // `resolve.alias`. Vite returns this and merges it into its config.
+    config() {
+      return {
+        resolve: {
+          alias: [{ find: /^@pg\//, replacement: PACKAGE_ROOT + '/' }],
+        },
+      };
+    },
     configureServer(server) {
       // The Hono app is a catch-all that answers (404s) every request, so it
       // must only see paths it actually owns — `/playground/api/*`. Everything

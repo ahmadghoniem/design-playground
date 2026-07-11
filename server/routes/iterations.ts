@@ -7,8 +7,8 @@ import {
   ITERATION_FILENAME_PATTERN,
   ITERATION_FILENAME_PARSE_PATTERN,
   TREE_MANIFEST_FILENAME,
-} from '../../lib/constants';
-import { resolvePlaygroundDir, resolveIterationsDirs } from '../../lib/resolve-playground-dir';
+} from '../../shared/lib/constants';
+import { resolvePlaygroundDir, resolveIterationsDirs } from '../../shared/lib/resolve-playground-dir';
 
 const ITERATIONS_DIR = path.join(resolvePlaygroundDir(), 'iterations');
 const INDEX_FILE = path.join(ITERATIONS_DIR, ITERATIONS_INDEX_FILENAME);

@@ -4,18 +4,18 @@ import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
-import { TEMP_DIR_RELATIVE } from '../../lib/constants';
-import type { ProviderId } from '../../lib/providers';
+import { TEMP_DIR_RELATIVE } from '../../shared/lib/constants';
+import type { ProviderId } from '../../shared/lib/providers';
 import {
   spawnAgent,
   getProviderNotFoundMessage,
   getProviderDisplayName,
   resolveAgentModel,
-} from '../../lib/providers';
-import { readDesignMd, buildSystemPromptAddon } from '../../lib/design-md-helpers';
-import { syncPublicFrameGitignoreSafe } from '../../lib/sync-host-gitignore';
+} from '../../shared/lib/providers';
+import { readDesignMd, buildSystemPromptAddon } from '../../shared/lib/design-md-helpers';
+import { syncPublicFrameGitignoreSafe } from '../../shared/lib/sync-host-gitignore';
 
-import { resolvePlaygroundDirRelative } from '../../lib/resolve-playground-dir';
+import { resolvePlaygroundDirRelative } from '../../shared/lib/resolve-playground-dir';
 import { readJson } from '../lib/hono-helpers';
 import {
   writeLockfile,
@@ -135,7 +135,6 @@ export function generateRoutes() {
         maxBudgetUsd?: number;
         maxTurns?: number;
         claudeDetailedStdout?: boolean;
-        htmlFolder?: string;
         jsxFile?: string;
         source?: string;
         skillIds?: string[];

@@ -23,7 +23,7 @@ import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import {
   ensureHostGitignore,
-} from './lib/host-gitignore.mjs';
+} from './shared/lib/host-gitignore.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

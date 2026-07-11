@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { TEMP_DIR_RELATIVE, GENERATION_LOCKFILE_FILENAME } from '../../lib/constants';
+import { TEMP_DIR_RELATIVE, GENERATION_LOCKFILE_FILENAME } from '../../shared/lib/constants';
 
 /**
  * Lockfile-based generation process recovery (survives HMR / host restarts).

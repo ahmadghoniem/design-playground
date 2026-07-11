@@ -9,11 +9,11 @@ import {
   JSX_ID_PREFIX,
   type JsxComponentInfo,
   type JsxIterationInfo,
-} from "../../lib/constants";
+} from "../../shared/lib/constants";
 import {
   resolvePlaygroundDir,
   listPlaygroundDirs,
-} from "../../lib/resolve-playground-dir";
+} from "../../shared/lib/resolve-playground-dir";
 
 const CANVAS_COMPONENTS_DIR = path.join(
   resolvePlaygroundDir(),

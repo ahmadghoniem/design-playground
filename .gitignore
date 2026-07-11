@@ -39,12 +39,11 @@ evals/runs/
 # ============================================================================
 # The following are explicitly NOT ignored (they are the playground framework):
 #
-# - page.tsx                    Entry point
-# - PlaygroundClient.tsx        Main client component
-# - PlaygroundCanvas.tsx        ReactFlow canvas
-# - PlaygroundSidebar.tsx       Component sidebar
+# - dev-entry.tsx               React-router mount entry
 # - registry.tsx                Types, helpers, empty registry template
-# - nodes/                      Node components (ComponentNode, IterationNode)
+# - app/                        Composition shell (PlaygroundClient/Canvas/Header/Sidebar)
+# - features/                   Feature modules (canvas, iterations, chat, ...)
+# - shared/                     Cross-feature ui/, lib/, stores/
 # - docs/                       AI instructions and documentation
 # - iterations/index.ts         Template for iteration registration
 # - server/routes/iterations.ts Core API for managing iterations

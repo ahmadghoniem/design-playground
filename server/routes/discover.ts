@@ -6,13 +6,13 @@ import {
   TEMP_DIR_RELATIVE,
   DISCOVERY_LOCKFILE_FILENAME,
   DISCOVERY_MANIFEST_FILENAME,
-} from '../../lib/constants';
-import { resolvePlaygroundDir } from '../../lib/resolve-playground-dir';
-import { discoveryPrompt } from '../../prompts/discovery.prompt';
-import { discoveryAnalyzePrompt } from '../../prompts/discovery-analyze.prompt';
-import { fetchPropsSnapshot } from '../../lib/props-fetchers.server';
-import type { ProviderId } from '../../lib/providers';
-import { spawnAgent, getProviderNotFoundMessage, getProviderDisplayName } from '../../lib/providers';
+} from '../../shared/lib/constants';
+import { resolvePlaygroundDir } from '../../shared/lib/resolve-playground-dir';
+import { discoveryPrompt } from '../../features/generation/prompts/discovery.prompt';
+import { discoveryAnalyzePrompt } from '../../features/generation/prompts/discovery-analyze.prompt';
+import { fetchPropsSnapshot } from '../../shared/lib/props-fetchers.server';
+import type { ProviderId } from '../../shared/lib/providers';
+import { spawnAgent, getProviderNotFoundMessage, getProviderDisplayName } from '../../shared/lib/providers';
 import { readJson } from '../lib/hono-helpers';
 
 const LOG_PREFIX = '[Playground][discover]';

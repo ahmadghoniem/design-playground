@@ -11,14 +11,14 @@ import {
   DESIGN_MD_PACKAGE,
   isPackageInstalled,
   STARTER_DESIGN_MD,
-} from '../../lib/design-md-helpers';
-import { runDesignMdCli } from '../../lib/run-design-md-cli';
+} from '../../shared/lib/design-md-helpers';
+import { runDesignMdCli } from '../../shared/lib/run-design-md-cli';
 import {
   spawnAgent,
   getProviderNotFoundMessage,
-} from '../../lib/providers';
-import type { ProviderId } from '../../lib/providers';
-import { hashFrontMatter } from '../../lib/parse-design-md';
+} from '../../shared/lib/providers';
+import type { ProviderId } from '../../shared/lib/providers';
+import { hashFrontMatter } from '../../shared/lib/parse-design-md';
 import { readJson } from '../lib/hono-helpers';
 
 const SHOWCASE_PATH = () => path.join(process.cwd(), '.context', 'design-preview.html');

@@ -8,7 +8,8 @@
  * shared `lib/` helpers.
  *
  * Usage:
- *   - Standalone: `node server/index.ts` (or tsx) listens on PORT (default 4319).
+ *   - Standalone: `bun server/index.ts` listens on PORT (default 4319). Use Bun
+ *     (not plain `node`) so tsconfig `paths` (`@pg/*`) resolve at runtime.
  *   - Embedded: `import { createPlaygroundServer } from './server'` and serve
  *     `createPlaygroundServer().fetch`, or mount it into a host dev server (see
  *     server/vite-plugin.ts, which uses `@hono/node-server`'s getRequestListener).
@@ -21,7 +22,6 @@ import { bodyLimit } from 'hono/body-limit';
 import { designRoutes } from './routes/design';
 import { discoverRoutes } from './routes/discover';
 import { generateRoutes } from './routes/generate';
-import { htmlPagesRoutes } from './routes/html-pages';
 import { imagesRoutes } from './routes/images';
 import { iterationsRoutes } from './routes/iterations';
 import { modelsRoutes } from './routes/models';
@@ -41,7 +41,6 @@ export function createPlaygroundRouter(): Hono {
   router.route('/', designRoutes());
   router.route('/', discoverRoutes());
   router.route('/', generateRoutes());
-  router.route('/', htmlPagesRoutes());
   router.route('/', imagesRoutes());
   router.route('/', iterationsRoutes());
   router.route('/', modelsRoutes());
@@ -70,11 +69,14 @@ export function createPlaygroundServer(): Hono {
   return app;
 }
 
-// Standalone entry: only runs when this module is executed directly (tsx/ts-node).
+// Standalone entry: only runs when this module is executed directly (`bun server/index.ts`).
+// Bun loads this file as ESM, so the CJS `require.main === module` check is always false
+// there — `import.meta.main` is the guard that works for the documented standalone path.
 const isMain =
-  typeof require !== 'undefined' &&
-  typeof module !== 'undefined' &&
-  require.main === module;
+  ('main' in import.meta && (import.meta as { main?: boolean }).main === true) ||
+  (typeof require !== 'undefined' &&
+    typeof module !== 'undefined' &&
+    require.main === module);
 
 if (isMain) {
   const port = Number(process.env.PORT) || 4319;

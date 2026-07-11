@@ -1,0 +1,78 @@
+import { useEffect, type MutableRefObject } from "react";
+import type { Edge, Node, Viewport } from "@xyflow/react";
+import { saveCanvasState } from "@pg/shared/lib/canvas-persistence";
+import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+
+export interface UseCanvasPersistenceParams {
+  storageKey: string;
+  nodes: Node[];
+  edges: Edge[];
+  coord: GenerationCoordination;
+  knownIterations: string[];
+  collapsedNodeIds: Set<string>;
+  collapsedNodeIdsRef: MutableRefObject<Set<string>>;
+  nodeIdCounterRef: MutableRefObject<number>;
+  getViewport: () => Viewport;
+}
+
+export function useCanvasPersistence({
+  storageKey,
+  nodes,
+  edges,
+  coord,
+  knownIterations,
+  collapsedNodeIds,
+  collapsedNodeIdsRef,
+  nodeIdCounterRef,
+  getViewport,
+}: UseCanvasPersistenceParams): void {
+  // Save to localStorage whenever nodes or edges change.
+  useEffect(() => {
+    saveCanvasState(
+      storageKey,
+      nodes,
+      edges,
+      nodeIdCounterRef.current,
+      knownIterations,
+      Array.from(collapsedNodeIds),
+      coord.getGenerationInfo(),
+      getViewport(),
+    );
+  }, [
+    nodes,
+    edges,
+    knownIterations,
+    collapsedNodeIds,
+    getViewport,
+    storageKey,
+    nodeIdCounterRef,
+    coord.getGenerationInfo,
+  ]);
+
+  // Save viewport on page unload (captures pan/zoom changes that don't trigger node updates)
+  useEffect(() => {
+    const handler = () => {
+      saveCanvasState(
+        storageKey,
+        coord.getNodes(),
+        edges,
+        nodeIdCounterRef.current,
+        coord.getKnownIterations(),
+        Array.from(collapsedNodeIdsRef.current),
+        coord.getGenerationInfo(),
+        getViewport(),
+      );
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [
+    edges,
+    getViewport,
+    storageKey,
+    coord.getNodes,
+    nodeIdCounterRef,
+    coord.getKnownIterations,
+    collapsedNodeIdsRef,
+    coord.getGenerationInfo,
+  ]);
+}

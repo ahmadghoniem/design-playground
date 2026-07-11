@@ -1,101 +1,86 @@
-# Feature-based restructure (Option 1)
+# Feature-Based Restructure (client) — Migration Plan
 
-Goal: reorganize the **client** code from layer-based (`hooks/`, `lib/`, `components/`,
-`stores/`, `nodes/`) into feature-based (`features/*`) over an explicit `shared/` layer,
-using a `@/` path alias so imports stay flat. **`server/` is left untouched.**
+Goal: reorganize the **client** code from layer-based directories (`hooks/`, `lib/`, `components/`, `stores/`, `nodes/`, `prompts/`) into encapsulated feature modules (`features/*`) with an explicit `shared/` layer. A package path alias `@pg/` keeps imports flat and makes file moves cheap. The `server/` directory layout stays intact — only import-path strings change, plus one new hook in the Vite plugin.
 
-## Decisions (locked)
+## Decisions
 
-- **Imports:** add a `@/` alias. `@/` maps to the package root. Wired via a package
-  `tsconfig.json` (paths, for editor/types) **and** injected into the host's Vite config
-  by the existing `server/vite-plugin.ts` at mount time — no host edits required.
-- **Server:** `server/` (routes + lib + index + vite-plugin) stays where it is. Only the
-  vite-plugin gains the alias injection.
-- **Feature set (8):** `canvas` (incl. shape tool + canvas node primitives), `discovery`,
-  `iterations`, `generation` (split out from iterations), `chat`, `design-system`,
-  `skills`, `providers` (its own feature).
-- **Shared layer:** explicit `shared/` — `shared/ui/` (shadcn primitives), `shared/lib/`
-  (anything used by 2+ features or framework-generic), `shared/stores/` (cross-feature state).
-- **Nodes:** split by feature — `IterationNode`/`SkeletonIterationNode` → iterations;
-  the rest (Component/Image/Text/Shape/Frame/DragGhost + `nodes/shared/*`) → canvas.
-- **Prompts:** all 13 `*.prompt.ts` + `shared-sections.ts` + `utility.ts` → `features/generation/prompts/`.
-- **Stores:** split into owning features; only truly cross-feature ones go to `shared/stores/`.
+- **Alias is `@pg/`, never `@/`.** `@/` is owned by the **host** app: `dev-entry.tsx` (`@/index.css`), `registry.tsx` (`@/features/...`, `@/components/ui/button`), and every generated `iterations/*.iteration-*.tsx` rely on the host's `@/ → host-src` alias. Those imports must **never** be rewritten.
+- **New package-level `tsconfig.json`** with `paths`: `"@pg/*": ["./*"]` **and** `"@/*": ["../../*"]`. The `@/` mapping is editor-only: a nested tsconfig captures playground files away from the host's `tsconfig.app.json` in VS Code, so host-facing `@/` imports would go red without it. When this repo is standalone (no host above), that mapping dangles harmlessly. This tsconfig is for IntelliSense and Bun's resolver; the host still compiles the TS.
+- **Vite registration**: new `config()` hook in `server/vite-plugin.ts` (it currently has only `configureServer`) returning `resolve.alias` in **array form** — `[{ find: /^@pg\//, replacement: <abs package root>/ }]` — so it appends to, never clobbers, the host's alias config. Derive the package root from `import.meta.url`.
+- **Server files use `@pg/` too.** Consequence: standalone mode is now **`bun server/index.ts`** (Bun honors tsconfig `paths`; plain `node` does not). Update the docstring in `server/index.ts` and CLAUDE.md. **Revert path**: if plain-node standalone is ever needed again, convert server imports back to relative (`../../shared/lib/x`) — nothing else server-side depends on the alias.
+- **8 feature modules**: `canvas`, `discovery`, `iterations`, `generation` (owns all of `prompts/` — 13 `*.prompt.ts` + `shared-sections.ts` + `utility.ts` → `features/generation/prompts/`), `chat`, `design-system`, `skills`, `providers` (`lib/providers/*` → `features/providers/`).
+- **Shared layer**: `shared/ui/` (base primitives, currently `components/ui/*`), `shared/lib/` (utilities used by 2+ features), `shared/stores/` (cross-feature state).
+- **Known pre-assignments** (fix current shared-layer violations before feature moves):
+  - `stores/model-settings-store` → `shared/stores/` (7+ importers across areas; `lib/generation-body.ts` imports it today)
+  - `stores/preview-color-scheme-store` → `shared/stores/` (app shell + iterations page)
+  - `components/ui/inline-reference/` → `shared/ui/` (`lib/impeccable-skill.ts` imports it today)
+  - `stores/interactive-node-store` → `features/canvas/`
+  - `stores/iframe-error-store` → `features/iterations/`
+- **Placement rule for everything unmapped** (41 flat `lib/` files, 24 `hooks/`, etc.): before moving a file, grep its importers. Imported by exactly one feature → that feature's directory. Imported by 2+ features → `shared/`. Server-imported client libs (`lib/constants`, `lib/providers`, `lib/resolve-playground-dir`, `lib/design-md-helpers`, …) count server routes as a consumer — if a lib file is used by the server plus any feature, it belongs in `shared/lib/`.
 
-## The placement rule
+## Do-not-touch list
 
-> A module used by exactly one feature lives in that feature. A module imported by two or
-> more features moves up to `shared/`. Features never import from each other — only from
-> `shared/` (and `app/` composes features). `app/` composes features.
+- **Root-pinned files stay at root**: `dev-entry.tsx`, `registry.tsx`, `playground-tailwind-entry.css`, `setup.mjs`, `bunfig.toml`, `knip.json`.
+- **Content/generated dirs stay put entirely**: `iterations/` (including `IterationIsolatedPage.tsx` — the dir's path is wired into server constants and generated artifacts), `canvas-components/`, `skills/` (skill content), `assets/`, `styles/`, `docs/`.
+- **Host-facing `@/` imports** are never rewritten (dev-entry, registry, generated iteration files).
+- **No server logic changes**: `server/routes/*`, `server/lib/*`, `server/index.ts` change only import-path strings (and the vite-plugin gains the `config()` hook).
+- Client fetch paths (`/playground/api/...`) untouched.
 
-## Important: server imports client files
+## Boundary policy
 
-`server/routes/*` and `server/lib/*` import a handful of client modules by relative path
-(`../../lib/constants`, `../../lib/providers`, `../../lib/design-md-helpers`,
-`../../lib/run-design-md-cli`, `../../lib/parse-design-md`, `../../lib/props-fetchers.server`,
-`../../lib/resolve-playground-dir`, `../../lib/sync-host-gitignore`, `../../lib/oid-stamp`,
-`../../prompts/discovery.prompt`, `../../prompts/discovery-analyze.prompt`). Since these files
-MOVE, the server's import lines must follow them.
+> A module consumed by exactly one feature lives inside that feature. A module imported by 2+ features (or by the server) is promoted to `shared/`. **Features never import other features** — cross-feature composition happens in `app/`. `shared/` never imports from `features/` or `app/`. Enforced mechanically by dependency-cruiser, not prose.
 
-**Resolution (decided):** server's files, structure, and logic stay exactly as-is. The ONLY
-server edits allowed are (a) plan 00's alias injection in `vite-plugin.ts`, and (b) rewriting
-the import *specifier strings* in server files that point at moved client files, changing
-`../../lib/x` → `@/shared/lib/x` (or `@/features/<f>/x`). No server logic, no new server files,
-no server file moves. The `@/` alias resolves in server too (same tsconfig + Vite), so this works.
+**No barrel files.** Features expose no `index.ts` re-export hubs; consumers deep-import. Rationale:
+1. This package is dev-only and never built, so barrels' only effect here is cost: importing one thing through a barrel makes Vite transform every module the barrel re-exports, and editing any file invalidates the barrel and cascades HMR to every consumer of *anything* in that feature.
+2. Barrels are the most common source of accidental circular imports; with ESM + zustand stores created at module scope, cycles surface as `undefined` at init, not clean errors.
+3. Deep imports keep the true dependency edge visible, which keeps dep-cruiser rules trivial.
+4. The curated-public-API benefit is already provided by the boundary rules; barrels can be added later if ever wanted — the reverse is much harder.
 
-## Target tree
+## Enforcement
+
+`.dependency-cruiser.cjs` at package root (uses `tsConfig` so `@pg/` resolves): forbid `features/X → features/Y (X≠Y)`, `shared → features|app`, and circular dependencies. Dev-time tool only; **do not add it to package.json**.
+
+**Working command** — plain `bunx dependency-cruiser` is a **false pass**: it cannot see a `typescript` package, so every `@pg/` specifier comes back `couldNotResolve` and the path-based rules match nothing ("no violations" while checking nothing). TypeScript 7.x also doesn't work with dependency-cruiser 18 — pin 5.x. Set up a throwaway install *outside* the repo and run its bin from the repo root:
 
 ```
-tsconfig.json              # NEW — paths: { "@/*": ["./*"] }
-app/                       # composition shell: PlaygroundClient, PlaygroundHeader
-features/
-  canvas/                  # PlaygroundCanvas + canvas hooks/lib/nodes + shape tool
-  discovery/               # DiscoveryModal, sidebar, registry-tree
-  iterations/              # IterationNode, IterateDialog, scan/adoption
-  generation/              # generation coordination/lifecycle + prompts
-  chat/                    # DockedChatBar, chat hooks, model-settings
-  design-system/           # DesignSystemModal + design-md pipeline
-  skills/                  # SkillsCatalogModal + skill picker/helpers
-  providers/               # lib/providers/* + resolve-agent-model
-shared/
-  ui/                      # shadcn primitives (from components/ui)
-  lib/                     # cross-feature helpers (generation-body, prompts builders, model-catalog…)
-  stores/                  # preview-color-scheme-store (cross-feature)
-server/                    # UNCHANGED except vite-plugin alias injection
+mkdir <somewhere-outside-repo>/depcruise && cd there
+bun init -y && bun add dependency-cruiser@18 typescript@5.7.3
+cd <repo root>
+<somewhere>/depcruise/node_modules/.bin/depcruise --config .dependency-cruiser.cjs --output-type err "{app,features,shared,server}/**/*.{ts,tsx}"
 ```
 
-## Sequencing (why this order)
+Sanity-check that it's really resolving: module count should be ~196, and a deliberately-added `features/X → features/Y` import must be flagged. (dependency-cruiser 18 no longer expands bare directory args — pass the explicit brace-glob.) Every migration stage ends with: dep-cruiser clean + grep for old paths clean.
 
-Because every import becomes a `@/`-absolute path, we decouple "move files" from "fix import
-depth". Do the mechanical codemod once, then each feature move is just `git mv` + a
-find/replace of one path prefix.
+## Stages
 
-| Plan | What | Risk | Suggested model |
-|------|------|------|-----------------|
-| 00 | Add `@/` alias infra (tsconfig + vite-plugin injection) | med | strong |
-| 01 | Codemod ALL relative imports → `@/` absolute, repo-wide | high (mechanical, broad) | strong |
-| 02 | Create `shared/` (move `components/ui`→`shared/ui`, shared `lib/`→`shared/lib`, shared stores) | med | strong |
-| 03 | `features/providers` | low | any |
-| 04 | `features/generation` (+ prompts) | med | mid |
-| 05 | `features/iterations` | med | mid |
-| 06 | `features/chat` | med | mid |
-| 07 | `features/discovery` | med | mid |
-| 08 | `features/design-system` | low | mid |
-| 09 | `features/skills` | low | mid |
-| 10 | `features/canvas` (largest; also nodes) | high | strong |
-| 11 | Final sweep: verify no stale paths, no cross-feature imports, boot the app | — | strong |
+| Stage | Operation | Risk |
+|------|------|------|
+| 00 | Alias infrastructure: `tsconfig.json`, `config()` hook in `server/vite-plugin.ts`, `.dependency-cruiser.cjs` | Moderate |
+| 01 | Convert relative imports to `@pg/...` project-wide (client + server). Same-directory `./sibling` imports stay relative; host `@/` imports untouched | High (mechanical) |
+| 02 | Create `shared/{ui,lib,stores}`; move `components/ui/*`, the pre-assigned stores, and every multi-consumer / server-consumed `lib/` file | Moderate |
+| 03 | `features/providers` (`lib/providers/*`) | Low |
+| 04 | `features/generation` + `prompts/` → `features/generation/prompts/` | Moderate |
+| 05 | `features/iterations` (IterationNode, SkeletonIterationNode, IterateDialog, iframe-error-store, adoption flows) | Moderate |
+| 06 | `features/chat` (DockedChatBar, chat hooks) | Moderate |
+| 07 | `features/discovery` (DiscoveryModal, sidebar/registry tree) | Moderate |
+| 08 | `features/design-system` | Low |
+| 09 | `features/skills` (SkillsCatalogModal + helpers; the `skills/` content dir stays put) | Low |
+| 10 | `features/canvas` (PlaygroundCanvas stays in `app/`; canvas hooks, remaining `nodes/*`, canvas components) — largest | High |
+| 11 | Verification: old layer dirs gone, dep-cruiser clean, knip pass, host-run typecheck, `/playground` smoke test, `bun server/index.ts` boots; update CLAUDE.md layout/conventions | — |
 
-Run strictly in order — every plan after 01 assumes `@/`-absolute imports already exist.
-After each plan, `git status` + the plan's grep VERIFY before starting the next.
+Stages run sequentially; every stage after 01 assumes the alias is active. After each move, update **all** references from `@pg/<old>` to `@pg/<new>` and re-run the gates.
 
-## Global constraints for every plan
+## Execution constraints
 
-- Use `git mv` (not delete+create) so history follows the file.
-- After moving a file, every reference to its old `@/<old>` path — anywhere in the repo,
-  including `server/` if it imports client code (it shouldn't) — must be updated to the new
-  `@/<new>` path. Grep-verify zero stale references.
-- Do NOT touch `server/routes/*`, `server/lib/*`, `server/index.ts` LOGIC or structure. The
-  only server edits allowed are: (a) plan 00's alias injection in `server/vite-plugin.ts`, and
-  (b) rewriting import *specifier strings* in server files that reference a moved client file
-  (`../../lib/x` → `@/shared/lib/x` or `@/features/<f>/x`). Nothing else in server changes.
-- Do NOT change any runtime behavior, JSX, or logic — this is a pure move + import rewrite.
-- No new dependencies.
+- Use `git mv` for moves (preserve history); no logic, behavior, or UI changes; no new runtime dependencies.
+- After each stage: `bunx dependency-cruiser ...` clean; grep for the stage's old paths returns zero.
+
+## Verification (stage 11 detail)
+
+1. `grep -r "\.\./lib/\|\.\./\.\./lib/\|\.\./prompts/" --include="*.ts*"` → only expected remnants (same-dir relatives).
+2. `bunx dependency-cruiser --config .dependency-cruiser.cjs "{app,features,shared,server}/**/*.{ts,tsx}"` → zero violations.
+3. knip (config already at `knip.json`) → no new orphans/dead exports introduced by the move.
+4. Real typecheck **from the host** (Rewynd): `npx tsc -p tsconfig.app.json --noEmit` — do not trust the host's `type-check` script (checks zero files).
+5. Smoke test: host `bun dev`, open `/playground` — canvas renders, discovery modal opens, one generation run streams; `/playground/iterations/:slug` isolated page loads.
+6. `bun server/index.ts` boots standalone and serves `/playground/api/...`.
+7. Update CLAUDE.md architecture/conventions sections to the new layout.

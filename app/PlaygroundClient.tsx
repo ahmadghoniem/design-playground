@@ -3,25 +3,25 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { toast, Toaster } from "sonner";
 import PlaygroundSidebar, {
   type PendingSidebarAdd,
-} from "../components/canvas/PlaygroundSidebar";
+} from "@pg/app/PlaygroundSidebar";
 import PlaygroundCanvas from "./PlaygroundCanvas";
 import PlaygroundHeader from "./PlaygroundHeader";
 import DiscoveryModal, {
   type DiscoveryEntry,
-} from "../components/modals/DiscoveryModal";
-import SkillsCatalogModal from "../components/modals/SkillsCatalogModal";
-import { getProviderFields } from "../lib/generation-body";
+} from "@pg/features/discovery/DiscoveryModal";
+import SkillsCatalogModal from "@pg/features/skills/SkillsCatalogModal";
+import { getProviderFields } from "@pg/shared/lib/generation-body";
 import {
   OPEN_SKILLS_CATALOG_EVENT,
   SKILLS_CHANGED_EVENT,
   STORAGE_KEY,
-} from "../lib/constants";
-import { preloadAllComponents } from "../registry";
-import { CanvasFlowProvider } from "../lib/canvas-flow";
+} from "@pg/shared/lib/constants";
+import { preloadAllComponents } from "@pg/registry";
+import { CanvasFlowProvider } from "@pg/features/canvas/canvas-flow";
 import {
   previewSchemeClass,
   usePreviewColorSchemeStore,
-} from "../stores/preview-color-scheme-store";
+} from "@pg/shared/stores/preview-color-scheme-store";
 
 export interface PendingChild {
   id: string;

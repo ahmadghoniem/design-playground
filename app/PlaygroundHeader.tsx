@@ -8,22 +8,22 @@ import {
   Moon,
   Monitor,
 } from "lucide-react";
-import { usePreviewColorSchemeStore } from "../stores/preview-color-scheme-store";
+import { usePreviewColorSchemeStore } from "@pg/shared/stores/preview-color-scheme-store";
 
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../components/ui/tooltip";
+} from "@pg/shared/ui/tooltip";
 import {
   CANVAS_BACKGROUND_COLOR,
   OPEN_SKILLS_CATALOG_EVENT,
   ITERATION_FETCH_EVENT,
   PLAYGROUND_CLEAR_EVENT,
-} from "../lib/constants";
-import ModelSettingsModal from "../components/modals/ModelSettingsModal";
-import { useProjectContext } from "../hooks/useProjectContext";
+} from "@pg/shared/lib/constants";
+import ModelSettingsModal from "@pg/app/ModelSettingsModal";
+import { useProjectContext } from "@pg/app/useProjectContext";
 
 // ---------------------------------------------------------------------------
 // Props

@@ -148,15 +148,19 @@ Your provider and model preferences are saved in your browser and persist across
 
 ```
 app/playground/
+├── app/               # Composition shell (PlaygroundClient/Canvas/Header/Sidebar)
+├── features/          # One dir per feature: canvas, discovery, iterations,
+│                      #   generation, chat, design-system, skills
+├── shared/            # ui/ (primitives), lib/ (cross-feature + providers), stores/
 ├── server/            # Hono API (routes mounted into Vite via server/vite-plugin.ts)
-├── lib/               # Shared utilities, stores, provider configs
-├── nodes/             # Canvas node components (cards, groups)
-├── ui/                # Reusable UI components (dialog, tabs, etc.)
 ├── skills/            # Built-in prompt templates
 ├── docs/              # Technical documentation
-├── setup.mjs          # Setup script
-└── page.tsx           # Main playground page
+├── dev-entry.tsx      # React-router mount entry
+├── registry.tsx       # Component registry template + helpers
+└── setup.mjs          # Setup script
 ```
+
+Client code is feature-based; cross-feature imports use the `@pg/` alias. See `CLAUDE.md` for the full layout and boundary rules.
 
 ---
 

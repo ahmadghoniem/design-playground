@@ -1,4 +1,5 @@
 import DailyRecapItem from "@/features/daily-recap/components/DailyRecapItem"
+import MaxDrawdownCard from "@/features/objectives-tracking/components/MaxDrawdownCard"
 import DrawdownConfigCard from "@/features/challenge-configuration/components/DrawdownConfigCard"
 import SessionChangeManager from "@/features/session-management/components/SessionChangeManager"
 import SessionDataManager from "@/features/session-management/components/SessionDataManager"
@@ -7,19 +8,21 @@ import Footer from "@/components/layout/Footer"
 import Header from "@/components/layout/Header"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progressbar"
+import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import StatusBadge from "@/components/ui/status-badge"
 import { ThemeToggleButton } from "@/components/ui/ThemeToggleButton"
-import { ComponentType } from "react"
-import type { ChatSubmitPayload, ComponentSize, StylingMode } from "./lib/constants"
-import { DEFAULT_STYLING_MODE } from "./lib/constants"
-import { adoptIterationPrompt } from "./prompts/adopt.prompt"
+import React, { ComponentType } from "react"
+import type { ChatSubmitPayload, ComponentSize, StylingMode } from "@pg/shared/lib/constants"
+import { DEFAULT_STYLING_MODE } from "@pg/shared/lib/constants"
+import { adoptIterationPrompt } from "@pg/features/generation/prompts/adopt.prompt"
 import {
   elementIterationFromIterationPrompt,
   elementIterationPrompt
-} from "./prompts/element-iteration.prompt"
-import { iterationFromIterationPrompt } from "./prompts/iteration-from-iteration.prompt"
-import { iterationPrompt } from "./prompts/iteration.prompt"
+} from "@pg/features/generation/prompts/element-iteration.prompt"
+import { iterationFromIterationPrompt } from "@pg/features/generation/prompts/iteration-from-iteration.prompt"
+import { iterationPrompt } from "@pg/features/generation/prompts/iteration.prompt"
 import {
   formatChildrenSection,
   formatCustomInstructionsSection,
@@ -28,7 +31,7 @@ import {
   getQualityChecklist,
   getStylingConstraint,
   getStylingQualityItem
-} from "./prompts/shared-sections"
+} from "@pg/shared/lib/prompts/shared-sections"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,7 +44,7 @@ export interface RegistryGroupItem {
 }
 
 // Re-export ComponentSize from constants for backward compatibility
-export type { ComponentSize } from "./lib/constants"
+export type { ComponentSize } from "@pg/shared/lib/constants"
 
 export interface RegistryLeafItem {
   id: string
@@ -263,7 +266,7 @@ type DrawdownConfigCardProps = Record<string, never>`
       },
       {
         id: "progress-bar",
-        label: "Progress Bar",
+        label: "ProgressBar",
         Component: ProgressBar as unknown as ComponentType<Record<string, unknown>>,
         props: {
           progress: 0.72,
@@ -279,7 +282,58 @@ type DrawdownConfigCardProps = Record<string, never>`
   filledColor?: string
   emptyColor?: string
   className?: string
-}`
+}`,
+        parentId: "max-drawdown-card"
+      },
+      {
+        id: "max-drawdown-card",
+        label: "Max Drawdown Card",
+        Component: MaxDrawdownCard as unknown as ComponentType<Record<string, unknown>>,
+        props: {
+          className: "bg-background"
+        } as Record<string, unknown>,
+        sourcePath: "src/features/objectives-tracking/components/MaxDrawdownCard.tsx",
+        size: "default",
+        propsInterface: `interface MaxDrawdownCardProps {\n  className?: string\n}`
+      },
+      {
+        id: "card",
+        label: "Card",
+        Component: Card as unknown as ComponentType<Record<string, unknown>>,
+        props: {
+          className: "bg-background max-w-sm",
+          children: "Account Overview"
+        } as Record<string, unknown>,
+        sourcePath: "src/components/ui/card.tsx",
+        size: "default",
+        propsInterface: `interface CardProps {\n  className?: string\n  children: React.ReactNode\n}`,
+        parentId: "max-drawdown-card"
+      },
+      {
+        id: "tooltip",
+        label: "Tooltip",
+        Component: (() => (
+          <Tooltip defaultOpen>
+            <TooltipTrigger asChild>
+              <button className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground">
+                Hover me
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Maximum drawdown threshold reached
+            </TooltipContent>
+          </Tooltip>
+        )) as unknown as ComponentType<Record<string, unknown>>,
+        props: {} as Record<string, unknown>,
+        sourcePath: "src/components/ui/tooltip.tsx",
+        size: "default",
+        propsInterface: `interface TooltipProps extends React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root> {
+  children: React.ReactNode
+  defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}`,
+        parentId: "max-drawdown-card"
       }
     ]
   }

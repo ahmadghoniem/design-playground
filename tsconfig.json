@@ -1,0 +1,25 @@
+// Package-level tsconfig for design-playground (JSONC).
+// @pg/* = this package root (./*); @/* = the HOST app's src (../../*).
+// This config is for editor IntelliSense and Bun's runtime resolver ONLY —
+// the host still compiles the playground TS with its own tsconfig.app.json.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@pg/*": ["./*"],
+      "@/*": ["../../*"]
+    },
+    "allowJs": false,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
+  },
+  "exclude": ["node_modules"]
+}

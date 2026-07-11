@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import path from 'path';
 import fs from 'fs/promises';
 import type { PlaygroundSkill } from '../../skills';
-import { resolvePlaygroundDir } from '../../lib/resolve-playground-dir';
+import { resolvePlaygroundDir } from '../../shared/lib/resolve-playground-dir';
 
 const BUILTIN_SKILLS_DIR = path.join(resolvePlaygroundDir(), 'skills');
 const USER_SKILLS_DIR = path.join(process.cwd(), '.claude', 'skills');

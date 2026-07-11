@@ -1,10 +1,10 @@
 import "@/index.css"
 import { createRoot } from "react-dom/client"
 import { BrowserRouter, Route, Routes } from "react-router-dom"
-import PlaygroundClient from "./app/PlaygroundClient"
-import { PlaygroundIterationIsolatedPage } from "./iterations/IterationIsolatedPage"
+import PlaygroundClient from "@pg/app/PlaygroundClient"
+import { PlaygroundIterationIsolatedPage } from "@pg/iterations/IterationIsolatedPage"
 import "./playground-tailwind-entry.css"
-import "./styles/playground-global.css"
+import "@pg/styles/playground-global.css"
 
 // basename="/playground" matches the clean URL the vite-plugin serves at.
 // Routes are declared relative to that basename.

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { MODELS_CACHE_TTL_MS, type ModelOption } from '../../lib/constants';
-import type { ProviderId } from '../../lib/providers';
-import { getProvider } from '../../lib/providers';
+import { MODELS_CACHE_TTL_MS, type ModelOption } from '../../shared/lib/constants';
+import type { ProviderId } from '../../shared/lib/providers';
+import { getProvider } from '../../shared/lib/providers';
 
 const modelCache = new Map<ProviderId, { models: ModelOption[]; timestamp: number }>();
 
