@@ -1,6 +1,6 @@
 ---
-globs: ["src/app/playground/iterations/**"]
-description: "How to generate component iterations: rules, file structure, naming, registration, quality checklist"
+globs: ["**/playground/iterations/**"]
+description: "How to generate component iterations: rules, file structure, naming, tree.json, quality checklist"
 ---
 
 # Iteration Generation Guide
@@ -24,28 +24,49 @@ export default function ArticleCard({ post, category, layout, theme }: Props)
 ### 2. File Naming
 
 ```
-src/app/playground/iterations/{PascalCaseName}.iteration-{n}.tsx
+{PascalCaseName}.iteration-{n}.tsx
 ```
+
+Save it at **the exact path given in your prompt** (the prompt states the full `Save as …` path for every iteration). Do not assume the playground lives at `src/app/playground` — the host may mount it elsewhere.
 
 `{PascalCaseName}` must match the **default export function name** (e.g. `ManifestoPage`, not `Manifesto`). This enables kebab-case conversion back to the registry ID.
 
-### 3. File Structure
+### 3. Imports — REWRITE relative paths, never copy them verbatim
+
+**This is the most common way an iteration breaks.** The iteration file is written to `<playground>/iterations/`, which is a **different directory than the original component**. Any relative (`../` or `./`) import copied from the original will silently re-anchor to the playground directory and fail to resolve.
+
+Rewrite every relative import from the original into the host alias `@/`, which maps to the host's `src/`. Work out the original's real location from the `Source file` path given in your prompt, then convert.
+
+```tsx
+// Original: src/features/daily-recap/components/DailyRecapItem.tsx
+import { calculateDailyMetrics } from "../hooks/useDailyRecap";
+// ❌ copied verbatim into iterations/ → resolves to <playground>/hooks/useDailyRecap → BREAKS
+// ✅ rewritten to the alias
+import { calculateDailyMetrics } from "@/features/daily-recap/hooks/useDailyRecap";
+```
+
+Imports that are **already** aliased (`@/…`) or are bare packages (`react`, `lucide-react`) are copied unchanged — they resolve from anywhere. Only `../` and `./` imports need rewriting.
+
+### 4. File Structure
 
 ```tsx
 "use client";
 
-// Keep same imports as original
-import Image from "next/image";
-import { cn } from "../lib/utils";
+// Bare packages: copy unchanged
+import React from "react";
+import { Calendar } from "lucide-react";
+// Already aliased: copy unchanged
+import { Separator } from "@/components/ui/separator";
+// Was "../hooks/useDailyRecap" in the original → rewritten to the alias
+import { calculateDailyMetrics } from "@/features/daily-recap/hooks/useDailyRecap";
+// Type imports follow the same rule
+import type { InsightPost } from "@/components/ArticleCard";
 
 /**
  * @iteration 1
  * @parent ArticleCard
  * @description Horizontal card layout with image on left
  */
-
-// Same type imports
-import type { InsightPost } from "@/components/ArticleCard";
 
 // Default export, SAME props interface
 export default function ArticleCard({ post, category, variant = "expanded", className, onClick }: {
@@ -56,17 +77,18 @@ export default function ArticleCard({ post, category, variant = "expanded", clas
 }
 ```
 
-### 4. Sequential Processing
+### 5. Sequential Processing
 
 Process iterations **one at a time**. For each:
 1. Save the `.tsx` file
-2. Register in `iterations/index.ts` (see @iterations/index-and-tree.mdc)
-3. Update `iterations/tree.json` (see @iterations/index-and-tree.mdc)
-4. Then proceed to the next
+2. Update `iterations/tree.json` with the correct parent
+3. Then proceed to the next
+
+Do **not** edit `iterations/index.ts` — the server rebuilds it from written iteration files.
 
 This gives the user immediate visual feedback as each iteration appears on the canvas.
 
-### 5. Tailwind
+### 6. Tailwind
 
 Stick to existing Tailwind utilities and patterns. Don't introduce custom utilities or CSS-in-JS beyond what the source already uses. You may change colors, typography, spacing — just stay within the existing config.
 
@@ -83,11 +105,11 @@ Stick to existing Tailwind utilities and patterns. Don't introduce custom utilit
 ## Quality Checklist
 
 - [ ] Props interface unchanged
+- [ ] No relative (`../` / `./`) imports copied from the original — all rewritten to `@/`
 - [ ] All imports resolve
 - [ ] Metadata comment included
 - [ ] File named correctly (`{PascalCase}.iteration-{n}.tsx`)
 - [ ] Default export with same function name
 - [ ] No TypeScript errors
-- [ ] Registered in `iterations/index.ts` (keys include `.tsx`)
 - [ ] `tree.json` updated with correct parent
 - [ ] Each iteration is meaningfully distinct

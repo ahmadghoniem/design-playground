@@ -25,7 +25,6 @@ import { generateRoutes } from './routes/generate';
 import { imagesRoutes } from './routes/images';
 import { iterationsRoutes } from './routes/iterations';
 import { modelsRoutes } from './routes/models';
-import { openInRoutes } from './routes/open-in';
 import { playgroundRootRoutes } from './routes/playground-root';
 import { projectIdRoutes } from './routes/project-id';
 import { skillsRoutes } from './routes/skills';
@@ -44,7 +43,6 @@ export function createPlaygroundRouter(): Hono {
   router.route('/', imagesRoutes());
   router.route('/', iterationsRoutes());
   router.route('/', modelsRoutes());
-  router.route('/', openInRoutes());
   router.route('/', playgroundRootRoutes());
   router.route('/', projectIdRoutes());
   router.route('/', skillsRoutes());

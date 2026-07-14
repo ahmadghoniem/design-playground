@@ -113,7 +113,8 @@ export function useGenerationLifecycle({
 
   // SSE helpers for progressive iteration detection during generation.
   // The server parses the agent's stream-json tool events and pushes an
-  // event per written file (the fs-watcher remains as a silent fallback).
+  // event per written file (the 4s poll in useIterationScan remains as
+  // belt-and-braces fallback).
   const stopGenerationEventSource = useCallback(() => {
     if (generationEventSourceRef.current) {
       generationEventSourceRef.current.close();

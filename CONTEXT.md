@@ -10,7 +10,7 @@ Local-dev design canvas embedded in a host React app. Agents generate layout/sty
 
 **Relative root (client)** — Cached playground-root string fetched once from the server so browser-built prompts use the real layout without a post-hoc rewrite.
 
-**Iteration** — A generated variant file under `iterations/`, registered in `index.ts` and `tree.json`.
+**Iteration** — A generated variant file under `iterations/`, listed in `tree.json` (`index.ts` is rebuilt server-side).
 
 **Generation** — One agent run that writes one or more iterations (or edits) from a prompt.
 

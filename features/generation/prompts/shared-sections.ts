@@ -7,7 +7,6 @@
 import type { StylingMode } from '@pg/shared/lib/constants';
 import {
   iterationsFile,
-  iterationsIndex,
   iterationsTree,
 } from '@pg/shared/lib/playground-paths';
 
@@ -31,24 +30,59 @@ export function getStylingQualityItem(mode: StylingMode): string {
   return "Uses the host's semantic theme tokens (no hardcoded hex); only allowed Tailwind classes already present in the codebase";
 }
 
+/**
+ * Import rewriting rule.
+ *
+ * Iterations are written to <playground>/iterations/, NOT next to the original
+ * component, so any relative import copied verbatim from the source silently
+ * re-anchors to the playground dir and fails to resolve. This is the single
+ * most common way a generated iteration breaks the host's dev server.
+ */
+export function importConstraint(): string {
+  return `- **Imports**: The iteration is saved to a DIFFERENT directory than the original, so relative imports from the source will NOT resolve. Rewrite every relative ("../" or "./") import from the original to the host alias "@/" (which maps to the host's "src/"), deriving the original's location from its source path. Example: a component at src/features/daily-recap/components/DailyRecapItem.tsx importing "../hooks/useDailyRecap" MUST become "@/features/daily-recap/hooks/useDailyRecap". Imports that are already "@/..." or bare packages (react, lucide-react) are copied unchanged.`;
+}
+
 /** Returns the full quality checklist with the appropriate styling line */
 export function getQualityChecklist(mode: StylingMode = 'tailwind'): string {
   return `QUALITY CHECKLIST (FOR EACH ITERATION)
 - [ ] Props interface unchanged from original
+- [ ] No relative ("../" or "./") imports copied from the original — every one rewritten to the "@/" host alias
 - [ ] All imports resolve correctly with no TypeScript errors
 - [ ] Metadata comment included with correct @iteration/@parent (and @sourceIteration when applicable)
 - [ ] File named correctly: PascalCaseComponentName.iteration-{n}.tsx (must match the default export function name)
 - [ ] ${getStylingQualityItem(mode)}
-- [ ] Registered in iterations/index.ts with a ".tsx" key
 - [ ] Entry added/updated in iterations/tree.json with correct parent
 - [ ] @sourceIteration set when derived from another iteration`;
 }
 
-/** Props constraint block shared across templates (paths resolved at call time). */
+/** Shared constraint block used by templates (paths resolved at call time). */
 export function propsConstraint(): string {
   return `- **Props interface**: Keep it IDENTICAL to the original component (no added/removed/renamed props, no type changes).
+${importConstraint()}
 - **Tree manifest**: Update ${iterationsTree()} for every new iteration file.
-- **Registry index**: Register every iteration in ${iterationsIndex()} with a ".tsx" map key.`;
+- Do not edit iterations/index.ts — the server rebuilds it from written iteration files.`;
+}
+
+/**
+ * Shared one-at-a-time save → metadata → tree ritual.
+ * iterations/index.ts is rebuilt server-side; agents must not hand-edit it.
+ */
+export function getSequentialIterationRitual(opts: {
+  includeSourceIteration?: boolean;
+  sourceIterationPlaceholder?: string;
+  parentPlaceholder: string;
+}): string {
+  const metadataLine = opts.includeSourceIteration
+    ? `   b. Include metadata comment with @iteration, @parent, @sourceIteration ${opts.sourceIterationPlaceholder ?? '{{sourceIterationFilename}}'}, and @description`
+    : '   b. Include metadata comment with @iteration, @parent, and @description';
+
+  return `Process iterations ONE AT A TIME in the order listed below. For each iteration, complete ALL of the following steps before moving to the next:
+   a. Create and save the iteration file
+${metadataLine}
+   c. Immediately add a matching entry to ${iterationsTree()} with parent set to "${opts.parentPlaceholder}"
+   d. Only then start the next iteration
+
+   This sequential approach ensures each iteration is visible on the canvas as soon as it's done.`;
 }
 
 // ---------------------------------------------------------------------------

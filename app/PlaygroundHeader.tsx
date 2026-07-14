@@ -23,13 +23,13 @@ import {
   PLAYGROUND_CLEAR_EVENT,
 } from "@pg/shared/lib/constants";
 import ModelSettingsModal from "@pg/app/ModelSettingsModal";
-import { useProjectContext } from "@pg/app/useProjectContext";
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 interface PlaygroundHeaderProps {
+  projectName: string;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
 }
@@ -39,13 +39,13 @@ interface PlaygroundHeaderProps {
 // ---------------------------------------------------------------------------
 
 export default function PlaygroundHeader({
+  projectName,
   sidebarVisible: _sidebarVisible,
   onToggleSidebar: _onToggleSidebar,
 }: PlaygroundHeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const previewScheme = usePreviewColorSchemeStore((s) => s.scheme);
   const cyclePreviewScheme = usePreviewColorSchemeStore((s) => s.cycle);
-  const projectContext = useProjectContext();
 
   const handleRefresh = () => {
     window.dispatchEvent(new CustomEvent(ITERATION_FETCH_EVENT));
@@ -66,7 +66,7 @@ export default function PlaygroundHeader({
         {/* Left: project name label */}
         <div className="flex items-center">
           <span className="text-sm font-medium text-stone-500 tracking-tight select-none">
-            /{projectContext.projectName}
+            /{projectName}
           </span>
         </div>
 

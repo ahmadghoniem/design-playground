@@ -6,7 +6,6 @@ import { fillTemplate } from './utility';
 import {
   iterationsFile,
   iterationsGuide,
-  iterationsIndex,
   iterationsTree,
 } from '@pg/shared/lib/playground-paths';
 
@@ -40,8 +39,8 @@ INSTRUCTIONS
     * @parent {ChosenName}
     * @description {Brief description of the component}
     */
-7. Register the file in ${iterationsIndex()} (map key MUST include ".tsx")
-8. Add an entry to ${iterationsTree()} with parent set to "{ChosenName}"
+7. Add an entry to ${iterationsTree()} with parent set to "{ChosenName}"
+   (Do not edit iterations/index.ts — the server rebuilds it from written iteration files.)
 {{customInstructionsSection}}
 
 CRITICAL REQUIREMENTS
@@ -55,7 +54,6 @@ QUALITY CHECKLIST
 - [ ] File saved as {ChosenName}.iteration-1.tsx
 - [ ] Metadata comment included with @iteration, @parent, @description
 - [ ] All imports resolve correctly with no TypeScript errors
-- [ ] Registered in iterations/index.ts with a ".tsx" key
 - [ ] Entry added in iterations/tree.json
 - [ ] Visual style is consistent with reference components
 

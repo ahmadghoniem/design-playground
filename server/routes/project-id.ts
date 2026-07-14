@@ -12,8 +12,9 @@ export function projectIdRoutes() {
 
   app.get('/api/project-id', (c) => {
     const cwd = process.cwd();
-    const projectId = `${basename(cwd)}-${createHash('sha1').update(cwd).digest('hex').slice(0, 8)}`;
-    return c.json({ projectId });
+    const projectName = basename(cwd);
+    const projectId = `${projectName}-${createHash('sha1').update(cwd).digest('hex').slice(0, 8)}`;
+    return c.json({ projectId, projectName });
   });
 
   return app;

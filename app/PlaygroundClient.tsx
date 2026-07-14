@@ -31,28 +31,44 @@ export interface PendingChild {
   status: "pending" | "analyzing" | "done" | "error";
 }
 
-function useProjectBootstrap() {
-  const [projectId, setProjectId] = useState<string | null>(null);
+interface ProjectBootstrap {
+  projectId: string;
+  projectName: string;
+}
+
+function useProjectBootstrap(): ProjectBootstrap | null {
+  const [project, setProject] = useState<ProjectBootstrap | null>(null);
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       fetch("/playground/api/project-id")
         .then((res) => res.json())
-        .then((data: { projectId: string }) => data.projectId)
-        .catch(() => "unknown-project"),
+        .then((data: { projectId: string; projectName?: string }) => ({
+          projectId: data.projectId,
+          projectName:
+            typeof data.projectName === "string" && data.projectName
+              ? data.projectName
+              : "project",
+        }))
+        .catch(() => ({
+          projectId: "unknown-project",
+          projectName: "project",
+        })),
       ensurePlaygroundRelativeRoot(),
-    ]).then(([id]) => {
-      if (!cancelled) setProjectId(id);
+    ]).then(([bootstrap]) => {
+      if (!cancelled) setProject(bootstrap);
     });
     return () => {
       cancelled = true;
     };
   }, []);
-  return projectId;
+  return project;
 }
 
 export default function PlaygroundClient() {
-  const projectId = useProjectBootstrap();
+  const project = useProjectBootstrap();
+  const projectId = project?.projectId ?? null;
+  const projectName = project?.projectName ?? "project";
   const [sidebarVisible, setSidebarVisible] = useState(true);
   /** Whether sidebar was opened via hover (auto-hide) vs click (sticky). */
   const sidebarHoverRef = useRef(false);
@@ -364,6 +380,7 @@ export default function PlaygroundClient() {
       >
         {/* Top header — full width */}
         <PlaygroundHeader
+          projectName={projectName}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
         />

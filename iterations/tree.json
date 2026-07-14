@@ -1,6 +1,18 @@
 {
   "version": 1,
   "entries": {
+    "DailyRecapItem.iteration-1.tsx": {
+      "parent": "daily-recap-item",
+      "description": "Horizontal metric layout with centered PnL prominence"
+    },
+    "DailyRecapItem.iteration-2.tsx": {
+      "parent": "daily-recap-item",
+      "description": "Vertical stacked layout with prominent date header, grid metrics, and compact footer"
+    },
+    "DailyRecapItem.iteration-3.tsx": {
+      "parent": "daily-recap-item",
+      "description": "Compact minimalist layout with tight horizontal grouping and accent bar"
+    },
     "DrawdownConfigCard.iteration-1.tsx": {
       "parent": "drawdown-config-card",
       "description": "Compact layout with Daily Drawdown and Max Drawdown side-by-side in a 2-column grid; Max Drawdown Type below"

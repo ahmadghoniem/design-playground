@@ -3,12 +3,11 @@
  * @description: Prompt used to generate new component iterations from the original source component in the playground
  */
 import { fillTemplate } from './utility';
-import { propsConstraint } from './shared-sections';
 import {
-  iterationsGuide,
-  iterationsIndex,
-  iterationsTree,
-} from '@pg/shared/lib/playground-paths';
+  getSequentialIterationRitual,
+  propsConstraint,
+} from './shared-sections';
+import { iterationsGuide } from '@pg/shared/lib/playground-paths';
 
 function buildPrompt(): string {
   return `
@@ -31,14 +30,7 @@ INSTRUCTIONS
 2. Read the source component at the path above
 3. Understand its structure, props interface, and current design
 4. Generate {{iterationCount}} **compatible** variations numbered {{iterationNumbersList}} (you may change both layout and visual design)
-5. Process iterations ONE AT A TIME in the order listed below. For each iteration, complete ALL of the following steps before moving to the next:
-   a. Create and save the iteration file
-   b. Include metadata comment with @iteration, @parent, and @description
-   c. Immediately register that file in ${iterationsIndex()} (map key MUST include ".tsx")
-   d. Immediately add a matching entry to ${iterationsTree()} with parent set to "{{componentId}}"
-   e. Only then start the next iteration
-
-   This sequential approach ensures each iteration is visible on the canvas as soon as it's done.
+5. ${getSequentialIterationRitual({ parentPlaceholder: '{{componentId}}' })}
 
 Files to create (in this order):
 {{iterationSavesBlock}}
