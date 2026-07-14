@@ -1,9 +1,9 @@
 /*
- * Tailwind compilation entry, imported by `app/playground/layout.tsx`.
+ * Tailwind compilation entry, imported by `dev-entry.tsx`. Lives in `styles/`.
  * Brings in Tailwind + typography + animate for the playground's OWN TS sources
- * (@source scoped to this dir). The host `globals.css` — loaded by the root
- * layout on every route, including /playground — compiles the utilities used by
- * HOST components.
+ * (@source scoped to the package root). The host `globals.css` — loaded by the
+ * root layout on every route, including /playground — compiles the utilities
+ * used by HOST components.
  *
  * The semantic `--color-*` / `--font-*` mappings mirror the host so preview
  * utilities (bg-background, font-sans, …) resolve against the HOST's :root
@@ -14,8 +14,8 @@
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 
-@source "./**/*.tsx";
-@source "./**/*.ts";
+@source "../**/*.tsx";
+@source "../**/*.ts";
 
 /* stylelint-disable at-rule-no-unknown, csstools/use-nesting */
 @theme inline {

@@ -1,6 +1,6 @@
 /*
  * Playground chrome stylesheet — vanilla CSS only (no Tailwind @import / @theme
- * here; the Tailwind build lives in `playground-tailwind-entry.css`).
+ * here; the Tailwind build lives alongside in `styles/playground-tailwind-entry.css`).
  *
  * Theming model:
  *  - The playground's own UI ("chrome": sidebar, header, toolbars, menus) is
