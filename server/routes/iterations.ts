@@ -51,17 +51,6 @@ function writeTreeManifest(manifest: TreeManifest): void {
   }
 }
 
-function rebuildTreeManifest(iterations: IterationFile[]): TreeManifest {
-  const manifest: TreeManifest = { version: 1, entries: {} };
-  for (const iter of iterations) {
-    manifest.entries[iter.filename] = {
-      parent: iter.sourceIteration || iter.parentId,
-    };
-  }
-  writeTreeManifest(manifest);
-  return manifest;
-}
-
 function findDescendants(manifest: TreeManifest, filename: string): string[] {
   const descendants: string[] = [];
   const queue = [filename];
@@ -344,26 +333,10 @@ export function iterationsRoutes() {
     }
   });
 
-  // POST - Regenerate index and optionally rebuild tree manifest
+  // POST - Regenerate index
   app.post('/api/iterations', async (c) => {
     try {
-      const body = await readJson<{ rebuildTree?: boolean }>(c);
-      const rebuildTree = body?.rebuildTree === true;
-
       regenerateIndex();
-
-      if (rebuildTree) {
-        const files = fs.readdirSync(ITERATIONS_DIR);
-        const iterations: IterationFile[] = [];
-        for (const file of files) {
-          if (file === 'index.ts' || file === TREE_MANIFEST_FILENAME) continue;
-          if (file.endsWith('.tsx')) {
-            const parsed = parseIterationFile(file);
-            if (parsed) iterations.push(parsed);
-          }
-        }
-        rebuildTreeManifest(iterations);
-      }
 
       return c.json({ success: true });
     } catch (error) {
