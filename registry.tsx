@@ -32,6 +32,7 @@ import {
   getStylingConstraint,
   getStylingQualityItem
 } from "@pg/shared/lib/prompts/shared-sections"
+import { iterationsFile } from "@pg/shared/lib/playground-paths"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -407,7 +408,6 @@ export function generateIterationPrompt(
   componentId: string,
   iterationCount: number = 4,
   startNumber: number = 1,
-  depth: "shell" | "1-level" | "all" = "shell",
   customInstructions?: string,
   skillPrompt?: string,
   stylingMode: StylingMode = DEFAULT_STYLING_MODE,
@@ -418,8 +418,6 @@ export function generateIterationPrompt(
 
   const componentName = item.label.replace(/\s*\(.*\)/, "")
   const cleanComponentName = registryIdToPascalCase(componentId)
-  const depthLabel =
-    depth === "shell" ? "Shell only" : depth === "1-level" ? "1 level deep" : "All levels"
 
   const childrenSection = formatChildrenSection(item.childComponents)
   const customInstructionsSection = formatCustomInstructionsSection(customInstructions)
@@ -429,7 +427,7 @@ export function generateIterationPrompt(
 
   const iterationSavesBlock = iterationNumbers
     .map(
-      (n) => `   - Save as src/app/playground/iterations/${cleanComponentName}.iteration-${n}.tsx`
+      (n) => `   - Save as ${iterationsFile(`${cleanComponentName}.iteration-${n}.tsx`)}`
     )
     .join("\n")
 
@@ -438,7 +436,6 @@ export function generateIterationPrompt(
     componentName,
     sourcePath: item.sourcePath,
     iterationCount: String(iterationCount),
-    depthLabel,
     childrenSection,
     propsInterface: item.propsInterface,
     cleanComponentName,
@@ -461,7 +458,6 @@ export function generateIterationFromIterationPrompt(
   sourceIterationFilename: string,
   iterationCount: number,
   startNumber: number,
-  depth: "shell" | "1-level" | "all" = "shell",
   customInstructions?: string,
   skillPrompt?: string,
   stylingMode: StylingMode = DEFAULT_STYLING_MODE,
@@ -472,10 +468,8 @@ export function generateIterationFromIterationPrompt(
 
   const componentName = item.label.replace(/\s*\(.*\)/, "")
   const cleanComponentName = registryIdToPascalCase(componentId)
-  const depthLabel =
-    depth === "shell" ? "Shell only" : depth === "1-level" ? "1 level deep" : "All levels"
   const endNumber = startNumber + iterationCount - 1
-  const iterationSourcePath = `src/app/playground/iterations/${sourceIterationFilename}`
+  const iterationSourcePath = iterationsFile(sourceIterationFilename)
 
   const childrenSection = formatChildrenSection(item.childComponents)
   const customInstructionsSection = formatCustomInstructionsSection(customInstructions)
@@ -485,7 +479,7 @@ export function generateIterationFromIterationPrompt(
 
   const iterationSavesBlock = iterationNumbers
     .map(
-      (n) => `   - Save as src/app/playground/iterations/${cleanComponentName}.iteration-${n}.tsx`
+      (n) => `   - Save as ${iterationsFile(`${cleanComponentName}.iteration-${n}.tsx`)}`
     )
     .join("\n")
 
@@ -497,7 +491,6 @@ export function generateIterationFromIterationPrompt(
     iterationCount: String(iterationCount),
     startNumber: String(startNumber),
     endNumber: String(endNumber),
-    depthLabel,
     childrenSection,
     propsInterface: item.propsInterface,
     iterationSavesBlock,
@@ -518,7 +511,6 @@ export function generateElementIterationPrompt(
   componentId: string,
   startNumber: number,
   iterationCount: number,
-  depth: "shell" | "1-level" | "all" = "all",
   elementSelections: ChatSubmitPayload["elementSelections"],
   customInstructions?: string,
   skillPrompt?: string,
@@ -530,8 +522,6 @@ export function generateElementIterationPrompt(
 
   const componentName = item.label.replace(/\s*\(.*\)/, "")
   const cleanComponentName = registryIdToPascalCase(componentId)
-  const depthLabel =
-    depth === "shell" ? "Shell only" : depth === "1-level" ? "1 level deep" : "All levels"
 
   const childrenSection = formatChildrenSection(item.childComponents)
   const customInstructionsSection = formatCustomInstructionsSection(customInstructions)
@@ -542,7 +532,7 @@ export function generateElementIterationPrompt(
 
   const iterationSavesBlock = iterationNumbers
     .map(
-      (n) => `   - Save as src/app/playground/iterations/${cleanComponentName}.iteration-${n}.tsx`
+      (n) => `   - Save as ${iterationsFile(`${cleanComponentName}.iteration-${n}.tsx`)}`
     )
     .join("\n")
 
@@ -550,7 +540,6 @@ export function generateElementIterationPrompt(
     skillSection,
     componentName,
     sourcePath: item.sourcePath,
-    depthLabel,
     childrenSection,
     propsInterface: item.propsInterface,
     cleanComponentName,
@@ -570,7 +559,6 @@ export function generateElementIterationFromIterationPrompt(
   sourceIterationFilename: string,
   startNumber: number,
   iterationCount: number,
-  depth: "shell" | "1-level" | "all" = "all",
   elementSelections: ChatSubmitPayload["elementSelections"],
   customInstructions?: string,
   skillPrompt?: string,
@@ -582,9 +570,7 @@ export function generateElementIterationFromIterationPrompt(
 
   const componentName = item.label.replace(/\s*\(.*\)/, "")
   const cleanComponentName = registryIdToPascalCase(componentId)
-  const depthLabel =
-    depth === "shell" ? "Shell only" : depth === "1-level" ? "1 level deep" : "All levels"
-  const iterationSourcePath = `src/app/playground/iterations/${sourceIterationFilename}`
+  const iterationSourcePath = iterationsFile(sourceIterationFilename)
 
   const childrenSection = formatChildrenSection(item.childComponents)
   const customInstructionsSection = formatCustomInstructionsSection(customInstructions)
@@ -595,7 +581,7 @@ export function generateElementIterationFromIterationPrompt(
 
   const iterationSavesBlock = iterationNumbers
     .map(
-      (n) => `   - Save as src/app/playground/iterations/${cleanComponentName}.iteration-${n}.tsx`
+      (n) => `   - Save as ${iterationsFile(`${cleanComponentName}.iteration-${n}.tsx`)}`
     )
     .join("\n")
 
@@ -604,7 +590,6 @@ export function generateElementIterationFromIterationPrompt(
     componentName,
     sourcePath: item.sourcePath,
     iterationSourcePath,
-    depthLabel,
     childrenSection,
     propsInterface: item.propsInterface,
     cleanComponentName,
@@ -629,7 +614,7 @@ export function generateAdoptPrompt(componentId: string, iterationFilename: stri
   const item = resolveRegistryItem(componentId)
   const originalPath =
     item?.sourcePath || `src/components/${iterationFilename.split(".iteration")[0]}.tsx`
-  const iterationPath = `src/app/playground/iterations/${iterationFilename}`
+  const iterationPath = iterationsFile(iterationFilename)
 
   return adoptIterationPrompt({ originalPath, iterationPath })
 }

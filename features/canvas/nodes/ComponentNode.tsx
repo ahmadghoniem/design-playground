@@ -4,7 +4,6 @@ import {
   useCallback,
   useRef,
   useEffect,
-  type ComponentType,
   type MouseEvent,
 } from "react";
 import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
@@ -22,7 +21,6 @@ import {
 import IterateDialog from "@pg/shared/ui/IterateDialog";
 import { SizeButtons } from "@pg/shared/ui/SizeButtons";
 import { NodeLabel, useInverseZoom } from "@pg/shared/ui/NodeLabel";
-import { loadOnCanvasComponentModule } from "@pg/shared/lib/oncanvas-loader";
 
 import {
   useAsyncProps,
@@ -41,7 +39,6 @@ import {
 import {
   COMPONENT_SIZE_CHANGE_EVENT,
   EDIT_COMPLETE_EVENT,
-  JSX_COMPONENT_ADDED_EVENT,
   DESIGN_SYSTEM_GENERATED_EVENT,
   DESIGN_SYSTEM_SHOWCASE_RAW_URL,
   SIZE_CONFIG,
@@ -58,10 +55,8 @@ interface ComponentNodeProps {
     size?: ComponentSize;
     /** Whether this node has been freeform-resized */
     customResized?: boolean;
-    /** Render mode: 'react' (default), 'jsx' for pasted TSX, 'design-system' for the generated showcase */
-    renderMode?: "react" | "jsx" | "design-system";
-    /** On-canvas JSX component filename in canvas-components/ (when renderMode is 'jsx') */
-    jsxFile?: string;
+    /** Render mode: 'react' (default), 'design-system' for the generated showcase */
+    renderMode?: "react" | "design-system";
   };
   selected?: boolean;
 }
@@ -72,70 +67,14 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   // layout slot (14 + 6 gap) so it doesn't visually overlap the label.
   const hidePlayButton = labelInvScale * 14 > 14 + 6;
   const componentId = data.componentId;
-  const isJsx = data.renderMode === "jsx";
   const isDesignSystem = data.renderMode === "design-system";
-  const registryItem =
-    isJsx || isDesignSystem
-      ? null
-      : resolveRegistryItem(componentId);
+  const registryItem = isDesignSystem ? null : resolveRegistryItem(componentId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
   const [iframeKey, setIframeKey] = useState(() => Date.now());
 
-  // On-canvas JSX component — loaded dynamically, updates when HMR re-evaluates index.ts
-  const [JsxComponent, setJsxComponent] = useState<ComponentType<any> | null>(
-    null,
-  );
-  const [jsxError, setJsxError] = useState<string | null>(null);
-  const [jsxLoadAttempt, setJsxLoadAttempt] = useState(0);
-
-  // Re-trigger load when a new JSX component is written to disk
-  useEffect(() => {
-    if (!isJsx) return;
-    const handler = () => setJsxLoadAttempt((n) => n + 1);
-    window.addEventListener(JSX_COMPONENT_ADDED_EVENT, handler);
-    return () => window.removeEventListener(JSX_COMPONENT_ADDED_EVENT, handler);
-  }, [isJsx]);
-
-  useEffect(() => {
-    if (!isJsx || !data.jsxFile) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    // Poll the module barrel until the new file shows up. HMR can take a few
-    // seconds to recompile after the file is written to disk; without polling,
-    // freshly pasted frames stay stuck on "Loading component…" until refresh.
-    const attempt = (delay: number) => {
-      loadOnCanvasComponentModule()
-        .then((mod) => {
-          if (cancelled) return;
-          const comp = mod.getOnCanvasComponent(data.jsxFile!);
-          if (comp) {
-            setJsxComponent(() => comp);
-            setJsxError(null);
-            return;
-          }
-          if (delay <= 8000) {
-            timer = setTimeout(
-              () => attempt(Math.min(delay * 1.5, 2000)),
-              delay,
-            );
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) setJsxError(String(err));
-        });
-    };
-    attempt(300);
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [isJsx, data.jsxFile, jsxLoadAttempt]);
-
   const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(
-    isJsx || isDesignSystem ? "" : componentId,
+    isDesignSystem ? "" : componentId,
   );
   const handleWheel = useScrollCapture(scrollContainerRef);
 
@@ -216,7 +155,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     setIsCustomResized(true);
     if (nodeId) {
       updateNodeData(nodeId, { customResized: true, size: "default" });
-      // Width-only for React/JSX components: drop the height the resize control
+      // Width-only for React components: drop the height the resize control
       // set so the frame hugs its content vertically (no trapped vertical gap).
       if (!isDesignSystem) {
         setNodes((nds) =>
@@ -274,13 +213,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
   }, [isDesignSystem]);
 
-  const Component = isJsx ? JsxComponent : registryItem?.Component;
+  const Component = registryItem?.Component;
   const props = registryItem?.props;
-  const label = isJsx
-    ? data.jsxFile?.replace(".tsx", "") || componentId
-    : isDesignSystem
-      ? "Design System"
-      : registryItem?.label || componentId;
+  const label = isDesignSystem
+    ? "Design System"
+    : registryItem?.label || componentId;
   const effectiveProps = (resolvedProps ?? props ?? {}) as Record<
     string,
     unknown
@@ -289,14 +226,14 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const isPreset = size !== "default";
   const isFillMode = isResizing || isCustomResized;
   const isLargeComponent = isPreset || isFillMode;
-  // React/JSX components resize width-only and hug their content height (no
+  // React components resize width-only and hug their content height (no
   // vertical padding). Design-system frames keep full 2D fill so their
   // iframe fills the resized box.
   const isAutoHeightFill = isFillMode && !isDesignSystem;
   const displayDims = getDisplayDimensions(size);
 
 
-  if (!isJsx && !isDesignSystem && !registryItem) {
+  if (!isDesignSystem && !registryItem) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 min-w-[200px]">
         <p className="text-red-600 text-sm">Unknown component: {componentId}</p>
@@ -343,7 +280,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       <div className="flex items-center justify-between px-0.5 pb-1.5 cursor-grab">
         {/* Left: open-in-new-tab + label (always visible) */}
         <div className="flex items-center gap-1.5">
-          {!isJsx && !isDesignSystem && (
+          {!isDesignSystem && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -371,15 +308,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               </TooltipContent>
             </Tooltip>
           )}
-          <NodeLabel
-            color={
-              isJsx
-                ? "#7C3AED"
-                : isDesignSystem
-                  ? "#C026D3"
-                  : "#0B99FF"
-            }
-          >
+          <NodeLabel color={isDesignSystem ? "#C026D3" : "#0B99FF"}>
             {label}
           </NodeLabel>
         </div>
@@ -405,10 +334,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           onMouseLeave={hoverHint.onMouseLeave}
           className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
             selected
-              ? `ring-2 ${isJsx ? "ring-purple-400" : isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
+              ? `ring-2 ${isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
               : ""
           } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? (isAutoHeightFill ? "w-full" : "w-full h-full") : ""}`}
-          style={isJsx ? { contain: "paint" } : undefined}
         >
           {isDesignSystem ? (
             <div
@@ -456,9 +384,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               className={`grid place-items-center overflow-auto w-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
               onWheel={isInteractive ? handleWheel : undefined}
             >
-              {jsxError ? (
-                <div className="text-xs text-red-500 p-4">{jsxError}</div>
-              ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
+              {isLoadingProps && !Object.keys(effectiveProps).length ? (
                 <div className="text-xs text-gray-500">Loading live data…</div>
               ) : propsError && !Object.keys(effectiveProps).length ? (
                 <div className="text-xs text-red-600">
@@ -468,8 +394,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                 <ComponentErrorBoundary componentName={label}>
                   <Component {...effectiveProps} />
                 </ComponentErrorBoundary>
-              ) : isJsx ? (
-                <div className="text-xs text-stone-400">Loading component…</div>
               ) : null}
             </div>
           ) : isPreset ? (
@@ -481,16 +405,14 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               onWheel={isInteractive ? handleWheel : undefined}
             >
               <div
-                className={isJsx ? "bg-white" : "bg-background"}
+                className="bg-background"
                 style={{
                   width: config.width,
                   minHeight: config.height,
                   zoom: config.scale,
                 }}
               >
-                {jsxError ? (
-                  <div className="p-6 text-xs text-red-500">{jsxError}</div>
-                ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
+                {isLoadingProps && !Object.keys(effectiveProps).length ? (
                   <div className="p-6 text-xs text-gray-500">
                     Loading live data…
                   </div>
@@ -502,10 +424,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                   <ComponentErrorBoundary componentName={label}>
                     <Component {...effectiveProps} />
                   </ComponentErrorBoundary>
-                ) : isJsx ? (
-                  <div className="p-6 text-xs text-stone-400">
-                    Loading component…
-                  </div>
                 ) : null}
               </div>
             </div>
@@ -516,9 +434,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                The bare div only carries the interaction classes so canvas
                pan/scroll gestures over an interactive component are gated. */
             <div className={isInteractive ? "nodrag nowheel nopan" : undefined}>
-              {jsxError ? (
-                <div className="text-xs text-red-500">{jsxError}</div>
-              ) : isLoadingProps && !Object.keys(effectiveProps).length ? (
+              {isLoadingProps && !Object.keys(effectiveProps).length ? (
                 <div className="text-xs text-gray-500">Loading live data…</div>
               ) : propsError && !Object.keys(effectiveProps).length ? (
                 <div className="text-xs text-red-600">
@@ -528,17 +444,15 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
                 <ComponentErrorBoundary componentName={label}>
                   <Component {...effectiveProps} />
                 </ComponentErrorBoundary>
-              ) : isJsx ? (
-                <div className="text-xs text-stone-400">Loading component…</div>
               ) : null}
             </div>
           )}
-          {/* Click-blocker for non-iframe (JSX/React) render modes — gates
-              link/button activity on a double-click, mirroring the iframe
-              overlay above. Already redundant for iframe/embed cases (which
-              keep their own scoped overlay) but harmless. Element-select
-              mode disables this via `[data-iframe-overlay] { pointer-events:
-              none !important }` in playground-global.css. */}
+          {/* Click-blocker for React render mode — gates link/button activity
+              on a double-click, mirroring the iframe overlay above. Already
+              redundant for iframe/embed cases (which keep their own scoped
+              overlay) but harmless. Element-select mode disables this via
+              `[data-iframe-overlay] { pointer-events: none !important }` in
+              playground-global.css. */}
           {!isInteractive && (
             <div className="absolute inset-0" data-iframe-overlay />
           )}
@@ -556,10 +470,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               componentName={label.replace(/\s*\(.*\)/, "")}
               parentNodeId={nodeId ?? ""}
               isGlobalGenerating={isGlobalGenerating}
-              renderMode={
-                data.renderMode as "react" | "jsx" | undefined
-              }
-              jsxFile={data.jsxFile}
             />
           ) : null}
         </div>

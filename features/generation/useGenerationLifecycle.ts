@@ -263,8 +263,6 @@ export function useGenerationLifecycle({
         parentNodeId,
         iterationCount,
         gridLayout,
-        renderMode: genRenderMode,
-        jsxFile: genJsxFile,
         editMode: isEditMode,
         startNumber: genStartNumber,
       } = payload;
@@ -279,8 +277,6 @@ export function useGenerationLifecycle({
           iterationCount: 0,
           skeletonNodeIds: [],
           startTime: Date.now(),
-          renderMode: genRenderMode,
-          jsxFile: genJsxFile,
         });
         // Subscribe to SSE for progressive iteration detection — same as iterate/freeform
         startGenerationEventSource();
@@ -315,8 +311,6 @@ export function useGenerationLifecycle({
           skeletonNodeIds: [skeletonId],
           startTime: Date.now(),
           skeletonPositions: [{ x: flowPos.x, y: flowPos.y }],
-          renderMode: genRenderMode,
-          jsxFile: genJsxFile,
           startNumber: genStartNumber ?? 1,
         };
         coord.setGenerationInfoEager(newInfo);
@@ -452,8 +446,6 @@ export function useGenerationLifecycle({
           ? skeletonNodes.map((n) => ({ x: n.position.x, y: n.position.y }))
           : undefined,
         gridCellSize: gridLayout ? { width: cellW, height: cellH } : undefined,
-        renderMode: genRenderMode,
-        jsxFile: genJsxFile,
         startNumber: genStartNumber ?? 1,
       };
       coord.setGenerationInfoEager(newInfo);

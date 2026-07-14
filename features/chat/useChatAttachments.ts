@@ -44,7 +44,7 @@ export function useChatAttachments({
   selectedNodes,
 }: UseChatAttachmentsOptions): UseChatAttachmentsResult {
   // The edit/explore target is the FIRST selected node that is a valid target
-  // (a React/HTML/JSX component or iteration — not an image/text). The
+  // (a React component or iteration — not an image/text). The
   // rest of the selection becomes reference context.
   const editTarget = useMemo<SelectedNodeContext | null>(() => {
     const candidates = (selectedNodes ?? []).filter(
@@ -69,7 +69,6 @@ export function useChatAttachments({
     () => (): ChatSubmitPayload['elementSelections'] => {
       if (!selectedElements || selectedElements.length === 0) return undefined;
       return selectedElements.map((sel) => ({
-        oid: sel.context.oid,
         tagName: sel.context.tagName,
         displayName: sel.context.displayName,
         textContent: sel.context.textContent,

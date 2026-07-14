@@ -8,7 +8,6 @@ export interface EditPromptOptions {
   skillPrompt?: string;
   referenceNodesSection?: string;
   elementSelections?: Array<{
-    oid?: string;
     tagName: string;
     displayName?: string;
     textContent?: string;
@@ -26,19 +25,6 @@ export function editPrompt(opts: EditPromptOptions): string {
     "Do NOT create new files. Modify the existing file in-place.",
   );
 
-  // JSX canvas-components must stay fully self-contained
-  if (opts.filePath.includes("canvas-components/")) {
-    sections.push(
-      `## Self-Contained Component Rules\n` +
-        `This file is a canvas-component that renders inside the playground. It MUST remain fully self-contained:\n` +
-        `- The ONLY allowed import is 'react' (e.g. import React, { useState } from 'react')\n` +
-        `- Do NOT add imports for any UI library: no shadcn/ui, no @radix-ui, no lucide-react, no @/components, no framer-motion, no other packages — no framework image/link helpers either (use plain <img>/<a> tags), since 'react' is the only allowed import\n` +
-        `- Use ONLY inline styles or style objects — no Tailwind classes, no external CSS imports, no CSS modules\n` +
-        `- All icons, images, and assets must be inline SVG or CSS-based\n` +
-        `- Keep default export`,
-    );
-  }
-
   if (opts.skillPrompt) {
     sections.push("## Skills\n" + opts.skillPrompt);
   }
@@ -46,10 +32,6 @@ export function editPrompt(opts: EditPromptOptions): string {
   if (opts.elementSelections && opts.elementSelections.length > 0) {
     const selLines = opts.elementSelections.map((el) => {
       const parts = [`- **${el.displayName || el.tagName}**`];
-      if (el.oid)
-        parts.push(
-          `  Locate: search the file for \`data-pg-oid="${el.oid}"\` — that attribute uniquely identifies this exact element in the source.`,
-        );
       if (el.cssSelector) parts.push(`  Selector: \`${el.cssSelector}\``);
       if (el.textContent)
         parts.push(`  Text: "${el.textContent.slice(0, 200)}"`);

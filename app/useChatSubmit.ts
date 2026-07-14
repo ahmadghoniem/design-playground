@@ -21,10 +21,7 @@ import {
 } from "@pg/shared/lib/prompts/shared-sections";
 import { freeformReferencePrompt } from "@pg/features/generation/prompts/freeform-reference.prompt";
 import { editPrompt } from "@pg/features/generation/prompts/edit.prompt";
-import {
-  generateJsxIterationPrompt,
-  generateJsxIterationFromIterationPrompt,
-} from "@pg/shared/lib/jsx-prompts";
+import { iterationsFile } from "@pg/shared/lib/playground-paths";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
@@ -33,17 +30,14 @@ import {
   DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
   DEFAULT_STYLING_MODE,
   CHAT_DEFAULT_COUNT,
-  CHAT_DEFAULT_DEPTH,
   ENABLE_FREEFORM_CHAT,
   canSubmitReferenceOnlyChat,
-  JSX_COMPONENT_ADDED_EVENT,
   EDIT_COMPLETE_EVENT,
   type StylingMode,
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
   type ChatSubmitPayload,
-  type JsxComponentInfo,
 } from "@pg/shared/lib/constants";
 import type { GenerationInfo } from "@pg/shared/lib/canvas-persistence";
 import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
@@ -105,24 +99,21 @@ export function useChatSubmit({
 
       // ── Edit Mode: modify file in-place, no iterations ──
       if (chatMode === "edit" && payload.targetNodeId) {
-        const isJsxEdit = payload.renderMode === "jsx" && !!payload.jsxFile;
         const editComponentId = payload.targetComponentId || "edit-mode";
         const editComponentName =
           payload.targetComponentName || editComponentId;
         let filePath: string;
 
-        if (isJsxEdit) {
-          filePath = `src/app/playground/canvas-components/${payload.jsxFile}`;
-        } else if (
+        if (
           payload.targetType === "iteration" &&
           payload.sourceFilename
         ) {
-          filePath = `src/app/playground/iterations/${payload.sourceFilename}`;
+          filePath = iterationsFile(payload.sourceFilename);
         } else {
           const item = resolveRegistryItem(editComponentId);
           filePath =
             item?.sourcePath ||
-            `src/app/playground/iterations/${editComponentId}`;
+            iterationsFile(editComponentId);
         }
 
         // Gather skill prompts (same logic as normal path)
@@ -200,9 +191,6 @@ export function useChatSubmit({
           flowPosition: payload.canvasPosition,
           targetNodeId: payload.targetNodeId,
           editMode: true,
-          ...(isJsxEdit && payload.jsxFile
-            ? { renderMode: "jsx" as const, jsxFile: payload.jsxFile }
-            : {}),
         });
 
         try {
@@ -216,9 +204,6 @@ export function useChatSubmit({
               source: "chat_edit",
               skillIds: payload.skillIds,
               ...getProviderFields(),
-              ...(isJsxEdit && payload.jsxFile
-                ? { jsxFile: payload.jsxFile }
-                : {}),
             }),
           });
           const data = await response.json().catch(() => ({ success: false }));
@@ -240,9 +225,13 @@ export function useChatSubmit({
               error: data?.error || "Edit failed",
             });
           } else {
-            if (isJsxEdit) {
-              window.dispatchEvent(new Event(JSX_COMPONENT_ADDED_EVENT));
-            }
+            // Tell the targeted node to re-import its freshly-edited component
+            // (same filename, so the loader can't detect the change itself).
+            window.dispatchEvent(
+              new CustomEvent(EDIT_COMPLETE_EVENT, {
+                detail: { nodeId: payload.targetNodeId },
+              }),
+            );
             generationEvents.complete.emit({
               componentId: editComponentId,
               parentNodeId: payload.targetNodeId,
@@ -341,7 +330,6 @@ export function useChatSubmit({
         }
       }
 
-      const isJsxTarget = payload.renderMode === "jsx" && !!payload.jsxFile;
       const canvasGenPf = getProviderFields();
 
       if (
@@ -360,75 +348,27 @@ export function useChatSubmit({
         if (!isRawMode) {
           // Fetch next available iteration number
           try {
-            if (isJsxTarget && payload.jsxFile) {
-              const baseFilename = payload.jsxFile.replace(
-                /\.iteration-\d+\.tsx$/,
-                ".tsx",
+            const cleanName = componentName.replace(/\s+/g, "");
+            const response = await fetch("/playground/api/iterations");
+            if (response.ok) {
+              const { iterations } = await response.json();
+              const componentIterations = iterations.filter(
+                (i: { componentName: string }) =>
+                  i.componentName === cleanName,
               );
-              const response = await fetch(
-                "/playground/api/oncanvas-components",
+              const maxNumber = componentIterations.reduce(
+                (max: number, i: { iterationNumber: number }) =>
+                  Math.max(max, i.iterationNumber),
+                0,
               );
-              if (response.ok) {
-                const { components } = (await response.json()) as {
-                  components: JsxComponentInfo[];
-                };
-                const comp = components.find(
-                  (c) => c.filename === baseFilename,
-                );
-                const maxNumber =
-                  comp?.iterations.reduce(
-                    (max: number, i: { iterationNumber: number }) =>
-                      Math.max(max, i.iterationNumber),
-                    0,
-                  ) ?? 0;
-                startNumber = maxNumber + 1;
-              }
-            } else {
-              const cleanName = componentName.replace(/\s+/g, "");
-              const response = await fetch("/playground/api/iterations");
-              if (response.ok) {
-                const { iterations } = await response.json();
-                const componentIterations = iterations.filter(
-                  (i: { componentName: string }) =>
-                    i.componentName === cleanName,
-                );
-                const maxNumber = componentIterations.reduce(
-                  (max: number, i: { iterationNumber: number }) =>
-                    Math.max(max, i.iterationNumber),
-                  0,
-                );
-                startNumber = maxNumber + 1;
-              }
+              startNumber = maxNumber + 1;
             }
           } catch {
             /* use default */
           }
         }
 
-        if (!isRawMode && isJsxTarget && payload.jsxFile) {
-          const baseFile = payload.jsxFile.replace(
-            /\.iteration-\d+\.tsx$/,
-            ".tsx",
-          );
-          if (targetType === "iteration" && sourceFilename) {
-            prompt = generateJsxIterationFromIterationPrompt(
-              baseFile,
-              sourceFilename,
-              iterationCount,
-              startNumber,
-              customInstructions,
-              combinedSkillPrompt,
-            );
-          } else {
-            prompt = generateJsxIterationPrompt(
-              baseFile,
-              iterationCount,
-              startNumber,
-              customInstructions,
-              combinedSkillPrompt,
-            );
-          }
-        } else if (!isRawMode && targetType === "iteration" && sourceFilename) {
+        if (!isRawMode && targetType === "iteration" && sourceFilename) {
           // Iterate from iteration
           if (hasElementSelections) {
             prompt = generateElementIterationFromIterationPrompt(
@@ -436,7 +376,6 @@ export function useChatSubmit({
               sourceFilename,
               startNumber,
               iterationCount,
-              CHAT_DEFAULT_DEPTH,
               payload.elementSelections,
               customInstructions,
               combinedSkillPrompt,
@@ -449,7 +388,6 @@ export function useChatSubmit({
               sourceFilename,
               iterationCount,
               startNumber,
-              CHAT_DEFAULT_DEPTH,
               customInstructions,
               combinedSkillPrompt,
               stylingMode,
@@ -463,7 +401,6 @@ export function useChatSubmit({
               componentId,
               startNumber,
               iterationCount,
-              CHAT_DEFAULT_DEPTH,
               payload.elementSelections,
               customInstructions,
               combinedSkillPrompt,
@@ -475,7 +412,6 @@ export function useChatSubmit({
               componentId,
               iterationCount,
               startNumber,
-              CHAT_DEFAULT_DEPTH,
               customInstructions,
               combinedSkillPrompt,
               stylingMode,
@@ -496,9 +432,6 @@ export function useChatSubmit({
             canvasGenPf.provider as GenerationStartPayload["provider"],
           flowPosition: payload.canvasPosition,
           targetNodeId,
-          ...(isJsxTarget && payload.jsxFile
-            ? { renderMode: "jsx" as const, jsxFile: payload.jsxFile }
-            : {}),
         });
 
         // Call the generate API
@@ -514,9 +447,6 @@ export function useChatSubmit({
               source: "chat",
               skillIds: payload.skillIds,
               ...canvasGenPf,
-              ...(isJsxTarget && payload.jsxFile
-                ? { jsxFile: payload.jsxFile }
-                : {}),
             }),
           });
 

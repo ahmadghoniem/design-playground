@@ -6,8 +6,6 @@
 // ---------------------------------------------------------------------------
 
 export interface ElementContext {
-  /** data-pg-oid from stamped HTML iterations — exact grep target for the agent. */
-  oid?: string;
   tagName: string;
   displayName: string;
   textContent: string;
@@ -107,7 +105,6 @@ function buildCssSelector(el: HTMLElement): string {
  * iframe's selection bridge script (no React fibers available).
  */
 export function createHtmlElementContext(data: {
-  oid?: string;
   tagName: string;
   displayName?: string;
   textContent: string;
@@ -117,7 +114,6 @@ export function createHtmlElementContext(data: {
   htmlSource: string;
 }): ElementContext {
   return {
-    oid: data.oid,
     tagName: data.tagName,
     displayName: data.displayName || data.tagName,
     textContent: data.textContent,

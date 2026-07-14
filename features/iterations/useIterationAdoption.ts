@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useReactFlow } from "@xyflow/react";
 import { generateAdoptPrompt } from "@pg/registry";
-import { generateJsxAdoptPrompt } from "@pg/shared/lib/jsx-prompts";
 import { getProviderFields } from "@pg/shared/lib/generation-body";
 import {
   generationEvents,
@@ -18,7 +17,6 @@ import {
   type AdoptionCompletePayload,
   type AdoptionErrorPayload,
 } from "@pg/shared/lib/constants";
-import { jsxIterationToBaseFile } from "@pg/features/iterations/iteration-filename";
 
 // ---------------------------------------------------------------------------
 // useIterationAdoption
@@ -40,13 +38,11 @@ import { jsxIterationToBaseFile } from "@pg/features/iterations/iteration-filena
 export interface UseIterationAdoptionParams {
   id: string;
   registryId: string;
-  isJsx: boolean;
   isGlobalGenerating: boolean;
   data: {
     componentName: string;
     parentNodeId: string;
     filename: string;
-    jsxFile?: string;
     adopted?: boolean;
     onAdopt?: (filename: string, componentName: string) => void;
   };
@@ -55,7 +51,6 @@ export interface UseIterationAdoptionParams {
 export function useIterationAdoption({
   id,
   registryId,
-  isJsx,
   isGlobalGenerating,
   data,
 }: UseIterationAdoptionParams) {
@@ -77,17 +72,9 @@ export function useIterationAdoption({
     const toastId = `adopt-${id}`;
 
     // Generate the adopt prompt
-    let adoptPrompt: string;
-    if (isJsx && data.jsxFile) {
-      const baseFile = jsxIterationToBaseFile(data.jsxFile);
-      adoptPrompt = generateJsxAdoptPrompt(baseFile, data.jsxFile);
-    } else {
-      adoptPrompt = generateAdoptPrompt(registryId, data.filename);
-    }
+    const adoptPrompt = generateAdoptPrompt(registryId, data.filename);
 
-    const componentId = isJsx
-      ? `jsx:${data.componentName}`
-      : registryId;
+    const componentId = registryId;
 
     // Dispatch start event (editMode prevents skeleton nodes)
     generationEvents.start.emit({
@@ -197,7 +184,7 @@ export function useIterationAdoption({
       setAdoptionStatus("error");
       setTimeout(() => setAdoptionStatus("idle"), 3000);
     }
-  }, [id, registryId, isJsx, data, updateNodeData]);
+  }, [id, registryId, data, updateNodeData]);
 
   return {
     adoptionStatus,

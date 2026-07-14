@@ -184,16 +184,6 @@ export const ITERATION_COUNT_OPTIONS = [1, 2, 3, 4] as const;
 /** Default number of iterations to generate */
 const DEFAULT_ITERATION_COUNT = 3;
 
-/** Default iteration depth */
-const DEFAULT_DEPTH: 'shell' | '1-level' | 'all' = 'shell';
-
-/** Depth option definitions */
-const DEPTH_OPTIONS: { key: 'shell' | '1-level' | 'all'; label: string }[] = [
-  { key: 'shell', label: 'Shell only' },
-  { key: '1-level', label: '1 level deep' },
-  { key: 'all', label: 'All levels' },
-];
-
 /** Default instructions used when the iterate chat is empty or drag-to-iterate is used */
 export const DEFAULT_EMPTY_ITERATION_INSTRUCTIONS = 'make the layout professional and polished. elements should not overlap or clash.';
 
@@ -315,56 +305,6 @@ export const ITERATION_FILENAME_PATTERN = /^[A-Za-z0-9]+\.iteration-\d+\.tsx$/;
 export const ITERATION_FILENAME_PARSE_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
 
 // ---------------------------------------------------------------------------
-// Host .gitignore markers (managed by lib/host-gitignore.mjs + setup.mjs)
-// ---------------------------------------------------------------------------
-
-/** Start marker for the static playground block in the host .gitignore */
-const GITIGNORE_STATIC_START = '# BEGIN design-playground';
-
-/** End marker for the static playground block in the host .gitignore */
-const GITIGNORE_STATIC_END = '# END design-playground';
-
-// ---------------------------------------------------------------------------
-// JSX On-Canvas Components
-// ---------------------------------------------------------------------------
-
-/** Prefix for on-canvas JSX component IDs in drag-and-drop and canvas state */
-export const JSX_ID_PREFIX = 'jsx:';
-
-/** Fired when a new JSX component file is added to the canvas */
-export const JSX_COMPONENT_ADDED_EVENT = 'playground:jsx-component-added';
-
-/** Regex to match on-canvas JSX base component filenames (e.g. frame-1.tsx, but not iterations) */
-export const CANVAS_COMPONENT_FILENAME_PATTERN = /^frame-\d+\.tsx$/;
-
-/** Regex to match on-canvas JSX iteration filenames (e.g. frame-1.iteration-2.tsx) */
-export const CANVAS_ITERATION_FILENAME_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
-
-/** Regex to parse on-canvas JSX iteration filenames into [name, number] */
-export const CANVAS_ITERATION_PARSE_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
-
-/** Info about an on-canvas JSX component */
-export interface JsxComponentInfo {
-  id: string;             // "jsx:frame-1"
-  label: string;          // "frame-1"
-  filename: string;       // "frame-1.tsx"
-  iterations: JsxIterationInfo[];
-}
-
-/** Info about a JSX iteration file */
-export interface JsxIterationInfo {
-  id: string;
-  label: string;
-  filename: string;
-  baseFilename: string;
-  iterationNumber: number;
-}
-
-// ---------------------------------------------------------------------------
-// Canvas Events
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // Edit Mode Constants
 // ---------------------------------------------------------------------------
 
@@ -445,9 +385,6 @@ export function canSubmitReferenceOnlyChat(input: {
 /** Default iteration count when submitting via the docked chat bar */
 export const CHAT_DEFAULT_COUNT = 3;
 
-/** Default depth when submitting via the docked chat bar */
-export const CHAT_DEFAULT_DEPTH = 'all' as const;
-
 /** Payload submitted by the chat composer */
 export interface ChatSubmitPayload {
   text: string;
@@ -463,8 +400,6 @@ export interface ChatSubmitPayload {
   iterationCount?: number;
   canvasPosition: { x: number; y: number };
   elementSelections?: {
-    /** data-pg-oid from stamped HTML iterations — exact grep target for the agent. */
-    oid?: string;
     tagName: string;
     displayName: string;
     textContent: string;
@@ -488,10 +423,6 @@ export interface ChatSubmitPayload {
   editMode?: boolean;
   /** Cursor chat behavior mode */
   chatMode?: 'explore' | 'edit' | 'raw';
-  /** Render mode of the target node */
-  renderMode?: 'react' | 'jsx';
-  /** On-canvas JSX filename in canvas-components/ (when renderMode is 'jsx') */
-  jsxFile?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -519,10 +450,6 @@ export interface GenerationStartPayload {
   flowPosition?: { x: number; y: number };
   /** Node this generation is anchored to, when dropped on a frame */
   targetNodeId?: string | null;
-  /** Render mode for generated nodes */
-  renderMode?: 'react' | 'jsx';
-  /** Base or iteration filename in canvas-components/ (when renderMode is 'jsx') */
-  jsxFile?: string;
   /** When true, this is an edit-in-place operation — no skeleton nodes should be created */
   editMode?: boolean;
 }
@@ -552,9 +479,6 @@ export interface DragIteratePayload {
   model?: string;
   provider?: import('./providers/types').ProviderId;
   sourceFilename?: string;
-  renderMode?: 'react' | 'jsx';
-  /** Base or iteration JSX filename (when renderMode is 'jsx') */
-  jsxFile?: string;
 }
 
 // ---------------------------------------------------------------------------

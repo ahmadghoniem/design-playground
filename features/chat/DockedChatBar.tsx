@@ -271,8 +271,6 @@ export default function DockedChatBar({
       canvasPosition: computeCanvasPosition(),
       editMode: mode === "edit",
       chatMode: mode,
-      renderMode: editTarget?.renderMode,
-      jsxFile: editTarget?.jsxFile,
       elementSelections: buildElementSelectionsPayload(),
       referenceNodes: buildReferenceNodesPayload(),
     };

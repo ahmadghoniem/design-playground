@@ -25,8 +25,6 @@ import {
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_WIDTH,
   ITERATION_EDGE_STYLE,
-  JSX_ID_PREFIX,
-  type JsxComponentInfo,
   type ComponentSize,
 } from "@pg/shared/lib/constants";
 
@@ -107,126 +105,6 @@ export function useIterationScan({
       try {
         const info =
           scanContext !== undefined ? scanContext : coord.getGenerationInfo();
-        const canvasIterationKeys = getIterationKeysOnCanvas(coord.getNodes());
-
-        if (info?.renderMode === "jsx" && info.jsxFile) {
-          const baseFilename = info.jsxFile.replace(
-            /\.iteration-\d+\.tsx$/,
-            ".tsx",
-          );
-          try {
-            const jsxResponse = await fetch(
-              "/playground/api/oncanvas-components",
-            );
-            if (jsxResponse.ok) {
-              const { components } = (await jsxResponse.json()) as {
-                components: JsxComponentInfo[];
-              };
-              const comp = components.find((c) => c.filename === baseFilename);
-              if (comp && comp.iterations.length > 0) {
-                const currentNodes = coord.getNodes();
-                const existingJsxKeys = canvasIterationKeys;
-
-                let newJsxIterations = comp.iterations.filter(
-                  (it) => !existingJsxKeys.has(it.filename),
-                );
-                if (info.startNumber != null && info.iterationCount) {
-                  newJsxIterations = newJsxIterations.filter((it) =>
-                    isInExpectedBatch(it.iterationNumber, info),
-                  );
-                }
-
-                if (newJsxIterations.length > 0) {
-                  const skeletonsToRemove: string[] = [];
-                  const newNodes: Node[] = [];
-                  const newEdges: Edge[] = [];
-                  const newKnownFilenames: string[] = [];
-
-                  newJsxIterations.sort(
-                    (a, b) => a.iterationNumber - b.iterationNumber,
-                  );
-
-                  for (const it of newJsxIterations) {
-                    const sourceNodeId = info.parentNodeId
-                      ? currentNodes.find((n) => n.id === info.parentNodeId)
-                          ?.id || undefined
-                      : undefined;
-                    const sourceNode = sourceNodeId
-                      ? currentNodes.find((n) => n.id === sourceNodeId) ||
-                        newNodes.find((n) => n.id === sourceNodeId)
-                      : undefined;
-
-                    const position = resolveIterationPosition(
-                      info,
-                      it.iterationNumber,
-                      currentNodes,
-                      skeletonsToRemove,
-                      sourceNode,
-                      info.skeletonPositions?.[0],
-                    );
-
-                    const nodeId = getNodeId();
-                    const parentSize = sourceNode?.data?.size as
-                      ComponentSize | undefined;
-                    const registryId =
-                      (sourceNode?.data?.componentId as string | undefined) ??
-                      `${JSX_ID_PREFIX}${comp.label}`;
-
-                    newNodes.push({
-                      id: nodeId,
-                      type: "iteration",
-                      position,
-                      data: {
-                        componentName: comp.label,
-                        iterationNumber: it.iterationNumber,
-                        filename: it.filename,
-                        description: "",
-                        parentNodeId: sourceNodeId || undefined,
-                        parentSize,
-                        registryId,
-                        renderMode: "jsx",
-                        jsxFile: it.filename,
-                        onDelete: handleIterationDelete,
-                        onAdopt: handleIterationAdopt,
-                      },
-                    });
-
-                    if (sourceNodeId) {
-                      newEdges.push({
-                        id: `edge_${sourceNodeId}_${nodeId}`,
-                        source: sourceNodeId,
-                        target: nodeId,
-                        type: "smoothstep",
-                        animated: false,
-                        style: ITERATION_EDGE_STYLE,
-                      });
-                    }
-
-                    newKnownFilenames.push(it.filename);
-                  }
-
-                  if (newNodes.length > 0) {
-                    const skeletonSet = new Set(skeletonsToRemove);
-                    setNodes((nds) => [
-                      ...nds.filter((n) => !skeletonSet.has(n.id)),
-                      ...newNodes,
-                    ]);
-                    setEdges((eds) => [
-                      ...eds.filter((e) => !skeletonSet.has(e.target)),
-                      ...newEdges,
-                    ]);
-                    coord.appendKnownIterations(newKnownFilenames);
-                    if (resetTimeoutOnFind) resetPollTimeout();
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error scanning JSX iterations:", error);
-          }
-          return;
-        }
-
         const response = await fetch("/playground/api/iterations");
         if (!response.ok) {
           console.error(

@@ -12,8 +12,6 @@ export interface SelectedNodeContext {
   componentName: string;
   type: 'component' | 'iteration' | 'image' | 'text';
   sourceFilename?: string;
-  renderMode?: 'react' | 'jsx';
-  jsxFile?: string;
   imagePath?: string;
   imageUrl?: string;
 }
@@ -42,16 +40,11 @@ export function useNodeSelection(): UseNodeSelectionReturn {
 
         if (node.type === 'component') {
           const compId = (data.componentId as string) || '';
-          const isJsx = data.renderMode === 'jsx';
           mapped.push({
             nodeId: node.id,
             componentId: compId,
-            componentName: isJsx
-              ? ((data.jsxFile as string)?.replace('.tsx', '') || compId)
-              : flatRegistry[compId]?.label || compId,
+            componentName: flatRegistry[compId]?.label || compId,
             type: 'component',
-            renderMode: isJsx ? 'jsx' : 'react',
-            jsxFile: isJsx ? (data.jsxFile as string) : undefined,
           });
         } else if (node.type === 'image') {
           mapped.push({
@@ -70,20 +63,16 @@ export function useNodeSelection(): UseNodeSelectionReturn {
             type: 'text',
           });
         } else {
-          const isJsx = data.renderMode === 'jsx';
           mapped.push({
             nodeId: node.id,
-            componentId: isJsx
-              ? `jsx:${data.componentName as string}`
-              : (data.componentName as string)
+            componentId:
+              (data.componentName as string)
                     ?.replace(/([A-Z])/g, '-$1')
                     .toLowerCase()
                     .replace(/^-/, '') || '',
             componentName: (data.componentName as string) || '',
             type: 'iteration',
             sourceFilename: (data.filename as string) || undefined,
-            renderMode: isJsx ? 'jsx' : 'react',
-            jsxFile: isJsx ? (data.jsxFile as string) : undefined,
           });
         }
       }

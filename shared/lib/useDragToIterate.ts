@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getProviderFields } from "@pg/shared/lib/generation-body";
-import {
-  generateJsxIterationPrompt,
-  generateJsxIterationFromIterationPrompt,
-} from "@pg/shared/lib/jsx-prompts";
 import { loadDefaultSkillPrompt } from "@pg/shared/lib/load-default-skill-prompt";
 import {
   generateIterationPrompt,
@@ -23,7 +19,6 @@ import {
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
-  type JsxComponentInfo,
 } from "@pg/shared/lib/constants";
 
 // ---------------------------------------------------------------------------
@@ -221,10 +216,7 @@ export function useDragIterateEventHandler(): void {
         iterationCount,
         model,
         sourceFilename,
-        renderMode: dragRenderMode,
-        jsxFile: dragJsxFile,
       } = e.detail;
-      const isDragJsx = dragRenderMode === "jsx" && !!dragJsxFile;
 
       // Build the prompt
       let prompt: string;
@@ -233,73 +225,31 @@ export function useDragIterateEventHandler(): void {
       // Fetch next available iteration number
       let startNumber = 1;
       try {
-        if (isDragJsx && dragJsxFile) {
-          const baseFilename = dragJsxFile.replace(
-            /\.iteration-\d+\.tsx$/,
-            ".tsx",
+        const cleanName = componentName.replace(/\s+/g, "");
+        const response = await fetch("/playground/api/iterations");
+        if (response.ok) {
+          const { iterations } = await response.json();
+          const componentIterations = iterations.filter(
+            (i: { componentName: string }) => i.componentName === cleanName,
           );
-          const response = await fetch("/playground/api/oncanvas-components");
-          if (response.ok) {
-            const { components } = (await response.json()) as {
-              components: JsxComponentInfo[];
-            };
-            const comp = components.find((c) => c.filename === baseFilename);
-            const maxNumber =
-              comp?.iterations.reduce(
-                (max: number, i: { iterationNumber: number }) =>
-                  Math.max(max, i.iterationNumber),
-                0,
-              ) ?? 0;
-            startNumber = maxNumber + 1;
-          }
-        } else {
-          const cleanName = componentName.replace(/\s+/g, "");
-          const response = await fetch("/playground/api/iterations");
-          if (response.ok) {
-            const { iterations } = await response.json();
-            const componentIterations = iterations.filter(
-              (i: { componentName: string }) => i.componentName === cleanName,
-            );
-            const maxNumber = componentIterations.reduce(
-              (max: number, i: { iterationNumber: number }) =>
-                Math.max(max, i.iterationNumber),
-              0,
-            );
-            startNumber = maxNumber + 1;
-          }
+          const maxNumber = componentIterations.reduce(
+            (max: number, i: { iterationNumber: number }) =>
+              Math.max(max, i.iterationNumber),
+            0,
+          );
+          startNumber = maxNumber + 1;
         }
       } catch {
         /* use default */
       }
 
-      if (isDragJsx && dragJsxFile) {
-        const baseFile = dragJsxFile.replace(/\.iteration-\d+\.tsx$/, ".tsx");
-        if (sourceFilename) {
-          prompt = generateJsxIterationFromIterationPrompt(
-            baseFile,
-            sourceFilename,
-            iterationCount,
-            startNumber,
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-          );
-        } else {
-          prompt = generateJsxIterationPrompt(
-            baseFile,
-            iterationCount,
-            startNumber,
-            DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-            defaultSkillPrompt || undefined,
-          );
-        }
-      } else if (sourceFilename) {
+      if (sourceFilename) {
         try {
           prompt = generateIterationFromIterationPrompt(
             componentId,
             sourceFilename,
             iterationCount,
             startNumber,
-            "shell",
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
           );
@@ -308,7 +258,6 @@ export function useDragIterateEventHandler(): void {
             componentId,
             iterationCount,
             startNumber,
-            "shell",
             DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
             defaultSkillPrompt || undefined,
           );
@@ -318,7 +267,6 @@ export function useDragIterateEventHandler(): void {
           componentId,
           iterationCount,
           startNumber,
-          "shell",
           DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
           defaultSkillPrompt || undefined,
         );
@@ -329,9 +277,7 @@ export function useDragIterateEventHandler(): void {
         generationEvents.error.emit({
           componentId,
           parentNodeId,
-          error: isDragJsx
-            ? "Could not build prompt for this JSX frame (missing jsxFile or canvas-components data)."
-            : `Component "${componentId}" is not registered. Add it to the registry or re-run discovery before iterating.`,
+          error: `Component "${componentId}" is not registered. Add it to the registry or re-run discovery before iterating.`,
         });
         return;
       }
@@ -347,9 +293,6 @@ export function useDragIterateEventHandler(): void {
         model: model || undefined,
         provider: dragPf.provider as GenerationStartPayload["provider"],
         gridLayout: { rows: e.detail.rows, cols: e.detail.cols },
-        ...(isDragJsx && dragJsxFile
-          ? { renderMode: "jsx" as const, jsxFile: dragJsxFile }
-          : {}),
       });
 
       // Call the generate API
@@ -364,7 +307,6 @@ export function useDragIterateEventHandler(): void {
             model: model || undefined,
             source: "drag",
             ...getProviderFields(),
-            ...(isDragJsx && dragJsxFile ? { jsxFile: dragJsxFile } : {}),
           }),
         });
 

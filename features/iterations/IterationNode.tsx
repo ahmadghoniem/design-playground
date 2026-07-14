@@ -30,10 +30,9 @@ import {
   ResizeGripIcon,
   PlayButtonIcon,
 } from "@pg/shared/ui/playground-nav-icons";
-import { getIterationComponent } from "@pg/iterations";
+import { loadIterationComponentModule } from "@pg/shared/lib/iteration-loader";
 import { SizeButtons } from "@pg/shared/ui/SizeButtons";
 import { NodeLabel, useInverseZoom } from "@pg/shared/ui/NodeLabel";
-import { loadOnCanvasComponentModule } from "@pg/shared/lib/oncanvas-loader";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
@@ -46,7 +45,6 @@ import {
   RESIZE_MIN_WIDTH,
   RESIZE_MIN_HEIGHT,
   type ComponentSize,
-  JSX_COMPONENT_ADDED_EVENT,
 } from "@pg/shared/lib/constants";
 import {
   useAsyncProps,
@@ -87,10 +85,6 @@ interface IterationNodeProps {
     adopted?: boolean;
     onDelete?: (filename: string) => void;
     onAdopt?: (filename: string, componentName: string) => void;
-    /** Render mode: 'react' (default) or 'jsx' for canvas-components */
-    renderMode?: "react" | "jsx";
-    /** JSX filename (when renderMode is 'jsx') */
-    jsxFile?: string;
   };
   selected?: boolean;
 }
@@ -145,69 +139,76 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     };
   }, [isInteractive, setInteractiveNodeId]);
 
-  const isJsx = data.renderMode === "jsx";
-
-  const IterationComponent = useMemo(
-    () => (isJsx ? null : getIterationComponent(data.filename)),
-    [data.filename, isJsx],
-  );
-
-  // On-canvas JSX iteration — loaded dynamically from canvas-components
-  const [JsxComponent, setJsxComponent] = useState<ComponentType<any> | null>(
-    null,
-  );
-  const [jsxLoadAttempt, setJsxLoadAttempt] = useState(0);
-
-  useEffect(() => {
-    if (!isJsx) return;
-    const handler = () => setJsxLoadAttempt((n) => n + 1);
-    window.addEventListener(JSX_COMPONENT_ADDED_EVENT, handler);
-    return () => window.removeEventListener(JSX_COMPONENT_ADDED_EVENT, handler);
-  }, [isJsx]);
+  // React iteration — loaded dynamically (not a static import) so a freshly
+  // regenerated iterations/index.ts is always picked up, even if this node
+  // mounted before the file was rewritten. Retries with backoff in case the
+  // node was created just before the server finished regenerating the index.
+  const [IterationComponent, setIterationComponent] =
+    useState<ComponentType<any> | null>(null);
+  // Bumped when an in-place edit targeting this node completes, so the
+  // dynamically-loaded component is re-imported and the fresh version shown
+  // (the file keeps the same name on an edit, so data.filename alone can't
+  // detect it — see EDIT_COMPLETE_EVENT listener below).
+  const [reloadAttempt, setReloadAttempt] = useState(0);
 
   useEffect(() => {
-    if (!isJsx || !data.jsxFile) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const attempt = (delay: number) => {
-      loadOnCanvasComponentModule()
+    // On an edit-triggered reload the component already exists (with stale
+    // output), so accepting the first truthy result would keep showing the old
+    // version. Re-import a few times to give Vite HMR time to swap the module.
+    const isReload = reloadAttempt > 0;
+    const attempt = (delay: number, tries: number) => {
+      loadIterationComponentModule()
         .then((mod) => {
           if (cancelled) return;
-          const comp = mod.getOnCanvasComponent(data.jsxFile!);
+          const comp = mod.getIterationComponent(data.filename);
           if (comp) {
-            setJsxComponent(() => comp);
+            setIterationComponent(() => comp);
+            if (!isReload) return;
+            // Keep re-importing briefly after an edit to catch the HMR update.
+            if (tries < 4) {
+              timer = setTimeout(() => attempt(400, tries + 1), 400);
+            }
             return;
           }
           if (delay <= 8000) {
             timer = setTimeout(
-              () => attempt(Math.min(delay * 1.5, 2000)),
+              () => attempt(Math.min(delay * 1.5, 2000), tries + 1),
               delay,
             );
           }
         })
         .catch(() => {});
     };
-    attempt(300);
+    attempt(isReload ? 300 : 300, 0);
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [isJsx, data.jsxFile, jsxLoadAttempt]);
+  }, [data.filename, reloadAttempt]);
+
+  // An in-place edit keeps the same filename, so nothing above re-runs. Listen
+  // for EDIT_COMPLETE_EVENT targeting this node and bump the reload counter so
+  // the freshly-written component is re-imported and rendered.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.nodeId === id) setReloadAttempt((n) => n + 1);
+    };
+    window.addEventListener(EDIT_COMPLETE_EVENT, handler);
+    return () => window.removeEventListener(EDIT_COMPLETE_EVENT, handler);
+  }, [id]);
 
   const registryId = useMemo(
-    () =>
-      isJsx
-        ? ""
-        : (data.registryId ?? componentNameToRegistryId(data.componentName)),
-    [data.registryId, data.componentName, isJsx],
+    () => data.registryId ?? componentNameToRegistryId(data.componentName),
+    [data.registryId, data.componentName],
   );
 
-  const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(
-    isJsx ? "" : registryId,
-  );
+  const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(registryId);
   const registryItem = useMemo(
-    () => (isJsx ? null : resolveRegistryItem(registryId)),
-    [registryId, isJsx],
+    () => resolveRegistryItem(registryId),
+    [registryId],
   );
   const staticProps = useMemo(() => registryItem?.props || {}, [registryItem]);
   const effectiveProps = (resolvedProps ?? staticProps) as Record<
@@ -220,7 +221,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     () =>
       data.parentSize ||
       resolveRegistryItem(registryId)?.size ||
-      (isJsx ? "laptop" : "default"),
+      "default",
   );
   const [isResizing, setIsResizing] = useState(false);
   const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
@@ -295,7 +296,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   const adoption = useIterationAdoption({
     id,
     registryId,
-    isJsx,
     isGlobalGenerating,
     data,
   });
@@ -304,20 +304,11 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     if (isDeleting) return;
     setIsDeleting(true);
     try {
-      let response: Response;
-      if (isJsx) {
-        response = await fetch("/playground/api/oncanvas-components", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: data.jsxFile }),
-        });
-      } else {
-        response = await fetch("/playground/api/iterations", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: data.filename }),
-        });
-      }
+      const response = await fetch("/playground/api/iterations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: data.filename }),
+      });
       if (response.ok) {
         deleteElements({ nodes: [{ id }] });
         data.onDelete?.(data.filename);
@@ -333,10 +324,8 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     () =>
       deriveIterationPageName({
         componentName: data.componentName,
-        isJsx,
-        jsxFile: data.jsxFile,
       }),
-    [data.componentName, isJsx, data.jsxFile],
+    [data.componentName],
   );
   const iterationLabel = `${pageName} #${data.iterationNumber}`;
 
@@ -347,8 +336,8 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   const displayDims = getDisplayDimensions(size);
   const handleWheel = useScrollCapture(scrollContainerRef);
 
-  // Resolved renderable component: JSX (from canvas-components) or React (from iterations registry)
-  const RenderComponent = isJsx ? JsxComponent : IterationComponent;
+  // Resolved renderable component (from iterations registry)
+  const RenderComponent = IterationComponent;
 
   return (
     <div
@@ -473,10 +462,9 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
             adoption.adoptionStatus === "adopted"
               ? "ring-2 ring-green-400"
               : selected
-                ? `ring-2 ${isJsx ? "ring-purple-400" : "ring-[#0B99FF]"}`
+                ? "ring-2 ring-[#0B99FF]"
                 : ""
           } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? "w-full h-full" : ""}`}
-          style={isJsx ? { contain: "paint" } : undefined}
         >
           {isFillMode ? (
             /* Freeform / active resize: fill the node with centered content */
@@ -609,7 +597,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
               )}
             </div>
           )}
-          {/* Click-blocker for non-iframe (JSX/React) render modes */}
+          {/* Click-blocker for React render mode */}
           {!isInteractive && (
             <div className="absolute inset-0" data-iframe-overlay />
           )}
@@ -623,17 +611,11 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         >
           {/* Iterate */}
           <IterateDialog
-            componentId={
-              isJsx
-                ? `jsx:${data.componentName}`
-                : registryId
-            }
+            componentId={registryId}
             componentName={data.componentName}
             parentNodeId={id}
             sourceFilename={data.filename}
             isGlobalGenerating={isGlobalGenerating}
-            renderMode={data.renderMode}
-            jsxFile={data.jsxFile}
           />
 
           {/* Use this (adopt) */}

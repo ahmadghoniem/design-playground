@@ -23,10 +23,6 @@ export interface GenerationInfo {
   gridPositions?: { x: number; y: number }[];
   /** Parent node cell size so real iteration nodes can match ghost/skeleton sizing */
   gridCellSize?: { width: number; height: number };
-  /** Render mode for this generation */
-  renderMode?: 'react' | 'jsx';
-  /** Base or iteration filename in canvas-components/ (when renderMode is 'jsx') */
-  jsxFile?: string;
 }
 
 export interface CanvasState {
@@ -50,12 +46,9 @@ export function getCanvasStorageKey(projectId?: string): string {
   return projectId ? `${STORAGE_KEY}:${projectId}` : STORAGE_KEY;
 }
 
-/** Map an iteration node to its dedup key (jsx file or react filename). */
+/** Map an iteration node to its dedup key (react filename). */
 export function getIterationKeyFromNode(n: Node): string | null {
   if (n.type !== 'iteration') return null;
-  if (n.data.renderMode === 'jsx' && n.data.jsxFile) {
-    return n.data.jsxFile as string;
-  }
   if (n.data.filename) {
     return n.data.filename as string;
   }

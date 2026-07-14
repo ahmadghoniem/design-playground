@@ -181,6 +181,18 @@ export function getIterationComponent(filename: string): ComponentType<any> | un
 `;
 }
 
+/**
+ * Rebuild iterations/index.ts from whatever .tsx files are on disk. Exported
+ * so the generate route can call it as soon as a new iteration file is
+ * written, instead of relying solely on the agent hand-editing the index
+ * per its prompt instructions (that step is easy to skip/miss, which used
+ * to silently leave the index — and anything reading it, like the isolated
+ * preview page — stale).
+ */
+export function regenerateIterationsIndex(): void {
+  regenerateIndex();
+}
+
 function regenerateIndex(): void {
   const files = fs.readdirSync(ITERATIONS_DIR);
   const iterations: IterationFile[] = [];

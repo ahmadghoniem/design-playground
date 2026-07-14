@@ -13,9 +13,8 @@ import {
   resolveAgentModel,
 } from '../../shared/lib/providers';
 import { readDesignMd, buildSystemPromptAddon } from '../../shared/lib/design-md-helpers';
-import { syncPublicFrameGitignoreSafe } from '../../shared/lib/sync-host-gitignore';
+import { regenerateIterationsIndex } from './iterations';
 
-import { resolvePlaygroundDirRelative } from '../../shared/lib/resolve-playground-dir';
 import { readJson } from '../lib/hono-helpers';
 import {
   writeLockfile,
@@ -31,6 +30,25 @@ import {
   extractStreamJsonError,
   formatAgentErrorMessage,
 } from '../lib/claude-jsonl';
+
+/**
+ * When a Write/Edit tool_result lands on a React iteration file
+ * (`Name.iteration-N.tsx` under an `iterations/` dir), rebuild
+ * iterations/index.ts so consumers that resolve
+ * the component by filename (IterationNode's live preview, the isolated
+ * preview page) see it immediately instead of depending on the agent
+ * remembering to hand-edit the index itself. Best-effort — must never break
+ * generation.
+ */
+function syncIterationsIndexForToolEvent(filePath: string): void {
+  if (!/\.iteration-\d+\.tsx$/.test(filePath)) return;
+  if (!/[\\/]iterations[\\/]/.test(filePath)) return;
+  try {
+    regenerateIterationsIndex();
+  } catch (e) {
+    console.error('[generate] Failed to sync iterations/index.ts:', e);
+  }
+}
 
 /**
  * Playground generation API - Agent CLI Integration
@@ -135,7 +153,6 @@ export function generateRoutes() {
         maxBudgetUsd?: number;
         maxTurns?: number;
         claudeDetailedStdout?: boolean;
-        jsxFile?: string;
         source?: string;
         skillIds?: string[];
       }>(c);
@@ -145,11 +162,6 @@ export function generateRoutes() {
       }
 
       let { prompt } = body;
-
-      const playgroundRelativeDir = resolvePlaygroundDirRelative();
-      if (prompt && playgroundRelativeDir !== 'src/app/playground') {
-        prompt = prompt.split('src/app/playground/').join(`${playgroundRelativeDir}/`);
-      }
 
       const providerId: ProviderId = body.provider ?? 'claude-code';
       const model = resolveAgentModel(providerId, body.model);
@@ -252,6 +264,7 @@ export function generateRoutes() {
           const toolEvents = extractToolEventsFromClaudeJsonlLines(parts, pendingToolUses);
           for (const evt of toolEvents) {
             const numMatch = /iteration-(\d+)/.exec(evt.filePath);
+            syncIterationsIndexForToolEvent(evt.filePath);
             generationEvents.emit('iteration-added', {
               filePath: evt.filePath,
               iterationNumber: numMatch ? Number(numMatch[1]) : undefined,
@@ -280,6 +293,7 @@ export function generateRoutes() {
             const closeToolEvents = extractToolEventsFromClaudeJsonlLines([stdoutLineBuf], pendingToolUses);
             for (const evt of closeToolEvents) {
               const numMatch = /iteration-(\d+)/.exec(evt.filePath);
+              syncIterationsIndexForToolEvent(evt.filePath);
               generationEvents.emit('iteration-added', {
                 filePath: evt.filePath,
                 iterationNumber: numMatch ? Number(numMatch[1]) : undefined,
@@ -290,7 +304,6 @@ export function generateRoutes() {
           currentLogStream?.write(`\n=== Generation ended with code ${code} at ${new Date().toISOString()} ===\n`);
           closeLogStream();
           removeLockfile();
-          syncPublicFrameGitignoreSafe();
           generationEvents.emit('done');
 
           isGenerating = false;
@@ -341,7 +354,6 @@ export function generateRoutes() {
           currentLogStream?.write(`\n=== Error: ${errorMessage} ===\n`);
           closeLogStream();
           removeLockfile();
-          syncPublicFrameGitignoreSafe();
           generationEvents.emit('done');
 
           isGenerating = false;

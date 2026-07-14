@@ -11,10 +11,6 @@ import {
   generateIterationFromIterationPrompt,
 } from "@pg/registry";
 import {
-  generateJsxIterationPrompt,
-  generateJsxIterationFromIterationPrompt,
-} from "@pg/shared/lib/jsx-prompts";
-import {
   InlineReference,
   InlineReferenceInput,
   InlineReferenceContent,
@@ -27,7 +23,6 @@ import {
 } from "@pg/shared/lib/generation-events";
 import {
   ITERATION_PROMPT_COPIED_EVENT,
-  JSX_ID_PREFIX,
   DRAG_GHOST_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_HEIGHT,
@@ -67,8 +62,6 @@ export interface IterateDialogProps {
   parentNodeId: string;
   sourceFilename?: string;
   isGlobalGenerating: boolean;
-  renderMode?: "react" | "jsx";
-  jsxFile?: string;
 }
 
 export default function IterateDialog({
@@ -77,22 +70,11 @@ export default function IterateDialog({
   parentNodeId,
   sourceFilename,
   isGlobalGenerating,
-  renderMode,
-  jsxFile,
 }: IterateDialogProps) {
-  const resolvedJsxFile =
-    jsxFile ??
-    (componentId.startsWith(JSX_ID_PREFIX)
-      ? `${componentId.slice(JSX_ID_PREFIX.length)}.tsx`
-      : undefined);
-  const isJsxMode =
-    renderMode === "jsx" ||
-    (!renderMode && componentId.startsWith(JSX_ID_PREFIX));
   const [open, setOpen] = useState(false);
   const [, setCopied] = useState(false);
   const [pendingDragGrid, setPendingDragGrid] =
     useState<PendingDragGrid | null>(null);
-  const [depth] = useState<"shell" | "1-level" | "all">("shell");
 
   const [startNumber, setStartNumber] = useState<number | null>(null);
   const [isFetchingMax, setIsFetchingMax] = useState(false);
@@ -208,56 +190,27 @@ export default function IterateDialog({
     const fetchMaxIteration = async () => {
       setIsFetchingMax(true);
       try {
-        if (isJsxMode && resolvedJsxFile) {
-          // JSX mode: fetch from oncanvas-components API
-          const response = await fetch("/playground/api/oncanvas-components");
-          if (!response.ok) {
-            setStartNumber(1);
-            return;
-          }
-          const { components } = (await response.json()) as {
-            components: {
-              filename: string;
-              iterations: { iterationNumber: number }[];
-            }[];
-          };
-          const baseName = resolvedJsxFile.replace(
-            /\.iteration-\d+\.tsx$/,
-            ".tsx",
-          );
-          const comp = components.find(
-            (c: { filename: string }) => c.filename === baseName,
-          );
-          const maxNumber =
-            comp?.iterations.reduce(
-              (max: number, i: { iterationNumber: number }) =>
-                Math.max(max, i.iterationNumber),
-              0,
-            ) ?? 0;
-          setStartNumber(maxNumber + 1);
-        } else {
-          const response = await fetch("/playground/api/iterations");
-          if (!response.ok) {
-            setStartNumber(1);
-            return;
-          }
-          const { iterations } = (await response.json()) as {
-            iterations: {
-              filename: string;
-              componentName: string;
-              iterationNumber: number;
-            }[];
-          };
-          const cleanName = componentName.replace(/\s+/g, "");
-          const componentIterations = iterations.filter(
-            (i) => i.componentName === cleanName,
-          );
-          const maxNumber = componentIterations.reduce(
-            (max, i) => Math.max(max, i.iterationNumber),
-            0,
-          );
-          setStartNumber(maxNumber + 1);
+        const response = await fetch("/playground/api/iterations");
+        if (!response.ok) {
+          setStartNumber(1);
+          return;
         }
+        const { iterations } = (await response.json()) as {
+          iterations: {
+            filename: string;
+            componentName: string;
+            iterationNumber: number;
+          }[];
+        };
+        const cleanName = componentName.replace(/\s+/g, "");
+        const componentIterations = iterations.filter(
+          (i) => i.componentName === cleanName,
+        );
+        const maxNumber = componentIterations.reduce(
+          (max, i) => Math.max(max, i.iterationNumber),
+          0,
+        );
+        setStartNumber(maxNumber + 1);
       } catch {
         setStartNumber(1);
       } finally {
@@ -265,42 +218,16 @@ export default function IterateDialog({
       }
     };
     fetchMaxIteration();
-  }, [
-    open,
-    componentName,
-    isJsxMode,
-    resolvedJsxFile,
-  ]);
+  }, [open, componentName]);
 
   const generatedPrompt = useMemo(() => {
     if (startNumber === null) return "";
-    if (isJsxMode && resolvedJsxFile) {
-      const baseFile = resolvedJsxFile.replace(/\.iteration-\d+\.tsx$/, ".tsx");
-      if (isFromIteration) {
-        return generateJsxIterationFromIterationPrompt(
-          baseFile,
-          resolvedJsxFile,
-          iterationCount,
-          startNumber,
-          customInstructionsText,
-          skillPrompt,
-        );
-      }
-      return generateJsxIterationPrompt(
-        baseFile,
-        iterationCount,
-        startNumber,
-        customInstructionsText,
-        skillPrompt,
-      );
-    }
     if (isFromIteration) {
       return generateIterationFromIterationPrompt(
         componentId,
         sourceFilename!,
         iterationCount,
         startNumber,
-        depth,
         customInstructionsText,
         skillPrompt,
       );
@@ -309,7 +236,6 @@ export default function IterateDialog({
       componentId,
       iterationCount,
       startNumber,
-      depth,
       customInstructionsText,
       skillPrompt,
     );
@@ -318,12 +244,9 @@ export default function IterateDialog({
     sourceFilename,
     iterationCount,
     startNumber,
-    depth,
     isFromIteration,
     customInstructionsText,
     skillPrompt,
-    isJsxMode,
-    resolvedJsxFile,
   ]);
 
   const handleCopyPrompt = useCallback(async (prompt: string) => {
@@ -343,7 +266,6 @@ export default function IterateDialog({
         componentId,
         4,
         startNumber ?? 1,
-        "shell",
         undefined,
       ),
     );
@@ -380,9 +302,6 @@ export default function IterateDialog({
             },
           }
         : {}),
-      ...(isJsxMode
-        ? { renderMode: "jsx" as const, jsxFile: resolvedJsxFile }
-        : {}),
     });
 
     closePanel();
@@ -398,9 +317,6 @@ export default function IterateDialog({
           model: selectedModel || undefined,
           source: "dialog",
           ...providerFields,
-          ...(isJsxMode
-            ? { jsxFile: resolvedJsxFile }
-            : {}),
         }),
       });
 

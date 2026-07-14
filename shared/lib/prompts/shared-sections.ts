@@ -5,6 +5,11 @@
 // ---------------------------------------------------------------------------
 
 import type { StylingMode } from '@pg/shared/lib/constants';
+import {
+  iterationsFile,
+  iterationsIndex,
+  iterationsTree,
+} from '@pg/shared/lib/playground-paths';
 
 // ---------------------------------------------------------------------------
 // Styling constraint resolvers
@@ -39,30 +44,12 @@ export function getQualityChecklist(mode: StylingMode = 'tailwind'): string {
 - [ ] @sourceIteration set when derived from another iteration`;
 }
 
-/** Common quality checklist (Tailwind default) — kept for backward compatibility */
-const QUALITY_CHECKLIST = getQualityChecklist('tailwind');
-
-/** File registration instructions shared across templates */
-export const FILE_REGISTRATION_INSTRUCTIONS = `IMPORTANT — SEQUENTIAL WORKFLOW: Process iterations ONE AT A TIME. For each iteration, complete ALL of the following steps before starting the next:
-   a. Create and save the iteration file
-   b. Include the required metadata comment block with @iteration, @parent, optional @sourceIteration, and @description
-   c. Immediately register that file in: src/app/playground/iterations/index.ts (map key MUST include ".tsx")
-   d. Immediately add a matching entry to: src/app/playground/iterations/tree.json with parent set to "{{componentId}}"
-   e. Only then proceed to the next iteration
-
-   This sequential approach ensures each iteration is visible on the canvas as soon as it's done.`;
-
-/** Props constraint block shared across templates */
-export const PROPS_CONSTRAINT = `- **Props interface**: Keep it IDENTICAL to the original component (no added/removed/renamed props, no type changes).
-- **Iteration depth**: Follow the requested depth (Shell only, 1 level deep, or All levels).
-- **Tree manifest**: Update src/app/playground/iterations/tree.json for every new iteration file.
-- **Registry index**: Register every iteration in src/app/playground/iterations/index.ts with a ".tsx" map key.`;
-
-/** Appended to Codex generation prompts to prevent browser-based verification */
-const NO_BROWSER_INSTRUCTIONS = `ENVIRONMENT CONSTRAINTS
-- Do NOT open a browser (Chrome, Safari, etc.), run \`open\`, or launch any GUI app to preview or verify changes.
-- Do NOT start a dev server or take screenshots to check your work.
-- The playground canvas hot-reloads and renders your files automatically — writing the files correctly IS the verification.`;
+/** Props constraint block shared across templates (paths resolved at call time). */
+export function propsConstraint(): string {
+  return `- **Props interface**: Keep it IDENTICAL to the original component (no added/removed/renamed props, no type changes).
+- **Tree manifest**: Update ${iterationsTree()} for every new iteration file.
+- **Registry index**: Register every iteration in ${iterationsIndex()} with a ".tsx" map key.`;
+}
 
 // ---------------------------------------------------------------------------
 // Prompt section formatters
@@ -134,7 +121,7 @@ export function formatReferenceNodesSection(
     const path = node.type === 'text' ? undefined : node.type === 'image'
       ? (node.imagePath || node.imageUrl)
       : (node.sourcePath || (node.sourceFilename
-        ? `src/app/playground/iterations/${node.sourceFilename}`
+        ? iterationsFile(node.sourceFilename)
         : undefined));
 
     lines.push(`${i + 1}. ${node.componentName} (${typeLabel})${path ? ` — ${path}` : ''}`);
@@ -163,7 +150,6 @@ export function formatReferenceNodesSection(
 
 export function formatElementSelectionsSection(
   elements?: {
-    oid?: string;
     tagName: string;
     displayName: string;
     textContent: string;
@@ -185,10 +171,6 @@ export function formatElementSelectionsSection(
   for (let i = 0; i < elements.length; i++) {
     const el = elements[i];
     lines.push(`Element ${i + 1}: <${el.tagName}> in ${el.componentName}`);
-
-    if (el.oid) {
-      lines.push(`- Locate: search the file for data-pg-oid="${el.oid}" — that attribute uniquely identifies this exact element in the source.`);
-    }
 
     if (el.textContent) {
       lines.push(`- Text: "${el.textContent}"`);

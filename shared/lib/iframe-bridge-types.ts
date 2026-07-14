@@ -7,8 +7,6 @@
 
 /** Element description sent from inside an iframe (no React fibers there). */
 export interface BridgeElementContext {
-  /** data-pg-oid stamped into the on-disk HTML — exact grep target for the agent. */
-  oid?: string;
   tagName: string;
   displayName: string;
   textContent: string;

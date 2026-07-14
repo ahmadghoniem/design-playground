@@ -2,14 +2,24 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Candidate playground locations, in preference order, relative to the host
- * project root. The playground submodule may be installed under either a
- * `src/app/` or an `app/` Next.js layout.
+ * Candidate playground locations, in preference order, as POSIX paths relative
+ * to the host project root. Shared with host-gitignore and PlaygroundPaths.
  */
-const CANDIDATE_RELATIVE_DIRS = [
-  path.join('src', 'app', 'playground'),
-  path.join('app', 'playground'),
-];
+export const PLAYGROUND_CANDIDATE_RELATIVE_DIRS = [
+  'src/app/playground',
+  'app/playground',
+] as const;
+
+/**
+ * Same candidates as platform-specific path segments for fs joins.
+ *
+ * Computed lazily (not at module top level) so importing this module in a
+ * browser bundle never touches `path.join` — Vite externalizes `path`, so a
+ * top-level access would throw even though these fns are only called server-side.
+ */
+function candidateRelativeDirs(): string[] {
+  return PLAYGROUND_CANDIDATE_RELATIVE_DIRS.map((d) => path.join(...d.split('/')));
+}
 
 /**
  * Files that only exist in a *real* playground install (the app shell), never
@@ -33,7 +43,7 @@ function hasAppShell(dir: string): boolean {
  */
 export function resolvePlaygroundDir(): string {
   const root = process.cwd();
-  const candidates = CANDIDATE_RELATIVE_DIRS.map((d) => path.join(root, d));
+  const candidates = candidateRelativeDirs().map((d) => path.join(root, d));
 
   const withShell = candidates.filter((dir) => fs.existsSync(dir) && hasAppShell(dir));
   if (withShell.length === 1) return withShell[0];
@@ -70,18 +80,18 @@ export function resolvePlaygroundDirRelative(): string {
 export function listPlaygroundDirs(): string[] {
   const root = process.cwd();
   const resolved = resolvePlaygroundDir();
-  const existing = CANDIDATE_RELATIVE_DIRS.map((d) => path.join(root, d)).filter((dir) =>
-    fs.existsSync(dir),
-  );
+  const existing = candidateRelativeDirs()
+    .map((d) => path.join(root, d))
+    .filter((dir) => fs.existsSync(dir));
   return [resolved, ...existing.filter((dir) => dir !== resolved)];
 }
 
 /** All playground roots that exist on disk (both layouts). */
 function resolveAllPlaygroundDirs(): string[] {
   const root = process.cwd();
-  return CANDIDATE_RELATIVE_DIRS.map((d) => path.join(root, d)).filter((dir) =>
-    fs.existsSync(dir),
-  );
+  return candidateRelativeDirs()
+    .map((d) => path.join(root, d))
+    .filter((dir) => fs.existsSync(dir));
 }
 
 /** Every iterations/ folder under existing playground roots, canonical first. */
@@ -89,9 +99,4 @@ export function resolveIterationsDirs(): string[] {
   return listPlaygroundDirs()
     .map((dir) => path.join(dir, 'iterations'))
     .filter((dir) => fs.existsSync(dir));
-}
-
-/** Primary canvas-components directory for the resolved playground root. */
-function resolveCanvasComponentsDir(): string {
-  return path.join(resolvePlaygroundDir(), 'canvas-components');
 }

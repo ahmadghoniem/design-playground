@@ -4,7 +4,6 @@
  */
 
 import { RegistryItem, RegistryLeafItem, isGroup, isLeaf } from '@pg/registry';
-import type { ComponentSize } from '@pg/shared/lib/constants';
 
 /** Build a map of parentId -> child leaf items from the registry tree. */
 export function buildChildrenMap(items: RegistryItem[]): Map<string, RegistryLeafItem[]> {
@@ -32,15 +31,4 @@ export function flattenLeaves(items: RegistryItem[]): RegistryLeafItem[] {
     else if (isGroup(item)) out.push(...flattenLeaves(item.children));
   }
   return out;
-}
-
-/** Pick a sensible viewport width for the preview based on the component's size hint. */
-export function pickPreviewViewport(size: ComponentSize | undefined): { width: number; height: number } {
-  switch (size) {
-    case 'laptop': return { width: 1470, height: 832 };
-    case 'tablet': return { width: 768, height: 1024 };
-    case 'mobile': return { width: 393, height: 852 };
-    case 'default':
-    default:       return { width: 720, height: 480 };
-  }
 }

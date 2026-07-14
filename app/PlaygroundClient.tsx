@@ -18,6 +18,7 @@ import {
 } from "@pg/shared/lib/constants";
 import { preloadAllComponents } from "@pg/registry";
 import { CanvasFlowProvider } from "@pg/features/canvas/canvas-flow";
+import { ensurePlaygroundRelativeRoot } from "@pg/shared/lib/playground-paths";
 import {
   previewSchemeClass,
   usePreviewColorSchemeStore,
@@ -30,18 +31,19 @@ export interface PendingChild {
   status: "pending" | "analyzing" | "done" | "error";
 }
 
-function useProjectId() {
+function useProjectBootstrap() {
   const [projectId, setProjectId] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
-    fetch("/playground/api/project-id")
-      .then((res) => res.json())
-      .then((data: { projectId: string }) => {
-        if (!cancelled) setProjectId(data.projectId);
-      })
-      .catch(() => {
-        if (!cancelled) setProjectId("unknown-project");
-      });
+    Promise.all([
+      fetch("/playground/api/project-id")
+        .then((res) => res.json())
+        .then((data: { projectId: string }) => data.projectId)
+        .catch(() => "unknown-project"),
+      ensurePlaygroundRelativeRoot(),
+    ]).then(([id]) => {
+      if (!cancelled) setProjectId(id);
+    });
     return () => {
       cancelled = true;
     };
@@ -50,7 +52,7 @@ function useProjectId() {
 }
 
 export default function PlaygroundClient() {
-  const projectId = useProjectId();
+  const projectId = useProjectBootstrap();
   const [sidebarVisible, setSidebarVisible] = useState(true);
   /** Whether sidebar was opened via hover (auto-hide) vs click (sticky). */
   const sidebarHoverRef = useRef(false);

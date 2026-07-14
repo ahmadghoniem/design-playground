@@ -44,13 +44,9 @@ interface PlaygroundSidebarProps {
 
 function SidebarSkeletonCard({ label }: { label: string }) {
   return (
-    <div className="flex flex-col gap-1.5 select-none pointer-events-none">
-      <div className="relative w-full h-[96px] overflow-hidden bg-stone-50 rounded-xl border border-stone-200/70">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 className="w-4 h-4 text-stone-300 animate-spin" />
-        </div>
-      </div>
-      <div className="mt-1.5 px-0.5 text-[11px] font-medium text-stone-400 truncate">
+    <div className="flex items-center gap-2 px-2 py-1.5 select-none pointer-events-none">
+      <Loader2 className="w-3.5 h-3.5 shrink-0 text-stone-300 animate-spin" />
+      <div className="text-[12px] font-medium text-stone-400 truncate">
         {label}
       </div>
     </div>
@@ -274,7 +270,7 @@ export default function PlaygroundSidebar({
               </button>
             </div>
             {componentsExpanded && (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-4 px-2 pt-2 pb-4">
+              <div className="flex flex-col pt-2 pb-4">
                 {visiblePendingAdds.map((pending) => (
                   <SidebarSkeletonCard key={pending.id} label={pending.name} />
                 ))}
@@ -286,15 +282,13 @@ export default function PlaygroundSidebar({
           </div>
         ) : !search.trim() ? (
           <div className="px-2 pt-1 pb-3">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-2 pb-3 opacity-40 pointer-events-none select-none">
+            <div className="flex flex-col gap-2 pt-2 pb-3 opacity-40 pointer-events-none select-none">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex flex-col gap-1.5">
-                  <div className="w-full h-[96px] rounded-xl bg-stone-200 animate-pulse" />
-                  <div
-                    className="h-2 rounded-full bg-stone-200 animate-pulse"
-                    style={{ width: i % 2 === 0 ? "60%" : "75%" }}
-                  />
-                </div>
+                <div
+                  key={i}
+                  className="h-3 rounded-full bg-stone-200 animate-pulse"
+                  style={{ width: i % 2 === 0 ? "60%" : "75%" }}
+                />
               ))}
             </div>
             <button

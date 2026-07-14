@@ -9,15 +9,12 @@ import { getIterationKeysOnCanvas } from "@pg/shared/lib/canvas-persistence";
 import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
 import {
   DND_DATA_KEY,
-  JSX_ID_PREFIX,
   DESIGN_SYSTEM_SHOWCASE_ID,
   ITERATION_EDGE_STYLE,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_WIDTH,
-  type JsxComponentInfo,
 } from "@pg/shared/lib/constants";
-import { toast } from "sonner";
 
 interface IterationFile {
   filename: string;
@@ -123,7 +120,6 @@ export function useCanvasDragDrop({
         y: event.clientY,
       });
 
-      const isJsxFrame = componentId.startsWith(JSX_ID_PREFIX);
       const isDesignSystem = componentId === DESIGN_SYSTEM_SHOWCASE_ID;
       const parentNodeId = getNodeId();
       const newNode: Node = {
@@ -142,107 +138,58 @@ export function useCanvasDragDrop({
 
       setNodes((nds) => nds.concat(newNode));
 
-      // After dropping a frame or registry component, also bring any of its
-      // iterations that are not already on the canvas, attached to this newly placed parent.
-      if (isJsxFrame || !isDesignSystem) {
+      // After dropping a registry component, also bring any of its iterations
+      // that are not already on the canvas, attached to this newly placed parent.
+      if (!isDesignSystem) {
         (async () => {
           try {
             const currentNodes = coord.getNodes();
             const parentW = DEFAULT_COMPONENT_NODE_WIDTH;
-            const stepW =
-              (isJsxFrame
-                ? DEFAULT_ITERATION_NODE_WIDTH
-                : DEFAULT_ITERATION_NODE_WIDTH) + ARRANGE_HORIZONTAL_GAP;
+            const stepW = DEFAULT_ITERATION_NODE_WIDTH + ARRANGE_HORIZONTAL_GAP;
             const baseX = position.x + parentW + ARRANGE_HORIZONTAL_GAP;
             const newNodes: Node[] = [];
             const newEdges: Edge[] = [];
             const newKnownFilenames: string[] = [];
 
-            if (isJsxFrame) {
-              const baseFilename = `${componentId.slice(JSX_ID_PREFIX.length)}.tsx`;
-              const res = await fetch("/playground/api/oncanvas-components");
-              if (!res.ok) return;
-              const { components } = (await res.json()) as {
-                components: JsxComponentInfo[];
-              };
-              const comp = components.find((c) => c.filename === baseFilename);
-              if (!comp || comp.iterations.length === 0) return;
+            const res = await fetch("/playground/api/iterations");
+            if (!res.ok) return;
+            const { iterations } = (await res.json()) as {
+              iterations: IterationFile[];
+            };
 
-              const existingKeys = getIterationKeysOnCanvas(currentNodes);
+            const existingKeys = getIterationKeysOnCanvas(currentNodes);
+            const missing = iterations
+              .filter((it) => it.parentId === componentId)
+              .filter((it) => !existingKeys.has(it.filename))
+              .sort((a, b) => a.iterationNumber - b.iterationNumber);
 
-              const missing = comp.iterations
-                .filter((it) => !existingKeys.has(it.filename))
-                .sort((a, b) => a.iterationNumber - b.iterationNumber);
-
-              missing.forEach((it, idx) => {
-                const nodeId = getNodeId();
-                newNodes.push({
-                  id: nodeId,
-                  type: "iteration",
-                  position: { x: baseX + idx * stepW, y: position.y },
-                  data: {
-                    componentName: comp.label,
-                    iterationNumber: it.iterationNumber,
-                    filename: it.filename,
-                    description: "",
-                    parentNodeId,
-                    renderMode: "jsx",
-                    jsxFile: it.filename,
-                    onDelete: handleIterationDelete,
-                    onAdopt: handleIterationAdopt,
-                  },
-                });
-                newEdges.push({
-                  id: `edge_${parentNodeId}_${nodeId}`,
-                  source: parentNodeId,
-                  target: nodeId,
-                  type: "smoothstep",
-                  animated: false,
-                  style: ITERATION_EDGE_STYLE,
-                });
-                newKnownFilenames.push(it.filename);
+            missing.forEach((it, idx) => {
+              const nodeId = getNodeId();
+              newNodes.push({
+                id: nodeId,
+                type: "iteration",
+                position: { x: baseX + idx * stepW, y: position.y },
+                data: {
+                  componentName: it.componentName,
+                  iterationNumber: it.iterationNumber,
+                  filename: it.filename,
+                  description: it.description,
+                  parentNodeId,
+                  registryId: componentId,
+                  onDelete: handleIterationDelete,
+                  onAdopt: handleIterationAdopt,
+                },
               });
-            } else {
-              const res = await fetch("/playground/api/iterations");
-              if (!res.ok) return;
-              const { iterations } = (await res.json()) as {
-                iterations: IterationFile[];
-              };
-
-              const existingKeys = getIterationKeysOnCanvas(currentNodes);
-              const missing = iterations
-                .filter((it) => it.parentId === componentId)
-                .filter((it) => !existingKeys.has(it.filename))
-                .sort((a, b) => a.iterationNumber - b.iterationNumber);
-
-              missing.forEach((it, idx) => {
-                const nodeId = getNodeId();
-                newNodes.push({
-                  id: nodeId,
-                  type: "iteration",
-                  position: { x: baseX + idx * stepW, y: position.y },
-                  data: {
-                    componentName: it.componentName,
-                    iterationNumber: it.iterationNumber,
-                    filename: it.filename,
-                    description: it.description,
-                    parentNodeId,
-                    registryId: componentId,
-                    onDelete: handleIterationDelete,
-                    onAdopt: handleIterationAdopt,
-                  },
-                });
-                newEdges.push({
-                  id: `edge_${parentNodeId}_${nodeId}`,
-                  source: parentNodeId,
-                  target: nodeId,
-                  type: "smoothstep",
-                  animated: false,
-                  style: ITERATION_EDGE_STYLE,
-                });
-                newKnownFilenames.push(it.filename);
+              newEdges.push({
+                id: `edge_${parentNodeId}_${nodeId}`,
+                source: parentNodeId,
+                target: nodeId,
+                type: "smoothstep",
+                animated: false,
+                style: ITERATION_EDGE_STYLE,
               });
-            }
+              newKnownFilenames.push(it.filename);
+            });
 
             if (newNodes.length > 0) {
               setNodes((nds) => [...nds, ...newNodes]);

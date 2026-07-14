@@ -33,33 +33,12 @@ export function componentNameToRegistryId(componentName: string): string {
 /**
  * Derive the short display label for an iteration node header.
  *
- * Rules (matching IterationNode's original logic):
- *   - JSX mode: strip `.iteration-N.tsx` + `.tsx` from the jsxFile; fall
- *     back to componentName.
- *   - React mode: kebab-case the componentName.
+ * Expands the PascalCase componentName into spaced Title Case
+ * (e.g. "CardComponent" → "Card Component"), preserving the original
+ * name instead of kebab-lowercasing it.
  */
 export function iterationPageName(params: {
   componentName: string;
-  isJsx: boolean;
-  jsxFile?: string;
 }): string {
-  const { componentName, isJsx, jsxFile } = params;
-  if (isJsx) {
-    return jsxFile?.replace(/\.iteration-\d+\.tsx$/, '').replace('.tsx', '') || componentName;
-  }
-  return componentNameToRegistryId(componentName);
-}
-
-// ---------------------------------------------------------------------------
-// Base-file derivation (used for adopt prompts)
-// ---------------------------------------------------------------------------
-
-/**
- * Strip the `.iteration-N.tsx` suffix from a JSX iteration filename,
- * returning the base component file.
- *
- * e.g. "Button.iteration-3.tsx" → "Button.tsx"
- */
-export function jsxIterationToBaseFile(jsxFile: string): string {
-  return jsxFile.replace(/\.iteration-\d+\.tsx$/, '.tsx');
+  return params.componentName.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }

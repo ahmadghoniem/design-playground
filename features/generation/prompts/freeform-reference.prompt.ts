@@ -3,8 +3,15 @@
  * @description: Prompt for generating a brand-new component using selected canvas nodes as design references.
  */
 import { fillTemplate } from '@pg/shared/lib/prompts/utility';
+import {
+  iterationsFile,
+  iterationsGuide,
+  iterationsIndex,
+  iterationsTree,
+} from '@pg/shared/lib/playground-paths';
 
-const prompt = `
+function buildPrompt(): string {
+  return `
 {{skillSection}}
 NEW COMPONENT REQUEST
 ═════════════════════
@@ -18,7 +25,7 @@ and the design references provided below.
 
 INSTRUCTIONS
 
-1. Read the generation guide: src/app/playground/docs/iterations/guide.mdc
+1. Read the generation guide: ${iterationsGuide()}
 2. Read the source code of each reference component listed above
 3. Examine the screenshots provided to understand their current visual appearance
 4. Choose an appropriate PascalCase name for the new component based on:
@@ -26,15 +33,15 @@ INSTRUCTIONS
    - The purpose and context of the reference components
    - The name should be descriptive and concise (e.g. "LandingHero", "DashboardOverview")
 5. Create the component and save it as:
-   src/app/playground/iterations/{ChosenName}.iteration-1.tsx
+   ${iterationsFile('{ChosenName}.iteration-1.tsx')}
 6. Include the required metadata comment block:
    /**
     * @iteration 1
     * @parent {ChosenName}
     * @description {Brief description of the component}
     */
-7. Register the file in src/app/playground/iterations/index.ts (map key MUST include ".tsx")
-8. Add an entry to src/app/playground/iterations/tree.json with parent set to "{ChosenName}"
+7. Register the file in ${iterationsIndex()} (map key MUST include ".tsx")
+8. Add an entry to ${iterationsTree()} with parent set to "{ChosenName}"
 {{customInstructionsSection}}
 
 CRITICAL REQUIREMENTS
@@ -55,6 +62,7 @@ QUALITY CHECKLIST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Generate the new component now.`;
+}
 
 export interface FreeformReferencePromptVars {
   skillSection?: string;
@@ -64,5 +72,5 @@ export interface FreeformReferencePromptVars {
 }
 
 export function freeformReferencePrompt(vars: FreeformReferencePromptVars): string {
-  return fillTemplate(prompt, vars as unknown as Record<string, string>);
+  return fillTemplate(buildPrompt(), vars as unknown as Record<string, string>);
 }
