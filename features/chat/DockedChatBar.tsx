@@ -19,8 +19,6 @@ import { useSkills } from "@pg/features/chat/useSkills";
 import { getModelIconConfig } from "@pg/shared/lib/model-icons";
 import {
   CHAT_DEFAULT_COUNT,
-  ENABLE_FREEFORM_CHAT,
-  canSubmitReferenceOnlyChat,
   type ChatSubmitPayload,
 } from "@pg/shared/lib/constants";
 
@@ -145,23 +143,13 @@ export default function DockedChatBar({
   // also keeps the bar open. Render uses this so it never minimises mid-use.
   const heldOpen = hasContent || hasSelection;
 
-  const isFreeformMode = !hasSelection && ENABLE_FREEFORM_CHAT;
+  // No edit/explore target → raw (freeform): create a brand-new component.
+  const isFreeformMode = !canEditOrExplore;
   const effectiveChatMode: "edit" | "explore" | "raw" = canEditOrExplore
     ? chatMode
-    : isFreeformMode
-      ? "raw"
-      : "explore";
+    : "raw";
   const showModeToggle = canEditOrExplore;
-  const canReferenceOnlySubmit =
-    !editTarget &&
-    referenceNodes.length > 0 &&
-    segments.some((s) => s.type === "reference" && s.trigger === "/");
-  const canSubmit =
-    hasContent &&
-    (editTarget != null ||
-      canEditOrExplore ||
-      (ENABLE_FREEFORM_CHAT && !editTarget && !canEditOrExplore) ||
-      canReferenceOnlySubmit);
+  const canSubmit = hasContent;
   const showPillsRow = hasAnyPill;
 
   // -------------------------------------------------------------------------
@@ -238,19 +226,6 @@ export default function DockedChatBar({
   const handleSubmit = useCallback(async () => {
     const { text, skillPrompts, skillIds } = extractPayload();
     if (!text && skillPrompts.length === 0) return;
-
-    if (
-      !editTarget &&
-      !ENABLE_FREEFORM_CHAT &&
-      !canSubmitReferenceOnlyChat({
-        hasEditTarget: false,
-        referenceNodeCount: referenceNodes.length,
-        skillPromptCount: skillPrompts.length,
-        text,
-      })
-    ) {
-      return;
-    }
 
     const mode: "edit" | "explore" | "raw" = canEditOrExplore
       ? chatMode
@@ -368,16 +343,14 @@ export default function DockedChatBar({
   const currentConfig = getModelIconConfig(model, activeProvider);
 
   const placeholder = isFreeformMode
-    ? "Ask anything, or / for skills…"
-    : !hasSelection
-      ? "Select a frame to edit or explore"
-      : !editTarget && referenceNodes.length > 0
-        ? "Type / to pick a skill…"
-        : effectiveChatMode === "edit"
-          ? "Describe edits…"
-          : editTarget
-            ? "Describe variations…"
-            : `Explore, using ${shortModelName}`;
+    ? !editTarget && referenceNodes.length > 0
+      ? "Type / to pick a skill…"
+      : "Ask anything, or / for skills…"
+    : effectiveChatMode === "edit"
+      ? "Describe edits…"
+      : editTarget
+        ? "Describe variations…"
+        : `Explore, using ${shortModelName}`;
 
   // -------------------------------------------------------------------------
   // Render

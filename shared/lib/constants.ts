@@ -321,24 +321,6 @@ const TREE_COLUMN_WIDTH = 500;
 // Chat Constants
 // ---------------------------------------------------------------------------
 
-/**
- * When true, chat with no canvas selection creates a freeform node.
- * When false, users must select a frame to edit or explore.
- */
-export const ENABLE_FREEFORM_CHAT = false;
-
-/** Submit without an edit target when reference nodes (e.g. text notes) carry the context. */
-export function canSubmitReferenceOnlyChat(input: {
-  hasEditTarget: boolean;
-  referenceNodeCount: number;
-  skillPromptCount: number;
-  text?: string;
-}): boolean {
-  if (input.hasEditTarget) return false;
-  if (input.referenceNodeCount <= 0) return false;
-  return input.skillPromptCount > 0 || Boolean(input.text?.trim());
-}
-
 /** Default iteration count when submitting via the docked chat bar */
 export const CHAT_DEFAULT_COUNT = 3;
 

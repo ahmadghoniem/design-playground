@@ -30,8 +30,6 @@ import {
   DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
   DEFAULT_STYLING_MODE,
   CHAT_DEFAULT_COUNT,
-  ENABLE_FREEFORM_CHAT,
-  canSubmitReferenceOnlyChat,
   EDIT_COMPLETE_EVENT,
   type StylingMode,
   type GenerationStartPayload,
@@ -78,24 +76,6 @@ export function useChatSubmit({
         payload.skillPrompts.length > 0 ||
         (payload.referenceNodes?.length ?? 0) > 0;
       if (isRawMode && !rawPrompt && !hasFreeformContext) return;
-
-      const hasTarget =
-        payload.targetNodeId &&
-        payload.targetComponentId &&
-        payload.targetComponentName &&
-        payload.targetType;
-      if (
-        !hasTarget &&
-        !ENABLE_FREEFORM_CHAT &&
-        !canSubmitReferenceOnlyChat({
-          hasEditTarget: false,
-          referenceNodeCount: payload.referenceNodes?.length ?? 0,
-          skillPromptCount: payload.skillPrompts.length,
-          text: payload.text,
-        })
-      ) {
-        return;
-      }
 
       // ── Edit Mode: modify file in-place, no iterations ──
       if (chatMode === "edit" && payload.targetNodeId) {
