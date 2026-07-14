@@ -21,15 +21,7 @@ export default function ArticleCard({ post, category, variant, className, onClic
 export default function ArticleCard({ post, category, layout, theme }: Props)
 ```
 
-### 2. Iteration Depth
-
-| Depth | What Changes |
-|-------|-------------|
-| **Shell only** | Only the container component. Child imports/usage unchanged. |
-| **1 level deep** | Container + direct children. Child props stay stable. |
-| **All levels** | Full recursive iteration. |
-
-### 3. File Naming
+### 2. File Naming
 
 ```
 src/app/playground/iterations/{PascalCaseName}.iteration-{n}.tsx
@@ -37,7 +29,7 @@ src/app/playground/iterations/{PascalCaseName}.iteration-{n}.tsx
 
 `{PascalCaseName}` must match the **default export function name** (e.g. `ManifestoPage`, not `Manifesto`). This enables kebab-case conversion back to the registry ID.
 
-### 4. File Structure
+### 3. File Structure
 
 ```tsx
 "use client";
@@ -64,7 +56,7 @@ export default function ArticleCard({ post, category, variant = "expanded", clas
 }
 ```
 
-### 5. Sequential Processing
+### 4. Sequential Processing
 
 Process iterations **one at a time**. For each:
 1. Save the `.tsx` file
@@ -74,7 +66,7 @@ Process iterations **one at a time**. For each:
 
 This gives the user immediate visual feedback as each iteration appears on the canvas.
 
-### 6. Tailwind
+### 5. Tailwind
 
 Stick to existing Tailwind utilities and patterns. Don't introduce custom utilities or CSS-in-JS beyond what the source already uses. You may change colors, typography, spacing — just stay within the existing config.
 

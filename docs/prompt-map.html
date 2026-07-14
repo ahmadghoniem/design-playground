@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Playground — The Prompt Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbf9f6; --bg2:#f4f1ea; --surface:#ffffff; --surface2:#f7f4ee;
+    --border:#e7e1d6; --border2:#d8d0c1;
+    --text:#26221c; --muted:#6d6459; --faint:#9a9084;
+    --accent:#c2603a; --accent-soft:#f4e2d6;
+    --good:#3f8f6b; --good-soft:#dcefe4;
+    --info:#3a6ea5; --info-soft:#dde8f3;
+    --warn:#b6852a; --warn-soft:#f4ead0;
+    --code-bg:#f0ece3; --code-text:#7a4b2e;
+    --display:'Bricolage Grotesque',system-ui,sans-serif;
+    --sans:'Inter',system-ui,'Segoe UI',sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+    --shadow:0 1px 2px rgba(40,34,26,.04),0 8px 24px -14px rgba(40,34,26,.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1c1a17; --bg2:#211e1a; --surface:#262320; --surface2:#2d2925;
+      --border:#39342d; --border2:#4a443b;
+      --text:#ece6dc; --muted:#a89e90; --faint:#7d7468;
+      --accent:#e08a5f; --accent-soft:#3a2a20;
+      --good:#6cc79a; --good-soft:#22322a;
+      --info:#7fb0e0; --info-soft:#1f2a37;
+      --warn:#e0bd6f; --warn-soft:#332b18;
+      --code-bg:#2f2a24; --code-text:#e0a878;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1a17; --bg2:#211e1a; --surface:#262320; --surface2:#2d2925;
+    --border:#39342d; --border2:#4a443b;
+    --text:#ece6dc; --muted:#a89e90; --faint:#7d7468;
+    --accent:#e08a5f; --accent-soft:#3a2a20;
+    --good:#6cc79a; --good-soft:#22322a;
+    --info:#7fb0e0; --info-soft:#1f2a37;
+    --warn:#e0bd6f; --warn-soft:#332b18;
+    --code-bg:#2f2a24; --code-text:#e0a878;
+  }
+  :root[data-theme="light"]{
+    --bg:#fbf9f6; --bg2:#f4f1ea; --surface:#ffffff; --surface2:#f7f4ee;
+    --border:#e7e1d6; --border2:#d8d0c1;
+    --text:#26221c; --muted:#6d6459; --faint:#9a9084;
+    --accent:#c2603a; --accent-soft:#f4e2d6;
+    --good:#3f8f6b; --good-soft:#dcefe4;
+    --info:#3a6ea5; --info-soft:#dde8f3;
+    --warn:#b6852a; --warn-soft:#f4ead0;
+    --code-bg:#f0ece3; --code-text:#7a4b2e;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);color:var(--code-text);padding:.12em .4em;border-radius:5px;word-break:break-word}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;display:grid;grid-template-columns:230px 1fr;gap:44px}
+  @media (max-width:880px){ .wrap{grid-template-columns:1fr;gap:0} nav.toc{display:none} }
+
+  /* ---- hero ---- */
+  header.hero{border-bottom:1px solid var(--border);background:
+     radial-gradient(1200px 380px at 80% -60%, var(--accent-soft), transparent 60%), var(--bg2)}
+  .hero-inner{max-width:1180px;margin:0 auto;padding:52px 28px 40px}
+  .eyebrow{font:600 12px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,4.4vw,46px);line-height:1.05;letter-spacing:-.02em;margin:0 0 16px}
+  .lede{font-size:18px;color:var(--muted);max-width:680px;margin:0}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 11px;border-radius:999px}
+  .pill b{color:var(--text);font-weight:600}
+
+  /* ---- toc ---- */
+  nav.toc{align-self:start;position:sticky;top:24px;padding:28px 0;font-size:14px}
+  nav.toc .toc-title{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;padding-left:12px}
+  nav.toc a{display:block;color:var(--muted);padding:6px 12px;border-left:2px solid transparent;line-height:1.35}
+  nav.toc a:hover{color:var(--text);text-decoration:none;border-left-color:var(--border2)}
+  nav.toc a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+  nav.toc a small{display:block;font:400 11.5px var(--sans);color:var(--faint)}
+  .toc-notes{margin:20px 12px 0}
+  .toc-notes .tag{font:600 10px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .toc-notes .saved{color:var(--good);opacity:0;transition:opacity .2s;text-transform:none;letter-spacing:0;font-weight:500}
+  .toc-notes .saved.show{opacity:1}
+  .toc-notes textarea{width:100%;min-height:130px;resize:vertical;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font:400 12.5px/1.55 var(--sans);color:var(--text);box-shadow:var(--shadow);outline:none}
+  .toc-notes textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .toc-notes textarea::placeholder{color:var(--faint)}
+  .toc-notes .clear{margin-top:6px;font:500 11px var(--sans);color:var(--faint);background:none;border:none;cursor:pointer;padding:2px 0}
+  .toc-notes .clear:hover{color:var(--accent)}
+
+  main{padding:40px 0 100px;min-width:0}
+  section{margin-bottom:56px;scroll-margin-top:24px}
+  section > h2{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.015em;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+  section > h2 .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font:700 14px var(--mono);display:grid;place-items:center}
+  section > .sub{color:var(--muted);margin:0 0 22px;font-size:15.5px}
+  h3{font-family:var(--display);font-weight:600;font-size:18px;margin:30px 0 10px;letter-spacing:-.01em}
+  p{margin:0 0 14px}
+  ul,ol{margin:0 0 14px;padding-left:22px}
+  li{margin:6px 0}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow);margin:18px 0}
+
+  /* plain-words callout */
+  .plain{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
+  .plain .tag{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+  .plain p{margin:0;color:var(--text)}
+
+  .note{border-radius:12px;padding:13px 16px;margin:16px 0;font-size:14.5px;border:1px solid var(--border)}
+  .note .tag{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:5px}
+  .note.info{background:var(--info-soft);border-color:transparent} .note.info .tag{color:var(--info)}
+  .note.good{background:var(--good-soft);border-color:transparent} .note.good .tag{color:var(--good)}
+  .note.warn{background:var(--warn-soft);border-color:transparent} .note.warn .tag{color:var(--warn)}
+  .note p:last-child{margin-bottom:0}
+
+  /* step flow */
+  .flow{display:flex;flex-direction:column;gap:0;margin:20px 0}
+  .step{display:grid;grid-template-columns:38px 1fr;gap:16px;position:relative;padding-bottom:22px}
+  .step:not(:last-child)::before{content:"";position:absolute;left:18px;top:36px;bottom:-2px;width:2px;background:var(--border2)}
+  .step .dot{width:38px;height:38px;border-radius:11px;background:var(--surface);border:1.5px solid var(--border2);color:var(--accent);font:700 15px var(--mono);display:grid;place-items:center;z-index:1}
+  .step .body{padding-top:5px}
+  .step h4{margin:0 0 4px;font:600 16px var(--sans)}
+  .step p{margin:0;color:var(--muted);font-size:14.5px}
+  .step .file{font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px;display:inline-block;margin-top:7px}
+
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:12px;padding:15px 17px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:13px;line-height:1.6}
+  pre code{background:none;color:var(--text);padding:0}
+  .cm{color:var(--faint)}
+  .k{color:var(--accent)}
+  .g{color:var(--good)}
+
+  /* two-column myth/reality */
+  .versus{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+  @media (max-width:640px){ .versus{grid-template-columns:1fr} }
+  .versus .col{border-radius:14px;padding:16px 18px;border:1px solid var(--border)}
+  .versus .col h4{margin:0 0 8px;font:600 14px var(--sans);display:flex;align-items:center;gap:8px}
+  .versus .col.myth{background:var(--warn-soft);border-color:transparent}
+  .versus .col.myth h4{color:var(--warn)}
+  .versus .col.real{background:var(--good-soft);border-color:transparent}
+  .versus .col.real h4{color:var(--good)}
+  .versus .col p{margin:0;font-size:14px;color:var(--text)}
+  .versus .col p + p{margin-top:9px}
+
+  /* matrix table */
+  .tablewrap{overflow-x:auto;margin:18px 0;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+  table.matrix{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px;background:var(--surface)}
+  table.matrix th,table.matrix td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  table.matrix thead th{background:var(--surface2);font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  table.matrix tbody tr:last-child td{border-bottom:none}
+  table.matrix td.name{font:600 13px var(--sans);color:var(--text)}
+  table.matrix td .fp{font:500 11.5px var(--mono);color:var(--info);display:block;margin-top:3px}
+  table.matrix td.mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .tag-chip{display:inline-block;font:600 10px var(--mono);padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .chip-react{background:var(--info-soft);color:var(--info)}
+  .chip-jsx{background:var(--good-soft);color:var(--good)}
+  .chip-edit{background:var(--warn-soft);color:var(--warn)}
+  .chip-new{background:var(--accent-soft);color:var(--accent)}
+
+  /* prompt-anatomy mock */
+  .anatomy{font-family:var(--sans);font-size:13px;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin:18px 0}
+  .anatomy .row{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);align-items:baseline}
+  .anatomy .row:last-child{border-bottom:none}
+  .anatomy .row .slot{flex:none;width:150px;font:600 11px var(--mono);color:var(--accent)}
+  .anatomy .row.shared .slot{color:var(--good)}
+  .anatomy .row .desc{flex:1;color:var(--muted);min-width:0}
+  .anatomy .row .desc b{color:var(--text);font-weight:600}
+  .anatomy .head{background:var(--surface2);font:600 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:block;padding:8px 14px}
+
+  .glossary dt{font:600 14.5px var(--sans);margin-top:14px;color:var(--text)}
+  .glossary dt code{font-size:13px}
+  .glossary dd{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+
+  .themebtn{position:fixed;top:16px;right:16px;z-index:10;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:7px 11px;font:500 12px var(--sans);cursor:pointer;box-shadow:var(--shadow)}
+  .themebtn:hover{color:var(--text)}
+  footer{border-top:1px solid var(--border);color:var(--faint);font-size:13px;padding:26px 0;text-align:center}
+  .kicker{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:34px 0 -6px}
+</style>
+</head>
+<body>
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark')})()">◐ theme</button>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Design Playground · The Prompt Map</p>
+    <h1>The app, seen through its prompts</h1>
+    <p class="lede">Everything the playground does ends up as <em>text sent to the <code>claude</code> CLI</em>. The canvas, the events, the process choreography — all of it exists to build a prompt and catch what the agent writes back. This is the full inventory: every prompt, what fires it, what it produces, and the two invariants that shape the entire codebase.</p>
+    <div class="hero-meta">
+      <span class="pill">🧩 <b>3 understanding + 9 generation</b> prompts</span>
+      <span class="pill">🤖 <b>Agent:</b> Claude Code CLI</span>
+      <span class="pill">📁 <b>All output →</b> <code>src/app/playground/…</code></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc" id="toc">
+    <p class="toc-title">On this page</p>
+    <a href="#model">The mental model<small>The app is a prompt factory</small></a>
+    <a href="#phases">Two phases<small>Understand → generate</small></a>
+    <a href="#phaseA">Phase A — understand<small>Discovery · Analyze · DESIGN.md</small></a>
+    <a href="#phaseB">Phase B — the generation grid<small>The 9 variation prompts</small></a>
+    <a href="#blocks">Shared building blocks<small>What every template injects</small></a>
+    <a href="#invariants">The two invariants<small>Why the rest of the app exists</small></a>
+    <a href="#decisions">Two refactors this suggests<small>Paths &amp; prompt assembly</small></a>
+    <a href="#glossary">Glossary</a>
+    <div class="toc-notes">
+      <span class="tag">My notes <span class="saved" id="notes-saved">saved ✓</span></span>
+      <textarea id="notes" placeholder="Jot notes as you read… (saved in this browser)"></textarea>
+      <button class="clear" id="notes-clear" type="button">clear notes</button>
+    </div>
+  </nav>
+
+  <main>
+
+  <!-- ================= MODEL ================= -->
+  <section id="model">
+    <h2><span class="num">0</span> The 30-second mental model</h2>
+    <p class="sub">One idea that makes every file in <code>prompts/</code> click into place.</p>
+
+    <p>The playground is a <b>prompt factory with a canvas bolted on top</b>. A user gesture — drag, chat, Alt-click, an Adopt button — is compiled into a block of <b>plain text</b>, streamed to the <code>claude</code> CLI over stdin, and the agent responds by <em>writing real files into your repo</em>. The canvas then discovers those files and renders them.</p>
+
+    <div class="plain">
+      <span class="tag">In plain words</span>
+      <p>There is no clever runtime. Each feature is “assemble the right paragraph, hand it to the agent, watch the folder it was told to write to.” If you understand the paragraphs, you understand the product.</p>
+    </div>
+
+    <div class="note info">
+      <span class="tag">Four nouns, up front</span>
+      <p>A <b>node</b> is anything sitting on the canvas. The <b>registry</b> (<code>registry.tsx</code>) is the list of your real, imported components the canvas can render. An <b>iteration</b> is an AI-written variation — a new numbered <code>.tsx</code> file on disk. A <b>skill</b> is a markdown style-brief (<code>SKILL.md</code>) pasted into the prompt to steer the aesthetic. The chat box has three verbs: <b>Explore</b> (write new iterations), <b>Edit</b> (rewrite the selected file in place), <b>Adopt</b> (merge an iteration back into the original). Full glossary at the end.</p>
+    </div>
+
+    <p>Two facts fall out of this, and they explain almost every other design choice:</p>
+    <ul>
+      <li><b>The prompt is the contract.</b> The agent only knows what the text tells it — where to save, what to keep identical, how to style. Change the wording and you change the app's behaviour.</li>
+      <li><b>Two invariants are hard-coded into every generation prompt</b> — a <b>save path</b> and a <b>registration ritual</b>. §5 shows how the SSE stream, the file-watcher, the index regeneration, and the <code>EDIT_COMPLETE</code> refresh are all just machinery serving those two sentences.</li>
+    </ul>
+  </section>
+
+  <!-- ================= PHASES ================= -->
+  <section id="phases">
+    <h2><span class="num">1</span> Two phases, one CLI</h2>
+    <p class="sub">Prompts split cleanly into “understand the codebase” and “generate variations.”</p>
+
+    <div class="flow">
+      <div class="step">
+        <div class="dot">A</div>
+        <div class="body">
+          <h4>Understand the host codebase</h4>
+          <p>Three prompts read your app and write structured facts to disk — which files are components, their props, your design tokens. Cheap, read-mostly, run occasionally.</p>
+          <span class="file">discovery.json · discovery.json (analyzed) · DESIGN.md</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">B</div>
+        <div class="body">
+          <h4>Generate variations</h4>
+          <p>Nine generation prompts turn a selected node + your instructions into new files on the canvas. This is the loop you run all day. Every one funnels through a single endpoint.</p>
+          <span class="file">POST /playground/api/generate</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">↓</div>
+        <div class="body">
+          <h4>Both funnel into the same agent</h4>
+          <p>Whichever phase, the text goes to <code>spawnAgent()</code> → the <code>claude</code> CLI over stdin. The only difference is which files the prompt tells the agent to touch.</p>
+          <span class="file">shared/lib/providers/spawn-agent.ts</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE A ================= -->
+  <section id="phaseA">
+    <h2><span class="num">2</span> Phase A — the “understanding” prompts</h2>
+    <p class="sub">Three prompts that convert your repo into facts the generation prompts later depend on.</p>
+
+    <div class="card">
+      <h3 style="margin-top:0">① Discovery scan → <code>discovery.json</code></h3>
+      <p>Scans every <code>.tsx</code> in the host repo and sorts each file into <b>INCLUDE</b> (renders real UI — a page or component worth showing) or <b>SKIP</b> (utilities, tests, config). It's told to decide <b>cheaply</b>: judge by path and filename first, open a file for a ~40-line peek only when ambiguous. The result is one JSON menu that becomes the sidebar tree.</p>
+      <span class="step-file file" style="font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px">features/generation/prompts/discovery.prompt.ts</span>
+<pre style="margin-top:14px"><code><span class="cm"># classify from the path, open a file only when unsure</span>
+rg --files -g '*.tsx' -g '!node_modules' -g '!{playgroundDir}/**'
+<span class="cm">→ writes {playgroundDir}/discovery.json  (entries[]: id, name, path,</span>
+<span class="cm">  type, description, status:"discovered", childComponents[])</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">② Analyze → the <code>propsInterface</code></h3>
+      <p>The deeper, per-component pass triggered on <b>Add</b>. It reads the component's source, extracts its real TypeScript props interface, and stores it on the registry entry. That interface text is what every Phase-B template later pastes in under <b>“Props interface (DO NOT MODIFY)”</b> — the two phases are joined right here.</p>
+      <span class="file" style="font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px">features/generation/prompts/discovery-analyze.prompt.ts</span>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">③ DESIGN.md generation → design tokens</h3>
+      <p>Reads the host's <code>globals.css</code> + tailwind config + component source and writes a <code>DESIGN.md</code> token spec in the <code>@google/design.md</code> format. Heavily fenced against fabrication: <b>host app only</b>, every token must trace to a real value, <em>omit</em> a section rather than invent one.</p>
+      <span class="file" style="font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px">server/routes/design.ts → buildGenerateFromCodebasePrompt()</span>
+      <div class="note info" style="margin-bottom:0">
+        <span class="tag">Note</span>
+        <p>This is the flow behind the <em>“generate DESIGN.md from codebase”</em> button. The prompt is the payload; the <code>design.md</code> CLI (<code>runDesignMdCli</code>) only lints the result afterward.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE B ================= -->
+  <section id="phaseB">
+    <h2><span class="num">3</span> Phase B — the generation grid</h2>
+    <p class="sub">Nine prompts across eight files. They vary on three axes plus two “special verbs” — once you see the axes, the list stops looking random.</p>
+
+    <p>Every generation template answers the same three questions differently:</p>
+    <ul>
+      <li><b>Source</b> — start from the <em>original component</em>, or from an <em>existing iteration</em> (the <code>…FromIteration</code> variants, which continue the numbering and lineage).</li>
+      <li><b>Scope</b> — reshape the <em>whole</em> component, edit only <em>Alt-selected elements</em> (“copy verbatim, surgical edits only”), or invent a <em>brand-new</em> component from references.</li>
+      <li><b>Render mode</b> — <span class="tag-chip chip-react">React</span> means a normal registry component: it uses the host's Tailwind theme tokens and is saved to <code>iterations/</code>. <span class="tag-chip chip-jsx">JSX</span> means a fully self-contained file: inline styles only, nothing imported except <code>react</code>, saved to <code>canvas-components/</code>. (Yes, both are technically JSX — “JSX” here is the playground's label for the portable, dependency-free kind.)</li>
+    </ul>
+
+    <div class="plain">
+      <span class="tag">Worked example</span>
+      <p>You Alt-click two buttons inside an <em>iteration</em> node and hit Generate. Source = an iteration, scope = selected elements, mode = React → the app reaches for <code>elementIterationFromIterationPrompt</code>. Every row below is just a different answer to those same three questions.</p>
+    </div>
+
+    <div class="note info">
+      <span class="tag">Decode the names</span>
+      <p>Six of the nine rows are one family, and the name is assembled straight from the axes: an optional scope prefix (<code>element</code> = only the selected elements, <code>jsx</code> = self-contained canvas file) + <code>iteration</code> + an optional <code>FromIteration</code> suffix (source is an existing iteration, not the original). The other three — <code>freeformReference</code>, <code>edit</code>, <code>adopt</code> — don't fit the grid; they're the special verbs.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table class="matrix">
+        <thead>
+          <tr><th>Template</th><th>Source</th><th>Scope</th><th>Mode</th><th>Fired by (chat verb + selection)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name">iterationPrompt<span class="fp">iteration.prompt.ts</span></td>
+            <td>original</td><td>whole component</td><td><span class="tag-chip chip-react">React</span></td>
+            <td class="mono">Explore mode</td>
+          </tr>
+          <tr>
+            <td class="name">iterationFromIterationPrompt<span class="fp">iteration-from-iteration.prompt.ts</span></td>
+            <td>an iteration</td><td>whole component</td><td><span class="tag-chip chip-react">React</span></td>
+            <td class="mono">Explore, node = iteration</td>
+          </tr>
+          <tr>
+            <td class="name">elementIterationPrompt<span class="fp">element-iteration.prompt.ts</span></td>
+            <td>original</td><td>Alt-selected elements</td><td><span class="tag-chip chip-react">React</span></td>
+            <td class="mono">Explore + Alt-selected elements</td>
+          </tr>
+          <tr>
+            <td class="name">elementIterationFromIterationPrompt<span class="fp">element-iteration.prompt.ts</span></td>
+            <td>an iteration</td><td>Alt-selected elements</td><td><span class="tag-chip chip-react">React</span></td>
+            <td class="mono">Same, but node = iteration</td>
+          </tr>
+          <tr>
+            <td class="name">jsxIterationPrompt<span class="fp">jsx-iteration.prompt.ts</span></td>
+            <td>original</td><td>whole component</td><td><span class="tag-chip chip-jsx">JSX</span></td>
+            <td class="mono">Explore on a JSX frame</td>
+          </tr>
+          <tr>
+            <td class="name">jsxIterationFromIterationPrompt<span class="fp">jsx-iteration-from-iteration.prompt.ts</span></td>
+            <td>an iteration</td><td>whole component</td><td><span class="tag-chip chip-jsx">JSX</span></td>
+            <td class="mono">Explore on a JSX iteration</td>
+          </tr>
+          <tr>
+            <td class="name">freeformReferencePrompt<span class="fp">freeform-reference.prompt.ts</span></td>
+            <td>reference nodes</td><td><span class="tag-chip chip-new">brand-new</span></td><td><span class="tag-chip chip-react">React</span></td>
+            <td class="mono">Chat, no target + refs</td>
+          </tr>
+          <tr>
+            <td class="name">editPrompt<span class="fp">edit.prompt.ts</span></td>
+            <td>the file itself</td><td><span class="tag-chip chip-edit">in-place</span></td><td>either</td>
+            <td class="mono">Edit mode (no new file)</td>
+          </tr>
+          <tr>
+            <td class="name">adoptIterationPrompt<span class="fp">adopt.prompt.ts</span></td>
+            <td>original + iteration</td><td><span class="tag-chip chip-edit">merge-back</span></td><td><span class="tag-chip chip-react">React</span></td>
+            <td class="mono">Adopt button</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:-8px">Nine rows, eight files — the two <code>element</code> rows are one template file with a source switch.</p>
+
+    <div class="versus">
+      <div class="col real">
+        <h4>● The “iterate” verbs — additive</h4>
+        <p>The six iteration templates all <b>write new numbered files</b> and never touch the source. Each ends with the same sequential ritual so files pop onto the canvas one at a time.</p>
+      </div>
+      <div class="col myth">
+        <h4>◑ The two “mutate” verbs — in place</h4>
+        <p><b>Edit</b> rewrites the selected file with no new node — and no new file means no file-watcher signal, so an explicit <code>EDIT_COMPLETE</code> event tells the canvas to refresh. <b>Adopt</b> rewrites the <em>original</em> to take an iteration's UI while keeping props/API byte-identical.</p>
+      </div>
+    </div>
+
+    <div class="note info">
+      <span class="tag">The element-targeted trick</span>
+      <p>Element iterations don't “redesign.” Their prompt says <b>copy the file verbatim, then surgically change only the targeted elements</b> — everything else must stay pixel-identical. That instruction is the whole feature; the Alt-click selection just fills in which elements.</p>
+    </div>
+  </section>
+
+  <!-- ================= BLOCKS ================= -->
+  <section id="blocks">
+    <h2><span class="num">4</span> Shared building blocks</h2>
+    <p class="sub">The templates are mostly the same paragraphs. <code>shared-sections.ts</code> is the parts bin they draw from.</p>
+
+    <p>Assembly happens client-side the moment you hit Generate: a fill function in <code>registry.tsx</code> takes the node + your instructions and slots them into a template. The result is one long string — the slots below. A generation prompt is that fixed skeleton plus optional injected sections. Anatomy of a typical <code>iterationPrompt</code>:</p>
+
+    <div class="anatomy">
+      <span class="head">Prompt anatomy — slots filled per request</span>
+      <div class="row shared"><span class="slot">skillSection</span><span class="desc"><b>shared formatter</b> · the selected SKILL.md context, or the default skill when the box is empty</span></div>
+      <div class="row"><span class="slot">componentName · sourcePath</span><span class="desc">from the registry entry — where the agent reads the original</span></div>
+      <div class="row"><span class="slot">propsInterface</span><span class="desc">from Phase-A analyze — pasted under <b>“DO NOT MODIFY”</b></span></div>
+      <div class="row shared"><span class="slot">referenceNodesSection</span><span class="desc"><b>shared formatter</b> · other canvas nodes / images / text notes selected as design references</span></div>
+      <div class="row shared"><span class="slot">customInstructionsSection</span><span class="desc"><b>shared formatter</b> · the user's typed instructions (or a default)</span></div>
+      <div class="row"><span class="slot">iterationSavesBlock</span><span class="desc">the hardcoded <code>Save as src/app/playground/iterations/…</code> lines — one per file (see §5)</span></div>
+      <div class="row shared"><span class="slot">stylingConstraint</span><span class="desc"><b>shared resolver</b> · picks the styling rules — host Tailwind tokens by default, or inline CSS when the active skill asks for unconstrained exploration</span></div>
+      <div class="row shared"><span class="slot">qualityChecklist</span><span class="desc"><b>shared resolver</b> · the “props unchanged / registered / tree updated” checkboxes</span></div>
+    </div>
+
+    <p>The styling switch is worth calling out because it changes the visual result completely:</p>
+    <div class="versus">
+      <div class="col real">
+        <h4>● tailwind (default)</h4>
+        <p>“Use only existing Tailwind classes; prefer semantic theme tokens (<code>bg-background</code>, <code>text-foreground</code>…); no hardcoded hex; no inline styles.” Result inherits the host theme, incl. light/dark.</p>
+      </div>
+      <div class="col real">
+        <h4>● inline-css</h4>
+        <p>“Use inline <code>style={{}}</code> for any property; no Tailwind utilities.” Maximum creative freedom, no theme coupling — used by the unbounded-explore skill.</p>
+      </div>
+    </div>
+
+    <div class=”note warn”>
+      <span class=”tag”>⚠ A quiet smell</span>
+      <p>The “sequential a–e” registration block is still <b>re-inlined by hand</b> in each template (~6 copies with tiny drifts) rather than shared. Deduplicating it into one constant is deliberate future work — kept out of the minimalism pass to keep that diff removal-only.</p>
+    </div>
+  </section>
+
+  <!-- ================= INVARIANTS ================= -->
+  <section id="invariants">
+    <h2><span class="num">5</span> The two invariants that shape the whole app</h2>
+    <p class="sub">This is the payoff. Nearly every non-prompt subsystem exists to serve one of these two sentences.</p>
+
+    <h3>Invariant 1 — the save path</h3>
+    <p>Every generation template hardcodes the same destination string:</p>
+<pre><code>Save as <span class="k">src/app/playground/iterations/</span><span class="g">{PascalName}</span>.iteration-<span class="g">{N}</span>.tsx</code></pre>
+    <p>That literal <code>src/app/playground/…</code> prefix is baked into all eight templates <em>and</em> the JSX ones — and because a host might mount the playground elsewhere, <code>generate.ts</code> carries a compensating rewrite:</p>
+<pre><code><span class="cm">// server/routes/generate.ts — patch the prompt at runtime</span>
+if (playgroundRelativeDir !== <span class="k">'src/app/playground'</span>)
+  prompt = prompt.split(<span class="k">'src/app/playground/'</span>).join(playgroundRelativeDir + <span class="k">'/'</span>);</code></pre>
+    <div class="plain">
+      <span class="tag">Why this is candidate #1 (PlaygroundPaths)</span>
+      <p>The prompts are the single biggest consumer of the hardcoded root. “Delete the rewrite, one module owns the paths” isn't abstract cleanup — it's untangling a string that's copy-pasted across a dozen templates and then string-replaced at runtime. That's the whole bug class.</p>
+    </div>
+
+    <h3>Invariant 2 — the registration ritual</h3>
+    <p>Immediately after writing each file, every template orders the same sequence:</p>
+<pre><code><span class="cm">Process iterations ONE AT A TIME. For each:</span>
+  a. save the iteration file
+  b. add the @iteration / @parent / @description metadata comment
+  c. register it in <span class="k">iterations/index.ts</span>   <span class="cm">(map key MUST include ".tsx")</span>
+  d. add a matching entry to <span class="k">iterations/tree.json</span>
+  e. only then start the next one
+<span class="cm">→ "so each iteration is visible on the canvas as soon as it's done"</span></code></pre>
+    <p>That one-at-a-time requirement is why four subsystems exist: the <b>SSE tool-event stream</b> (parse the agent's “I wrote file X” to reveal each iteration live), server-side <b>index regeneration</b>, the <b>skeleton → iteration</b> swap on the canvas, and the <b>fs-watcher</b> as a fallback for files written via shell. The <code>EDIT_COMPLETE</code> refresh (§3) is the <em>edit</em>-verb corner of the same story.</p>
+
+    <div class="note good">
+      <span class="tag">✓ The lens</span>
+      <p>When a subsystem looks over-engineered, ask <em>which prompt sentence it's serving</em>. Almost always it's one of these two. Simplify the sentence and the machinery downstream can shrink with it.</p>
+    </div>
+  </section>
+
+  <!-- ================= DECISIONS ================= -->
+  <section id="decisions">
+    <h2><span class="num">6</span> Two refactors this map points at</h2>
+    <p class="sub">The two invariants from §5, seen from the refactoring side. (An ongoing architecture review numbers these <b>#1 “PlaygroundPaths”</b> and <b>#6 “PromptBuilder”</b>.)</p>
+
+    <div class="versus">
+      <div class="col real">
+        <h4>● The templates are already clean</h4>
+        <p>The eight <code>*.prompt.ts</code> files are well-isolated, documented, and single-purpose. They do <b>not</b> need to move. The parts bin (<code>shared-sections.ts</code>) is healthy too.</p>
+      </div>
+      <div class="col myth">
+        <h4>◑ The orchestration is the mess</h4>
+        <p><code>registry.tsx</code> owns the fill layer: <code>generateIterationPrompt()</code> &amp; friends take <b>8 positional args</b>, build the save-block strings, and hardcode the path. <b>#6 PromptBuilder</b> should move that assembly into <code>features/generation</code> behind a plain-data options object (no React, no positional args). The templates themselves stay put.</p>
+      </div>
+    </div>
+
+    <ul>
+      <li><b>#1 PlaygroundPaths</b> is foundational precisely <em>because</em> the prompts are the path's heaviest consumer (Invariant 1). Fixing paths makes the #6 extraction honest.</li>
+      <li><b>#6 IterationPromptBuilder</b> is narrower than it sounds: move the positional-arg fill functions out of the React host registry into <code>features/generation</code>, and fold the ~8 duplicated “sequential a–e” blocks into the shared constants that already exist for them.</li>
+      <li><b>Everything else</b> — the events, watcher, SSE — traces to Invariant 2. Any simplification there should start by asking whether the <em>prompt</em> could carry the signal more directly (it already does, via the tool-event stream).</li>
+    </ul>
+
+    <div class="plain">
+      <span class="tag">Bottom line</span>
+      <p>The prompts are small, readable, and stable. The debt isn't in <em>what we ask the agent</em> — it's in the hardcoded path threaded through everything, and the registry moonlighting as a prompt assembler. Fix those two and the map stays this legible.</p>
+    </div>
+  </section>
+
+  <!-- ================= GLOSSARY ================= -->
+  <section id="glossary">
+    <h2><span class="num">✦</span> Glossary</h2>
+    <p class="sub">The prompt families and the nouns around them.</p>
+    <dl class="glossary">
+      <dt>Phase A / “understanding” prompts</dt>
+      <dd>Discovery, Analyze, DESIGN.md — read the host repo and write facts (<code>discovery.json</code>, props interfaces, design tokens) that Phase B later consumes.</dd>
+      <dt>Phase B / generation templates</dt>
+      <dd>The eight <code>*.prompt.ts</code> under <code>features/generation/prompts/</code> (+ JSX ones in <code>shared/lib/prompts/</code>) that turn a selection into new files via <code>/api/generate</code>.</dd>
+      <dt>Iterate vs Edit vs Adopt</dt>
+      <dd><b>Iterate</b> writes new numbered files (additive). <b>Edit</b> rewrites the selected file in place. <b>Adopt</b> merges an iteration's UI back into the original, preserving its API.</dd>
+      <dt>…FromIteration variant</dt>
+      <dd>A template whose <em>source</em> is an existing iteration rather than the original component — continues the numbering and records <code>@sourceIteration</code>.</dd>
+      <dt>Render mode <span class="tag-chip chip-react">React</span> / <span class="tag-chip chip-jsx">JSX</span></dt>
+      <dd>React = a registry component styled with the host's Tailwind tokens, written to <code>iterations/</code>. JSX = a self-contained canvas-component that may import only <code>react</code>, inline styles, written to <code>canvas-components/</code>.</dd>
+      <dt>Shared sections <code>shared-sections.ts</code></dt>
+      <dd>The parts bin: styling constraint, quality checklist, props constraint, file-registration, and the formatters (children / instructions / skill / references / elements) injected into templates.</dd>
+      <dt>The two invariants</dt>
+      <dd>See §5 — the hardcoded save path and the register-in-index+tree ritual.</dd>
+    </dl>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  Design Playground · The Prompt Map · sibling to <a href="how-it-works.html">how-it-works.html</a> · open in any browser
+</footer>
+
+<script>
+  // Scrollspy for the TOC
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var map = {};
+  links.forEach(function(a){ var id=a.getAttribute('href').slice(1); var el=document.getElementById(id); if(el) map[id]=a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(l){l.classList.remove('active')});
+        var a=map[e.target.id]; if(a)a.classList.add('active');
+      }
+    });
+  }, { rootMargin:'-20% 0px -70% 0px', threshold:0 });
+  Object.keys(map).forEach(function(id){ obs.observe(document.getElementById(id)); });
+
+  // Notepad — persists to this browser via localStorage
+  (function(){
+    var KEY='prompt-map-notes';
+    var ta=document.getElementById('notes');
+    var saved=document.getElementById('notes-saved');
+    var clearBtn=document.getElementById('notes-clear');
+    if(!ta) return;
+    try{ ta.value=localStorage.getItem(KEY)||''; }catch(e){}
+    var t;
+    ta.addEventListener('input',function(){
+      clearTimeout(t);
+      t=setTimeout(function(){
+        try{ localStorage.setItem(KEY,ta.value); }catch(e){}
+        if(saved){ saved.classList.add('show'); setTimeout(function(){saved.classList.remove('show')},1100); }
+      },350);
+    });
+    clearBtn.addEventListener('click',function(){
+      if(!ta.value || confirm('Clear your notes?')){
+        ta.value=''; try{ localStorage.removeItem(KEY); }catch(e){} ta.focus();
+      }
+    });
+  })();
+</script>
+</body>
+</html>

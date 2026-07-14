@@ -30,7 +30,7 @@ bun dev
 
 The playground lives entirely in `app/playground/` — no global config changes, no wrappers. To uninstall, just delete that folder: its dependencies live nested inside it and are removed with it. Your `package.json` is never touched.
 
-The setup script checks your project and installs the playground's dependencies with **Bun**, **nested** under `app/playground/node_modules/` (so your host `package.json` and lockfile stay clean). It also **configures `.gitignore`** so the playground and generated artifacts (iterations, HTML frames, temp files) are not committed. Run `node src/app/playground/setup.mjs --untrack` if playground files were already tracked. See [SETUP.md](SETUP.md) for details.
+The setup script checks your project and installs the playground's dependencies with **Bun**, **nested** under `app/playground/node_modules/` (so your host `package.json` and lockfile stay clean). It also **configures `.gitignore`** so the playground and generated artifacts (iterations, temp files) are not committed. Run `node src/app/playground/setup.mjs --untrack` if playground files were already tracked. See [SETUP.md](SETUP.md) for details.
 
 ---
 

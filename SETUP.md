@@ -62,8 +62,7 @@ The setup script (`node src/app/playground/setup.mjs`) checks for installed prov
 Setup updates your project's `.gitignore` so playground files stay out of version control:
 
 - The full `src/app/playground/` (or `app/playground/`) folder
-- Runtime artifacts: `.playground-temp/`, `public/.playground/`, uploaded images
-- HTML design frames under `public/{slug}/` (including iterations)
+- Runtime artifacts: `.playground-temp/`, uploaded images
 - Skills installed by the playground (`skills-lock.json`, `.claude/skills/`)
 
 **Your host `package.json` and lockfile are untouched.** The playground's dependencies install nested under `src/app/playground/node_modules/` (gitignored), so setup produces no dependency diff for your project to commit.
@@ -75,8 +74,6 @@ If you previously committed playground files, stop tracking them (files stay on 
 ```
 node src/app/playground/setup.mjs --untrack
 ```
-
-New HTML frames are added to `.gitignore` automatically when created or after generation.
 
 ## Removing the Playground
 
