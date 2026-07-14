@@ -6,7 +6,6 @@ import {
   InlineReferenceGroup,
   type InlineReferenceItemData,
 } from "./inline-reference";
-import { getSkillBubbleStyle } from "./skill-bubble-helpers";
 import { IMPECCABLE_ITEM_ID } from "@pg/shared/lib/impeccable-skill";
 import { OPEN_SKILLS_CATALOG_EVENT } from "@pg/shared/lib/constants";
 
@@ -141,7 +140,6 @@ function ImpeccableSkillPickerItem({
       value={item}
       className="gap-2.5 rounded-lg px-2 py-1.5 data-[selected=true]:bg-stone-100 data-[selected=true]:text-stone-900"
     >
-      <span style={getSkillBubbleStyle(item.id, 24)} />
       <span className="text-[13px] font-medium text-stone-800 truncate">
         {item.label}
       </span>

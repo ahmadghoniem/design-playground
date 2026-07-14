@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@pg/shared/ui/dialog";
-import { getSkillBubbleStyle } from "@pg/shared/ui/skill-bubble-helpers";
 import { FEATURED_SKILLS, type FeaturedSkill } from "@pg/features/skills/featured-skills";
 import type { PlaygroundSkill } from "@pg/skills";
 
@@ -67,7 +66,6 @@ function SkillRow({
 }) {
   return (
     <div className="group flex items-start gap-3 px-4 py-3.5 rounded-xl bg-stone-50/60 border border-stone-100 hover:border-stone-200 hover:bg-stone-50 transition-all">
-      <span style={getSkillBubbleStyle(id, 28)} className="mt-0.5" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[13px] font-semibold text-stone-800 truncate">
