@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Design Playground — The Prompt Map</title>
+<title>Design Playground — The App Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -16,6 +16,7 @@
     --good:#3f8f6b; --good-soft:#dcefe4;
     --info:#3a6ea5; --info-soft:#dde8f3;
     --warn:#b6852a; --warn-soft:#f4ead0;
+    --dead:#a04747; --dead-soft:#f6dede;
     --code-bg:#f0ece3; --code-text:#7a4b2e;
     --display:'Bricolage Grotesque',system-ui,sans-serif;
     --sans:'Inter',system-ui,'Segoe UI',sans-serif;
@@ -31,6 +32,7 @@
       --good:#6cc79a; --good-soft:#22322a;
       --info:#7fb0e0; --info-soft:#1f2a37;
       --warn:#e0bd6f; --warn-soft:#332b18;
+      --dead:#e08585; --dead-soft:#3a2323;
       --code-bg:#2f2a24; --code-text:#e0a878;
       --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.7);
     }
@@ -43,6 +45,7 @@
     --good:#6cc79a; --good-soft:#22322a;
     --info:#7fb0e0; --info-soft:#1f2a37;
     --warn:#e0bd6f; --warn-soft:#332b18;
+    --dead:#e08585; --dead-soft:#3a2323;
     --code-bg:#2f2a24; --code-text:#e0a878;
   }
   :root[data-theme="light"]{
@@ -53,6 +56,7 @@
     --good:#3f8f6b; --good-soft:#dcefe4;
     --info:#3a6ea5; --info-soft:#dde8f3;
     --warn:#b6852a; --warn-soft:#f4ead0;
+    --dead:#a04747; --dead-soft:#f6dede;
     --code-bg:#f0ece3; --code-text:#7a4b2e;
   }
 
@@ -66,7 +70,6 @@
   .wrap{max-width:1180px;margin:0 auto;padding:0 28px;display:grid;grid-template-columns:230px 1fr;gap:44px}
   @media (max-width:880px){ .wrap{grid-template-columns:1fr;gap:0} nav.toc{display:none} }
 
-  /* ---- hero ---- */
   header.hero{border-bottom:1px solid var(--border);background:
      radial-gradient(1200px 380px at 80% -60%, var(--accent-soft), transparent 60%), var(--bg2)}
   .hero-inner{max-width:1180px;margin:0 auto;padding:52px 28px 40px}
@@ -77,7 +80,6 @@
   .pill{display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 11px;border-radius:999px}
   .pill b{color:var(--text);font-weight:600}
 
-  /* ---- toc ---- */
   nav.toc{align-self:start;position:sticky;top:24px;padding:28px 0;font-size:14px}
   nav.toc .toc-title{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;padding-left:12px}
   nav.toc a{display:block;color:var(--muted);padding:6px 12px;border-left:2px solid transparent;line-height:1.35}
@@ -106,7 +108,6 @@
 
   .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow);margin:18px 0}
 
-  /* plain-words callout */
   .plain{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
   .plain .tag{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
   .plain p{margin:0;color:var(--text)}
@@ -116,9 +117,9 @@
   .note.info{background:var(--info-soft);border-color:transparent} .note.info .tag{color:var(--info)}
   .note.good{background:var(--good-soft);border-color:transparent} .note.good .tag{color:var(--good)}
   .note.warn{background:var(--warn-soft);border-color:transparent} .note.warn .tag{color:var(--warn)}
+  .note.dead{background:var(--dead-soft);border-color:transparent} .note.dead .tag{color:var(--dead)}
   .note p:last-child{margin-bottom:0}
 
-  /* step flow */
   .flow{display:flex;flex-direction:column;gap:0;margin:20px 0}
   .step{display:grid;grid-template-columns:38px 1fr;gap:16px;position:relative;padding-bottom:22px}
   .step:not(:last-child)::before{content:"";position:absolute;left:18px;top:36px;bottom:-2px;width:2px;background:var(--border2)}
@@ -133,8 +134,8 @@
   .cm{color:var(--faint)}
   .k{color:var(--accent)}
   .g{color:var(--good)}
+  .r{color:var(--dead)}
 
-  /* two-column myth/reality */
   .versus{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
   @media (max-width:640px){ .versus{grid-template-columns:1fr} }
   .versus .col{border-radius:14px;padding:16px 18px;border:1px solid var(--border)}
@@ -146,7 +147,6 @@
   .versus .col p{margin:0;font-size:14px;color:var(--text)}
   .versus .col p + p{margin-top:9px}
 
-  /* matrix table */
   .tablewrap{overflow-x:auto;margin:18px 0;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
   table.matrix{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px;background:var(--surface)}
   table.matrix th,table.matrix td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
@@ -157,11 +157,11 @@
   table.matrix td.mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
   .tag-chip{display:inline-block;font:600 10px var(--mono);padding:1px 7px;border-radius:999px;white-space:nowrap}
   .chip-react{background:var(--info-soft);color:var(--info)}
-  .chip-jsx{background:var(--good-soft);color:var(--good)}
   .chip-edit{background:var(--warn-soft);color:var(--warn)}
   .chip-new{background:var(--accent-soft);color:var(--accent)}
+  .chip-dead{background:var(--dead-soft);color:var(--dead)}
+  .chip-live{background:var(--good-soft);color:var(--good)}
 
-  /* prompt-anatomy mock */
   .anatomy{font-family:var(--sans);font-size:13px;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin:18px 0}
   .anatomy .row{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);align-items:baseline}
   .anatomy .row:last-child{border-bottom:none}
@@ -178,7 +178,6 @@
   .themebtn{position:fixed;top:16px;right:16px;z-index:10;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:7px 11px;font:500 12px var(--sans);cursor:pointer;box-shadow:var(--shadow)}
   .themebtn:hover{color:var(--text)}
   footer{border-top:1px solid var(--border);color:var(--faint);font-size:13px;padding:26px 0;text-align:center}
-  .kicker{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:34px 0 -6px}
 </style>
 </head>
 <body>
@@ -186,13 +185,14 @@
 
 <header class="hero">
   <div class="hero-inner">
-    <p class="eyebrow">Design Playground · The Prompt Map</p>
-    <h1>The app, seen through its prompts</h1>
-    <p class="lede">Everything the playground does ends up as <em>text sent to the <code>claude</code> CLI</em>. The canvas, the events, the process choreography — all of it exists to build a prompt and catch what the agent writes back. This is the full inventory: every prompt, what fires it, what it produces, and the two invariants that shape the entire codebase.</p>
+    <p class="eyebrow">Design Playground · The App Map</p>
+    <h1>What the app is, feature by feature</h1>
+    <p class="lede">A local-dev design canvas that embeds into a host React app. You drag real components onto an infinite canvas and an agent CLI writes <em>variations of them as real files in your repo</em>. This map covers every feature that exists today, how the pieces fit, and — in §8 — an evidence-backed list of what is dead or redundant enough to delete.</p>
     <div class="hero-meta">
-      <span class="pill">🧩 <b>3 understanding + 9 generation</b> prompts</span>
-      <span class="pill">🤖 <b>Agent:</b> Claude Code CLI</span>
-      <span class="pill">📁 <b>All output →</b> <code>src/app/playground/…</code></span>
+      <span class="pill">🧩 <b>7 generation</b> + <b>3 understanding</b> prompts</span>
+      <span class="pill">🤖 <b>Agent:</b> Claude Code CLI (only)</span>
+      <span class="pill">🖇 <b>10</b> server routes · <b>7</b> node types</span>
+      <span class="pill">📅 Verified against the tree, Jul 2026</span>
     </div>
   </div>
 </header>
@@ -200,13 +200,13 @@
 <div class="wrap">
   <nav class="toc" id="toc">
     <p class="toc-title">On this page</p>
-    <a href="#model">The mental model<small>The app is a prompt factory</small></a>
-    <a href="#phases">Two phases<small>Understand → generate</small></a>
-    <a href="#phaseA">Phase A — understand<small>Discovery · Analyze · DESIGN.md</small></a>
-    <a href="#phaseB">Phase B — the generation grid<small>The 9 variation prompts</small></a>
-    <a href="#blocks">Shared building blocks<small>What every template injects</small></a>
-    <a href="#invariants">The two invariants<small>Why the rest of the app exists</small></a>
-    <a href="#decisions">Two refactors this suggests<small>Paths &amp; prompt assembly</small></a>
+    <a href="#model">The mental model<small>A prompt factory</small></a>
+    <a href="#loop">The loop<small>Gesture → files → canvas</small></a>
+    <a href="#features">Feature map<small>Everything that exists</small></a>
+    <a href="#prompts">The prompt grid<small>7 generation templates</small></a>
+    <a href="#invariants">The two invariants<small>Save path · tree ritual</small></a>
+    <a href="#skills">Skills &amp; impeccable<small>How steering works</small></a>
+    <a href="#removals">Removal candidates<small>Dead &amp; redundant code</small></a>
     <a href="#glossary">Glossary</a>
     <div class="toc-notes">
       <span class="tag">My notes <span class="saved" id="notes-saved">saved ✓</span></span>
@@ -220,207 +220,200 @@
   <!-- ================= MODEL ================= -->
   <section id="model">
     <h2><span class="num">0</span> The 30-second mental model</h2>
-    <p class="sub">One idea that makes every file in <code>prompts/</code> click into place.</p>
+    <p class="sub">One idea that makes every directory click into place.</p>
 
-    <p>The playground is a <b>prompt factory with a canvas bolted on top</b>. A user gesture — drag, chat, Alt-click, an Adopt button — is compiled into a block of <b>plain text</b>, streamed to the <code>claude</code> CLI over stdin, and the agent responds by <em>writing real files into your repo</em>. The canvas then discovers those files and renders them.</p>
+    <p>The playground is a <b>prompt factory with a canvas bolted on top</b>. A user gesture — a drag from the sidebar, a chat message, an Alt-click, an Adopt button — is compiled into a block of <b>plain text</b>, streamed to the <code>claude</code> CLI over stdin, and the agent responds by <em>writing real <code>.tsx</code> files into your repo</em>. The canvas then discovers those files and renders them.</p>
 
     <div class="plain">
       <span class="tag">In plain words</span>
-      <p>There is no clever runtime. Each feature is “assemble the right paragraph, hand it to the agent, watch the folder it was told to write to.” If you understand the paragraphs, you understand the product.</p>
+      <p>There is no clever runtime. Every feature is “assemble the right paragraph, hand it to the agent, watch the folder it was told to write to.” If you understand the paragraphs, you understand the product.</p>
     </div>
 
     <div class="note info">
       <span class="tag">Four nouns, up front</span>
-      <p>A <b>node</b> is anything sitting on the canvas. The <b>registry</b> (<code>registry.tsx</code>) is the list of your real, imported components the canvas can render. An <b>iteration</b> is an AI-written variation — a new numbered <code>.tsx</code> file on disk. A <b>skill</b> is a markdown style-brief (<code>SKILL.md</code>) pasted into the prompt to steer the aesthetic. The chat box has three verbs: <b>Explore</b> (write new iterations), <b>Edit</b> (rewrite the selected file in place), <b>Adopt</b> (merge an iteration back into the original). Full glossary at the end.</p>
+      <p>A <b>node</b> is anything on the canvas. The <b>registry</b> (<code>registry.tsx</code>) is the list of your real, imported host components the canvas can render. An <b>iteration</b> is an AI-written variation — a new numbered <code>.tsx</code> file on disk. A <b>skill</b> is a markdown style-brief whose <em>path</em> is pasted into the prompt to steer the aesthetic. The chat bar has two live verbs: <b>Explore</b> (write new iterations) and <b>Edit</b> (rewrite the selected file in place); <b>Adopt</b> is a third, on the iteration node.</p>
     </div>
 
-    <p>Two facts fall out of this, and they explain almost every other design choice:</p>
+    <p>Two facts fall out of this and explain almost every other design choice:</p>
     <ul>
       <li><b>The prompt is the contract.</b> The agent only knows what the text tells it — where to save, what to keep identical, how to style. Change the wording and you change the app's behaviour.</li>
-      <li><b>Two invariants are hard-coded into every generation prompt</b> — a <b>save path</b> and a <b>registration ritual</b>. §5 shows how the SSE stream, the file-watcher, the index regeneration, and the <code>EDIT_COMPLETE</code> refresh are all just machinery serving those two sentences.</li>
+      <li><b>Two invariants sit in every generation prompt</b> — a <b>save path</b> and a <b>registration ritual</b>. §5 shows how the SSE stream, the poll, and the index rebuild are all machinery serving those two sentences.</li>
     </ul>
   </section>
 
-  <!-- ================= PHASES ================= -->
-  <section id="phases">
-    <h2><span class="num">1</span> Two phases, one CLI</h2>
-    <p class="sub">Prompts split cleanly into “understand the codebase” and “generate variations.”</p>
+  <!-- ================= LOOP ================= -->
+  <section id="loop">
+    <h2><span class="num">1</span> The loop, end to end</h2>
+    <p class="sub">The path a single “make me 4 variations” request actually takes.</p>
 
     <div class="flow">
       <div class="step">
-        <div class="dot">A</div>
+        <div class="dot">1</div>
         <div class="body">
-          <h4>Understand the host codebase</h4>
-          <p>Three prompts read your app and write structured facts to disk — which files are components, their props, your design tokens. Cheap, read-mostly, run occasionally.</p>
-          <span class="file">discovery.json · discovery.json (analyzed) · DESIGN.md</span>
+          <h4>Select a node, type into the chat bar</h4>
+          <p>Pick <b>Explore</b>, drag the count to 1–4, optionally pick a skill with <code>/</code> and attach reference nodes or images as pills.</p>
+          <span class="file">features/chat/DockedChatBar.tsx</span>
         </div>
       </div>
       <div class="step">
-        <div class="dot">B</div>
+        <div class="dot">2</div>
         <div class="body">
-          <h4>Generate variations</h4>
-          <p>Nine generation prompts turn a selected node + your instructions into new files on the canvas. This is the loop you run all day. Every one funnels through a single endpoint.</p>
-          <span class="file">POST /playground/api/generate</span>
+          <h4>The prompt is assembled client-side</h4>
+          <p><code>useChatSubmit</code> picks the right template and calls the fill function in <code>registry.tsx</code>, which slots in the component's source path, props interface, skill paths, references and save-path lines.</p>
+          <span class="file">app/useChatSubmit.ts → registry.tsx → features/generation/prompts/</span>
         </div>
       </div>
       <div class="step">
-        <div class="dot">↓</div>
+        <div class="dot">3</div>
         <div class="body">
-          <h4>Both funnel into the same agent</h4>
-          <p>Whichever phase, the text goes to <code>spawnAgent()</code> → the <code>claude</code> CLI over stdin. The only difference is which files the prompt tells the agent to touch.</p>
-          <span class="file">shared/lib/providers/spawn-agent.ts</span>
+          <h4>POST /api/generate spawns the agent</h4>
+          <p>One chokepoint for every verb. The server pipes the text to the <code>claude</code> CLI over stdin and reads back <code>stream-json</code>.</p>
+          <span class="file">server/routes/generate.ts → shared/lib/providers/spawn-agent.ts</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">4</div>
+        <div class="body">
+          <h4>Skeletons appear immediately</h4>
+          <p>The client drops N placeholder nodes next to the parent so the canvas feels responsive while the agent works.</p>
+          <span class="file">features/generation/useGenerationLifecycle.ts</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">5</div>
+        <div class="body">
+          <h4>Tool events reveal each file as it lands</h4>
+          <p>The server parses <code>tool_use</code>/<code>tool_result</code> out of the agent's stream, <b>rebuilds <code>iterations/index.ts</code> itself</b>, and pushes an <code>iteration-added</code> SSE event. A 4s poll is the safety net.</p>
+          <span class="file">server/lib/claude-jsonl.ts · GET /api/generate?action=events</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">6</div>
+        <div class="body">
+          <h4>Skeleton → iteration swap</h4>
+          <p><code>useIterationScan</code> diffs the server's file list against the canvas, creates real iteration nodes with edges back to the parent, and removes the skeletons.</p>
+          <span class="file">features/iterations/useIterationScan.ts</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ================= PHASE A ================= -->
-  <section id="phaseA">
-    <h2><span class="num">2</span> Phase A — the “understanding” prompts</h2>
-    <p class="sub">Three prompts that convert your repo into facts the generation prompts later depend on.</p>
+  <!-- ================= FEATURES ================= -->
+  <section id="features">
+    <h2><span class="num">2</span> The feature map</h2>
+    <p class="sub">Everything that exists today, and where it lives.</p>
 
-    <div class="card">
-      <h3 style="margin-top:0">① Discovery scan → <code>discovery.json</code></h3>
-      <p>Scans every <code>.tsx</code> in the host repo and sorts each file into <b>INCLUDE</b> (renders real UI — a page or component worth showing) or <b>SKIP</b> (utilities, tests, config). It's told to decide <b>cheaply</b>: judge by path and filename first, open a file for a ~40-line peek only when ambiguous. The result is one JSON menu that becomes the sidebar tree.</p>
-      <span class="step-file file" style="font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px">features/generation/prompts/discovery.prompt.ts</span>
-<pre style="margin-top:14px"><code><span class="cm"># classify from the path, open a file only when unsure</span>
-rg --files -g '*.tsx' -g '!node_modules' -g '!{playgroundDir}/**'
-<span class="cm">→ writes {playgroundDir}/discovery.json  (entries[]: id, name, path,</span>
-<span class="cm">  type, description, status:"discovered", childComponents[])</span></code></pre>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">② Analyze → the <code>propsInterface</code></h3>
-      <p>The deeper, per-component pass triggered on <b>Add</b>. It reads the component's source, extracts its real TypeScript props interface, and stores it on the registry entry. That interface text is what every Phase-B template later pastes in under <b>“Props interface (DO NOT MODIFY)”</b> — the two phases are joined right here.</p>
-      <span class="file" style="font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px">features/generation/prompts/discovery-analyze.prompt.ts</span>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">③ DESIGN.md generation → design tokens</h3>
-      <p>Reads the host's <code>globals.css</code> + tailwind config + component source and writes a <code>DESIGN.md</code> token spec in the <code>@google/design.md</code> format. Heavily fenced against fabrication: <b>host app only</b>, every token must trace to a real value, <em>omit</em> a section rather than invent one.</p>
-      <span class="file" style="font:500 12px var(--mono);color:var(--info);background:var(--info-soft);padding:2px 8px;border-radius:6px">server/routes/design.ts → buildGenerateFromCodebasePrompt()</span>
-      <div class="note info" style="margin-bottom:0">
-        <span class="tag">Note</span>
-        <p>This is the flow behind the <em>“generate DESIGN.md from codebase”</em> button. The prompt is the payload; the <code>design.md</code> CLI (<code>runDesignMdCli</code>) only lints the result afterward.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= PHASE B ================= -->
-  <section id="phaseB">
-    <h2><span class="num">3</span> Phase B — the generation grid</h2>
-    <p class="sub">Nine prompts across eight files. They vary on three axes plus two “special verbs” — once you see the axes, the list stops looking random.</p>
-
-    <p>Every generation template answers the same three questions differently:</p>
-    <ul>
-      <li><b>Source</b> — start from the <em>original component</em>, or from an <em>existing iteration</em> (the <code>…FromIteration</code> variants, which continue the numbering and lineage).</li>
-      <li><b>Scope</b> — reshape the <em>whole</em> component, edit only <em>Alt-selected elements</em> (“copy verbatim, surgical edits only”), or invent a <em>brand-new</em> component from references.</li>
-      <li><b>Render mode</b> — <span class="tag-chip chip-react">React</span> means a normal registry component: it uses the host's Tailwind theme tokens and is saved to <code>iterations/</code>. <span class="tag-chip chip-jsx">JSX</span> means a fully self-contained file: inline styles only, nothing imported except <code>react</code>, saved to <code>canvas-components/</code>. (Yes, both are technically JSX — “JSX” here is the playground's label for the portable, dependency-free kind.)</li>
-    </ul>
-
-    <div class="plain">
-      <span class="tag">Worked example</span>
-      <p>You Alt-click two buttons inside an <em>iteration</em> node and hit Generate. Source = an iteration, scope = selected elements, mode = React → the app reaches for <code>elementIterationFromIterationPrompt</code>. Every row below is just a different answer to those same three questions.</p>
-    </div>
-
-    <div class="note info">
-      <span class="tag">Decode the names</span>
-      <p>Six of the nine rows are one family, and the name is assembled straight from the axes: an optional scope prefix (<code>element</code> = only the selected elements, <code>jsx</code> = self-contained canvas file) + <code>iteration</code> + an optional <code>FromIteration</code> suffix (source is an existing iteration, not the original). The other three — <code>freeformReference</code>, <code>edit</code>, <code>adopt</code> — don't fit the grid; they're the special verbs.</p>
-    </div>
-
+    <h3>Canvas node types</h3>
+    <p>Registered in the <code>nodeTypes</code> map in <code>app/PlaygroundCanvas.tsx</code>. Canvas is <code>@xyflow/react</code> v12.</p>
     <div class="tablewrap">
       <table class="matrix">
-        <thead>
-          <tr><th>Template</th><th>Source</th><th>Scope</th><th>Mode</th><th>Fired by (chat verb + selection)</th></tr>
-        </thead>
+        <thead><tr><th>Type</th><th>What it is</th><th>How you create it</th></tr></thead>
         <tbody>
-          <tr>
-            <td class="name">iterationPrompt<span class="fp">iteration.prompt.ts</span></td>
-            <td>original</td><td>whole component</td><td><span class="tag-chip chip-react">React</span></td>
-            <td class="mono">Explore mode</td>
-          </tr>
-          <tr>
-            <td class="name">iterationFromIterationPrompt<span class="fp">iteration-from-iteration.prompt.ts</span></td>
-            <td>an iteration</td><td>whole component</td><td><span class="tag-chip chip-react">React</span></td>
-            <td class="mono">Explore, node = iteration</td>
-          </tr>
-          <tr>
-            <td class="name">elementIterationPrompt<span class="fp">element-iteration.prompt.ts</span></td>
-            <td>original</td><td>Alt-selected elements</td><td><span class="tag-chip chip-react">React</span></td>
-            <td class="mono">Explore + Alt-selected elements</td>
-          </tr>
-          <tr>
-            <td class="name">elementIterationFromIterationPrompt<span class="fp">element-iteration.prompt.ts</span></td>
-            <td>an iteration</td><td>Alt-selected elements</td><td><span class="tag-chip chip-react">React</span></td>
-            <td class="mono">Same, but node = iteration</td>
-          </tr>
-          <tr>
-            <td class="name">jsxIterationPrompt<span class="fp">jsx-iteration.prompt.ts</span></td>
-            <td>original</td><td>whole component</td><td><span class="tag-chip chip-jsx">JSX</span></td>
-            <td class="mono">Explore on a JSX frame</td>
-          </tr>
-          <tr>
-            <td class="name">jsxIterationFromIterationPrompt<span class="fp">jsx-iteration-from-iteration.prompt.ts</span></td>
-            <td>an iteration</td><td>whole component</td><td><span class="tag-chip chip-jsx">JSX</span></td>
-            <td class="mono">Explore on a JSX iteration</td>
-          </tr>
-          <tr>
-            <td class="name">freeformReferencePrompt<span class="fp">freeform-reference.prompt.ts</span></td>
-            <td>reference nodes</td><td><span class="tag-chip chip-new">brand-new</span></td><td><span class="tag-chip chip-react">React</span></td>
-            <td class="mono">Chat, no target + refs</td>
-          </tr>
-          <tr>
-            <td class="name">editPrompt<span class="fp">edit.prompt.ts</span></td>
-            <td>the file itself</td><td><span class="tag-chip chip-edit">in-place</span></td><td>either</td>
-            <td class="mono">Edit mode (no new file)</td>
-          </tr>
-          <tr>
-            <td class="name">adoptIterationPrompt<span class="fp">adopt.prompt.ts</span></td>
-            <td>original + iteration</td><td><span class="tag-chip chip-edit">merge-back</span></td><td><span class="tag-chip chip-react">React</span></td>
-            <td class="mono">Adopt button</td>
-          </tr>
+          <tr><td class="name">component<span class="fp">features/canvas/nodes/ComponentNode.tsx</span></td><td>A real host component from <code>registry.tsx</code>, rendered live.</td><td class="mono">Drag from the sidebar</td></tr>
+          <tr><td class="name">iteration<span class="fp">features/iterations/IterationNode.tsx</span></td><td>An AI variation, rendered in an iframe.</td><td class="mono">Written by a generation</td></tr>
+          <tr><td class="name">skeleton<span class="fp">features/iterations/SkeletonIterationNode.tsx</span></td><td>Placeholder shown while generating.</td><td class="mono">Auto, then swapped</td></tr>
+          <tr><td class="name">image<span class="fp">features/canvas/nodes/ImageNode.tsx</span></td><td>A reference image.</td><td class="mono">Upload · drag-drop · paste</td></tr>
+          <tr><td class="name">text<span class="fp">features/canvas/nodes/TextNode.tsx</span></td><td>A sticky note / annotation.</td><td class="mono">Text tool → click</td></tr>
+          <tr><td class="name">shape<span class="fp">features/canvas/nodes/ShapeNode.tsx</span></td><td>Annotation shapes.</td><td class="mono">Shape tool → drag</td></tr>
+          <tr><td class="name">frame<span class="fp">features/canvas/nodes/FrameNode.tsx</span></td><td>A group container around a selection.</td><td class="mono">Context menu → group</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-top:-8px">Nine rows, eight files — the two <code>element</code> rows are one template file with a source switch.</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:-8px">Canvas extras: snap-to-grid (only while Ctrl/⌘ held), helper lines, undo/redo (Ctrl+Z/Y), auto-arrange, paste, group/ungroup/z-order, collapse, context menu, and localStorage persistence scoped by project id.</p>
 
-    <div class="versus">
-      <div class="col real">
-        <h4>● The “iterate” verbs — additive</h4>
-        <p>The six iteration templates all <b>write new numbered files</b> and never touch the source. Each ends with the same sequential ritual so files pop onto the canvas one at a time.</p>
-      </div>
-      <div class="col myth">
-        <h4>◑ The two “mutate” verbs — in place</h4>
-        <p><b>Edit</b> rewrites the selected file with no new node — and no new file means no file-watcher signal, so an explicit <code>EDIT_COMPLETE</code> event tells the canvas to refresh. <b>Adopt</b> rewrites the <em>original</em> to take an iteration's UI while keeping props/API byte-identical.</p>
-      </div>
+    <h3>The chat bar — the app's control surface</h3>
+    <p>One component, <code>features/chat/DockedChatBar.tsx</code>, is where nearly all intent is expressed:</p>
+    <ul>
+      <li><b>Explore</b> — write N new iterations (count dragger, 1–4, default 3). Only shown in explore mode.</li>
+      <li><b>Edit</b> — rewrite the selected file in place, no new node.</li>
+      <li><b>Freeform / raw</b> — no frame selected: create a brand-new component from the prompt (skeleton lands on the canvas).</li>
+      <li><b>Model picker</b> — click to cycle; <b>skill picker</b> — type <code>/</code>.</li>
+      <li><b>Pills</b> — the edit target (blue), Alt-clicked elements (chips), reference nodes (green), images (purple).</li>
+    </ul>
+
+    <h3>Discovery — how host components get onto the canvas</h3>
+    <p><code>POST /api/discover</code> spawns the agent with the discovery prompt; <b>the agent itself writes <code>discovery.json</code></b> (a menu of every INCLUDE/SKIP-classified <code>.tsx</code>). Pressing <b>Add</b> runs a second, deeper pass (<code>/api/discover/analyze</code>) that extracts the component's real TypeScript props interface and appends an entry to <code>registry.tsx</code>. That props text is what every generation template later pastes under <b>“Props interface (DO NOT MODIFY)”</b> — this is the seam joining discovery to generation.</p>
+    <div class="note info">
+      <span class="tag">Subtlety</span>
+      <p>The <em>sidebar tree</em> is built from <code>registry.tsx</code>, not from <code>discovery.json</code>. Discovery populates the modal; the registry is what the canvas can actually render.</p>
     </div>
 
-    <div class="note info">
-      <span class="tag">The element-targeted trick</span>
-      <p>Element iterations don't “redesign.” Their prompt says <b>copy the file verbatim, then surgically change only the targeted elements</b> — everything else must stay pixel-identical. That instruction is the whole feature; the Alt-click selection just fills in which elements.</p>
+    <h3>Iterations — the lifecycle after the agent writes</h3>
+    <ul>
+      <li><b>Registration</b> — <code>iterations/index.ts</code> (filename → component map) and <code>tree.json</code> (parent lineage). The server now regenerates the index from tool events.</li>
+      <li><b>Element selection</b> — a <b>penpal</b> RPC bridge injects a child script into the iteration iframe; holding <b>Alt</b> enters select mode and hovering/clicking an element sends it back as a pill. This is what makes “change only this button” possible.</li>
+      <li><b>Adopt</b> — merges an iteration's UI back into the original component while keeping its props/API byte-identical.</li>
+      <li><b>Delete</b> — <code>tree.json</code> supports cascade or reparent.</li>
+    </ul>
+
+    <h3>Everything else</h3>
+    <p><b>Header</b>: project name label, preview theme cycle, Skills, Model settings, Clear, Refresh. <b>Sidebar</b>: the registry tree. <b>Stores</b> (zustand): model settings (persisted), preview color scheme, interactive-node. <b>Images</b>: base64 JSON upload → <code>.playground/images/</code>. <b>project-id</b>: scopes canvas state per host project and supplies the header project name.</p>
+
+    <h3>Server routes — all under <code>/playground/api/</code></h3>
+    <div class="tablewrap">
+      <table class="matrix">
+        <thead><tr><th>Route</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td class="name">generate.ts</td><td>POST spawn agent · DELETE cancel · GET <code>?action=events|status|download-chat</code>. <b>The chokepoint every verb funnels through.</b></td></tr>
+          <tr><td class="name">discover.ts</td><td>Repo scan + the per-component analyze pass.</td></tr>
+          <tr><td class="name">iterations.ts</td><td>GET scan · DELETE (cascade/reparent) · POST regenerate index/tree.</td></tr>
+          <tr><td class="name">skills.ts</td><td>GET merged builtin + user skills. <b>That is its only endpoint.</b></td></tr>
+          <tr><td class="name">models.ts</td><td>GET available models from the provider CLI.</td></tr>
+          <tr><td class="name">images.ts</td><td>list / upload / delete canvas images.</td></tr>
+          <tr><td class="name">playground-root.ts</td><td>GET the resolved playground root (so the browser can build host-correct paths).</td></tr>
+          <tr><td class="name">project-id.ts</td><td>GET a stable per-project id + project name (canvas localStorage scope + header label).</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
-  <!-- ================= BLOCKS ================= -->
-  <section id="blocks">
-    <h2><span class="num">4</span> Shared building blocks</h2>
-    <p class="sub">The templates are mostly the same paragraphs. <code>shared-sections.ts</code> is the parts bin they draw from.</p>
+  <!-- ================= PROMPTS ================= -->
+  <section id="prompts">
+    <h2><span class="num">3</span> The prompt grid</h2>
+    <p class="sub">Seven generation templates across six files. They vary on two axes plus two special verbs.</p>
 
-    <p>Assembly happens client-side the moment you hit Generate: a fill function in <code>registry.tsx</code> takes the node + your instructions and slots them into a template. The result is one long string — the slots below. A generation prompt is that fixed skeleton plus optional injected sections. Anatomy of a typical <code>iterationPrompt</code>:</p>
+    <p>Since the JSX/on-canvas render mode was removed, the grid collapsed to two questions:</p>
+    <ul>
+      <li><b>Source</b> — start from the <em>original component</em>, or from an <em>existing iteration</em> (the <code>…FromIteration</code> variants, which continue the numbering and record lineage).</li>
+      <li><b>Scope</b> — reshape the <em>whole</em> component, or edit only the <em>Alt-selected elements</em>.</li>
+    </ul>
 
+    <div class="tablewrap">
+      <table class="matrix">
+        <thead><tr><th>Template</th><th>Source</th><th>Scope</th><th>Fired by</th></tr></thead>
+        <tbody>
+          <tr><td class="name">iterationPrompt<span class="fp">iteration.prompt.ts</span></td><td>original</td><td>whole component</td><td class="mono">Explore</td></tr>
+          <tr><td class="name">iterationFromIterationPrompt<span class="fp">iteration-from-iteration.prompt.ts</span></td><td>an iteration</td><td>whole component</td><td class="mono">Explore, node = iteration</td></tr>
+          <tr><td class="name">elementIterationPrompt<span class="fp">element-iteration.prompt.ts</span></td><td>original</td><td>Alt-selected elements</td><td class="mono">Explore + element chips</td></tr>
+          <tr><td class="name">elementIterationFromIterationPrompt<span class="fp">element-iteration.prompt.ts</span></td><td>an iteration</td><td>Alt-selected elements</td><td class="mono">Same, node = iteration</td></tr>
+          <tr><td class="name">freeformReferencePrompt<span class="fp">freeform-reference.prompt.ts</span></td><td>reference nodes</td><td><span class="tag-chip chip-new">brand-new</span></td><td class="mono">Refs, no edit target</td></tr>
+          <tr><td class="name">editPrompt<span class="fp">edit.prompt.ts</span></td><td>the file itself</td><td><span class="tag-chip chip-edit">in-place</span></td><td class="mono">Edit mode</td></tr>
+          <tr><td class="name">adoptIterationPrompt<span class="fp">adopt.prompt.ts</span></td><td>original + iteration</td><td><span class="tag-chip chip-edit">merge-back</span></td><td class="mono">Adopt button</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Plus two <b>understanding</b> prompts that read the repo and write facts the generation prompts later consume: <code>discovery.prompt.ts</code> (→ <code>discovery.json</code>) and <code>discovery-analyze.prompt.ts</code> (→ the props interface).</p>
+
+    <div class="note good">
+      <span class="tag">✓ All prompts now live together</span>
+      <p>Every template, the shared parts bin (<code>shared-sections.ts</code>), the <code>{{var}}</code> filler (<code>utility.ts</code>) and the agent-read <code>iterations-guide.mdc</code> are co-located under <code>features/generation/prompts/</code>. Nothing under <code>/docs</code> is read at runtime any more — this directory is safe to delete.</p>
+    </div>
+
+    <h3>Prompt anatomy</h3>
+    <p>A generation prompt is a fixed skeleton plus injected sections. Assembly happens client-side in <code>registry.tsx</code> the moment you hit Generate:</p>
     <div class="anatomy">
-      <span class="head">Prompt anatomy — slots filled per request</span>
-      <div class="row shared"><span class="slot">skillSection</span><span class="desc"><b>shared formatter</b> · the selected SKILL.md context, or the default skill when the box is empty</span></div>
+      <span class="head">Slots filled per request</span>
+      <div class="row shared"><span class="slot">skillSection</span><span class="desc"><b>shared formatter</b> · the <em>paths</em> of selected SKILL.md files (never their bodies — see §5)</span></div>
       <div class="row"><span class="slot">componentName · sourcePath</span><span class="desc">from the registry entry — where the agent reads the original</span></div>
-      <div class="row"><span class="slot">propsInterface</span><span class="desc">from Phase-A analyze — pasted under <b>“DO NOT MODIFY”</b></span></div>
-      <div class="row shared"><span class="slot">referenceNodesSection</span><span class="desc"><b>shared formatter</b> · other canvas nodes / images / text notes selected as design references</span></div>
-      <div class="row shared"><span class="slot">customInstructionsSection</span><span class="desc"><b>shared formatter</b> · the user's typed instructions (or a default)</span></div>
-      <div class="row"><span class="slot">iterationSavesBlock</span><span class="desc">the hardcoded <code>Save as src/app/playground/iterations/…</code> lines — one per file (see §5)</span></div>
-      <div class="row shared"><span class="slot">stylingConstraint</span><span class="desc"><b>shared resolver</b> · picks the styling rules — host Tailwind tokens by default, or inline CSS when the active skill asks for unconstrained exploration</span></div>
+      <div class="row"><span class="slot">propsInterface</span><span class="desc">from the analyze pass — pasted under <b>“DO NOT MODIFY”</b></span></div>
+      <div class="row shared"><span class="slot">referenceNodesSection</span><span class="desc"><b>shared formatter</b> · other canvas nodes / images / notes selected as references</span></div>
+      <div class="row shared"><span class="slot">customInstructionsSection</span><span class="desc"><b>shared formatter</b> · what you typed</span></div>
+      <div class="row"><span class="slot">iterationSavesBlock</span><span class="desc">the <code>Save as …</code> lines, now built via <code>iterationsFile()</code> (§5)</span></div>
+      <div class="row shared"><span class="slot">stylingConstraint</span><span class="desc"><b>shared resolver</b> · host Tailwind tokens by default; inline CSS when <code>no-bound-explore</code> is active</span></div>
       <div class="row shared"><span class="slot">qualityChecklist</span><span class="desc"><b>shared resolver</b> · the “props unchanged / registered / tree updated” checkboxes</span></div>
     </div>
 
-    <p>The styling switch is worth calling out because it changes the visual result completely:</p>
     <div class="versus">
       <div class="col real">
         <h4>● tailwind (default)</h4>
@@ -428,97 +421,192 @@ rg --files -g '*.tsx' -g '!node_modules' -g '!{playgroundDir}/**'
       </div>
       <div class="col real">
         <h4>● inline-css</h4>
-        <p>“Use inline <code>style={{}}</code> for any property; no Tailwind utilities.” Maximum creative freedom, no theme coupling — used by the unbounded-explore skill.</p>
+        <p>“Use inline <code>style={{}}</code> for any property; no Tailwind utilities.” Maximum creative freedom, no theme coupling. Triggered by exactly one skill id: <code>no-bound-explore</code>.</p>
       </div>
-    </div>
-
-    <div class=”note warn”>
-      <span class=”tag”>⚠ A quiet smell</span>
-      <p>The “sequential a–e” registration block is still <b>re-inlined by hand</b> in each template (~6 copies with tiny drifts) rather than shared. Deduplicating it into one constant is deliberate future work — kept out of the minimalism pass to keep that diff removal-only.</p>
     </div>
   </section>
 
   <!-- ================= INVARIANTS ================= -->
   <section id="invariants">
-    <h2><span class="num">5</span> The two invariants that shape the whole app</h2>
-    <p class="sub">This is the payoff. Nearly every non-prompt subsystem exists to serve one of these two sentences.</p>
+    <h2><span class="num">4</span> The two invariants</h2>
+    <p class="sub">Nearly every non-prompt subsystem exists to serve one of these two sentences.</p>
 
-    <h3>Invariant 1 — the save path</h3>
-    <p>Every generation template hardcodes the same destination string:</p>
-<pre><code>Save as <span class="k">src/app/playground/iterations/</span><span class="g">{PascalName}</span>.iteration-<span class="g">{N}</span>.tsx</code></pre>
-    <p>That literal <code>src/app/playground/…</code> prefix is baked into all eight templates <em>and</em> the JSX ones — and because a host might mount the playground elsewhere, <code>generate.ts</code> carries a compensating rewrite:</p>
-<pre><code><span class="cm">// server/routes/generate.ts — patch the prompt at runtime</span>
-if (playgroundRelativeDir !== <span class="k">'src/app/playground'</span>)
-  prompt = prompt.split(<span class="k">'src/app/playground/'</span>).join(playgroundRelativeDir + <span class="k">'/'</span>);</code></pre>
-    <div class="plain">
-      <span class="tag">Why this is candidate #1 (PlaygroundPaths)</span>
-      <p>The prompts are the single biggest consumer of the hardcoded root. “Delete the rewrite, one module owns the paths” isn't abstract cleanup — it's untangling a string that's copy-pasted across a dozen templates and then string-replaced at runtime. That's the whole bug class.</p>
-    </div>
+    <h3>Invariant 1 — the save path <span class="tag-chip chip-live">fixed</span></h3>
+    <p>Every generation template tells the agent where to write. This <em>used</em> to be a hardcoded <code>src/app/playground/…</code> string copy-pasted across every template, with a compensating string-replace in <code>generate.ts</code> for hosts that mounted the playground elsewhere. That's gone:</p>
+<pre><code><span class="cm">// one module owns the root; prompts call a helper</span>
+<span class="k">iterationsFile</span>(`${PascalName}.iteration-${N}.tsx`)
+<span class="cm">// → "src/app/playground/iterations/…" or "app/playground/iterations/…"</span></code></pre>
+    <p><code>shared/lib/playground-paths.ts</code> resolves the root from disk on the server and, in the browser, fetches it once from <code>/api/playground-root</code>. The runtime rewrite is deleted.</p>
 
     <h3>Invariant 2 — the registration ritual</h3>
-    <p>Immediately after writing each file, every template orders the same sequence:</p>
+    <p>Immediately after writing each file, templates order this shared sequence (<code>getSequentialIterationRitual</code> in <code>shared-sections.ts</code>):</p>
 <pre><code><span class="cm">Process iterations ONE AT A TIME. For each:</span>
   a. save the iteration file
   b. add the @iteration / @parent / @description metadata comment
-  c. register it in <span class="k">iterations/index.ts</span>   <span class="cm">(map key MUST include ".tsx")</span>
-  d. add a matching entry to <span class="k">iterations/tree.json</span>
-  e. only then start the next one
-<span class="cm">→ "so each iteration is visible on the canvas as soon as it's done"</span></code></pre>
-    <p>That one-at-a-time requirement is why four subsystems exist: the <b>SSE tool-event stream</b> (parse the agent's “I wrote file X” to reveal each iteration live), server-side <b>index regeneration</b>, the <b>skeleton → iteration</b> swap on the canvas, and the <b>fs-watcher</b> as a fallback for files written via shell. The <code>EDIT_COMPLETE</code> refresh (§3) is the <em>edit</em>-verb corner of the same story.</p>
+  c. add a matching entry to <span class="k">iterations/tree.json</span>
+  d. only then start the next one</code></pre>
+    <p><code>iterations/index.ts</code> is rebuilt by the server from Write/Edit/MultiEdit tool events — agents must not hand-edit it. That one-at-a-time requirement is why the SSE tool-event stream and the skeleton→iteration swap exist: so each file appears the moment it lands rather than all at once at the end.</p>
 
     <div class="note good">
       <span class="tag">✓ The lens</span>
-      <p>When a subsystem looks over-engineered, ask <em>which prompt sentence it's serving</em>. Almost always it's one of these two. Simplify the sentence and the machinery downstream can shrink with it.</p>
+      <p>When a subsystem looks over-engineered, ask <em>which prompt sentence it serves</em>. Almost always it's one of these two. Simplify the sentence and the machinery downstream shrinks with it.</p>
     </div>
   </section>
 
-  <!-- ================= DECISIONS ================= -->
-  <section id="decisions">
-    <h2><span class="num">6</span> Two refactors this map points at</h2>
-    <p class="sub">The two invariants from §5, seen from the refactoring side. (An ongoing architecture review numbers these <b>#1 “PlaygroundPaths”</b> and <b>#6 “PromptBuilder”</b>.)</p>
+  <!-- ================= SKILLS ================= -->
+  <section id="skills">
+    <h2><span class="num">5</span> Skills — and the impeccable skill</h2>
+    <p class="sub">How the aesthetic gets steered, and the one entry that isn't like the others.</p>
 
-    <div class="versus">
-      <div class="col real">
-        <h4>● The templates are already clean</h4>
-        <p>The eight <code>*.prompt.ts</code> files are well-isolated, documented, and single-purpose. They do <b>not</b> need to move. The parts bin (<code>shared-sections.ts</code>) is healthy too.</p>
+    <h3>The big surprise: skills are injected by <em>path</em>, not by content</h3>
+    <p>A selected skill does <b>not</b> get its markdown pasted into the prompt. Only its file path does. <code>formatSkillSection</code> wraps them in a header that says the quiet part out loud:</p>
+<pre><code>SKILL CONTEXT (read each SKILL.md at the repo paths below)
+══════════════
+
+skills/frontend-design/SKILL.md</code></pre>
+    <p>The agent is expected to open those files itself. This is why the skills system is so small: it's a path registry, not a content pipeline.</p>
+
+    <div class="card">
+      <h3 style="margin-top:0">Where skills come from</h3>
+      <p><code>GET /api/skills</code> — the <b>only</b> skills endpoint — scans two directories for any <code>SKILL.md</code> and merges them, with user skills shadowing builtins on id collision:</p>
+      <ul>
+        <li><b>builtin</b> — <code>&lt;playground&gt;/skills/</code>: <code>design-variations</code>, <code>frontend-design</code>, <code>make-interfaces-feel-better</code>, <code>no-bound-explore</code>, <code>nothing-design</code>, <code>stick-to-design-system</code>, <code>ux-variation-designer</code>.</li>
+        <li><b>user</b> — <code>&lt;host&gt;/.claude/skills/</code>: whatever you installed with the external <code>npx skills</code> CLI.</li>
+      </ul>
+      <p style="margin-bottom:0">Ids come from YAML frontmatter <code>name</code> or the parent directory name. <code>skills/index.ts</code> is a <b>types-only</b> module — there is no loader. If you pick no skill <em>and</em> type nothing, two defaults are injected: <code>design-variations</code> + <code>frontend-design</code>.</p>
+    </div>
+
+    <h3>The impeccable skill</h3>
+    <p><b>It is a synthetic client-side picker entry, not a skill on disk.</b> <code>IMPECCABLE_PARENT_ITEM</code> is a hardcoded constant in <code>shared/lib/impeccable-skill.ts</code> that <code>useImpeccableSkillPicker</code> prepends to the API-derived list (and it filters out any real skill with the id <code>impeccable</code> first, so the synthetic entry always wins).</p>
+
+    <p><b>Where it lives in the UI:</b> exactly one place — the <code>/</code> slash menu of the docked chat bar (<code>DockedChatBar.tsx</code> → <code>ImpeccableSkillPicker</code>). It is a two-level menu:</p>
+    <div class="flow">
+      <div class="step">
+        <div class="dot">/</div>
+        <div class="body">
+          <h4>Type <code>/</code> → pick “impeccable”</h4>
+          <p>Selecting the parent inserts <em>no</em> pill — it returns <code>preventDefault</code> and opens a sub-menu of 19 commands.</p>
+          <span class="file">shared/lib/useImpeccableSkillPicker.ts</span>
+        </div>
       </div>
-      <div class="col myth">
-        <h4>◑ The orchestration is the mess</h4>
-        <p><code>registry.tsx</code> owns the fill layer: <code>generateIterationPrompt()</code> &amp; friends take <b>8 positional args</b>, build the save-block strings, and hardcode the path. <b>#6 PromptBuilder</b> should move that assembly into <code>features/generation</code> behind a plain-data options object (no React, no positional args). The templates themselves stay put.</p>
+      <div class="step">
+        <div class="dot">▸</div>
+        <div class="body">
+          <h4>Pick a command</h4>
+          <p>19 of them, grouped <b>Create · Evaluate · Refine · Simplify · Harden</b>: polish, critique, audit, craft, delight, animate, bolder, colorize, layout, typeset, overdrive, quieter, adapt, clarify, distill, harden, optimize, onboard, shape.</p>
+          <span class="file">IMPECCABLE_COMMANDS</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">◆</div>
+        <div class="body">
+          <h4>It collapses into one pill</h4>
+          <p>The pill reads <code>impeccable polish</code> and carries the command on a DOM attribute that round-trips through the editor.</p>
+          <span class="file">shared/ui/inline-reference/dom-engine.ts</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="dot">→</div>
+        <div class="body">
+          <h4>On submit it emits a 3-line pointer prompt</h4>
+          <p>Not a style brief — an instruction to go read two files and apply a command flow to each iteration after writing it.</p>
+          <span class="file">impeccablePromptFromSegment()</span>
+        </div>
       </div>
     </div>
 
+<pre><code>IMPECCABLE SKILL
+Read <span class="k">{root}</span>/SKILL.md and <span class="k">{root}</span>/reference/<span class="g">{command}</span>.md.
+After creating each iteration file, follow the "<span class="g">{command}</span>" command flow from
+those files and apply the result directly to the iteration file before
+moving to the next one.</code></pre>
+
+    <div class="note dead">
+      <span class="tag">⚠ It currently points at nothing</span>
+      <p><code>{root}</code> comes from the real skill's path if a skill with id <code>impeccable</code> is installed — otherwise it falls back to the literal <code>skills/impeccable</code>. <b>No such directory exists in this repo</b>, and it isn't in <code>skills-lock.json</code>. So today the emitted prompt tells the agent to read two files that aren't there. The design clearly anticipates installing it via <code>npx skills add</code> into <code>.claude/skills/impeccable/</code>, at which point the real path is picked up automatically — but as shipped, every impeccable command is a dangling pointer.</p>
+    </div>
+
+    <div class="note info">
+      <span class="tag">Two things impeccable is <em>not</em></span>
+      <p>It has <b>no relationship to styling mode</b> — the tailwind→inline-css switch is triggered by exactly one id, <code>no-bound-explore</code>, and nothing else. And it isn't a “mode”: it's just another entry in the same picker that produces a differently-shaped prompt string.</p>
+    </div>
+
+    <div class="note dead">
+      <span class="tag">⚠ The skills catalog is a UI without a backend</span>
+      <p><code>SkillsCatalogModal</code> POSTs to <code>/api/skills/add</code>, <code>/update</code>, <code>/remove</code> and <code>/preview</code>. <b>None of those four routes exist</b> — <code>skills.ts</code> defines only the GET. Its <code>FEATURED_SKILLS</code> list is 8 hardcoded <code>vercel-labs/agent-skills</code> entries. <code>skills-lock.json</code> is written by the external <code>npx skills</code> CLI; the only reference to it in this codebase is a gitignore line.</p>
+    </div>
+  </section>
+
+  <!-- ================= DESIGN (removed) ================= -->
+  <section id="design">
+    <h2><span class="num">6</span> DESIGN.md — removed</h2>
+    <p class="sub">The DESIGN.md / design-system subsystem (modal, showcase canvas node, <code>/api/design/*</code>, <code>pg-design-inject</code> cookie prepend) has been deleted. Generation relies on the component source path, props interface, and host semantic Tailwind tokens directly.</p>
+  </section>
+
+  <!-- ================= REMOVALS ================= -->
+  <section id="removals">
+    <h2><span class="num">7</span> Removal candidates</h2>
+    <p class="sub">Verified against the tree — each one is dead, unreachable, or duplicated.</p>
+
+    <h3>Provably dead — nothing reaches these</h3>
+    <div class="tablewrap">
+      <table class="matrix">
+        <thead><tr><th>Thing</th><th>Evidence</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Iframe error badges</td><td>The <code>onConsoleError</code> bridge plumbing exists end-to-end but <b>no node registers a handler</b>. <code>AlertTriangle</code> is imported in <code>IterationNode</code> and never used.</td><td class="mono">small</td></tr>
+          <tr><td class="name">Screenshot targets</td><td><code>data-screenshot-target</code> is stamped on 8 node components; <b>nothing reads it</b>.</td><td class="mono">small</td></tr>
+          <tr><td class="name">Skills add/update/remove/preview</td><td>The catalog modal POSTs to 4 routes that <b>don't exist</b> server-side.</td><td class="mono">medium</td></tr>
+          <tr><td class="name"><code>handleIterationAdopt</code></td><td>An explicit <b>no-op</b> threaded through two hooks.</td><td class="mono">small</td></tr>
+          <tr><td class="name">Header sidebar props</td><td><code>sidebarVisible</code> / <code>onToggleSidebar</code> are accepted and never used.</td><td class="mono">tiny</td></tr>
+          <tr><td class="name">Example fixtures</td><td><code>iterations/index.example.ts</code>, <code>tree.example.json</code>.</td><td class="mono">tiny</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Redundant — works, but duplicated or superseded</h3>
     <ul>
-      <li><b>#1 PlaygroundPaths</b> is foundational precisely <em>because</em> the prompts are the path's heaviest consumer (Invariant 1). Fixing paths makes the #6 extraction honest.</li>
-      <li><b>#6 IterationPromptBuilder</b> is narrower than it sounds: move the positional-arg fill functions out of the React host registry into <code>features/generation</code>, and fold the ~8 duplicated “sequential a–e” blocks into the shared constants that already exist for them.</li>
-      <li><b>Everything else</b> — the events, watcher, SSE — traces to Invariant 2. Any simplification there should start by asking whether the <em>prompt</em> could carry the signal more directly (it already does, via the tool-event stream).</li>
+      <li><b>A stale comment</b> claiming an fs-watcher fallback. There is no watcher; the fallback is a 4s poll.</li>
     </ul>
+
+    <h3>Architecture debt (refactor, don't delete)</h3>
+    <div class="versus">
+      <div class="col myth">
+        <h4>◑ <code>constants.ts</code> is a junk drawer</h4>
+        <p>~500 lines mixing real constants (zoom, colors, timings) with <b>7 payload interfaces</b>, <b>runtime functions</b> (<code>getDisplayDimensions</code>), event-name and storage-key registries, and <b>server-only filesystem constants</b> — all imported broadly by features <em>and</em> the server. Split it per-feature; types and functions don't belong here.</p>
+      </div>
+      <div class="col myth">
+        <h4>◑ <code>registry.tsx</code> moonlights as a prompt assembler</h4>
+        <p>The fill functions take <b>~8 positional args</b>, build the save-block strings, and live in the React host registry. Move the assembly into <code>features/generation</code> behind a plain-data options object — no React, no positional args. The templates themselves are clean and should stay put.</p>
+      </div>
+    </div>
 
     <div class="plain">
       <span class="tag">Bottom line</span>
-      <p>The prompts are small, readable, and stable. The debt isn't in <em>what we ask the agent</em> — it's in the hardcoded path threaded through everything, and the registry moonlighting as a prompt assembler. Fix those two and the map stays this legible.</p>
+      <p>The prompts are small, readable and stable — the debt was never in <em>what we ask the agent</em>. It's in a constants junk drawer, a registry doing a second job, and a surprising amount of scaffolding for features that were never finished (skills install, error badges, screenshots, providers). Delete the dead half; refactor the two seams above; the map stays this legible.</p>
     </div>
   </section>
 
   <!-- ================= GLOSSARY ================= -->
   <section id="glossary">
     <h2><span class="num">✦</span> Glossary</h2>
-    <p class="sub">The prompt families and the nouns around them.</p>
+    <p class="sub">The nouns, in one place.</p>
     <dl class="glossary">
-      <dt>Phase A / “understanding” prompts</dt>
-      <dd>Discovery, Analyze, DESIGN.md — read the host repo and write facts (<code>discovery.json</code>, props interfaces, design tokens) that Phase B later consumes.</dd>
-      <dt>Phase B / generation templates</dt>
-      <dd>The eight <code>*.prompt.ts</code> under <code>features/generation/prompts/</code> (+ JSX ones in <code>shared/lib/prompts/</code>) that turn a selection into new files via <code>/api/generate</code>.</dd>
-      <dt>Iterate vs Edit vs Adopt</dt>
-      <dd><b>Iterate</b> writes new numbered files (additive). <b>Edit</b> rewrites the selected file in place. <b>Adopt</b> merges an iteration's UI back into the original, preserving its API.</dd>
+      <dt>Playground root</dt>
+      <dd>Where this package lives inside the host (<code>src/app/playground</code> or <code>app/playground</code>), resolved from disk by sentinel files. Owned by <code>playground-paths.ts</code>; never hardcoded.</dd>
+      <dt>Registry <code>registry.tsx</code></dt>
+      <dd>The list of real host components the canvas can render, plus (today) the prompt fill functions.</dd>
+      <dt>Iteration</dt>
+      <dd>An AI-written variation: a numbered <code>.tsx</code> file under <code>iterations/</code>, listed in <code>tree.json</code>; <code>index.ts</code> is rebuilt server-side from those files.</dd>
+      <dt>Explore vs Edit vs Adopt</dt>
+      <dd><b>Explore</b> writes new numbered files (additive, 1–4 at a time). <b>Edit</b> rewrites the selected file in place. <b>Adopt</b> merges an iteration's UI back into the original, preserving its API.</dd>
       <dt>…FromIteration variant</dt>
-      <dd>A template whose <em>source</em> is an existing iteration rather than the original component — continues the numbering and records <code>@sourceIteration</code>.</dd>
-      <dt>Render mode <span class="tag-chip chip-react">React</span> / <span class="tag-chip chip-jsx">JSX</span></dt>
-      <dd>React = a registry component styled with the host's Tailwind tokens, written to <code>iterations/</code>. JSX = a self-contained canvas-component that may import only <code>react</code>, inline styles, written to <code>canvas-components/</code>.</dd>
-      <dt>Shared sections <code>shared-sections.ts</code></dt>
-      <dd>The parts bin: styling constraint, quality checklist, props constraint, file-registration, and the formatters (children / instructions / skill / references / elements) injected into templates.</dd>
+      <dd>A template whose <em>source</em> is an existing iteration rather than the original — continues numbering and records <code>@sourceIteration</code>.</dd>
+      <dt>Skill</dt>
+      <dd>A markdown style-brief. Only its <b>path</b> is injected; the agent reads the file itself.</dd>
+      <dt>Impeccable</dt>
+      <dd>A synthetic picker entry (not a file) offering 19 commands; emits a pointer prompt to a skill directory that isn't currently installed. See §5.</dd>
       <dt>The two invariants</dt>
-      <dd>See §5 — the hardcoded save path and the register-in-index+tree ritual.</dd>
+      <dd>The save path and the sequential save → metadata → tree.json ritual. See §4.</dd>
     </dl>
   </section>
 
@@ -526,11 +614,10 @@ if (playgroundRelativeDir !== <span class="k">'src/app/playground'</span>)
 </div>
 
 <footer>
-  Design Playground · The Prompt Map · sibling to <a href="how-it-works.html">how-it-works.html</a> · open in any browser
+  Design Playground · The App Map · open in any browser
 </footer>
 
 <script>
-  // Scrollspy for the TOC
   var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
   var map = {};
   links.forEach(function(a){ var id=a.getAttribute('href').slice(1); var el=document.getElementById(id); if(el) map[id]=a; });
@@ -544,7 +631,6 @@ if (playgroundRelativeDir !== <span class="k">'src/app/playground'</span>)
   }, { rootMargin:'-20% 0px -70% 0px', threshold:0 });
   Object.keys(map).forEach(function(id){ obs.observe(document.getElementById(id)); });
 
-  // Notepad — persists to this browser via localStorage
   (function(){
     var KEY='prompt-map-notes';
     var ta=document.getElementById('notes');
