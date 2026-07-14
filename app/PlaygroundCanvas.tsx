@@ -39,12 +39,10 @@ import { useCanvasFrameOps } from "@pg/features/canvas/hooks/useCanvasFrameOps";
 import { useCanvasNodeDelete } from "@pg/features/canvas/hooks/useCanvasNodeDelete";
 import { useCanvasAutoArrange } from "@pg/features/canvas/hooks/useCanvasAutoArrange";
 import { useCanvasClear } from "@pg/features/canvas/hooks/useCanvasClear";
-import { useDragIterateEventHandler } from "@pg/shared/lib/useDragToIterate";
 
 import ComponentNode from "@pg/features/canvas/nodes/ComponentNode";
 import IterationNode from "@pg/features/iterations/IterationNode";
 import SkeletonIterationNode from "@pg/features/iterations/SkeletonIterationNode";
-import DragGhostNode from "@pg/features/canvas/nodes/DragGhostNode";
 import ImageNode from "@pg/features/canvas/nodes/ImageNode";
 import TextNode from "@pg/features/canvas/nodes/TextNode";
 import ShapeNode, { type ShapeKind } from "@pg/features/canvas/nodes/ShapeNode";
@@ -71,7 +69,6 @@ const nodeTypes = {
   component: ComponentNode,
   iteration: IterationNode,
   skeleton: SkeletonIterationNode,
-  "drag-ghost": DragGhostNode,
   image: ImageNode,
   text: TextNode,
   shape: ShapeNode,
@@ -328,11 +325,6 @@ export default function PlaygroundCanvas({
     scanForIterations,
     resumeGenerationInfo: initialState?.generationInfo,
   });
-
-  // ---------------------------------------------------------------------------
-  // Drag-to-iterate handler
-  // ---------------------------------------------------------------------------
-  useDragIterateEventHandler();
 
   // ---------------------------------------------------------------------------
   // Cursor Chat submit handler + queue

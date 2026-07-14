@@ -45,9 +45,6 @@ export const ITERATION_COLLAPSE_TOGGLE_EVENT = 'playground:iteration-collapse-to
 
 /** Fired to open the clear-all confirmation dialog */
 export const PLAYGROUND_CLEAR_EVENT = 'playground:clear-requested';
-
-/** Fired when drag-to-iterate releases (triggers toast + generation) */
-export const DRAG_ITERATE_EVENT = 'playground:drag-iterate';
 // ---------------------------------------------------------------------------
 
 /** Key for persisting canvas state (nodes, edges, counter) */
@@ -320,37 +317,6 @@ export const DND_DATA_KEY = 'application/x-playground-component';
 
 
 // ---------------------------------------------------------------------------
-// Drag-to-Iterate Constants
-// ---------------------------------------------------------------------------
-
-/** Pixels of drag distance per grid step (row or column) */
-const DRAG_ITERATE_PX_PER_STEP = 200;
-
-/** Minimum pointer distance (px) to enter drag state (prevents accidental drags) */
-export const DRAG_ITERATE_THRESHOLD_PX = 5;
-
-/** Maximum time (ms) for a pointerdown→pointerup to count as a click */
-const DRAG_ITERATE_CLICK_TIMEOUT_MS = 150;
-
-/** Duration (ms) of the undo window before generation starts */
-const DRAG_ITERATE_UNDO_DURATION_MS = 3000;
-
-/** Duration (ms) for the Sonner toast auto-dismiss */
-const DRAG_ITERATE_TOAST_DURATION_MS = 4000;
-
-/** Maximum total new iterations from a single drag */
-export const DRAG_ITERATE_MAX_TOTAL = 8;
-
-/** Maximum grid columns for drag-to-iterate */
-export const DRAG_ITERATE_MAX_COLS = 4;
-
-/** Maximum grid rows for drag-to-iterate */
-export const DRAG_ITERATE_MAX_ROWS = 4;
-
-/** Gap between ghost boxes in flow coordinates (px) */
-export const DRAG_GHOST_GAP = 20;
-
-// ---------------------------------------------------------------------------
 // Tree Layout Constants
 // ---------------------------------------------------------------------------
 
@@ -437,11 +403,6 @@ export interface GenerationStartPayload {
   iterationCount: number;
   /** First iteration number in this batch (e.g. 9 when iterations 1–8 already exist) */
   startNumber?: number;
-  /** When set, skeleton nodes are placed in a grid matching drag-to-iterate ghost positions */
-  gridLayout?: {
-    rows: number;
-    cols: number;
-  };
   /** Model used for this generation */
   model?: string;
   /** Provider used for this generation */
@@ -466,19 +427,6 @@ export interface GenerationErrorPayload {
   componentId: string;
   parentNodeId: string;
   error: string;
-}
-
-/** Payload for DRAG_ITERATE_EVENT */
-export interface DragIteratePayload {
-  componentId: string;
-  componentName: string;
-  parentNodeId: string;
-  iterationCount: number;
-  rows: number;
-  cols: number;
-  model?: string;
-  provider?: import('./providers/types').ProviderId;
-  sourceFilename?: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -17,8 +17,6 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  DRAG_GHOST_GAP,
-  ARRANGE_HORIZONTAL_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_HEIGHT,
   DEFAULT_ITERATION_NODE_WIDTH,
@@ -262,7 +260,6 @@ export function useGenerationLifecycle({
         componentName,
         parentNodeId,
         iterationCount,
-        gridLayout,
         editMode: isEditMode,
         startNumber: genStartNumber,
       } = payload;
@@ -350,40 +347,13 @@ export function useGenerationLifecycle({
         [];
 
       for (let i = 1; i <= iterationCount; i++) {
-        let x: number;
-        let y: number;
-
-        if (gridLayout) {
-          // Grid layout from drag-to-iterate: anchor grid to the right of parent
-          const { cols } = gridLayout;
-          const gap = DRAG_GHOST_GAP;
-          const parentW =
-            parentNode.measured?.width ??
-            (parentNode.type === "component"
-              ? DEFAULT_COMPONENT_NODE_WIDTH
-              : DEFAULT_ITERATION_NODE_WIDTH);
-
-          const gridOriginX =
-            parentNode.position.x + parentW + ARRANGE_HORIZONTAL_GAP;
-          const gridOriginY = parentNode.position.y;
-
-          // Fill grid left-to-right, top-to-bottom
-          const col = (i - 1) % cols;
-          const row = Math.floor((i - 1) / cols);
-
-          x = gridOriginX + col * (cellW + gap);
-          y = gridOriginY + row * (cellH + gap);
-        } else {
-          // Dialog flow: place iterations to the right of the parent
-          const pos = calculateIterationPosition(
-            coord.getNodes(),
-            parentNode,
-            i,
-            iterationCount,
-          );
-          x = pos.x;
-          y = pos.y;
-        }
+        // Place iterations to the right of the parent
+        const { x, y } = calculateIterationPosition(
+          coord.getNodes(),
+          parentNode,
+          i,
+          iterationCount,
+        );
 
         candidateRects.push({ x, y, w: cellW, h: cellH });
       }
@@ -408,7 +378,7 @@ export function useGenerationLifecycle({
             componentName,
             parentNodeId,
             totalIterations: iterationCount,
-            // Always size skeleton nodes to match parent so button and drag flows are consistent
+            // Always size skeleton nodes to match parent
             width: cellW,
             height: cellH,
           },
@@ -442,10 +412,6 @@ export function useGenerationLifecycle({
           x: n.position.x,
           y: n.position.y,
         })),
-        gridPositions: gridLayout
-          ? skeletonNodes.map((n) => ({ x: n.position.x, y: n.position.y }))
-          : undefined,
-        gridCellSize: gridLayout ? { width: cellW, height: cellH } : undefined,
         startNumber: genStartNumber ?? 1,
       };
       coord.setGenerationInfoEager(newInfo);

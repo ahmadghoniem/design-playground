@@ -18,7 +18,6 @@ import {
   ResizeGripIcon,
   PlayButtonIcon,
 } from "@pg/shared/ui/playground-nav-icons";
-import IterateDialog from "@pg/shared/ui/IterateDialog";
 import { SizeButtons } from "@pg/shared/ui/SizeButtons";
 import { NodeLabel, useInverseZoom } from "@pg/shared/ui/NodeLabel";
 
@@ -33,9 +32,6 @@ import {
   useIsInteractiveNode,
 } from "@pg/shared/stores/interactive-node-store";
 import { useFrameHoverHint } from "@pg/shared/ui/FrameHoverHint";
-import {
-  generationEvents,
-} from "@pg/shared/lib/generation-events";
 import {
   COMPONENT_SIZE_CHANGE_EVENT,
   EDIT_COMPLETE_EVENT,
@@ -70,7 +66,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const isDesignSystem = data.renderMode === "design-system";
   const registryItem = isDesignSystem ? null : resolveRegistryItem(componentId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
   const [iframeKey, setIframeKey] = useState(() => Date.now());
 
   const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(
@@ -130,19 +125,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   );
   const [isResizing, setIsResizing] = useState(false);
   const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
-
-  useEffect(() => {
-    const on = () => setIsGlobalGenerating(true);
-    const off = () => setIsGlobalGenerating(false);
-    const offStart = generationEvents.start.on(on);
-    const offComplete = generationEvents.complete.on(off);
-    const offError = generationEvents.error.on(off);
-    return () => {
-      offStart();
-      offComplete();
-      offError();
-    };
-  }, []);
 
 
   const handleResizeStart = useCallback(() => {
@@ -459,20 +441,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         </div>
 
         {hoverHint.tooltip}
-
-        {/* Right-side vertical action toolbar — always in DOM, invisible when not selected */}
-        <div
-          className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        >
-          {!isDesignSystem ? (
-            <IterateDialog
-              componentId={componentId}
-              componentName={label.replace(/\s*\(.*\)/, "")}
-              parentNodeId={nodeId ?? ""}
-              isGlobalGenerating={isGlobalGenerating}
-            />
-          ) : null}
-        </div>
       </div>
     </div>
   );

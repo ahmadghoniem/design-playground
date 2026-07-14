@@ -51,7 +51,6 @@ import {
   useScrollCapture,
 } from "@pg/shared/lib/useNodeShared";
 import ComponentErrorBoundary from "@pg/shared/ui/ComponentErrorBoundary";
-import IterateDialog from "@pg/shared/ui/IterateDialog";
 import {
   useInteractiveNodeStore,
   useIsInteractiveNode,
@@ -609,15 +608,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         <div
           className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          {/* Iterate */}
-          <IterateDialog
-            componentId={registryId}
-            componentName={data.componentName}
-            parentNodeId={id}
-            sourceFilename={data.filename}
-            isGlobalGenerating={isGlobalGenerating}
-          />
-
           {/* Use this (adopt) */}
           <Tooltip>
             <TooltipTrigger asChild>
