@@ -42,20 +42,18 @@ The playground UI is **self-contained** — it ships its own neutral theme (a pr
 ## How It Works
 
 1. **Drag** components from the sidebar onto the canvas
-2. **Generate variations** by clicking the sparkle icon on any component (requires the Claude Code CLI — or enable `SHOW_ALL_PROVIDERS` to also use Cursor/Codex)
+2. **Generate variations** by clicking the sparkle icon on any component (requires the Claude Code CLI)
 3. **Compare** variations side-by-side on the canvas
 4. **Use a variation** by clicking "Use this" to copy the import path
 5. **Delete** variations you don't want — files are removed from your project automatically
 
 ## AI Generation
 
-The variation generator runs an agent CLI as a subprocess. **Claude Code is the default and only provider shown** — install it and make sure it's in your PATH:
+The variation generator runs the **Claude Code** CLI as a subprocess — install it and make sure it's in your PATH:
 
 - **Claude Code** — `bun add -g @anthropic-ai/claude-code`
 
-Cursor and Codex remain implemented but hidden; set `SHOW_ALL_PROVIDERS = true` in `lib/providers/registry.ts` to surface them in the Model Settings dialog (Cursor: [Cursor CLI](https://cursor.com/docs/cli/installation) + `cursor agent login`; Codex: `bun add -g @openai/codex` + `codex login`, runs sandboxed `workspace-write` by default).
-
-The setup script (`node src/app/playground/setup.mjs`) checks for installed providers and will tell you what's missing. Without one, everything else works — you just won't be able to generate new variations from the UI.
+The setup script (`node src/app/playground/setup.mjs`) checks for Claude Code and will tell you if it's missing. Without it, everything else works — you just won't be able to generate new variations from the UI.
 
 ## Git
 

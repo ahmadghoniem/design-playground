@@ -79,5 +79,5 @@ Onlook (local at `C:\Users\Ahmed Ibrahim\Documents\GitHub\onlook`) runs its own 
 ## Why Tier 3 over Tier 2 (ACP)
 
 - Tier 2's adapter (`@zed-industries/claude-code-acp`) wraps the **Agent SDK**, reopening the auth question (API-key vs the user's existing `claude` subscription login) that shelling to the user's own CLI deliberately avoids.
-- ACP adds a persistent JSON-RPC session + a dependency to a package whose value prop is a thin footprint; its payoff (standardized multi-agent protocol, edit diffs, permission round-trips) only matters if `SHOW_ALL_PROVIDERS` un-hides. Revisit ACP then — it would replace `lib/providers/` wholesale.
+- ACP was deferred when Cursor/Codex were still in play; Claude-only today — revisit only if multi-agent protocol becomes useful again.
 - Tier 3 is ~50 lines inside files that already exist, deletes ~200+, changes no auth, no deps.

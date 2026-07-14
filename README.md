@@ -46,11 +46,11 @@ Everything happens locally. Your code stays on your machine.
 
 ---
 
-## Providers
+## Provider
 
-**Claude Code is the default provider** and the only one shown in **Model Settings**. Cursor and Codex are still implemented and can be re-enabled by setting `SHOW_ALL_PROVIDERS = true` in `lib/providers/registry.ts`.
+**Claude Code** is the only AI provider. Install the CLI and keep it on your PATH.
 
-### Claude Code (Default)
+### Claude Code
 
 Anthropic's command-line coding agent.
 
@@ -136,11 +136,11 @@ Skills provide optimized prompts so you get better results without needing to wr
 
 Open **Model Settings** from the toolbar gear icon to:
 
-- Enable or disable specific AI models (Claude Code; enable `SHOW_ALL_PROVIDERS` to also switch to Cursor/Codex)
+- Enable or disable specific Claude models
 - Configure Claude Code advanced options (effort, budget, turns)
 - Refresh the available model list
 
-Your provider and model preferences are saved in your browser and persist across sessions.
+Your model preferences are saved in your browser and persist across sessions.
 
 ---
 
@@ -179,10 +179,10 @@ audit pointers: [TELEMETRY.md](TELEMETRY.md).
 ## Troubleshooting
 
 **"Provider not found" error**
-Make sure your chosen CLI is installed and available in your terminal's PATH. Run `cursor --version` or `claude --version` to verify.
+Make sure the Claude Code CLI is installed and available in your terminal's PATH. Run `claude --version` to verify.
 
 **Models not loading**
-Click the refresh button in Model Settings. If using Cursor, make sure the Cursor app is running.
+Click the refresh button in Model Settings.
 
 **Generation seems stuck**
 Check your terminal for error output. You can cancel an in-progress generation from the canvas toolbar.

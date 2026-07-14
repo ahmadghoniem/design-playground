@@ -1,11 +1,12 @@
 import type { ProviderId, ProviderConfig } from './types';
 import { claudeCodeProvider } from './claude-code';
 
+/** Claude Code is the only provider. */
+export const DEFAULT_PROVIDER_ID: ProviderId = 'claude-code';
+
 const PROVIDERS = new Map<ProviderId, ProviderConfig>([
   [claudeCodeProvider.id, claudeCodeProvider],
 ]);
-
-export const DEFAULT_PROVIDER_ID: ProviderId = 'claude-code';
 
 /** Get a provider config by ID. Throws if the ID is not registered. */
 export function getProvider(id: ProviderId): ProviderConfig {
@@ -16,22 +17,7 @@ export function getProvider(id: ProviderId): ProviderConfig {
   return config;
 }
 
-/** Get all registered provider configs. */
-function getAllProviders(): ProviderConfig[] {
-  return Array.from(PROVIDERS.values());
-}
-
-/** Get all registered provider IDs. */
+/** Registered provider IDs (always just Claude Code). */
 export function getAllProviderIds(): ProviderId[] {
-  return Array.from(PROVIDERS.keys());
-}
-
-/** Get provider configs visible in the UI, in tab order. */
-export function getVisibleProviders(): ProviderConfig[] {
-  return [claudeCodeProvider];
-}
-
-/** Get provider IDs visible in the UI, in tab order. */
-export function getVisibleProviderIds(): ProviderId[] {
-  return ['claude-code'];
+  return [DEFAULT_PROVIDER_ID];
 }

@@ -1,6 +1,4 @@
 import claudeIcon from '@pg/assets/claude-icon-white.svg';
-import openaiIcon from '@pg/assets/openai-icon.svg';
-import geminiIcon from '@pg/assets/gemini-icon.svg';
 
 const ICON_SRC = (icon: unknown) =>
   (icon as { src?: string }).src ?? (icon as string);
@@ -11,44 +9,15 @@ export interface ModelIconConfig {
   bg: string;
 }
 
-const MODEL_ICON_CONFIGS: Record<string, ModelIconConfig> = {
-  claude: { src: ICON_SRC(claudeIcon), bg: '#D77655' },
-  openai: { src: ICON_SRC(openaiIcon), bg: '#1c1917' },
-  gemini: { src: ICON_SRC(geminiIcon), bg: '#ffffff' },
+const CLAUDE_ICON: ModelIconConfig = {
+  src: ICON_SRC(claudeIcon),
+  bg: '#D77655',
 };
 
-function getModelIcon(modelValue: string, providerId?: string): string {
-  return getModelIconConfig(modelValue, providerId).src;
-}
-
-export function getModelIconConfig(modelValue: string, _providerId?: string): ModelIconConfig {
-  const v = modelValue.toLowerCase();
-
-  if (
-    !v ||
-    v.includes('claude') ||
-    v.includes('opus') ||
-    v.includes('sonnet') ||
-    v.includes('haiku') ||
-    v.includes('fable') ||
-    v === 'best' ||
-    v === 'opusplan'
-  ) {
-    return MODEL_ICON_CONFIGS.claude;
-  }
-
-  if (
-    v.includes('gpt') ||
-    v.includes('openai') ||
-    v.includes('codex') ||
-    v.includes('o1') ||
-    v.includes('o3') ||
-    v.includes('o4')
-  ) {
-    return MODEL_ICON_CONFIGS.openai;
-  }
-
-  if (v.includes('gemini')) return MODEL_ICON_CONFIGS.gemini;
-
-  return MODEL_ICON_CONFIGS.claude;
+/** Claude Code is the only provider — always return the Claude icon. */
+export function getModelIconConfig(
+  _modelValue?: string,
+  _providerId?: string,
+): ModelIconConfig {
+  return CLAUDE_ICON;
 }

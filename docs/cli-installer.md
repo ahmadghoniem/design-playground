@@ -28,7 +28,7 @@ guarantee. The CLI vendors source; it does not become a runtime dep.
 
 - Finds the host root (`findProjectRoot`).
 - Verifies host prerequisites (`react`/`react-dom`/`tailwindcss`/`vite` present).
-- Checks for an agent CLI provider (Claude Code / Cursor / Codex).
+- Checks for the Claude Code CLI.
 - Runs the **nested** `bun install` (reads this folder's `package.json` +
   `bunfig.toml` `peer=false`).
 - Wires the host `.gitignore` via `lib/host-gitignore.mjs` (`ensureHostGitignore`).

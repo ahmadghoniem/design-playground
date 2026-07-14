@@ -12,7 +12,7 @@ import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
 import { getModelIconConfig } from "@pg/shared/lib/model-icons";
 import { type ModelOption } from "@pg/shared/lib/constants";
 import type { ClaudeCodeOptions } from "@pg/shared/lib/providers/types";
-import { getVisibleProviders, getProvider } from "@pg/shared/lib/providers/registry";
+import { getProvider } from "@pg/shared/lib/providers/registry";
 import { partitionClaudeModels } from "@pg/shared/lib/model-catalog";
 
 const EFFORT_OPTIONS: { value: ClaudeCodeOptions["effort"]; label: string }[] =
@@ -72,7 +72,6 @@ export default function ModelSettingsModal({
     };
   }, [allModels]);
 
-  const providers = getVisibleProviders();
   const allSelected = selected.size === selectableModels.length;
 
   const renderModelRow = (m: ModelOption) => {
@@ -144,7 +143,7 @@ export default function ModelSettingsModal({
         <DialogHeader>
           <DialogTitle>Model Settings</DialogTitle>
           <DialogDescription className="flex items-center justify-between">
-            <span>Choose provider and models.</span>
+            <span>Choose Claude models and options.</span>
             <button
               onClick={() => fetchModels()}
               disabled={isLoading}
@@ -157,35 +156,6 @@ export default function ModelSettingsModal({
             </button>
           </DialogDescription>
         </DialogHeader>
-
-        {/* Provider segment control — single item for now, kept for when more are re-added */}
-        {providers.length > 1 && (
-          <div className="flex gap-0.5 p-0.5 bg-stone-100 rounded-lg">
-            {providers.map((p) => {
-              const isActive = activeProvider === p.id;
-              const iconConfig = getModelIconConfig("", p.id);
-              return (
-                <button
-                  key={p.id}
-                  className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                    isActive
-                      ? "bg-white text-stone-900 shadow-sm"
-                      : "text-stone-500 hover:text-stone-700"
-                  }`}
-                >
-                  <span
-                    className="inline-block w-4 h-4 rounded bg-center bg-no-repeat bg-[length:70%] flex-shrink-0"
-                    style={{
-                      backgroundColor: iconConfig.bg,
-                      backgroundImage: `url(${iconConfig.src})`,
-                    }}
-                  />
-                  {p.displayName}
-                </button>
-              );
-            })}
-          </div>
-        )}
 
         <div className="flex flex-col gap-1 mt-1">
           <button

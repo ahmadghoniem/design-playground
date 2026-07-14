@@ -50,7 +50,7 @@ export function getProviderNotFoundMessage(providerId: ProviderId): string {
   return getProvider(providerId).notFoundMessage;
 }
 
-/** Get the human-readable display name for a provider (e.g. "Cursor", "Claude Code"). */
+/** Get the human-readable display name for a provider (e.g. "Claude Code"). */
 export function getProviderDisplayName(providerId: ProviderId): string {
   return getProvider(providerId).displayName;
 }

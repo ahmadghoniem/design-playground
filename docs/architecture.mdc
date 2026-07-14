@@ -13,7 +13,7 @@ The Design Playground is an AI-powered visual component iteration tool. Users di
 ```
 Sidebar (components)  →  Canvas (React Flow)  →  Iterate Dialog
                                                        ↓
-                                              Provider (Cursor/Claude CLI)
+                                              Provider (Claude Code CLI)
                                                        ↓
                                               API (/generate) spawns agent
                                                        ↓
@@ -51,7 +51,7 @@ Sidebar (components)  →  Canvas (React Flow)  →  Iterate Dialog
 - **Registry Items**: Components registered in `registry.tsx` with ID, lazy import, mock props, optional size
 - **Canvas Nodes**: ComponentNode (original), IterationNode (variation), SkeletonNode (loading), ImageNode
 - **Iterations**: AI-generated `.tsx` variation files in `iterations/`, tracked in `tree.json`
-- **Providers**: Cursor CLI or Claude Code CLI — abstractions for spawning AI agents
+- **Providers**: Claude Code CLI — spawns AI agents for generation
 
 ## State
 

@@ -194,8 +194,7 @@ design-playground/
 
 ## 4. Provider / agent subsystem
 
-The agent CLI is abstracted behind a small provider interface so the same spawn
-machinery serves Claude Code, Cursor, and Codex.
+The playground spawns **Claude Code** only (`ProviderId = 'claude-code'`).
 
 - **`lib/providers/types.ts`** defines `ProviderId`, `ProviderConfig`
   (`id`, `displayName`, `binary`, `versionFlag`, `notFoundMessage`,
@@ -211,12 +210,9 @@ machinery serves Claude Code, Cursor, and Codex.
   not-found message points to `npm install -g @anthropic-ai/claude-code`. Claude
   Code has no `models list` subcommand, so `buildModelListArgs` returns `null` and
   `/api/models` serves `CLAUDE_FALLBACK_MODELS` from `lib/model-catalog.ts`.
-- **`lib/providers/registry.ts`** holds the `PROVIDERS` map. Per `CLAUDE.md`, the
-  UI is gated by a `SHOW_ALL_PROVIDERS` flag: `getVisibleProviders()` /
-  `getVisibleProviderIds()` return only Claude Code (`registry.ts:30-37`), and
-  `DEFAULT_PROVIDER_ID` is `'claude-code'` (`registry.ts:8`). Cursor/Codex remain
-  implemented but hidden; flip the flag to surface them. **Never hardcode
-  provider-id literals** — use `DEFAULT_PROVIDER_ID`.
+- **`lib/providers/registry.ts`** registers Claude Code only.
+  `DEFAULT_PROVIDER_ID` is `'claude-code'`. **Never hardcode provider-id
+  literals** — use `DEFAULT_PROVIDER_ID`.
 - **`lib/providers/spawn-agent.ts`** is the thin spawn wrapper. `spawnAgent(id,
   opts, cwd)` (`spawn-agent.ts:12`) looks up the config, builds args, and
   `spawn(config.binary, args, { cwd, stdio: ['pipe','pipe','pipe'], env: {

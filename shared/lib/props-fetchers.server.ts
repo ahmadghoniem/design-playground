@@ -3,7 +3,7 @@
  *
  * Each entry maps a discovery component ID to an async function that fetches
  * real data once — during the "Add to Playground" analysis flow. The result is
- * passed to the Cursor agent as a data snapshot so it can write realistic,
+ * passed to the Claude Code agent as a data snapshot so it can write realistic,
  * live-data-based mock props into the discovered wrapper file.
  *
  * NEVER call these at render time. They are only safe to run in server-side

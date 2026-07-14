@@ -6,10 +6,9 @@ import {
   getProvider,
   DEFAULT_PROVIDER_ID,
   getAllProviderIds,
-  getVisibleProviderIds,
 } from '@pg/shared/lib/providers/registry';
 import type { ModelOption } from '@pg/shared/lib/constants';
-import { migrateEnabledModels, isModelEnabled } from '@pg/shared/lib/model-catalog';
+import { migrateEnabledModels } from '@pg/shared/lib/model-catalog';
 
 // ---------------------------------------------------------------------------
 // Per-Provider State
@@ -45,8 +44,8 @@ function makeDefaultProviderStates(): Record<ProviderId, PerProviderState> {
 interface ModelSettingsState {
   hasHydrated: boolean;
 
+  /** Always Claude Code — kept for request payloads / persistence. */
   activeProvider: ProviderId;
-  setActiveProvider: (id: ProviderId) => void;
 
   providerState: Record<ProviderId, PerProviderState>;
 
@@ -70,35 +69,12 @@ interface ModelSettingsState {
 
 const STORE_KEY = 'playground-model-settings-v3';
 
-function getPersistedProvider(): ProviderId {
-  if (typeof window === 'undefined') return DEFAULT_PROVIDER_ID;
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const id = parsed?.state?.activeProvider;
-      if (id && getVisibleProviderIds().includes(id)) return id;
-    }
-  } catch {
-    // ignore — fall back to default
-  }
-  return DEFAULT_PROVIDER_ID;
-}
-
 export const useModelSettingsStore = create<ModelSettingsState>()(
   persist(
     (set, get) => ({
       hasHydrated: false,
 
-      activeProvider: getPersistedProvider(),
-
-      setActiveProvider: (id: ProviderId) => {
-        set({ activeProvider: id });
-        const providerState = get().providerState[id];
-        if (!providerState?.hasFetched) {
-          get().fetchModels();
-        }
-      },
+      activeProvider: DEFAULT_PROVIDER_ID,
 
       providerState: makeDefaultProviderStates(),
 
@@ -236,6 +212,7 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
 
           return {
             ...state,
+            activeProvider: DEFAULT_PROVIDER_ID,
             providerState: mergedProviderState,
             claudeCodeOptions: state.claudeCodeOptions ?? DEFAULT_CLAUDE_CODE_OPTIONS,
           };
@@ -244,27 +221,10 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
         return persisted as ModelSettingsState;
       },
       partialize: (state) => ({
-        activeProvider: state.activeProvider,
+        activeProvider: DEFAULT_PROVIDER_ID,
         providerState: state.providerState,
         claudeCodeOptions: state.claudeCodeOptions,
       }),
     },
   ),
 );
-
-/**
- * Filters a list of models to only those enabled in settings.
- */
-function filterEnabledModels(allModels: ModelOption[]): ModelOption[] {
-  const state = useModelSettingsStore.getState();
-  const providerId = state.activeProvider;
-  const ps = state.providerState[providerId];
-  const enabledModels = ps?.enabledModels ?? [];
-  if (enabledModels.length === 0) {
-    const config = getProvider(providerId);
-    return allModels.filter((m) =>
-      config.defaultEnabledModels.some((id) => isModelEnabled(providerId, m.value, [id])),
-    );
-  }
-  return allModels.filter((m) => isModelEnabled(providerId, m.value, enabledModels));
-}

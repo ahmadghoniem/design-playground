@@ -348,7 +348,7 @@
 
     <section id="s4">
       <h2>4 · Provider / agent subsystem</h2>
-      <p>The agent CLI is abstracted behind a small provider interface so the same spawn machinery serves Claude Code, Cursor, and Codex.</p>
+      <p>The playground spawns <strong>Claude Code</strong> only (<code>ProviderId = 'claude-code'</code>).</p>
       <ul class="body">
         <li><strong><code>lib/providers/types.ts</code></strong> defines <code>ProviderId</code>, <code>ProviderConfig</code>
           (<code>id</code>, <code>displayName</code>, <code>binary</code>, <code>versionFlag</code>, <code>notFoundMessage</code>,
@@ -360,10 +360,8 @@
           <code>--output-format text</code>), plus optional <code>--model/--effort/--max-budget-usd/--max-turns</code>. binary is
           <code>claude</code>; Claude Code has no <code>models list</code> subcommand, so <code>buildModelListArgs</code> returns
           <code>null</code> and <code>/api/models</code> serves <code>CLAUDE_FALLBACK_MODELS</code> from <code>lib/model-catalog.ts</code>.</li>
-        <li><strong><code>lib/providers/registry.ts</code></strong> holds the <code>PROVIDERS</code> map. The UI is gated by a
-          <code>SHOW_ALL_PROVIDERS</code> flag: <code>getVisibleProviders()</code> / <code>getVisibleProviderIds()</code> return only Claude
-          Code, and <code>DEFAULT_PROVIDER_ID</code> is <code>'claude-code'</code>. Cursor/Codex remain implemented but hidden; flip the flag
-          to surface them. <strong>Never hardcode provider-id literals</strong> — use <code>DEFAULT_PROVIDER_ID</code>.</li>
+        <li><strong><code>lib/providers/registry.ts</code></strong> registers Claude Code only.
+          <code>DEFAULT_PROVIDER_ID</code> is <code>'claude-code'</code>. <strong>Never hardcode provider-id literals</strong> — use <code>DEFAULT_PROVIDER_ID</code>.</li>
         <li><strong><code>lib/providers/spawn-agent.ts</code></strong> is the thin spawn wrapper. <code>spawnAgent(id, opts, cwd)</code>
           (<code>spawn-agent.ts:12</code>) looks up the config, builds args, and
           <code>spawn(config.binary, args, { cwd, stdio: ['pipe','pipe','pipe'], env: { ...process.env } })</code>.</li>

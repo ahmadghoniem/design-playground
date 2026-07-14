@@ -50,15 +50,6 @@ const CLAUDE_LEGACY_ALIASES: Record<string, string> = {
   'claude-haiku-4-5': 'claude-haiku-4-5-20251001',
 };
 
-const LEGACY_MODEL_ALIASES: Record<string, string> = {
-  ...CLAUDE_LEGACY_ALIASES,
-};
-
-/** Treat an empty model id as the Cursor "auto" model. */
-function normalizeAutoModelId(model: string): string {
-  return model === '' ? 'auto' : model;
-}
-
 /**
  * Map a possibly-stale model id to its current equivalent.
  * Returns the input unchanged when no migration applies.

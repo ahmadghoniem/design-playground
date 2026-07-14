@@ -141,40 +141,25 @@ async function main() {
     process.exit(1);
   }
 
-  // 4b. Check for agent CLI providers (at least one needed for generation)
+  // 4b. Check for Claude Code CLI (required for generation)
   console.log('');
-  console.log(bold('  Agent CLI Providers:'));
+  console.log(bold('  Agent CLI:'));
 
-  const providers = [
-    { name: 'Cursor', cmd: 'cursor --version', installHint: 'https://cursor.com/docs/cli/installation' },
-    { name: 'Claude Code', cmd: 'claude --version', installHint: 'npm install -g @anthropic-ai/claude-code' },
-    { name: 'Codex', cmd: 'codex --version', installHint: 'npm install -g @openai/codex — then run `codex login`' },
-  ];
-
-  let anyProviderFound = false;
-  for (const p of providers) {
-    let found = false;
-    try {
-      execSync(p.cmd, { encoding: 'utf-8', timeout: 5000 });
-      found = true;
-    } catch {
-      // not in PATH or not installed
-    }
-    if (found) {
-      console.log(`    ${green('+')} ${p.name} (found)`);
-      anyProviderFound = true;
-    } else {
-      console.log(`    ${dim('-')} ${p.name} ${dim('(not found)')}`);
-    }
+  let claudeFound = false;
+  try {
+    execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
+    claudeFound = true;
+  } catch {
+    // not in PATH or not installed
   }
 
-  if (!anyProviderFound) {
+  if (claudeFound) {
+    console.log(`    ${green('+')} Claude Code (found)`);
+  } else {
+    console.log(`    ${dim('-')} Claude Code ${dim('(not found)')}`);
     console.log('');
-    console.log(dim('  At least one agent CLI provider is required for generating variations.'));
-    console.log(dim('  Install one of:'));
-    for (const p of providers) {
-      console.log(dim(`    - ${p.name}: ${p.installHint}`));
-    }
+    console.log(dim('  Claude Code CLI is required for generating variations.'));
+    console.log(dim('  Install: npm install -g @anthropic-ai/claude-code'));
     console.log('');
   }
 
