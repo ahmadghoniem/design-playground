@@ -1,26 +1,20 @@
 /**
  * Host-project .gitignore management for Design Playground.
- *
- * Marker strings are duplicated in lib/constants.ts — keep in sync on change.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, relative } from 'path';
 import { execSync } from 'child_process';
+import { PLAYGROUND_CANDIDATE_RELATIVE_DIRS } from './resolve-playground-dir.ts';
 
-// Keep in sync with lib/constants.ts GITIGNORE_* / HTML_TREE_* / TEMP_DIR_RELATIVE
 export const MARKERS = {
   staticStart: '# BEGIN design-playground',
   staticEnd: '# END design-playground',
-  framesStart: '# BEGIN design-playground-public-frames',
-  framesEnd: '# END design-playground-public-frames',
 };
 
-const HTML_TREE_DIR = '.playground';
-const HTML_TREE_FILENAME = 'html-tree.json';
 const TEMP_DIR_RELATIVE = '.playground-temp';
 
-const PLAYGROUND_DIRS = ['src/app/playground', 'app/playground'];
+const PLAYGROUND_DIRS = [...PLAYGROUND_CANDIDATE_RELATIVE_DIRS];
 
 /**
  * @param {string} scriptDir - Absolute path to the playground folder (setup.mjs dir)
@@ -36,102 +30,12 @@ export function getPlaygroundRelPathFromScriptDir(scriptDir, root) {
 export function getStaticIgnoreLines() {
   return [
     '# Design Playground — local dev tool; installed via setup.mjs',
-    '/src/app/playground/',
-    '/app/playground/',
+    ...PLAYGROUND_DIRS.map((d) => `/${d}/`),
     `/${TEMP_DIR_RELATIVE}/`,
     '/skills-lock.json',
     '/.claude/skills/',
-    `/public/${HTML_TREE_DIR}/`,
     '/public/untitled-*/',
   ];
-}
-
-/**
- * @param {string} root
- * @returns {Set<string>}
- */
-export function parseHtmlTreeSlugs(root) {
-  const slugs = new Set();
-  const treePath = join(root, 'public', HTML_TREE_DIR, HTML_TREE_FILENAME);
-  if (!existsSync(treePath)) return slugs;
-
-  try {
-    const data = JSON.parse(readFileSync(treePath, 'utf-8'));
-    const entries = data?.entries ?? {};
-    for (const key of Object.keys(entries)) {
-      const slash = key.indexOf('/');
-      if (slash > 0) {
-        slugs.add(key.slice(0, slash));
-      } else if (key && !key.includes('..')) {
-        slugs.add(key);
-      }
-    }
-    for (const value of Object.values(entries)) {
-      const parent = value?.parent;
-      if (typeof parent === 'string' && parent.startsWith('html:')) {
-        const slug = parent.slice(5);
-        if (slug && !slug.includes('..')) slugs.add(slug);
-      }
-    }
-  } catch {
-    /* corrupt manifest — skip */
-  }
-  return slugs;
-}
-
-/**
- * Scan public/ for HTML frame folders (index.html at root of slug dir).
- * @param {string} root
- * @returns {Set<string>}
- */
-export function scanPublicFrameSlugs(root) {
-  const slugs = new Set();
-  const publicDir = join(root, 'public');
-  if (!existsSync(publicDir)) return slugs;
-
-  let entries;
-  try {
-    entries = readdirSync(publicDir, { withFileTypes: true });
-  } catch {
-    return slugs;
-  }
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name === HTML_TREE_DIR || entry.name.startsWith('.')) continue;
-    if (entry.name.includes('..')) continue;
-    const indexPath = join(publicDir, entry.name, 'index.html');
-    if (existsSync(indexPath)) {
-      slugs.add(entry.name);
-    }
-  }
-  return slugs;
-}
-
-/**
- * @param {string} root
- * @returns {Set<string>}
- */
-export function getAllFrameSlugs(root) {
-  const slugs = new Set();
-  for (const s of parseHtmlTreeSlugs(root)) slugs.add(s);
-  for (const s of scanPublicFrameSlugs(root)) slugs.add(s);
-  return slugs;
-}
-
-/**
- * @param {string} root
- * @returns {string[]}
- */
-export function getDynamicFrameIgnoreLines(root) {
-  const lines = [
-    '# Auto-managed — do not edit; synced from public/.playground/html-tree.json',
-  ];
-  const sorted = [...getAllFrameSlugs(root)].sort();
-  for (const slug of sorted) {
-    lines.push(`/public/${slug}/`);
-  }
-  return lines;
 }
 
 /**
@@ -165,33 +69,15 @@ export function upsertGitignoreBlock(root, markerStart, markerEnd, innerLines) {
 
 /**
  * @param {string} root
- */
-export function syncPublicFrameGitignore(root) {
-  upsertGitignoreBlock(
-    root,
-    MARKERS.framesStart,
-    MARKERS.framesEnd,
-    getDynamicFrameIgnoreLines(root),
-  );
-}
-
-/**
- * @param {string} root
  * @returns {string[]}
  */
 function getAllIgnoredPaths(root) {
-  /** @type {string[]} */
-  const paths = [
+  return [
     ...PLAYGROUND_DIRS,
     TEMP_DIR_RELATIVE,
     'skills-lock.json',
     '.claude/skills',
-    `public/${HTML_TREE_DIR}`,
   ];
-  for (const slug of getAllFrameSlugs(root)) {
-    paths.push(`public/${slug}`);
-  }
-  return paths;
 }
 
 /**
@@ -258,7 +144,6 @@ export function ensureHostGitignore(root, opts = {}) {
     MARKERS.staticEnd,
     getStaticIgnoreLines(),
   );
-  syncPublicFrameGitignore(root);
 
   if (untrack) {
     untrackIgnoredPaths(root);
