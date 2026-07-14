@@ -63,7 +63,7 @@ This is the only enforced "gate", and it is **entirely mechanical**:
 - [ ] All imports resolve, no TS errors
 - [ ] Metadata comment with @iteration/@parent
 - [ ] File named PascalCase.iteration-{n}.tsx
-- [ ] Registered in iterations/index.ts + tree.json
+- [ ] Entry added/updated in iterations/tree.json
 - [ ] Styling mode honored (tokens vs inline)
 ```
 

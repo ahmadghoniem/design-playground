@@ -45,7 +45,7 @@ The parent is the **iteration filename** (not the registry ID `"pricing-card"`).
 3. Number from the next available number (check existing iterations)
 4. Include `@sourceIteration` in metadata
 5. Set tree.json parent to the base iteration filename
-6. Register in `index.ts` as normal
+   (Do not edit `index.ts` — the server rebuilds it)
 
 ## Related Docs
 
