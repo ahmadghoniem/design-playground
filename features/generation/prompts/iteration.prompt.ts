@@ -2,8 +2,8 @@
  * @name: iteration-prompt
  * @description: Prompt used to generate new component iterations from the original source component in the playground
  */
-import { fillTemplate } from '@pg/shared/lib/prompts/utility';
-import { propsConstraint } from '@pg/shared/lib/prompts/shared-sections';
+import { fillTemplate } from './utility';
+import { propsConstraint } from './shared-sections';
 import {
   iterationsGuide,
   iterationsIndex,

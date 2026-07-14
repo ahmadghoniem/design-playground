@@ -5,7 +5,7 @@
  *   originalPath: Relative path to the original source component file.
  *   iterationPath: Relative path to the iteration file being adopted.
  */
-import { fillTemplate } from '@pg/shared/lib/prompts/utility';
+import { fillTemplate } from './utility';
 
 const prompt = `
 ADOPT ITERATION

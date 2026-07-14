@@ -31,7 +31,7 @@ import {
   getQualityChecklist,
   getStylingConstraint,
   getStylingQualityItem
-} from "@pg/shared/lib/prompts/shared-sections"
+} from "@pg/features/generation/prompts/shared-sections"
 import { iterationsFile } from "@pg/shared/lib/playground-paths"
 
 // ---------------------------------------------------------------------------

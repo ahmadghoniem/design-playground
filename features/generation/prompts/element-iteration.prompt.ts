@@ -3,7 +3,7 @@
  * @description: Prompt used to generate targeted element iterations — the AI copies the component
  *   verbatim and only modifies the specific elements the user selected via Alt+click.
  */
-import { fillTemplate } from '@pg/shared/lib/prompts/utility';
+import { fillTemplate } from './utility';
 import {
   iterationsGuide,
   iterationsIndex,

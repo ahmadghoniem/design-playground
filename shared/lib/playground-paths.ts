@@ -95,5 +95,5 @@ export function iterationsTree(): string {
 }
 
 export function iterationsGuide(): string {
-  return playgroundJoin('docs', 'iterations', 'guide.mdc');
+  return playgroundJoin('features', 'generation', 'prompts', 'iterations-guide.mdc');
 }

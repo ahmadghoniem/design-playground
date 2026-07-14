@@ -2,7 +2,7 @@
  * @name: iteration-from-iteration-prompt
  * @description: Prompt used to generate new component iterations derived from an existing iteration file in the playground.
  */
-import { fillTemplate } from '@pg/shared/lib/prompts/utility';
+import { fillTemplate } from './utility';
 import {
   iterationsGuide,
   iterationsIndex,

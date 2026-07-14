@@ -18,7 +18,7 @@ import {
   formatSkillSection,
   formatCustomInstructionsSection,
   getStylingConstraint,
-} from "@pg/shared/lib/prompts/shared-sections";
+} from "@pg/features/generation/prompts/shared-sections";
 import { freeformReferencePrompt } from "@pg/features/generation/prompts/freeform-reference.prompt";
 import { editPrompt } from "@pg/features/generation/prompts/edit.prompt";
 import { iterationsFile } from "@pg/shared/lib/playground-paths";
