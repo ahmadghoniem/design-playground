@@ -72,47 +72,6 @@ export function useAsyncProps(registryId: string): AsyncPropsState {
 }
 
 // ---------------------------------------------------------------------------
-// useIframeSrcDoc – when `enabled`, fetches the src URL and injects the
-// selection-bridge script, returning a string suitable for an iframe `srcDoc`.
-// `enabled` gates the work so the hook can be called unconditionally (rules of
-// hooks) on nodes that render no iframe. Sole caller today is the design-system
-// showcase node.
-// ---------------------------------------------------------------------------
-
-export function useIframeSrcDoc(srcUrl: string, enabled: boolean) {
-  const [srcDoc, setSrcDoc] = useState<string>("");
-
-  useEffect(() => {
-    if (!enabled || !srcUrl) {
-      setSrcDoc("");
-      return;
-    }
-    let cancelled = false;
-    fetch(srcUrl)
-      .then((r) => r.text())
-      .then((html) => {
-        if (cancelled) return;
-        // Dynamically import to keep the bridge module out of the initial bundle
-        // when not needed (nodes that render no iframe)
-        import("@pg/shared/lib/iframe-bridge").then(
-          ({ injectBridgeScript }) => {
-            if (cancelled) return;
-            setSrcDoc(injectBridgeScript(html));
-          },
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setSrcDoc("");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [srcUrl, enabled]);
-
-  return srcDoc;
-}
-
-// ---------------------------------------------------------------------------
 // useScrollCapture – captures wheel events when the container can scroll
 // ---------------------------------------------------------------------------
 

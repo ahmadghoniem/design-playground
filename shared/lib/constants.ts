@@ -63,15 +63,6 @@ const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
 /** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
 export const PREVIEW_COLOR_SCHEME_STORAGE_KEY = 'playground-preview-color-scheme';
 
-/** Sidebar drag id for the generated design-system showcase */
-export const DESIGN_SYSTEM_SHOWCASE_ID = 'design-system:showcase';
-
-/** API URL serving raw HTML for the generated design-system showcase */
-export const DESIGN_SYSTEM_SHOWCASE_RAW_URL = '/playground/api/design/preview-showcase?raw=1';
-
-/** Fires after a successful design-system showcase generation */
-export const DESIGN_SYSTEM_GENERATED_EVENT = 'playground:design-system-generated';
-
 /** Key for persisting generation info across page reloads */
 const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
 

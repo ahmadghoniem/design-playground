@@ -19,7 +19,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { bodyLimit } from 'hono/body-limit';
 
-import { designRoutes } from './routes/design';
 import { discoverRoutes } from './routes/discover';
 import { generateRoutes } from './routes/generate';
 import { imagesRoutes } from './routes/images';
@@ -37,7 +36,6 @@ import { skillsRoutes } from './routes/skills';
 export function createPlaygroundRouter(): Hono {
   const router = new Hono();
 
-  router.route('/', designRoutes());
   router.route('/', discoverRoutes());
   router.route('/', generateRoutes());
   router.route('/', imagesRoutes());

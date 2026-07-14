@@ -12,7 +12,6 @@ import {
   getProviderDisplayName,
   resolveAgentModel,
 } from '../../shared/lib/providers';
-import { readDesignMd, buildSystemPromptAddon } from '../../shared/lib/design-md-helpers';
 import { regenerateIterationsIndex } from './iterations';
 
 import { readJson } from '../lib/hono-helpers';
@@ -166,14 +165,6 @@ export function generateRoutes() {
       const providerId: ProviderId = body.provider ?? 'claude-code';
       const model = resolveAgentModel(providerId, body.model);
 
-      const cookieHeader = c.req.header('cookie') ?? '';
-      const designInjectEnabled = /(?:^|;\s*)pg-design-inject=1(?:;|$)/.test(cookieHeader);
-      if (designInjectEnabled) {
-        const md = readDesignMd();
-        if (md) {
-          prompt = buildSystemPromptAddon(md) + '\n' + prompt;
-        }
-      }
       const streamJsonForPreview = shouldStreamJsonForPreview(body);
       const clientComponentId = String(body.componentId).slice(0, 400);
       const componentId = clientComponentId.replace(/[^A-Za-z0-9-_]/g, '_').slice(0, 200) || 'component';

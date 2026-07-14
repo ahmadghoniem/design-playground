@@ -150,7 +150,7 @@ Your provider and model preferences are saved in your browser and persist across
 app/playground/
 ├── app/               # Composition shell (PlaygroundClient/Canvas/Header/Sidebar)
 ├── features/          # One dir per feature: canvas, discovery, iterations,
-│                      #   generation, chat, design-system, skills
+│                      #   generation, chat, skills
 ├── shared/            # ui/ (primitives), lib/ (cross-feature + providers), stores/
 ├── server/            # Hono API (routes mounted into Vite via server/vite-plugin.ts)
 ├── skills/            # Built-in prompt templates

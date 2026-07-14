@@ -4,10 +4,8 @@ import {
   useCallback,
   useRef,
   useEffect,
-  type MouseEvent,
 } from "react";
 import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
-import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +22,6 @@ import { NodeLabel, useInverseZoom } from "@pg/shared/ui/NodeLabel";
 import {
   useAsyncProps,
   useScrollCapture,
-  useIframeSrcDoc,
 } from "@pg/shared/lib/useNodeShared";
 import ComponentErrorBoundary from "@pg/shared/ui/ComponentErrorBoundary";
 import {
@@ -34,9 +31,6 @@ import {
 import { useFrameHoverHint } from "@pg/shared/ui/FrameHoverHint";
 import {
   COMPONENT_SIZE_CHANGE_EVENT,
-  EDIT_COMPLETE_EVENT,
-  DESIGN_SYSTEM_GENERATED_EVENT,
-  DESIGN_SYSTEM_SHOWCASE_RAW_URL,
   SIZE_CONFIG,
   getDisplayDimensions,
   RESIZE_MIN_WIDTH,
@@ -51,8 +45,6 @@ interface ComponentNodeProps {
     size?: ComponentSize;
     /** Whether this node has been freeform-resized */
     customResized?: boolean;
-    /** Render mode: 'react' (default), 'design-system' for the generated showcase */
-    renderMode?: "react" | "design-system";
   };
   selected?: boolean;
 }
@@ -63,18 +55,15 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   // layout slot (14 + 6 gap) so it doesn't visually overlap the label.
   const hidePlayButton = labelInvScale * 14 > 14 + 6;
   const componentId = data.componentId;
-  const isDesignSystem = data.renderMode === "design-system";
-  const registryItem = isDesignSystem ? null : resolveRegistryItem(componentId);
+  const registryItem = resolveRegistryItem(componentId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [iframeKey, setIframeKey] = useState(() => Date.now());
 
-  const { resolvedProps, isLoadingProps, propsError } = useAsyncProps(
-    isDesignSystem ? "" : componentId,
-  );
+  const { resolvedProps, isLoadingProps, propsError } =
+    useAsyncProps(componentId);
   const handleWheel = useScrollCapture(scrollContainerRef);
 
   const nodeId = useNodeId();
-  const { updateNodeData, setNodes, getNode } = useReactFlow();
+  const { updateNodeData, setNodes } = useReactFlow();
   const isInteractive = useIsInteractiveNode(nodeId);
   const setInteractiveNodeId = useInteractiveNodeStore(
     (s) => s.setInteractiveNodeId,
@@ -91,41 +80,24 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     if (!selected && isInteractive) setInteractiveNodeId(null);
   }, [selected, isInteractive, setInteractiveNodeId]);
 
-  // Listen for Escape inside same-origin iframe to exit interactive mode
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Listen for Escape to exit interactive mode
   useEffect(() => {
     if (!isInteractive) return;
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") setInteractiveNodeId(null);
     };
     window.addEventListener("keydown", handleEsc);
-    const iframe = iframeRef.current;
-    let innerDoc: Document | null = null;
-    try {
-      innerDoc = iframe?.contentDocument ?? null;
-      innerDoc?.addEventListener("keydown", handleEsc);
-    } catch {
-      // cross-origin iframe — skip
-    }
     return () => {
       window.removeEventListener("keydown", handleEsc);
-      try {
-        innerDoc?.removeEventListener("keydown", handleEsc);
-      } catch {
-        /* noop */
-      }
     };
   }, [isInteractive, setInteractiveNodeId]);
 
   // Prefer the persisted size from node data (survives reload), then registry default
   const [size, setSize] = useState<ComponentSize>(
-    data.size ||
-      registryItem?.size ||
-      (isDesignSystem ? "laptop" : "default"),
+    data.size || registryItem?.size || "default",
   );
   const [isResizing, setIsResizing] = useState(false);
   const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
-
 
   const handleResizeStart = useCallback(() => {
     setIsResizing(true);
@@ -139,21 +111,19 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       updateNodeData(nodeId, { customResized: true, size: "default" });
       // Width-only for React components: drop the height the resize control
       // set so the frame hugs its content vertically (no trapped vertical gap).
-      if (!isDesignSystem) {
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === nodeId
-              ? {
-                  ...n,
-                  height: undefined,
-                  style: { ...n.style, height: undefined },
-                }
-              : n,
-          ),
-        );
-      }
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                height: undefined,
+                style: { ...n.style, height: undefined },
+              }
+            : n,
+        ),
+      );
     }
-  }, [nodeId, updateNodeData, isDesignSystem, setNodes]);
+  }, [nodeId, updateNodeData, setNodes]);
 
   const handleSizeChange = (newSize: ComponentSize) => {
     setSize(newSize);
@@ -181,25 +151,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     );
   };
 
-  const iframeSrc = isDesignSystem
-    ? `${DESIGN_SYSTEM_SHOWCASE_RAW_URL}&t=${iframeKey}`
-    : "";
-  const iframeSrcDoc = useIframeSrcDoc(iframeSrc, isDesignSystem);
-
-  // Refresh the design-system iframe when a new showcase is generated.
-  useEffect(() => {
-    if (!isDesignSystem) return;
-    const handler = () => setIframeKey(Date.now());
-    window.addEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
-    return () =>
-      window.removeEventListener(DESIGN_SYSTEM_GENERATED_EVENT, handler);
-  }, [isDesignSystem]);
-
   const Component = registryItem?.Component;
   const props = registryItem?.props;
-  const label = isDesignSystem
-    ? "Design System"
-    : registryItem?.label || componentId;
+  const label = registryItem?.label || componentId;
   const effectiveProps = (resolvedProps ?? props ?? {}) as Record<
     string,
     unknown
@@ -209,13 +163,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const isFillMode = isResizing || isCustomResized;
   const isLargeComponent = isPreset || isFillMode;
   // React components resize width-only and hug their content height (no
-  // vertical padding). Design-system frames keep full 2D fill so their
-  // iframe fills the resized box.
-  const isAutoHeightFill = isFillMode && !isDesignSystem;
+  // vertical padding).
+  const isAutoHeightFill = isFillMode;
   const displayDims = getDisplayDimensions(size);
 
-
-  if (!isDesignSystem && !registryItem) {
+  if (!registryItem) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 min-w-[200px]">
         <p className="text-red-600 text-sm">Unknown component: {componentId}</p>
@@ -262,37 +214,33 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       <div className="flex items-center justify-between px-0.5 pb-1.5 cursor-grab">
         {/* Left: open-in-new-tab + label (always visible) */}
         <div className="flex items-center gap-1.5">
-          {!isDesignSystem && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {
-                    const url = `/playground/iterations/${componentId}`;
-                    if (url) window.open(url, "_blank", "noopener,noreferrer");
-                  }}
-                  className="nodrag shrink-0 p-0 leading-none rounded-[5px] transition-colors"
-                  style={{
-                    color: selected ? "#0B99FF" : "#A8A29E",
-                    display: "inline-block",
-                    transform: `scale(${labelInvScale})`,
-                    transformOrigin: "left bottom",
-                    willChange: "transform",
-                    visibility: hidePlayButton ? "hidden" : "visible",
-                    pointerEvents: hidePlayButton ? "none" : undefined,
-                  }}
-                  aria-label="Open in new tab"
-                >
-                  <PlayButtonIcon />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Open in new tab</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <NodeLabel color={isDesignSystem ? "#C026D3" : "#0B99FF"}>
-            {label}
-          </NodeLabel>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => {
+                  const url = `/playground/iterations/${componentId}`;
+                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                }}
+                className="nodrag shrink-0 p-0 leading-none rounded-[5px] transition-colors"
+                style={{
+                  color: selected ? "#0B99FF" : "#A8A29E",
+                  display: "inline-block",
+                  transform: `scale(${labelInvScale})`,
+                  transformOrigin: "left bottom",
+                  willChange: "transform",
+                  visibility: hidePlayButton ? "hidden" : "visible",
+                  pointerEvents: hidePlayButton ? "none" : undefined,
+                }}
+                aria-label="Open in new tab"
+              >
+                <PlayButtonIcon />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Open in new tab</p>
+            </TooltipContent>
+          </Tooltip>
+          <NodeLabel color="#0B99FF">{label}</NodeLabel>
         </div>
 
         {/* Right: size controls — invisible when not selected */}
@@ -315,50 +263,10 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
           className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
-            selected
-              ? `ring-2 ${isDesignSystem ? "ring-fuchsia-400" : "ring-[#0B99FF]"}`
-              : ""
+            selected ? "ring-2 ring-[#0B99FF]" : ""
           } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? (isAutoHeightFill ? "w-full" : "w-full h-full") : ""}`}
         >
-          {isDesignSystem ? (
-            <div
-              className="relative"
-              style={
-                isPreset
-                  ? { width: displayDims.width, height: displayDims.height }
-                  : isFillMode
-                    ? { width: "100%", height: "100%" }
-                    : {
-                        minWidth: "400px",
-                        minHeight: "300px",
-                        width: isPreset ? displayDims.width : undefined,
-                        height: isPreset ? displayDims.height : undefined,
-                      }
-              }
-            >
-              <iframe
-                ref={iframeRef}
-                key={iframeKey}
-                srcDoc={iframeSrcDoc || undefined}
-                src={iframeSrcDoc ? undefined : iframeSrc}
-                className="w-full h-full border-0"
-                style={
-                  isPreset
-                    ? {
-                        width: config.width,
-                        height: config.height,
-                        transform: `scale(${config.scale})`,
-                        transformOrigin: "top left",
-                      }
-                    : { width: "100%", height: "100%" }
-                }
-                sandbox="allow-scripts allow-same-origin"
-              />
-              {!isInteractive && (
-                <div className="absolute inset-0" data-iframe-overlay />
-              )}
-            </div>
-          ) : isFillMode ? (
+          {isFillMode ? (
             /* Freeform / active resize: fill the node width; height hugs content
                (width-only resize) so the frame never traps vertical padding. */
             <div
@@ -430,9 +338,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
             </div>
           )}
           {/* Click-blocker for React render mode — gates link/button activity
-              on a double-click, mirroring the iframe overlay above. Already
-              redundant for iframe/embed cases (which keep their own scoped
-              overlay) but harmless. Element-select mode disables this via
+              on a double-click. Element-select mode disables this via
               `[data-iframe-overlay] { pointer-events: none !important }` in
               playground-global.css. */}
           {!isInteractive && (

@@ -13,7 +13,7 @@ The package is designed to be **dropped into a host project** at `src/app/playgr
 Client code is organized by **feature**, not by layer. Cross-feature imports use the package-root alias `@pg/` (e.g. `@pg/shared/lib/constants`, `@pg/features/canvas/canvas-flow`).
 
 - `app/` — composition shell: `PlaygroundClient`, `PlaygroundCanvas`, `PlaygroundHeader`, `PlaygroundSidebar`, `ModelSettingsModal`, and cross-feature glue (`useChatSubmit`). This is where features are wired together. (There is no `page.tsx`; `dev-entry.tsx` at root is the mount entry.)
-- `features/<name>/` — one dir per feature: `canvas` (canvas shell hooks, `nodes/`, `components/`, flow state), `discovery`, `iterations`, `generation` (owns `prompts/` — all `*.prompt.ts` templates, `shared-sections.ts`, `utility.ts`, `iterations-guide.mdc`), `chat`, `design-system`, `skills`. **Features never import other features** — cross-feature composition lives in `app/`; anything shared is promoted to `shared/`.
+- `features/<name>/` — one dir per feature: `canvas` (canvas shell hooks, `nodes/`, `components/`, flow state), `discovery`, `iterations`, `generation` (owns `prompts/` — all `*.prompt.ts` templates, `shared-sections.ts`, `utility.ts`, `iterations-guide.mdc`), `chat`, `skills`. **Features never import other features** — cross-feature composition lives in `app/`; anything shared is promoted to `shared/`.
 - `shared/` — `shared/ui/` (shadcn primitives + cross-feature components), `shared/lib/` (utilities used by 2+ features or by the server, incl. `providers/`, the iframe bridge, `generation-events`), `shared/stores/` (cross-feature zustand: `model-settings-store`, `preview-color-scheme-store`, `interactive-node-store`).
 - `server/` — unchanged in structure (see Backend below). **Server files import client code via relative paths, not `@pg/`** (so `bun server/index.ts` standalone resolves without a bundler); the alias is a client-only convenience.
 - Root-pinned (do not move): `dev-entry.tsx`, `registry.tsx`, `setup.mjs`, `bunfig.toml`, `knip.json`, `tsconfig.json`. Content/generated dirs stay put: `iterations/`, `skills/` (skill markdown), `assets/`, `styles/`.
@@ -29,11 +29,11 @@ The alias is defined in the package-root `tsconfig.json` (`@pg/* → ./*`, plus 
   - `server/vite-plugin.ts` — `designPlaygroundPlugin()` bridges Hono into Vite's connect middleware via `getRequestListener(app.fetch)` from `@hono/node-server`. Vite's `server.middlewares` is connect/Node `(req,res)`, so this adapter is required for the embedded path even under Bun.
   - `server/routes/*.ts` — one module per API area, each exporting a `xxxRoutes()` factory returning a `Hono` sub-app. Handlers register at `/api/...`; served path is `/playground/api/...`.
   - `server/lib/hono-helpers.ts` — `readJson<T>(c)` parses a JSON body, returning `null` on missing/invalid input (mirrors the old Express `req.body ?? null`).
-- **Shared logic**: `shared/lib/` (mostly stateless helpers: provider configs, telemetry, design-md helpers, path resolvers) — plus a few stateful subsystems (the penpal iframe bridge and the `generation-events` typed event bus). Cross-feature zustand stores live in `shared/stores/`. Server routes import these via relative paths and pass `c.req.raw` (a native Web `Request`) to helpers like `isLocalRequest` / `captureFromRequest`.
+- **Shared logic**: `shared/lib/` (mostly stateless helpers: provider configs, telemetry, path resolvers) — plus a few stateful subsystems (the penpal iframe bridge and the `generation-events` typed event bus). Cross-feature zustand stores live in `shared/stores/`. Server routes import these via relative paths and pass `c.req.raw` (a native Web `Request`) to helpers like `isLocalRequest` / `captureFromRequest`.
 - **Iterate / Explore**: the only iterate entry point is the docked chat bar’s Explore mode (variation count 1–4). The old node-level IterateDialog and drag-to-iterate affordances are removed (`shared/ui/iterate-dialog/parts.tsx` remains only as a shared model-list helper).
 - **Element selection & generation events** (added after the postMessage/scaffold era):
   - **Iframe selection RPC** uses **penpal** (nested dep), not raw `postMessage`. `shared/lib/iframe-bridge-types.ts` is the typed parent↔child contract; `shared/lib/iframe-bridge.ts` (parent) and `shared/lib/iframe-bridge-child.ts` (child, injected into the iteration iframe) implement it. Alt+hover/click selection flows through this bridge.
-  - **Generation event stream**: `shared/lib/generation-events.ts` is a typed event bus (replaced ad-hoc `window` events). Iteration detection is driven by parsing `tool_use`/`tool_result` from the `claude` stream-json output in `server/lib/claude-jsonl.ts` (Tier 3). The client's final `scanForIterations` on generation-complete is the belt-and-braces catch for files written via `Bash` instead of `Write`/`Edit`. There is no `design-system-store` — the design-system cookie is the single source of truth, read directly in `DesignSystemModal`.
+  - **Generation event stream**: `shared/lib/generation-events.ts` is a typed event bus (replaced ad-hoc `window` events). Iteration detection is driven by parsing `tool_use`/`tool_result` from the `claude` stream-json output in `server/lib/claude-jsonl.ts` (Tier 3). The client's final `scanForIterations` on generation-complete is the belt-and-braces catch for files written via `Bash` instead of `Write`/`Edit`.
   - **Iframe console errors (dead path)**: the penpal bridge can forward iframe console/window errors via `onConsoleError`, but no node component registers a handler today — nothing is surfaced in the UI.
 
 ## Route conventions (Hono)
@@ -41,7 +41,7 @@ The alias is defined in the package-root `tsconfig.json` (`@pg/* → ./*`, plus 
 - `req.body` → `await readJson(c)`; `req.query.X` → `c.req.query('X')`; `req.headers.x` → `c.req.header('x')`.
 - `res.status(n).json(o)` → `return c.json(o, n)`; empty responses → `c.body(null, n)`.
 - Custom headers → `c.header(k, v)` then `return c.body(...)`.
-- **Streaming**: text/plain agent output uses `streamText` from `hono/streaming` (`design.ts`); SSE uses `streamSSE` (`generate.ts`). Client-disconnect cleanup is `stream.onAbort(...)`.
+- **Streaming**: SSE uses `streamSSE` (`generate.ts`). Client-disconnect cleanup is `stream.onAbort(...)`.
 - **Callback/spawn-driven handlers** (discover, generate POST): wrap the child-process `close`/`error` events in `new Promise<Response>((resolve) => {...})` and `return await` it.
 - Module-level state (process handles, caches, `generationEvents` EventEmitter, lockfile recovery) is plain Node and lives at module scope — unaffected by the HTTP layer.
 
@@ -51,7 +51,6 @@ The alias is defined in the package-root `tsconfig.json` (`@pg/* → ./*`, plus 
 - `bunfig.toml` sets `[install] peer = false` — this is what keeps `react`/`react-dom`/`tailwindcss`/`vite` out of the nested `node_modules` so they resolve up to the host's single copy (Bun installs peerDependencies by default, so this must stay). It replaces the old `.npmrc` `legacy-peer-deps` flag.
 - Run: start the **host's** Vite dev server (`bun dev`); open `/playground`. The playground has no standalone dev script of its own.
 - Standalone API only (rare): `bun server/index.ts` → `http://localhost:4319/playground/api/...`. Use **Bun, not `node`** — the guard is `import.meta.main`. (Server files use relative imports, so no alias resolution is needed at runtime either way.)
-- The design-system "Setup" feature (`/api/design/setup`) runs `bun add --dev` against the **host** project, so the host is assumed to use Bun too.
 
 ## Conventions
 

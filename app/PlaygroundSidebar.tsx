@@ -1,34 +1,19 @@
 import {
   useState,
-  useEffect,
   useMemo,
-  useCallback,
 } from "react";
 import {
   ChevronRight,
   ChevronDown,
   ChevronLeft,
   Plus,
-  Palette,
   Loader2,
-  RotateCcw,
 } from "lucide-react";
 import { ProjectBoxIcon } from "@pg/shared/ui/playground-nav-icons";
 import { registry, RegistryItem, isGroup, isLeaf } from "@pg/registry";
 import type { PendingChild } from "@pg/app/PlaygroundClient";
-import DesignSystemModal from "@pg/features/design-system/DesignSystemModal";
-import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@pg/shared/ui/tooltip";
-import { toast } from "sonner";
 import { buildChildrenMap, flattenLeaves } from "@pg/features/discovery/registry-tree";
-import { useSidebarDiscoverySync } from "@pg/features/discovery/useSidebarDiscoverySync";
 import ComponentPreviewCard from "@pg/features/discovery/ComponentPreviewCard";
-import DesignSystemPreviewCard from "@pg/features/discovery/DesignSystemPreviewCard";
 
 export interface PendingSidebarAdd {
   id: string;
@@ -56,59 +41,12 @@ function SidebarSkeletonCard({ label }: { label: string }) {
 export default function PlaygroundSidebar({
   onCollapse,
   onOpenDiscovery,
-  pendingChildren,
   pendingAdds,
 }: PlaygroundSidebarProps) {
   const [search, setSearch] = useState("");
   const [componentsExpanded, setComponentsExpanded] = useState(true);
-  const [designOpen, setDesignOpen] = useState(false);
-  const [designSystemExpanded, setDesignSystemExpanded] = useState(true);
-  const [isGeneratingDesignSystem, setIsGeneratingDesignSystem] =
-    useState(false);
-  const activeProvider = useModelSettingsStore((s) => s.activeProvider);
-  const enabledModels = useModelSettingsStore(
-    (s) => s.providerState[s.activeProvider]?.enabledModels ?? [],
-  );
-
-  const { designSystemHtml, fetchDesignSystem } = useSidebarDiscoverySync();
 
   const childrenMap = useMemo(() => buildChildrenMap(registry), []);
-
-  const regenerateDesignSystem = useCallback(async () => {
-    if (isGeneratingDesignSystem) return;
-    setIsGeneratingDesignSystem(true);
-    try {
-      const res = await fetch(
-        "/playground/api/design/generate-preview-showcase",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: activeProvider,
-            model: enabledModels[0],
-          }),
-        },
-      );
-      if (res.body) {
-        const reader = res.body.getReader();
-        while (true) {
-          const { done } = await reader.read();
-          if (done) break;
-        }
-      }
-      await fetchDesignSystem();
-      toast.success("Design system regenerated");
-    } catch (error) {
-      toast.error(`Regeneration failed: ${(error as Error).message}`);
-    } finally {
-      setIsGeneratingDesignSystem(false);
-    }
-  }, [
-    isGeneratingDesignSystem,
-    activeProvider,
-    enabledModels,
-    fetchDesignSystem,
-  ]);
 
   const filterRegistryForGrid = (
     items: RegistryItem[],
@@ -165,13 +103,6 @@ export default function PlaygroundSidebar({
         </div>
         <div className="flex items-center gap-0.5">
           <button
-            onClick={() => setDesignOpen(true)}
-            className="flex items-center justify-center w-[24px] h-[24px] rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-            aria-label="Design system"
-          >
-            <Palette className="w-[14px] h-[14px]" />
-          </button>
-          <button
             type="button"
             onPointerDown={(e) => {
               e.preventDefault();
@@ -197,54 +128,6 @@ export default function PlaygroundSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto px-1.5 min-h-0 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-stone-300 [&::-webkit-scrollbar-thumb]:rounded">
-        {designSystemHtml &&
-          (!search.trim() ||
-            "design system".includes(search.toLowerCase())) && (
-            <div className="mb-2">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setDesignSystemExpanded(!designSystemExpanded)}
-                  className="flex items-center gap-1.5 px-2 py-2 text-left text-[11px] font-medium text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-2xl transition-colors flex-1"
-                >
-                  {designSystemExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5 shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                  )}
-                  <span className="uppercase tracking-[0.08em] text-[10px]">
-                    Design system
-                  </span>
-                </button>
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={regenerateDesignSystem}
-                        disabled={isGeneratingDesignSystem}
-                        className="p-1 rounded text-stone-400 hover:text-stone-600 transition-colors disabled:opacity-50"
-                        aria-label="Regenerate"
-                      >
-                        {isGeneratingDesignSystem ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <RotateCcw className="w-3 h-3" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Regenerate</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              {designSystemExpanded && (
-                <div className="grid grid-cols-1 gap-y-4 px-2 pt-2 pb-4">
-                  <DesignSystemPreviewCard html={designSystemHtml} />
-                </div>
-              )}
-            </div>
-          )}
-
         {hasComponents ? (
           <div className="mb-2">
             <div className="flex items-center justify-between">
@@ -311,8 +194,6 @@ export default function PlaygroundSidebar({
           Drag drop any component
         </p>
       </div>
-
-      <DesignSystemModal open={designOpen} onOpenChange={setDesignOpen} />
     </aside>
   );
 }

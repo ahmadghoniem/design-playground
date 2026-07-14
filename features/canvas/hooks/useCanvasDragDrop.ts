@@ -9,7 +9,6 @@ import { getIterationKeysOnCanvas } from "@pg/shared/lib/canvas-persistence";
 import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
 import {
   DND_DATA_KEY,
-  DESIGN_SYSTEM_SHOWCASE_ID,
   ITERATION_EDGE_STYLE,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
@@ -120,7 +119,6 @@ export function useCanvasDragDrop({
         y: event.clientY,
       });
 
-      const isDesignSystem = componentId === DESIGN_SYSTEM_SHOWCASE_ID;
       const parentNodeId = getNodeId();
       const newNode: Node = {
         id: parentNodeId,
@@ -128,11 +126,6 @@ export function useCanvasDragDrop({
         position,
         data: {
           componentId,
-          ...(isDesignSystem
-            ? {
-                renderMode: "design-system" as const,
-              }
-            : {}),
         },
       };
 
@@ -140,70 +133,68 @@ export function useCanvasDragDrop({
 
       // After dropping a registry component, also bring any of its iterations
       // that are not already on the canvas, attached to this newly placed parent.
-      if (!isDesignSystem) {
-        (async () => {
-          try {
-            const currentNodes = coord.getNodes();
-            const parentW = DEFAULT_COMPONENT_NODE_WIDTH;
-            const stepW = DEFAULT_ITERATION_NODE_WIDTH + ARRANGE_HORIZONTAL_GAP;
-            const baseX = position.x + parentW + ARRANGE_HORIZONTAL_GAP;
-            const newNodes: Node[] = [];
-            const newEdges: Edge[] = [];
-            const newKnownFilenames: string[] = [];
+      (async () => {
+        try {
+          const currentNodes = coord.getNodes();
+          const parentW = DEFAULT_COMPONENT_NODE_WIDTH;
+          const stepW = DEFAULT_ITERATION_NODE_WIDTH + ARRANGE_HORIZONTAL_GAP;
+          const baseX = position.x + parentW + ARRANGE_HORIZONTAL_GAP;
+          const newNodes: Node[] = [];
+          const newEdges: Edge[] = [];
+          const newKnownFilenames: string[] = [];
 
-            const res = await fetch("/playground/api/iterations");
-            if (!res.ok) return;
-            const { iterations } = (await res.json()) as {
-              iterations: IterationFile[];
-            };
+          const res = await fetch("/playground/api/iterations");
+          if (!res.ok) return;
+          const { iterations } = (await res.json()) as {
+            iterations: IterationFile[];
+          };
 
-            const existingKeys = getIterationKeysOnCanvas(currentNodes);
-            const missing = iterations
-              .filter((it) => it.parentId === componentId)
-              .filter((it) => !existingKeys.has(it.filename))
-              .sort((a, b) => a.iterationNumber - b.iterationNumber);
+          const existingKeys = getIterationKeysOnCanvas(currentNodes);
+          const missing = iterations
+            .filter((it) => it.parentId === componentId)
+            .filter((it) => !existingKeys.has(it.filename))
+            .sort((a, b) => a.iterationNumber - b.iterationNumber);
 
-            missing.forEach((it, idx) => {
-              const nodeId = getNodeId();
-              newNodes.push({
-                id: nodeId,
-                type: "iteration",
-                position: { x: baseX + idx * stepW, y: position.y },
-                data: {
-                  componentName: it.componentName,
-                  iterationNumber: it.iterationNumber,
-                  filename: it.filename,
-                  description: it.description,
-                  parentNodeId,
-                  registryId: componentId,
-                  onDelete: handleIterationDelete,
-                  onAdopt: handleIterationAdopt,
-                },
-              });
-              newEdges.push({
-                id: `edge_${parentNodeId}_${nodeId}`,
-                source: parentNodeId,
-                target: nodeId,
-                type: "smoothstep",
-                animated: false,
-                style: ITERATION_EDGE_STYLE,
-              });
-              newKnownFilenames.push(it.filename);
+          missing.forEach((it, idx) => {
+            const nodeId = getNodeId();
+            newNodes.push({
+              id: nodeId,
+              type: "iteration",
+              position: { x: baseX + idx * stepW, y: position.y },
+              data: {
+                componentName: it.componentName,
+                iterationNumber: it.iterationNumber,
+                filename: it.filename,
+                description: it.description,
+                parentNodeId,
+                registryId: componentId,
+                onDelete: handleIterationDelete,
+                onAdopt: handleIterationAdopt,
+              },
             });
+            newEdges.push({
+              id: `edge_${parentNodeId}_${nodeId}`,
+              source: parentNodeId,
+              target: nodeId,
+              type: "smoothstep",
+              animated: false,
+              style: ITERATION_EDGE_STYLE,
+            });
+            newKnownFilenames.push(it.filename);
+          });
 
-            if (newNodes.length > 0) {
-              setNodes((nds) => [...nds, ...newNodes]);
-              setEdges((eds) => [...eds, ...newEdges]);
-              coord.appendKnownIterations(newKnownFilenames);
-            }
-          } catch (err) {
-            console.error(
-              "[Playground] Failed to load iterations for dropped frame:",
-              err,
-            );
+          if (newNodes.length > 0) {
+            setNodes((nds) => [...nds, ...newNodes]);
+            setEdges((eds) => [...eds, ...newEdges]);
+            coord.appendKnownIterations(newKnownFilenames);
           }
-        })();
-      }
+        } catch (err) {
+          console.error(
+            "[Playground] Failed to load iterations for dropped frame:",
+            err,
+          );
+        }
+      })();
     },
     [
       screenToFlowPosition,
