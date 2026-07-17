@@ -1,5 +1,4 @@
 import type { ModelOption } from './constants';
-import type { ProviderId } from './providers/types';
 
 // ---------------------------------------------------------------------------
 // Claude Code static catalog (no CLI list command — docs-verified slugs)
@@ -54,7 +53,7 @@ const CLAUDE_LEGACY_ALIASES: Record<string, string> = {
  * Map a possibly-stale model id to its current equivalent.
  * Returns the input unchanged when no migration applies.
  */
-export function migrateModelId(_providerId: ProviderId, model: string): string {
+export function migrateModelId(model: string): string {
   const trimmed = model.trim();
   if (!trimmed) return trimmed;
   return CLAUDE_LEGACY_ALIASES[trimmed] ?? trimmed;
@@ -62,12 +61,11 @@ export function migrateModelId(_providerId: ProviderId, model: string): string {
 
 /** Migrate and dedupe a list of enabled model ids, falling back to defaults when empty. */
 export function migrateEnabledModels(
-  providerId: ProviderId,
   ids: string[],
   defaultIds: readonly string[],
 ): string[] {
   const migrated = ids
-    .map((id) => migrateModelId(providerId, id))
+    .map((id) => migrateModelId(id))
     .filter((id) => id !== '');
 
   const unique = [...new Set(migrated)];
@@ -109,7 +107,6 @@ export function partitionClaudeModels(allModels: ModelOption[]): ModelPartition 
 }
 
 export function isModelEnabled(
-  _providerId: ProviderId,
   modelValue: string,
   enabledIds: readonly string[],
 ): boolean {

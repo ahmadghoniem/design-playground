@@ -4,8 +4,6 @@ import {
   saveSelectedModel,
 } from "@pg/shared/ui/iterate-dialog/parts";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
-import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
-import type { ProviderId } from "@pg/shared/lib/providers/types";
 import type { ModelOption } from "@pg/shared/ui/iterate-dialog/parts";
 
 // ---------------------------------------------------------------------------
@@ -22,11 +20,9 @@ export interface UseModelCycleReturn {
 }
 
 export function useModelCycle(models: ModelOption[]): UseModelCycleReturn {
-  const [model, setModel] = useState(() => {
-    const provider = useModelSettingsStore.getState()
-      .activeProvider as ProviderId;
-    return resolveAgentModel(provider, loadSelectedModel()) ?? "auto";
-  });
+  const [model, setModel] = useState(
+    () => resolveAgentModel(loadSelectedModel()) ?? "auto",
+  );
 
   const cycleModel = useCallback(() => {
     if (models.length === 0) return;

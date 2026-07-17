@@ -5,13 +5,9 @@ import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
 import { TEMP_DIR_RELATIVE } from '../../shared/lib/constants';
-import type { ProviderId } from '../../shared/lib/providers';
-import {
-  spawnAgent,
-  getProviderNotFoundMessage,
-  getProviderDisplayName,
-  resolveAgentModel,
-} from '../../shared/lib/providers';
+import { AGENT_DISPLAY_NAME, AGENT_NOT_FOUND_MESSAGE } from '../../shared/lib/agent-config';
+import { spawnAgent } from '../../shared/lib/spawn-agent';
+import { resolveAgentModel } from '../../shared/lib/resolve-agent-model';
 import { regenerateIterationsIndex } from './iterations';
 
 import { readJson } from '../lib/hono-helpers';
@@ -147,7 +143,6 @@ export function generateRoutes() {
         componentId?: string;
         iterationCount?: number;
         model?: string;
-        provider?: ProviderId;
         effort?: string;
         maxBudgetUsd?: number;
         maxTurns?: number;
@@ -162,8 +157,7 @@ export function generateRoutes() {
 
       let { prompt } = body;
 
-      const providerId: ProviderId = body.provider ?? 'claude-code';
-      const model = resolveAgentModel(providerId, body.model);
+      const model = resolveAgentModel(body.model);
 
       const streamJsonForPreview = shouldStreamJsonForPreview(body);
       const clientComponentId = String(body.componentId).slice(0, 400);
@@ -174,7 +168,7 @@ export function generateRoutes() {
       ensureTempDir();
       currentChatLogPath = path.join(TEMP_DIR, `chat-${componentId}-${timestamp}.txt`);
 
-      const providerName = getProviderDisplayName(providerId);
+      const providerName = AGENT_DISPLAY_NAME;
       const header = [
         `=== Generation started at ${new Date().toISOString()} ===`,
         `Provider: ${providerName}`,
@@ -202,7 +196,7 @@ export function generateRoutes() {
         // Tool-event tracking for this run: tool_use id → file path.
         const pendingToolUses = new Map<string, string>();
 
-        currentProcess = spawnAgent(providerId, {
+        currentProcess = spawnAgent({
           model,
           effort: body.effort as 'low' | 'medium' | 'high' | 'max' | undefined,
           maxBudgetUsd: body.maxBudgetUsd,
@@ -339,7 +333,7 @@ export function generateRoutes() {
             stdoutLineBuf = '';
           }
           const errorMessage = error.message.includes('ENOENT')
-            ? getProviderNotFoundMessage(providerId)
+            ? AGENT_NOT_FOUND_MESSAGE
             : error.message;
 
           currentLogStream?.write(`\n=== Error: ${errorMessage} ===\n`);

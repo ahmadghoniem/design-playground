@@ -24,7 +24,6 @@ import {
 
 import type { SelectedElement } from "@pg/shared/lib/element-context";
 import type { SelectedNodeContext } from "@pg/features/chat/useNodeSelection";
-import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
 import {
   PillLeadingRemoveSlot,
   IterationCountDragger,
@@ -83,7 +82,6 @@ export default function DockedChatBar({
   const { screenToFlowPosition } = useReactFlow();
   const { models, isLoading: isLoadingModels } = useAvailableModels();
   const { model, cycleModel } = useModelCycle(models);
-  const activeProvider = useModelSettingsStore((s) => s.activeProvider);
 
   const {
     impeccableSubMenuOpen,
@@ -236,7 +234,6 @@ export default function DockedChatBar({
       skillPrompts,
       skillIds,
       model,
-      provider: useModelSettingsStore.getState().activeProvider,
       targetNodeId: editTarget?.nodeId ?? null,
       targetComponentId: editTarget?.componentId ?? null,
       targetComponentName: editTarget?.componentName ?? null,
@@ -340,7 +337,7 @@ export default function DockedChatBar({
     return cleaned || label;
   }, [models, model, isLoadingModels]);
 
-  const currentConfig = getModelIconConfig(model, activeProvider);
+  const currentConfig = getModelIconConfig(model);
 
   const placeholder = isFreeformMode
     ? !editTarget && referenceNodes.length > 0

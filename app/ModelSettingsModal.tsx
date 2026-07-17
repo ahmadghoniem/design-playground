@@ -11,8 +11,8 @@ import { useAvailableModels } from "@pg/shared/ui/iterate-dialog/parts";
 import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
 import { getModelIconConfig } from "@pg/shared/lib/model-icons";
 import { type ModelOption } from "@pg/shared/lib/constants";
-import type { ClaudeCodeOptions } from "@pg/shared/lib/providers/types";
-import { getProvider } from "@pg/shared/lib/providers/registry";
+import type { ClaudeCodeOptions } from "@pg/shared/lib/agent-config";
+import { AGENT_DEFAULT_ENABLED_MODELS } from "@pg/shared/lib/agent-config";
 import { partitionClaudeModels } from "@pg/shared/lib/model-catalog";
 
 const EFFORT_OPTIONS: { value: ClaudeCodeOptions["effort"]; label: string }[] =
@@ -34,16 +34,13 @@ export default function ModelSettingsModal({
 }: ModelSettingsModalProps) {
   const { allModels, isLoading } = useAvailableModels();
   const {
-    activeProvider,
     setEnabledModels,
     fetchModels,
     claudeCodeOptions,
     setClaudeCodeOptions,
   } = useModelSettingsStore();
 
-  const enabledModels = useModelSettingsStore(
-    (s) => s.providerState[s.activeProvider]?.enabledModels ?? [],
-  );
+  const enabledModels = useModelSettingsStore((s) => s.enabledModels);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [localClaudeOpts, setLocalClaudeOpts] =
@@ -53,15 +50,14 @@ export default function ModelSettingsModal({
 
   useEffect(() => {
     if (open) {
-      const config = getProvider(activeProvider);
       if (enabledModels.length === 0) {
-        setSelected(new Set(config.defaultEnabledModels));
+        setSelected(new Set(AGENT_DEFAULT_ENABLED_MODELS));
       } else {
         setSelected(new Set(enabledModels));
       }
       setLocalClaudeOpts(claudeCodeOptions);
     }
-  }, [open, enabledModels, allModels, activeProvider, claudeCodeOptions]);
+  }, [open, enabledModels, allModels, claudeCodeOptions]);
 
   const { featuredModels, advancedModels, selectableModels } = useMemo(() => {
     const { featured, advanced } = partitionClaudeModels(allModels);
@@ -76,7 +72,7 @@ export default function ModelSettingsModal({
 
   const renderModelRow = (m: ModelOption) => {
     const checked = selected.has(m.value);
-    const iconConfig = getModelIconConfig(m.value, activeProvider);
+    const iconConfig = getModelIconConfig(m.value);
     return (
       <button
         key={m.value || "__auto__"}

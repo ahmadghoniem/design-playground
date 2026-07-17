@@ -14,10 +14,7 @@ const CLAUDE_ICON: ModelIconConfig = {
   bg: '#D77655',
 };
 
-/** Claude Code is the only provider — always return the Claude icon. */
-export function getModelIconConfig(
-  _modelValue?: string,
-  _providerId?: string,
-): ModelIconConfig {
+/** Claude Code is the only agent — always return the Claude icon. */
+export function getModelIconConfig(_modelValue?: string): ModelIconConfig {
   return CLAUDE_ICON;
 }

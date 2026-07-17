@@ -1,41 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ProviderId, ClaudeCodeOptions } from '@pg/shared/lib/providers/types';
-import { DEFAULT_CLAUDE_CODE_OPTIONS } from '@pg/shared/lib/providers/types';
+import type { ClaudeCodeOptions } from '@pg/shared/lib/agent-config';
 import {
-  getProvider,
-  DEFAULT_PROVIDER_ID,
-  getAllProviderIds,
-} from '@pg/shared/lib/providers/registry';
+  DEFAULT_CLAUDE_CODE_OPTIONS,
+  AGENT_MODELS,
+  AGENT_DEFAULT_ENABLED_MODELS,
+} from '@pg/shared/lib/agent-config';
 import type { ModelOption } from '@pg/shared/lib/constants';
 import { migrateEnabledModels } from '@pg/shared/lib/model-catalog';
-
-// ---------------------------------------------------------------------------
-// Per-Provider State
-// ---------------------------------------------------------------------------
-
-interface PerProviderState {
-  enabledModels: string[];
-  availableModels: ModelOption[];
-  hasFetched: boolean;
-}
-
-function makeDefaultProviderState(providerId: ProviderId): PerProviderState {
-  const config = getProvider(providerId);
-  return {
-    enabledModels: config.defaultEnabledModels,
-    availableModels: config.fallbackModels,
-    hasFetched: false,
-  };
-}
-
-function makeDefaultProviderStates(): Record<ProviderId, PerProviderState> {
-  const states = {} as Record<ProviderId, PerProviderState>;
-  for (const id of getAllProviderIds()) {
-    states[id] = makeDefaultProviderState(id);
-  }
-  return states;
-}
 
 // ---------------------------------------------------------------------------
 // Store Interface
@@ -44,13 +16,11 @@ function makeDefaultProviderStates(): Record<ProviderId, PerProviderState> {
 interface ModelSettingsState {
   hasHydrated: boolean;
 
-  /** Always Claude Code — kept for request payloads / persistence. */
-  activeProvider: ProviderId;
-
-  providerState: Record<ProviderId, PerProviderState>;
-
-  readonly enabledModels: string[];
-  readonly availableModels: ModelOption[];
+  /** Model ids enabled in the picker. Empty means "use defaults". */
+  enabledModels: string[];
+  /** Full catalog available to choose from. */
+  availableModels: ModelOption[];
+  hasFetched: boolean;
 
   isLoadingModels: boolean;
 
@@ -74,100 +44,43 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
     (set, get) => ({
       hasHydrated: false,
 
-      activeProvider: DEFAULT_PROVIDER_ID,
-
-      providerState: makeDefaultProviderStates(),
-
-      get enabledModels() {
-        const state = get();
-        return state.providerState[state.activeProvider]?.enabledModels ?? [];
-      },
-      get availableModels() {
-        const state = get();
-        return state.providerState[state.activeProvider]?.availableModels ?? [];
-      },
+      enabledModels: AGENT_DEFAULT_ENABLED_MODELS,
+      availableModels: AGENT_MODELS,
+      hasFetched: false,
 
       isLoadingModels: false,
 
       toggleModel: (value: string) =>
         set((state) => {
-          const ps = state.providerState[state.activeProvider];
-          const current = ps.enabledModels;
-          let next: string[];
+          const current = state.enabledModels;
           if (current.includes(value)) {
             if (current.length <= 1) return state;
-            next = current.filter((v) => v !== value);
-          } else {
-            next = [...current, value];
+            return { enabledModels: current.filter((v) => v !== value) };
           }
-          return {
-            providerState: {
-              ...state.providerState,
-              [state.activeProvider]: { ...ps, enabledModels: next },
-            },
-          };
+          return { enabledModels: [...current, value] };
         }),
 
-      setEnabledModels: (values: string[]) =>
-        set((state) => ({
-          providerState: {
-            ...state.providerState,
-            [state.activeProvider]: {
-              ...state.providerState[state.activeProvider],
-              enabledModels: values,
-            },
-          },
-        })),
+      setEnabledModels: (values: string[]) => set({ enabledModels: values }),
 
-      resetToAll: () =>
-        set((state) => {
-          const config = getProvider(state.activeProvider);
-          return {
-            providerState: {
-              ...state.providerState,
-              [state.activeProvider]: {
-                ...state.providerState[state.activeProvider],
-                enabledModels: config.defaultEnabledModels,
-              },
-            },
-          };
-        }),
+      resetToAll: () => set({ enabledModels: AGENT_DEFAULT_ENABLED_MODELS }),
 
       fetchModels: async () => {
         if (get().isLoadingModels) return;
         set({ isLoadingModels: true });
-        const { activeProvider } = get();
         try {
-          const response = await fetch(`/playground/api/models?provider=${activeProvider}`);
+          const response = await fetch('/playground/api/models');
           const data = await response.json();
           if (!response.ok || !data.success) {
             throw new Error(data?.error || 'Failed to fetch models');
           }
           if (Array.isArray(data.models) && data.models.length > 0) {
-            set((state) => ({
-              providerState: {
-                ...state.providerState,
-                [activeProvider]: {
-                  ...state.providerState[activeProvider],
-                  availableModels: data.models,
-                  hasFetched: true,
-                },
-              },
-            }));
+            set({ availableModels: data.models, hasFetched: true });
           } else {
             throw new Error('No models returned from API');
           }
         } catch (error) {
           console.error('[Models] Failed to fetch models:', error);
-          set((state) => ({
-            providerState: {
-              ...state.providerState,
-              [activeProvider]: {
-                ...state.providerState[activeProvider],
-                hasFetched: true,
-              },
-            },
-          }));
+          set({ hasFetched: true });
         } finally {
           set({ isLoadingModels: false });
         }
@@ -181,48 +94,40 @@ export const useModelSettingsStore = create<ModelSettingsState>()(
     }),
     {
       name: STORE_KEY,
-      version: 1,
+      version: 2,
       onRehydrateStorage: () => () => {
         useModelSettingsStore.setState({ hasHydrated: true });
       },
+      // v1 (provider-indexed) → v2 (flat): lift the single provider's
+      // enabledModels/claudeCodeOptions out of `providerState['claude-code']`
+      // so existing users keep their selected models after the collapse.
       migrate: (persisted: unknown, _version: number) => {
-        const defaultStates = makeDefaultProviderStates();
+        if (!persisted || typeof persisted !== 'object') {
+          return persisted as ModelSettingsState;
+        }
+        const state = persisted as Record<string, unknown>;
 
-        if (persisted && typeof persisted === 'object') {
-          const state = persisted as Partial<ModelSettingsState>;
-          const mergedProviderState = { ...defaultStates, ...state.providerState };
-          for (const id of getAllProviderIds()) {
-            if (!mergedProviderState[id]) {
-              mergedProviderState[id] = defaultStates[id];
-            } else {
-              const config = getProvider(id);
-              const ps = mergedProviderState[id];
-              mergedProviderState[id] = {
-                ...ps,
-                enabledModels: migrateEnabledModels(
-                  id,
-                  ps.enabledModels,
-                  config.defaultEnabledModels,
-                ),
-                availableModels: config.fallbackModels,
-                hasFetched: false,
-              };
-            }
-          }
-
+        const hasLegacyShape = 'providerState' in state || 'activeProvider' in state;
+        if (hasLegacyShape) {
+          const providerState = state.providerState as
+            | Record<string, { enabledModels?: string[] } | undefined>
+            | undefined;
+          const legacyEnabled = providerState?.['claude-code']?.enabledModels ?? [];
           return {
-            ...state,
-            activeProvider: DEFAULT_PROVIDER_ID,
-            providerState: mergedProviderState,
-            claudeCodeOptions: state.claudeCodeOptions ?? DEFAULT_CLAUDE_CODE_OPTIONS,
-          };
+            enabledModels: migrateEnabledModels(
+              legacyEnabled,
+              AGENT_DEFAULT_ENABLED_MODELS,
+            ),
+            claudeCodeOptions:
+              (state.claudeCodeOptions as ClaudeCodeOptions | undefined) ??
+              DEFAULT_CLAUDE_CODE_OPTIONS,
+          } as Partial<ModelSettingsState>;
         }
 
-        return persisted as ModelSettingsState;
+        return state as unknown as ModelSettingsState;
       },
       partialize: (state) => ({
-        activeProvider: DEFAULT_PROVIDER_ID,
-        providerState: state.providerState,
+        enabledModels: state.enabledModels,
         claudeCodeOptions: state.claudeCodeOptions,
       }),
     },
