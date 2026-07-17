@@ -2,12 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   extractElementContext,
-  createHtmlElementContext,
   type SelectedElement,
-  type ElementContext,
 } from '@pg/shared/lib/element-context';
-import { connectToIframe, setIframeBridgeHandlers } from '@pg/shared/lib/iframe-bridge';
-import type { BridgeElementContext } from '@pg/shared/lib/iframe-bridge-types';
 
 // Selectors for playground chrome that should be excluded from element selection
 const EXCLUDE_SELECTORS = [
@@ -27,56 +23,6 @@ export interface UseElementSelectionReturn {
 }
 
 // -----------------------------------------------------------------------
-// Iframe bridge helpers
-// -----------------------------------------------------------------------
-
-/** Find all iframes inside ReactFlow nodes */
-function getNodeIframes(): HTMLIFrameElement[] {
-  return Array.from(
-    document.querySelectorAll<HTMLIFrameElement>('.react-flow__node iframe[sandbox]'),
-  );
-}
-
-/** Resolve which ReactFlow node an iframe belongs to */
-function resolveNodeFromIframe(
-  iframe: HTMLIFrameElement,
-  getNodes: () => Array<{ id: string; data: Record<string, unknown> }>,
-) {
-  const nodeWrapper = iframe.closest('.react-flow__node') as HTMLElement | null;
-  if (!nodeWrapper) return null;
-  const nodeId = nodeWrapper.dataset.id;
-  if (!nodeId) return null;
-  const nodes = getNodes();
-  const node = nodes.find((n) => n.id === nodeId);
-  if (!node) return null;
-  const data = node.data as Record<string, unknown>;
-  return {
-    nodeId,
-    componentName:
-      (data.componentName as string) ||
-      (data.name as string) ||
-      node.id,
-  };
-}
-
-/** Convert iframe-relative rect to page-absolute DOMRect, accounting for CSS transform scale */
-function iframeRectToPage(
-  iframeRect: { top: number; left: number; width: number; height: number },
-  iframe: HTMLIFrameElement,
-): DOMRect {
-  const iframeBounds = iframe.getBoundingClientRect();
-  // The iframe may have CSS transform: scale() applied — detect by comparing
-  // visual size (getBoundingClientRect) to layout size (offsetWidth)
-  const scale = iframe.offsetWidth > 0 ? iframeBounds.width / iframe.offsetWidth : 1;
-  return new DOMRect(
-    iframeBounds.left + iframeRect.left * scale,
-    iframeBounds.top + iframeRect.top * scale,
-    iframeRect.width * scale,
-    iframeRect.height * scale,
-  );
-}
-
-// -----------------------------------------------------------------------
 // Main hook
 // -----------------------------------------------------------------------
 
@@ -91,79 +37,7 @@ export function useElementSelection(): UseElementSelectionReturn {
   const { getNodes } = useReactFlow();
 
   // -----------------------------------------------------------------------
-  // Per-iframe typed bridge (penpal RPC). The iframe identity travels via
-  // closure in the parent methods, so hover/select callbacks don't need to
-  // match message sources against every iframe on the page.
-  // -----------------------------------------------------------------------
-
-  const bridgeFor = useCallback(
-    (iframe: HTMLIFrameElement) => {
-      setIframeBridgeHandlers(iframe, {
-        onHover: (ctx: BridgeElementContext) => {
-          const pageRect = iframeRectToPage(ctx.rect, iframe);
-          setHoveredElement(iframe);
-          setHoveredRect(pageRect);
-          setHoveredInfo({
-            tagName: ctx.tagName,
-            displayName: ctx.displayName || ctx.tagName,
-          });
-        },
-        onHoverClear: () => {
-          setHoveredElement(null);
-          setHoveredRect(null);
-          setHoveredInfo(null);
-        },
-        onSelect: (ctx: BridgeElementContext) => {
-          const nodeInfo = resolveNodeFromIframe(
-            iframe,
-            getNodes as () => Array<{ id: string; data: Record<string, unknown> }>,
-          );
-          if (!nodeInfo) return;
-
-          const context: ElementContext = createHtmlElementContext(ctx);
-
-          const newElement: SelectedElement = {
-            element: iframe,
-            context,
-            nodeId: nodeInfo.nodeId,
-            componentName: nodeInfo.componentName,
-            iframeRect: ctx.rect,
-          };
-
-          setSelectedElements((prev) => {
-            // For iframe elements, toggle by matching cssSelector + nodeId
-            const existingIndex = prev.findIndex(
-              (s) => s.nodeId === nodeInfo.nodeId && s.context.cssSelector === context.cssSelector,
-            );
-            if (existingIndex !== -1) {
-              return prev.filter((_, i) => i !== existingIndex);
-            }
-            // Shift state isn't observable from the child click, so iframe
-            // selections always replace (single select) — same as before.
-            return [newElement];
-          });
-        },
-        // onConsoleError is registered by the node components (error badges),
-        // not by selection — the handler registry merges both.
-      });
-      return connectToIframe(iframe);
-    },
-    [getNodes],
-  );
-
-  const setSelectModeAll = useCallback(
-    (enter: boolean) => {
-      for (const iframe of getNodeIframes()) {
-        bridgeFor(iframe)
-          ?.then((child) => (enter ? child.enterSelectMode() : child.exitSelectMode()))
-          .catch(() => {});
-      }
-    },
-    [bridgeFor],
-  );
-
-  // -----------------------------------------------------------------------
-  // Alt key tracking + iframe bridge enter/exit
+  // Alt key tracking
   // -----------------------------------------------------------------------
 
   useEffect(() => {
@@ -174,7 +48,6 @@ export function useElementSelection(): UseElementSelectionReturn {
         altRef.current = true;
         setIsAltHeld(true);
         document.documentElement.classList.add('element-select-mode');
-        setSelectModeAll(true);
       }
     };
 
@@ -185,7 +58,6 @@ export function useElementSelection(): UseElementSelectionReturn {
       setHoveredRect(null);
       setHoveredInfo(null);
       document.documentElement.classList.remove('element-select-mode');
-      setSelectModeAll(false);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -203,7 +75,7 @@ export function useElementSelection(): UseElementSelectionReturn {
       window.removeEventListener('blur', handleBlur);
       document.documentElement.classList.remove('element-select-mode');
     };
-  }, [setSelectModeAll]);
+  }, []);
 
   // -----------------------------------------------------------------------
   // Resolve ReactFlow node from a DOM element
@@ -264,22 +136,6 @@ export function useElementSelection(): UseElementSelectionReturn {
         return;
       }
 
-      // If hovering an iframe directly (node is selected, overlay removed), bridge handles it
-      if (el.tagName === 'IFRAME') return;
-
-      // If hovering the iframe overlay (node NOT selected), proxy coordinates to iframe bridge
-      if (el.hasAttribute('data-iframe-overlay')) {
-        const iframe = el.parentElement?.querySelector('iframe') as HTMLIFrameElement | null;
-        if (iframe) {
-          const bounds = iframe.getBoundingClientRect();
-          const scale = iframe.offsetWidth > 0 ? bounds.width / iframe.offsetWidth : 1;
-          const x = (e.clientX - bounds.left) / scale;
-          const y = (e.clientY - bounds.top) / scale;
-          bridgeFor(iframe)?.then((child) => child.hoverAt(x, y)).catch(() => {});
-        }
-        return;
-      }
-
       setHoveredElement(el);
       setHoveredRect(el.getBoundingClientRect());
 
@@ -307,7 +163,7 @@ export function useElementSelection(): UseElementSelectionReturn {
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [bridgeFor]);
+  }, []);
 
   // -----------------------------------------------------------------------
   // Click handling (when Alt is held) — React components only
@@ -327,28 +183,6 @@ export function useElementSelection(): UseElementSelectionReturn {
 
       // Must be inside a ReactFlow node
       if (!target.closest('.react-flow__node')) return;
-
-      // If clicking on an iframe directly (node selected, overlay gone), bridge handles it
-      if (target.tagName === 'IFRAME') {
-        e.stopPropagation();
-        e.preventDefault();
-        return;
-      }
-
-      // If clicking on the iframe overlay (node NOT selected), proxy click to iframe bridge
-      if (target.hasAttribute('data-iframe-overlay')) {
-        e.stopPropagation();
-        e.preventDefault();
-        const iframe = target.parentElement?.querySelector('iframe') as HTMLIFrameElement | null;
-        if (iframe) {
-          const bounds = iframe.getBoundingClientRect();
-          const scale = iframe.offsetWidth > 0 ? bounds.width / iframe.offsetWidth : 1;
-          const x = (e.clientX - bounds.left) / scale;
-          const y = (e.clientY - bounds.top) / scale;
-          bridgeFor(iframe)?.then((child) => child.clickAt(x, y)).catch(() => {});
-        }
-        return;
-      }
 
       // Block event from reaching ReactFlow
       e.stopPropagation();
@@ -383,7 +217,7 @@ export function useElementSelection(): UseElementSelectionReturn {
 
     window.addEventListener('mousedown', handleMouseDown, true);
     return () => window.removeEventListener('mousedown', handleMouseDown, true);
-  }, [resolveNode, bridgeFor]);
+  }, [resolveNode]);
 
   // -----------------------------------------------------------------------
   // Stale element cleanup + rect refresh
