@@ -4,23 +4,23 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { Edge, Node } from "@xyflow/react";
-import { ITERATION_EDGE_STYLE } from "@pg/shared/lib/constants";
+import type { Node } from "@xyflow/react";
+import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
 
 export interface UseCanvasNodeDeleteParams {
   nodes: Node[];
-  edges: Edge[];
+  relations: CanvasRelation[];
   setNodes: Dispatch<SetStateAction<Node[]>>;
-  setEdges: Dispatch<SetStateAction<Edge[]>>;
+  setRelations: Dispatch<SetStateAction<CanvasRelation[]>>;
   setKnownIterations: Dispatch<SetStateAction<string[]>>;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
 }
 
 export function useCanvasNodeDelete({
   nodes,
-  edges,
+  relations,
   setNodes,
-  setEdges,
+  setRelations,
   setKnownIterations,
   setCollapsedNodeIds,
 }: UseCanvasNodeDeleteParams) {
@@ -42,8 +42,8 @@ export function useCanvasNodeDelete({
           }
         } else if (node.type === "iteration" && node.data.filename) {
           // Check if this node has children
-          const childEdges = edges.filter((e) => e.source === node.id);
-          if (childEdges.length > 0) {
+          const childRelations = relations.filter((r) => r.parentId === node.id);
+          if (childRelations.length > 0) {
             // Has children -- show cascade/reparent dialog instead of deleting immediately
             setDeleteDialogNode(node);
             return; // Don't delete yet, wait for dialog action
@@ -65,7 +65,7 @@ export function useCanvasNodeDelete({
         }
       }
     },
-    [edges, setKnownIterations],
+    [relations, setKnownIterations],
   );
 
   // Handle cascade or reparent deletion
@@ -105,11 +105,11 @@ export function useCanvasNodeDelete({
           });
 
           setNodes((nds) => nds.filter((n) => !nodeIdsToRemove.has(n.id)));
-          setEdges((eds) =>
-            eds.filter(
-              (e) =>
-                !nodeIdsToRemove.has(e.source) &&
-                !nodeIdsToRemove.has(e.target),
+          setRelations((rels) =>
+            rels.filter(
+              (r) =>
+                !nodeIdsToRemove.has(r.parentId) &&
+                !nodeIdsToRemove.has(r.childId),
             ),
           );
           setKnownIterations((prev) => prev.filter((f) => !deletedSet.has(f)));
@@ -122,31 +122,30 @@ export function useCanvasNodeDelete({
           });
         } else {
           // Reparent: reconnect children to the deleted node's parent
-          const parentEdge = edges.find((e) => e.target === node.id);
-          const parentId = parentEdge?.source;
+          const parentRelation = relations.find((r) => r.childId === node.id);
+          const parentId = parentRelation?.parentId;
 
           // Get child node IDs
-          const childEdges = edges.filter((e) => e.source === node.id);
-          const childNodeIds = childEdges.map((e) => e.target);
+          const childRelations = relations.filter((r) => r.parentId === node.id);
+          const childNodeIds = childRelations.map((r) => r.childId);
 
           // Remove the deleted node
           setNodes((nds) => nds.filter((n) => n.id !== node.id));
 
-          // Remove all edges to/from deleted node, and add new edges from parent to children
-          setEdges((eds) => {
-            const filtered = eds.filter(
-              (e) => e.source !== node.id && e.target !== node.id,
+          // Remove all relations to/from deleted node, and add new relations from parent to children
+          setRelations((rels) => {
+            const filtered = rels.filter(
+              (r) => r.parentId !== node.id && r.childId !== node.id,
             );
             if (parentId) {
-              const newEdges = childNodeIds.map((childId) => ({
-                id: `edge_${parentId}_${childId}`,
-                source: parentId,
-                target: childId,
-                type: "smoothstep",
-                animated: false,
-                style: ITERATION_EDGE_STYLE,
-              }));
-              return [...filtered, ...newEdges];
+              const newRelations: CanvasRelation[] = childNodeIds.map(
+                (childId) => ({
+                  parentId,
+                  childId,
+                  kind: "iteration",
+                }),
+              );
+              return [...filtered, ...newRelations];
             }
             return filtered;
           });
@@ -171,9 +170,9 @@ export function useCanvasNodeDelete({
     [
       deleteDialogNode,
       nodes,
-      edges,
+      relations,
       setNodes,
-      setEdges,
+      setRelations,
       setKnownIterations,
       setCollapsedNodeIds,
     ],

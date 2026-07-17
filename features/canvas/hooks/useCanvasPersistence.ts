@@ -1,12 +1,13 @@
 import { useEffect, type MutableRefObject } from "react";
-import type { Edge, Node, Viewport } from "@xyflow/react";
+import type { Node, Viewport } from "@xyflow/react";
 import { saveCanvasState } from "@pg/shared/lib/canvas-persistence";
+import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
 import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
 
 export interface UseCanvasPersistenceParams {
   storageKey: string;
   nodes: Node[];
-  edges: Edge[];
+  relations: CanvasRelation[];
   coord: GenerationCoordination;
   knownIterations: string[];
   collapsedNodeIds: Set<string>;
@@ -18,7 +19,7 @@ export interface UseCanvasPersistenceParams {
 export function useCanvasPersistence({
   storageKey,
   nodes,
-  edges,
+  relations,
   coord,
   knownIterations,
   collapsedNodeIds,
@@ -26,27 +27,25 @@ export function useCanvasPersistence({
   nodeIdCounterRef,
   getViewport,
 }: UseCanvasPersistenceParams): void {
-  // Save to localStorage whenever nodes or edges change.
+  // Save to localStorage whenever nodes or relations change.
   useEffect(() => {
     saveCanvasState(
       storageKey,
       nodes,
-      edges,
+      relations,
       nodeIdCounterRef.current,
       knownIterations,
       Array.from(collapsedNodeIds),
-      coord.getGenerationInfo(),
       getViewport(),
     );
   }, [
     nodes,
-    edges,
+    relations,
     knownIterations,
     collapsedNodeIds,
     getViewport,
     storageKey,
     nodeIdCounterRef,
-    coord.getGenerationInfo,
   ]);
 
   // Save viewport on page unload (captures pan/zoom changes that don't trigger node updates)
@@ -55,24 +54,22 @@ export function useCanvasPersistence({
       saveCanvasState(
         storageKey,
         coord.getNodes(),
-        edges,
+        relations,
         nodeIdCounterRef.current,
         coord.getKnownIterations(),
         Array.from(collapsedNodeIdsRef.current),
-        coord.getGenerationInfo(),
         getViewport(),
       );
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [
-    edges,
+    relations,
     getViewport,
     storageKey,
     coord.getNodes,
     nodeIdCounterRef,
     coord.getKnownIterations,
     collapsedNodeIdsRef,
-    coord.getGenerationInfo,
   ]);
 }

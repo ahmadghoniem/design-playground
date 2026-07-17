@@ -5,8 +5,9 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from "react";
-import type { Edge, FitViewOptions, Node, Viewport } from "@xyflow/react";
+import type { FitViewOptions, Node, Viewport } from "@xyflow/react";
 import { computeAutoArrangePositions } from "@pg/features/canvas/canvas-auto-arrange";
+import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
 import {
   PLAYGROUND_AUTO_ARRANGE_EVENT,
   FITVIEW_AFTER_ARRANGE,
@@ -14,7 +15,7 @@ import {
 
 export interface UseCanvasAutoArrangeParams {
   nodes: Node[];
-  edges: Edge[];
+  relations: CanvasRelation[];
   collapsedNodeIdsRef: MutableRefObject<Set<string>>;
   setNodes: Dispatch<SetStateAction<Node[]>>;
   fitView: (options?: FitViewOptions) => void;
@@ -27,7 +28,7 @@ export interface UseCanvasAutoArrangeResult {
 
 export function useCanvasAutoArrange({
   nodes,
-  edges,
+  relations,
   collapsedNodeIdsRef,
   setNodes,
   fitView,
@@ -38,7 +39,7 @@ export function useCanvasAutoArrange({
       const zoom = Math.max(getViewport().zoom, 0.0001);
       const positionMap = computeAutoArrangePositions(
         nodes,
-        edges,
+        relations,
         collapsedNodeIdsRef.current,
         zoom,
       );
@@ -60,7 +61,7 @@ export function useCanvasAutoArrange({
         }, 50);
       }
     },
-    [nodes, edges, setNodes, fitView, getViewport, collapsedNodeIdsRef],
+    [nodes, relations, setNodes, fitView, getViewport, collapsedNodeIdsRef],
   );
 
   useEffect(() => {

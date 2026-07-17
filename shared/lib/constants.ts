@@ -7,9 +7,6 @@
 // Custom Event Names
 // ---------------------------------------------------------------------------
 
-/** Fired when the iteration prompt is copied to clipboard */
-export const ITERATION_PROMPT_COPIED_EVENT = 'iteration-prompt-copied';
-
 /** Fired to request an immediate iteration fetch/scan */
 export const ITERATION_FETCH_EVENT = 'iteration-fetch-requested';
 
@@ -63,18 +60,9 @@ const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
 /** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
 export const PREVIEW_COLOR_SCHEME_STORAGE_KEY = 'playground-preview-color-scheme';
 
-/** Key for persisting generation info across page reloads */
-const GENERATION_INFO_STORAGE_KEY = 'playground-generation-info';
-
 // ---------------------------------------------------------------------------
 // Timing Constants
 // ---------------------------------------------------------------------------
-
-/** Interval between iteration polling scans (ms) */
-export const POLL_INTERVAL = 10_000; // 10 seconds
-
-/** Maximum duration to keep polling after a prompt copy (ms) */
-export const POLL_DURATION = 120_000; // 120 seconds
 
 /** TTL for the shared async-props cache (ms) */
 export const PROPS_CACHE_TTL_MS = 60_000; // 60 seconds
@@ -184,9 +172,6 @@ export type StylingMode = 'tailwind' | 'inline-css';
 /** Default styling mode when no skill overrides it */
 export const DEFAULT_STYLING_MODE: StylingMode = 'tailwind';
 
-/** localStorage key for persisting the active provider selection */
-const PROVIDER_STORAGE_KEY = 'playground-provider';
-
 // ---------------------------------------------------------------------------
 // AI Models
 // ---------------------------------------------------------------------------
@@ -235,23 +220,6 @@ const FULLSCREEN_EXIT_DELAY = 100;
 export const POST_GENERATION_SCAN_DELAY = 1000;
 
 // ---------------------------------------------------------------------------
-// Edge Styles
-// ---------------------------------------------------------------------------
-
-/** Edge style for normal iteration connections */
-export const ITERATION_EDGE_STYLE = {
-  stroke: '#9ca3af',
-  strokeWidth: 1.5,
-} as const;
-
-/** Edge style for skeleton (generating) connections */
-export const SKELETON_EDGE_STYLE = {
-  stroke: '#f59e0b',
-  strokeWidth: 1.5,
-  strokeDasharray: '5,5',
-} as const;
-
-// ---------------------------------------------------------------------------
 // ReactFlow Background
 // ---------------------------------------------------------------------------
 
@@ -285,6 +253,20 @@ export const DISCOVERY_LOCKFILE_FILENAME = 'discovery.lock';
 
 /** Filename for the discovery manifest */
 export const DISCOVERY_MANIFEST_FILENAME = 'discovery.json';
+
+/**
+ * Filename for the discovered-components manifest — the playground-owned JSON
+ * that the analyze flow writes registry entries into (instead of splicing the
+ * hand-written registry.tsx). The generated module below is rebuilt from it.
+ */
+export const DISCOVERED_REGISTRY_MANIFEST_FILENAME = 'discovered-registry.json';
+
+/**
+ * Filename for the generated registry module. Regenerated wholesale from the
+ * manifest on every add/remove so it always reflects the manifest and Vite HMR
+ * picks up changes. Committed as an empty-array module for fresh projects.
+ */
+export const DISCOVERED_REGISTRY_MODULE_FILENAME = 'discovered-registry.gen.tsx';
 
 /** Regex pattern to validate iteration filenames (prevents directory traversal) */
 export const ITERATION_FILENAME_PATTERN = /^[A-Za-z0-9]+\.iteration-\d+\.tsx$/;
@@ -330,7 +312,6 @@ export interface ChatSubmitPayload {
   skillPrompts: string[];
   skillIds: string[];
   model: string;
-  provider?: import('./providers/types').ProviderId;
   targetNodeId: string | null;
   targetComponentId: string | null;
   targetComponentName: string | null;
@@ -378,8 +359,8 @@ export interface GenerationStartPayload {
   startNumber?: number;
   /** Model used for this generation */
   model?: string;
-  /** Provider used for this generation */
-  provider?: import('./providers/types').ProviderId;
+  /** Agent CLI used for this generation. Always Claude Code; kept for back-compat with consumers. */
+  provider?: string;
   /** Flow-space position where the generation was initiated */
   flowPosition?: { x: number; y: number };
   /** Node this generation is anchored to, when dropped on a frame */

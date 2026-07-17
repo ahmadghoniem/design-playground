@@ -7,7 +7,19 @@
 import type { Node, Edge } from '@xyflow/react';
 import { STORAGE_KEY } from './constants';
 
-/** Track generation info for status display + resuming after a page reload. */
+/**
+ * Explicit parent→child iteration-tree record. Replaces the old React Flow
+ * `Edge[]` state (which was never rendered). Defined here so persistence owns
+ * the stored shape; `@pg/features/canvas/canvas-relations` re-exports the type
+ * and provides the traversal helpers (shared/ may not import features/).
+ */
+export interface CanvasRelation {
+  parentId: string;
+  childId: string;
+  kind: 'iteration';
+}
+
+/** In-memory generation state for status display during a live run. */
 export interface GenerationInfo {
   componentId: string;
   componentName: string;
@@ -27,12 +39,10 @@ export interface GenerationInfo {
 
 export interface CanvasState {
   nodes: Node[];
-  edges: Edge[];
+  relations: CanvasRelation[];
   nodeIdCounter: number;
   knownIterations: string[];
   collapsedNodeIds?: string[];
-  /** Persisted generation info for resuming after page reload */
-  generationInfo?: GenerationInfo | null;
   /** Persisted viewport (pan/zoom) */
   viewport?: { x: number; y: number; zoom: number };
 }
@@ -71,6 +81,24 @@ export function pruneKnownIterations(knownIterations: string[], nodes: Node[]): 
   return knownIterations.filter((k) => onCanvas.has(k));
 }
 
+/**
+ * Produce the `relations` array for a loaded snapshot. New snapshots already
+ * carry `relations`; snapshots written before the relation model store React
+ * Flow `edges`, which we convert (edge.source → parentId, edge.target → childId)
+ * so existing iteration trees survive the upgrade.
+ */
+function migrateRelations(raw: CanvasState & { edges?: Edge[] }): CanvasRelation[] {
+  if (Array.isArray(raw.relations)) return raw.relations;
+  if (Array.isArray(raw.edges)) {
+    return raw.edges.map((e) => ({
+      parentId: e.source,
+      childId: e.target,
+      kind: 'iteration' as const,
+    }));
+  }
+  return [];
+}
+
 export function loadCanvasState(storageKey: string = STORAGE_KEY): CanvasState | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -87,20 +115,30 @@ export function loadCanvasState(storageKey: string = STORAGE_KEY): CanvasState |
       }
     }
     if (stored) {
-      const state = JSON.parse(stored) as CanvasState;
+      // Parse into a loose shape so an OLD snapshot that still holds React Flow
+      // `edges` can be migrated to `relations` before use (see below).
+      const raw = JSON.parse(stored) as CanvasState & { edges?: Edge[] };
+      const state: CanvasState = {
+        ...raw,
+        relations: migrateRelations(raw),
+      };
+      // `edges` is no longer part of the persisted shape.
+      delete (state as { edges?: unknown }).edges;
+
+      // A mid-run refresh drops the live view: always strip skeleton nodes and
+      // their relations. The CLI keeps writing files; they reappear on the next
+      // scan/refresh. Any legacy `generationInfo` key on an old snapshot is
+      // ignored (it's simply not part of the shape anymore).
       const skeletonIds = new Set(
         state.nodes.filter(n => n.type === 'skeleton').map(n => n.id),
       );
-      // Strip skeleton nodes unless we have generationInfo to resume
-      const hasValidGenInfo = state.generationInfo &&
-        (Date.now() - state.generationInfo.startTime <= 10 * 60 * 1000);
-      if (skeletonIds.size > 0 && !hasValidGenInfo) {
+      if (skeletonIds.size > 0) {
         state.nodes = state.nodes.filter(n => n.type !== 'skeleton');
-        state.edges = state.edges.filter(
-          e => !skeletonIds.has(e.source) && !skeletonIds.has(e.target),
+        state.relations = state.relations.filter(
+          r => !skeletonIds.has(r.parentId) && !skeletonIds.has(r.childId),
         );
-        state.generationInfo = null;
       }
+      delete (state as { generationInfo?: unknown }).generationInfo;
       if (state.knownIterations?.length) {
         state.knownIterations = pruneKnownIterations(state.knownIterations, state.nodes);
       }
@@ -115,19 +153,16 @@ export function loadCanvasState(storageKey: string = STORAGE_KEY): CanvasState |
 export function saveCanvasState(
   storageKey: string,
   nodes: Node[],
-  edges: Edge[],
+  relations: CanvasRelation[],
   counter: number,
   knownIterations: string[],
   collapsedNodeIds: string[],
-  generationInfo?: GenerationInfo | null,
   viewport?: { x: number; y: number; zoom: number },
 ) {
   if (typeof window === 'undefined') return;
   try {
     const state: CanvasState = {
-      nodes, edges, nodeIdCounter: counter, knownIterations, collapsedNodeIds,
-      // Only persist generationInfo when skeletons are present
-      generationInfo: nodes.some(n => n.type === 'skeleton') ? generationInfo : null,
+      nodes, relations, nodeIdCounter: counter, knownIterations, collapsedNodeIds,
       viewport,
     };
     localStorage.setItem(storageKey, JSON.stringify(state));

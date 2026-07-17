@@ -18,7 +18,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { TooltipProvider } from "@pg/shared/ui/tooltip";
 import {
-  loadCanvasState,
   getCanvasStorageKey,
   getIterationKeyFromNode,
   pruneKnownIterations,
@@ -63,7 +62,10 @@ import ElementHighlight from "@pg/features/canvas/components/ElementHighlight";
 import { useElementSelection } from "@pg/features/canvas/hooks/useElementSelection";
 import { useNodeSelection } from "@pg/features/chat/useNodeSelection";
 import { useInteractiveNodeStore } from "@pg/shared/stores/interactive-node-store";
-import { computeVisibleNodes } from "@pg/features/canvas/canvas-visibility";
+import {
+  computeVisibleNodes,
+  computeVisibleEdges,
+} from "@pg/features/canvas/canvas-visibility";
 
 const nodeTypes = {
   component: ComponentNode,
@@ -95,7 +97,21 @@ export default function PlaygroundCanvas({
   const initialized = useRef(false);
   const sidebarOpenedByButtonHoverRef = useRef(false);
   const storageKey = getCanvasStorageKey(projectId);
-  const initialState = loadCanvasState(storageKey);
+
+  // The flow provider is the single loader of persisted canvas state. It reads
+  // localStorage once and exposes the loaded snapshot via `initialState`, so this
+  // component never reads localStorage itself.
+  const {
+    nodes,
+    setNodes,
+    onNodesChange,
+    relations,
+    setRelations,
+    initialState,
+    undo,
+    redo,
+  } = useCanvasFlow();
+
   const initialKnownIterations = initialState?.knownIterations
     ? pruneKnownIterations(
         initialState.knownIterations,
@@ -168,16 +184,6 @@ export default function PlaygroundCanvas({
     initialized.current = true;
   }
 
-  const {
-    nodes,
-    setNodes,
-    onNodesChange,
-    edges,
-    setEdges,
-    onEdgesChange,
-    undo,
-    redo,
-  } = useCanvasFlow();
   const coord = useGenerationCoordination({
     nodes,
     knownIterations,
@@ -229,9 +235,9 @@ export default function PlaygroundCanvas({
     handleDeleteWithMode,
   } = useCanvasNodeDelete({
     nodes,
-    edges,
+    relations,
     setNodes,
-    setEdges,
+    setRelations,
     setKnownIterations,
     setCollapsedNodeIds,
   });
@@ -260,7 +266,7 @@ export default function PlaygroundCanvas({
   useCanvasPersistence({
     storageKey,
     nodes,
-    edges,
+    relations,
     coord,
     knownIterations,
     collapsedNodeIds,
@@ -285,31 +291,19 @@ export default function PlaygroundCanvas({
     setKnownIterations((prev) => prev.filter((f) => f !== filename));
   }, []);
 
-  // Handle iteration adoption — IterationNode now owns the full adoption flow
-  // (agent execution, toasts). This callback is kept for any canvas-level
-  // bookkeeping needed after a successful adoption.
-  const handleIterationAdopt = useCallback(
-    (_filename: string, _componentName: string) => {
-      // No-op: IterationNode handles everything via events + API calls
-    },
-    [],
-  );
-
-  const { scanForIterations, stopPolling } = useIterationScan({
+  const { scanForIterations } = useIterationScan({
     coord,
     isGenerating,
     setNodes,
-    setEdges,
+    setRelations,
     getNodeId,
     handleIterationDelete,
-    handleIterationAdopt,
   });
 
   const { showClearDialog, setShowClearDialog, confirmClearAllNodes } =
     useCanvasClear({
-      stopPolling,
       setNodes,
-      setEdges,
+      setRelations,
       setKnownIterations,
       setCollapsedNodeIds,
       storageKey,
@@ -320,10 +314,9 @@ export default function PlaygroundCanvas({
     isGenerating,
     generationInfo,
     setNodes,
-    setEdges,
+    setRelations,
     getNodeId,
     scanForIterations,
-    resumeGenerationInfo: initialState?.generationInfo,
   });
 
   // ---------------------------------------------------------------------------
@@ -333,8 +326,6 @@ export default function PlaygroundCanvas({
   const nodeSelection = useNodeSelection();
   const { handleChatSubmit } = useChatSubmit({
     coord,
-    getNodeId,
-    setNodes,
     scanForIterations,
   });
 
@@ -384,9 +375,8 @@ export default function PlaygroundCanvas({
     screenToFlowPosition,
     getNodeId,
     setNodes,
-    setEdges,
+    setRelations,
     handleIterationDelete,
-    handleIterationAdopt,
   });
 
   const handlePaneClick = useCallback(
@@ -476,7 +466,7 @@ export default function PlaygroundCanvas({
 
   const { autoArrangeNodes } = useCanvasAutoArrange({
     nodes,
-    edges,
+    relations,
     collapsedNodeIdsRef,
     setNodes,
     fitView,
@@ -513,8 +503,15 @@ export default function PlaygroundCanvas({
   }, []);
 
   const visibleNodes = useMemo(
-    () => computeVisibleNodes(nodes, edges, collapsedNodeIds).visibleNodes,
-    [nodes, edges, collapsedNodeIds],
+    () => computeVisibleNodes(nodes, relations, collapsedNodeIds),
+    [nodes, relations, collapsedNodeIds],
+  );
+
+  // Render-only edges derived from the relation records (never stored). Both
+  // endpoints must be visible, so a collapsed subtree hides its connectors.
+  const visibleEdges = useMemo(
+    () => computeVisibleEdges(nodes, relations, collapsedNodeIds),
+    [nodes, relations, collapsedNodeIds],
   );
 
   // Image upload via toolbar button (reuses same logic as drag-drop)
@@ -597,9 +594,8 @@ export default function PlaygroundCanvas({
         {/* XY Flow reads pane fill from `--xy-background-color`; Tailwind bg-* often loses to `.react-flow` in the cascade. */}
         <ReactFlow
           nodes={visibleNodes}
-          edges={[]}
+          edges={visibleEdges}
           onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
           onNodesDelete={onNodesDelete}
           onDragOver={onDragOver}
           onDrop={onDrop}
@@ -632,6 +628,8 @@ export default function PlaygroundCanvas({
           nodesDraggable={activeTool !== "hand"}
           nodesConnectable={false}
           elementsSelectable
+          edgesFocusable={false}
+          edgesReconnectable={false}
           deleteKeyCode={["Delete", "Backspace"]}
         >
           {/* <Controls

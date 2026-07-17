@@ -5,22 +5,21 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { Edge, Node } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
+import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
 import { PLAYGROUND_CLEAR_EVENT } from "@pg/shared/lib/constants";
 
 export interface UseCanvasClearParams {
-  stopPolling: () => void;
   setNodes: Dispatch<SetStateAction<Node[]>>;
-  setEdges: Dispatch<SetStateAction<Edge[]>>;
+  setRelations: Dispatch<SetStateAction<CanvasRelation[]>>;
   setKnownIterations: Dispatch<SetStateAction<string[]>>;
   setCollapsedNodeIds: Dispatch<SetStateAction<Set<string>>>;
   storageKey: string;
 }
 
 export function useCanvasClear({
-  stopPolling,
   setNodes,
-  setEdges,
+  setRelations,
   setKnownIterations,
   setCollapsedNodeIds,
   storageKey,
@@ -35,8 +34,6 @@ export function useCanvasClear({
   }, []);
 
   const confirmClearAllNodes = useCallback(async () => {
-    stopPolling();
-
     try {
       await fetch("/playground/api/generate", {
         method: "DELETE",
@@ -80,7 +77,7 @@ export function useCanvasClear({
     }
 
     setNodes([]);
-    setEdges([]);
+    setRelations([]);
     setKnownIterations([]);
     setCollapsedNodeIds(new Set());
 
@@ -89,10 +86,9 @@ export function useCanvasClear({
     setShowClearDialog(false);
   }, [
     setNodes,
-    setEdges,
+    setRelations,
     setKnownIterations,
     setCollapsedNodeIds,
-    stopPolling,
     storageKey,
   ]);
 

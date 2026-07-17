@@ -4,12 +4,12 @@ import {
   type DragEvent,
   type SetStateAction,
 } from "react";
-import type { Edge, Node } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 import { getIterationKeysOnCanvas } from "@pg/shared/lib/canvas-persistence";
+import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
 import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
 import {
   DND_DATA_KEY,
-  ITERATION_EDGE_STYLE,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_COMPONENT_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_WIDTH,
@@ -32,9 +32,8 @@ export interface UseCanvasDragDropParams {
   };
   getNodeId: () => string;
   setNodes: Dispatch<SetStateAction<Node[]>>;
-  setEdges: Dispatch<SetStateAction<Edge[]>>;
+  setRelations: Dispatch<SetStateAction<CanvasRelation[]>>;
   handleIterationDelete: (filename: string) => void;
-  handleIterationAdopt: (filename: string, componentName: string) => void;
 }
 
 export interface UseCanvasDragDropResult {
@@ -47,9 +46,8 @@ export function useCanvasDragDrop({
   screenToFlowPosition,
   getNodeId,
   setNodes,
-  setEdges,
+  setRelations,
   handleIterationDelete,
-  handleIterationAdopt,
 }: UseCanvasDragDropParams): UseCanvasDragDropResult {
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -140,7 +138,7 @@ export function useCanvasDragDrop({
           const stepW = DEFAULT_ITERATION_NODE_WIDTH + ARRANGE_HORIZONTAL_GAP;
           const baseX = position.x + parentW + ARRANGE_HORIZONTAL_GAP;
           const newNodes: Node[] = [];
-          const newEdges: Edge[] = [];
+          const newRelations: CanvasRelation[] = [];
           const newKnownFilenames: string[] = [];
 
           const res = await fetch("/playground/api/iterations");
@@ -169,23 +167,19 @@ export function useCanvasDragDrop({
                 parentNodeId,
                 registryId: componentId,
                 onDelete: handleIterationDelete,
-                onAdopt: handleIterationAdopt,
               },
             });
-            newEdges.push({
-              id: `edge_${parentNodeId}_${nodeId}`,
-              source: parentNodeId,
-              target: nodeId,
-              type: "smoothstep",
-              animated: false,
-              style: ITERATION_EDGE_STYLE,
+            newRelations.push({
+              parentId: parentNodeId,
+              childId: nodeId,
+              kind: "iteration",
             });
             newKnownFilenames.push(it.filename);
           });
 
           if (newNodes.length > 0) {
             setNodes((nds) => [...nds, ...newNodes]);
-            setEdges((eds) => [...eds, ...newEdges]);
+            setRelations((rels) => [...rels, ...newRelations]);
             coord.appendKnownIterations(newKnownFilenames);
           }
         } catch (err) {
@@ -199,10 +193,9 @@ export function useCanvasDragDrop({
     [
       screenToFlowPosition,
       setNodes,
-      setEdges,
+      setRelations,
       getNodeId,
       handleIterationDelete,
-      handleIterationAdopt,
       coord.getNodes,
       coord.appendKnownIterations,
     ],

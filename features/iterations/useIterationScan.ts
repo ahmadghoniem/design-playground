@@ -2,12 +2,14 @@ import {
   useCallback,
   useEffect,
   useRef,
-  useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { Edge, Node } from "@xyflow/react";
-import type { GenerationInfo } from "@pg/shared/lib/canvas-persistence";
+import type { Node } from "@xyflow/react";
+import type {
+  GenerationInfo,
+  CanvasRelation,
+} from "@pg/shared/lib/canvas-persistence";
 import { getIterationKeysOnCanvas } from "@pg/shared/lib/canvas-persistence";
 import {
   isInExpectedBatch,
@@ -17,14 +19,10 @@ import {
 } from "@pg/shared/lib/iteration-scan";
 import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
 import {
-  ITERATION_PROMPT_COPIED_EVENT,
   ITERATION_FETCH_EVENT,
-  POLL_INTERVAL,
-  POLL_DURATION,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_WIDTH,
-  ITERATION_EDGE_STYLE,
   type ComponentSize,
 } from "@pg/shared/lib/constants";
 
@@ -44,10 +42,9 @@ export interface UseIterationScanParams {
   coord: GenerationCoordination;
   isGenerating: boolean;
   setNodes: Dispatch<SetStateAction<Node[]>>;
-  setEdges: Dispatch<SetStateAction<Edge[]>>;
+  setRelations: Dispatch<SetStateAction<CanvasRelation[]>>;
   getNodeId: () => string;
   handleIterationDelete: (filename: string) => void;
-  handleIterationAdopt: (filename: string, componentName: string) => void;
 }
 
 export interface UseIterationScanResult {
@@ -55,45 +52,17 @@ export interface UseIterationScanResult {
     resetTimeoutOnFind?: boolean,
     scanContext?: GenerationInfo | null,
   ) => Promise<void>;
-  /** Stop any active prompt-copy polling loop (used by clear-canvas). */
-  stopPolling: () => void;
 }
 
 export function useIterationScan({
   coord,
   isGenerating,
   setNodes,
-  setEdges,
+  setRelations,
   getNodeId,
   handleIterationDelete,
-  handleIterationAdopt,
 }: UseIterationScanParams): UseIterationScanResult {
-  const [, setIsScanning] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
-  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const generationPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const stopPolling = useCallback(() => {
-    setIsPolling(false);
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-      pollTimeoutRef.current = null;
-    }
-  }, []);
-
-  const resetPollTimeout = useCallback(() => {
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-    }
-    pollTimeoutRef.current = setTimeout(() => {
-      stopPolling();
-    }, POLL_DURATION);
-  }, [stopPolling]);
 
   const scanForIterations = useCallback(
     async (resetTimeoutOnFind = false, scanContext?: GenerationInfo | null) => {
@@ -101,7 +70,6 @@ export function useIterationScan({
         coord.markScanQueued(scanContext);
         return;
       }
-      setIsScanning(true);
       try {
         const info =
           scanContext !== undefined ? scanContext : coord.getGenerationInfo();
@@ -139,7 +107,7 @@ export function useIterationScan({
 
         const skeletonsToRemove: string[] = [];
         const newNodes: Node[] = [];
-        const newEdges: Edge[] = [];
+        const newRelations: CanvasRelation[] = [];
         const newKnownFilenames: string[] = [];
         const pendingNodesByFilename = new Map<string, string>();
 
@@ -224,18 +192,14 @@ export function useIterationScan({
               parentSize,
               registryId: inheritedRegistryId,
               onDelete: handleIterationDelete,
-              onAdopt: handleIterationAdopt,
             },
           });
 
           if (sourceNodeId) {
-            newEdges.push({
-              id: `edge_${sourceNodeId}_${nodeId}`,
-              source: sourceNodeId,
-              target: nodeId,
-              type: "smoothstep",
-              animated: false,
-              style: ITERATION_EDGE_STYLE,
+            newRelations.push({
+              parentId: sourceNodeId,
+              childId: nodeId,
+              kind: "iteration",
             });
           }
 
@@ -248,20 +212,15 @@ export function useIterationScan({
             ...nds.filter((n) => !skeletonSet.has(n.id)),
             ...newNodes,
           ]);
-          setEdges((eds) => [
-            ...eds.filter((e) => !skeletonSet.has(e.target)),
-            ...newEdges,
+          setRelations((rels) => [
+            ...rels.filter((r) => !skeletonSet.has(r.childId)),
+            ...newRelations,
           ]);
           coord.appendKnownIterations(newKnownFilenames);
-
-          if (resetTimeoutOnFind) {
-            resetPollTimeout();
-          }
         }
       } catch (error) {
         console.error("Error scanning iterations:", error);
       } finally {
-        setIsScanning(false);
         const { queued, override } = coord.releaseScanLock();
         if (queued) {
           scanForIterations(resetTimeoutOnFind, override);
@@ -272,48 +231,21 @@ export function useIterationScan({
       coord,
       getNodeId,
       handleIterationDelete,
-      handleIterationAdopt,
       setNodes,
-      setEdges,
-      resetPollTimeout,
+      setRelations,
     ],
   );
 
-  const startPolling = useCallback(() => {
-    if (isPolling) return;
-
-    setIsPolling(true);
-    scanForIterations(true);
-
-    pollIntervalRef.current = setInterval(() => {
-      scanForIterations(true);
-    }, POLL_INTERVAL);
-
-    pollTimeoutRef.current = setTimeout(() => {
-      stopPolling();
-    }, POLL_DURATION);
-  }, [isPolling, scanForIterations, stopPolling]);
-
   useEffect(() => {
-    const handlePromptCopied = () => {
-      startPolling();
-    };
-
     const handleFetchRequest = () => {
       scanForIterations(true);
     };
 
-    window.addEventListener(ITERATION_PROMPT_COPIED_EVENT, handlePromptCopied);
     window.addEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
     return () => {
-      window.removeEventListener(
-        ITERATION_PROMPT_COPIED_EVENT,
-        handlePromptCopied,
-      );
       window.removeEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
-      stopPolling();
     };
-  }, [startPolling, stopPolling, scanForIterations]);
+  }, [scanForIterations]);
 
   // Initial scan on mount. scanForIterations changes identity every render
   // (it closes over `coord`), so guard with a ref to keep this run-once while
@@ -349,5 +281,5 @@ export function useIterationScan({
     };
   }, [isGenerating, scanForIterations, coord]);
 
-  return { scanForIterations, stopPolling };
+  return { scanForIterations };
 }

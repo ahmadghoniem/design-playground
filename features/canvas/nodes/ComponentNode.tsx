@@ -6,6 +6,7 @@ import {
   useEffect,
 } from "react";
 import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
+import { EdgeAnchorHandles } from "@pg/features/canvas/canvas-edge-handles";
 import {
   Tooltip,
   TooltipContent,
@@ -188,6 +189,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         fontFamily: "var(--pg-font-sans)",
       }}
     >
+      <EdgeAnchorHandles />
       {/* Resize handle — bottom-right corner, only when selected */}
       <NodeResizeControl
         position="bottom-right"

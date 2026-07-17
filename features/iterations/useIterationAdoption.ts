@@ -44,7 +44,6 @@ export interface UseIterationAdoptionParams {
     parentNodeId: string;
     filename: string;
     adopted?: boolean;
-    onAdopt?: (filename: string, componentName: string) => void;
   };
 }
 
@@ -149,7 +148,6 @@ export function useIterationAdoption({
         );
         setAdoptionStatus("adopted");
         updateNodeData(id, { adopted: true });
-        data.onAdopt?.(data.filename, data.componentName);
 
         // Pan canvas to the original (parent) component so the user sees the update
         setTimeout(() => {

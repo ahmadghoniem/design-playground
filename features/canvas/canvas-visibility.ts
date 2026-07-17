@@ -1,43 +1,50 @@
-// Pure graph helper for collapse/expand visibility on the canvas.
+// Pure graph helpers for collapse/expand visibility on the canvas.
 //
-// Given the current nodes, edges, and the set of collapsed node ids, computes
-// which nodes/edges are visible (descendants of collapsed nodes are hidden) and
-// annotates iteration nodes with `hasChildren` / `isCollapsed` flags. No side
-// effects — PlaygroundCanvas memoizes the result.
+// Given the current nodes, relations, and the set of collapsed node ids, computes
+// which nodes are visible (descendants of collapsed nodes are hidden) and
+// annotates iteration nodes with `hasChildren` / `isCollapsed` flags. It also
+// derives the render-only edge layer from the relation records, respecting the
+// same collapse rules. No side effects — PlaygroundCanvas memoizes the results.
 
-import type { Edge, Node } from '@xyflow/react';
+import type { Node, Edge } from "@xyflow/react";
+import { buildChildrenMap, type CanvasRelation } from "./canvas-relations";
 
-export interface VisibleGraph {
-  visibleNodes: Node[];
-  visibleEdges: Edge[];
-}
+/** Muted, low-contrast stroke that reads clearly on the dotted canvas. */
+const EDGE_STROKE_COLOR = "#bdb9b3";
 
-export function computeVisibleNodes(
-  nodes: Node[],
-  edges: Edge[],
+/**
+ * Ids of every node hidden because an ancestor is collapsed. The collapsed node
+ * itself stays visible; only its descendants are hidden. Cycle-safe.
+ */
+export function computeHiddenDescendants(
+  relations: CanvasRelation[],
   collapsedNodeIds: Set<string>,
-): VisibleGraph {
-  const childrenMap = new Map<string, string[]>();
-  edges.forEach((edge) => {
-    const existing = childrenMap.get(edge.source) || [];
-    existing.push(edge.target);
-    childrenMap.set(edge.source, existing);
-  });
-
+): Set<string> {
+  const childrenMap = buildChildrenMap(relations);
   const hiddenSet = new Set<string>();
   const markDescendantsHidden = (parentId: string) => {
-    const children = childrenMap.get(parentId) || [];
-    for (const childId of children) {
+    for (const childId of childrenMap.get(parentId) || []) {
+      if (hiddenSet.has(childId)) continue;
       hiddenSet.add(childId);
       markDescendantsHidden(childId);
     }
   };
   collapsedNodeIds.forEach((nodeId) => markDescendantsHidden(nodeId));
+  return hiddenSet;
+}
+
+export function computeVisibleNodes(
+  nodes: Node[],
+  relations: CanvasRelation[],
+  collapsedNodeIds: Set<string>,
+): Node[] {
+  const childrenMap = buildChildrenMap(relations);
+  const hiddenSet = computeHiddenDescendants(relations, collapsedNodeIds);
 
   const annotatedNodes = nodes
     .filter((n) => !hiddenSet.has(n.id))
     .map((n) => {
-      if (n.type === 'iteration') {
+      if (n.type === "iteration") {
         const children = childrenMap.get(n.id) || [];
         const hasChildren = children.length > 0;
         const isCollapsed = collapsedNodeIds.has(n.id);
@@ -48,6 +55,49 @@ export function computeVisibleNodes(
       return n;
     });
 
-  const vEdges = edges.filter((e) => !hiddenSet.has(e.target) && !hiddenSet.has(e.source));
-  return { visibleNodes: annotatedNodes, visibleEdges: vEdges };
+  return annotatedNodes;
+}
+
+/**
+ * Render-only edges derived from the relation records. Relations remain the
+ * single source of truth (undo/redo, persistence, deletion cascades all operate
+ * on them) — these edges are never stored. An edge is emitted only when BOTH
+ * endpoints exist and are visible, so a collapsed subtree hides its connectors.
+ * Edges are non-interactive; a skeleton endpoint gets a dashed stroke.
+ */
+export function computeVisibleEdges(
+  nodes: Node[],
+  relations: CanvasRelation[],
+  collapsedNodeIds: Set<string>,
+): Edge[] {
+  const hiddenSet = computeHiddenDescendants(relations, collapsedNodeIds);
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const edges: Edge[] = [];
+
+  for (const rel of relations) {
+    if (hiddenSet.has(rel.parentId) || hiddenSet.has(rel.childId)) continue;
+    const parent = nodeById.get(rel.parentId);
+    const child = nodeById.get(rel.childId);
+    if (!parent || !child) continue;
+
+    const isSkeletonEdge =
+      parent.type === "skeleton" || child.type === "skeleton";
+
+    edges.push({
+      id: `rel-${rel.parentId}-${rel.childId}`,
+      source: rel.parentId,
+      target: rel.childId,
+      type: "smoothstep",
+      selectable: false,
+      deletable: false,
+      focusable: false,
+      style: {
+        stroke: EDGE_STROKE_COLOR,
+        strokeWidth: 1.5,
+        ...(isSkeletonEdge ? { strokeDasharray: "4 4" } : {}),
+      },
+    });
+  }
+
+  return edges;
 }

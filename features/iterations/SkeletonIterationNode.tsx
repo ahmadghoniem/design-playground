@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Loader2 } from "lucide-react";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
+import { EdgeAnchorHandles } from "@pg/features/canvas/canvas-edge-handles";
 
 interface SkeletonIterationNodeProps {
   data: {
@@ -30,6 +31,7 @@ function SkeletonIterationNode({ data }: SkeletonIterationNodeProps) {
           : { minWidth: 280, fontFamily: "var(--pg-font-sans)" }
       }
     >
+      <EdgeAnchorHandles />
       {/* Top bar — mirrors ComponentNode's label bar */}
       <div className="flex items-center justify-between px-0.5 pb-1.5">
         <div className="flex items-center gap-1.5">

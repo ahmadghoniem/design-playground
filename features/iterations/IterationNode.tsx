@@ -9,6 +9,7 @@ import {
   type ComponentType,
 } from "react";
 import { useReactFlow, NodeResizeControl } from "@xyflow/react";
+import { EdgeAnchorHandles } from "@pg/features/canvas/canvas-edge-handles";
 import { GitMerge, Trash2, Loader2, ChevronRight, AlertTriangle } from "lucide-react";
 import {
   Tooltip,
@@ -83,7 +84,6 @@ interface IterationNodeProps {
     /** Whether this iteration has been adopted into the original component */
     adopted?: boolean;
     onDelete?: (filename: string) => void;
-    onAdopt?: (filename: string, componentName: string) => void;
   };
   selected?: boolean;
 }
@@ -96,7 +96,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [iframeKey, setIframeKey] = useState(() => Date.now());
 
   const isInteractive = useIsInteractiveNode(id);
   const setInteractiveNodeId = useInteractiveNodeStore(
@@ -113,28 +112,14 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     if (!selected && isInteractive) setInteractiveNodeId(null);
   }, [selected, isInteractive, setInteractiveNodeId]);
 
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     if (!isInteractive) return;
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") setInteractiveNodeId(null);
     };
     window.addEventListener("keydown", handleEsc);
-    const iframe = iframeRef.current;
-    let innerDoc: Document | null = null;
-    try {
-      innerDoc = iframe?.contentDocument ?? null;
-      innerDoc?.addEventListener("keydown", handleEsc);
-    } catch {
-      // cross-origin iframe — skip
-    }
     return () => {
       window.removeEventListener("keydown", handleEsc);
-      try {
-        innerDoc?.removeEventListener("keydown", handleEsc);
-      } catch {
-        /* noop */
-      }
     };
   }, [isInteractive, setInteractiveNodeId]);
 
@@ -347,6 +332,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         fontFamily: "var(--pg-font-sans)",
       }}
     >
+      <EdgeAnchorHandles />
       {/* Resize handle — bottom-right corner, only when selected */}
       <NodeResizeControl
         position="bottom-right"

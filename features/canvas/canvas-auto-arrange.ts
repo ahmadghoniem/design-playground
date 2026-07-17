@@ -1,4 +1,5 @@
-import type { Edge, Node } from '@xyflow/react';
+import type { Node } from '@xyflow/react';
+import { buildChildrenMap, type CanvasRelation } from './canvas-relations';
 import {
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_HEIGHT,
@@ -14,7 +15,7 @@ import {
  */
 export function computeAutoArrangePositions(
   nodes: Node[],
-  edges: Edge[],
+  relations: CanvasRelation[],
   collapsedNodeIds: Set<string>,
   _zoom: number,
 ): Map<string, { x: number; y: number }> {
@@ -46,12 +47,7 @@ export function computeAutoArrangePositions(
   const sortByStableNodeOrder = (a: string, b: string) =>
     (nodeOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (nodeOrder.get(b) ?? Number.MAX_SAFE_INTEGER);
 
-  const childrenMap = new Map<string, string[]>();
-  edges.forEach(edge => {
-    const existing = childrenMap.get(edge.source) || [];
-    existing.push(edge.target);
-    childrenMap.set(edge.source, existing);
-  });
+  const childrenMap = buildChildrenMap(relations);
   childrenMap.forEach((children, parentId) => {
     childrenMap.set(parentId, children.sort(sortByStableNodeOrder));
   });

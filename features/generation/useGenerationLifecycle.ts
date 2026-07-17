@@ -2,12 +2,14 @@ import {
   useCallback,
   useEffect,
   useRef,
-  useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { Edge, Node } from "@xyflow/react";
-import type { GenerationInfo } from "@pg/shared/lib/canvas-persistence";
+import type { Node } from "@xyflow/react";
+import type {
+  GenerationInfo,
+  CanvasRelation,
+} from "@pg/shared/lib/canvas-persistence";
 import {
   countBatchIterationNodes,
   calculateIterationPosition,
@@ -21,7 +23,6 @@ import {
   DEFAULT_COMPONENT_NODE_HEIGHT,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_HEIGHT,
-  SKELETON_EDGE_STYLE,
   POST_GENERATION_SCAN_DELAY,
   type GenerationStartPayload,
   type GenerationCompletePayload,
@@ -34,13 +35,12 @@ export interface UseGenerationLifecycleParams {
   isGenerating: boolean;
   generationInfo: GenerationInfo | null;
   setNodes: Dispatch<SetStateAction<Node[]>>;
-  setEdges: Dispatch<SetStateAction<Edge[]>>;
+  setRelations: Dispatch<SetStateAction<CanvasRelation[]>>;
   getNodeId: () => string;
   scanForIterations: (
     resetTimeoutOnFind?: boolean,
     scanContext?: GenerationInfo | null,
   ) => Promise<void>;
-  resumeGenerationInfo?: GenerationInfo | null;
 }
 
 export function useGenerationLifecycle({
@@ -48,36 +48,17 @@ export function useGenerationLifecycle({
   isGenerating,
   generationInfo,
   setNodes,
-  setEdges,
+  setRelations,
   getNodeId,
   scanForIterations,
-  resumeGenerationInfo,
 }: UseGenerationLifecycleParams): void {
   const generationEventSourceRef = useRef<EventSource | null>(null);
-  const hasResumedRef = useRef(false);
-  const [, setLastGenerationDuration] = useState<string | null>(null);
-  const [, setElapsedTime] = useState<string>("0m:00s");
 
-  // Running timer during generation + safety timeout for orphaned skeletons
+  // Safety timeout for orphaned skeletons
   useEffect(() => {
     if (!isGenerating || !generationInfo?.startTime) {
       return;
     }
-
-    // Update elapsed time every second
-    const updateElapsed = () => {
-      const durationMs = Date.now() - generationInfo.startTime;
-      const totalSeconds = Math.floor(durationMs / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      setElapsedTime(`${minutes}m:${seconds.toString().padStart(2, "0")}s`);
-    };
-
-    // Initial update
-    updateElapsed();
-
-    // Update every second
-    const intervalId = setInterval(updateElapsed, 1000);
 
     // Safety: auto-clean skeleton nodes after 10 minutes if generation hangs
     const safetyTimeout = setTimeout(
@@ -87,9 +68,9 @@ export function useGenerationLifecycle({
           setNodes((nds) =>
             nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
           );
-          setEdges((eds) =>
-            eds.filter(
-              (e) => !info.skeletonNodeIds.some((sid) => e.target === sid),
+          setRelations((rels) =>
+            rels.filter(
+              (r) => !info.skeletonNodeIds.some((sid) => r.childId === sid),
             ),
           );
         }
@@ -99,14 +80,13 @@ export function useGenerationLifecycle({
     );
 
     return () => {
-      clearInterval(intervalId);
       clearTimeout(safetyTimeout);
     };
   }, [
     isGenerating,
     generationInfo?.startTime,
     setNodes,
-    setEdges,
+    setRelations,
     coord.getGenerationInfo,
     coord.clearGenerationEager,
   ]);
@@ -146,43 +126,6 @@ export function useGenerationLifecycle({
     };
     generationEventSourceRef.current = es;
   }, [scanForIterations, stopGenerationEventSource, coord.getGenerationInfo]);
-
-  // Resume generation after page reload — restore persisted generationInfo,
-  // keep skeleton nodes on canvas, and reconnect SSE.
-  useEffect(() => {
-    // Resume is a one-time restore after page reload; guard so re-runs
-    // (from dependency changes) never re-trigger it.
-    if (hasResumedRef.current) return;
-    const persisted = resumeGenerationInfo;
-    if (!persisted) return;
-
-    // Verify skeletons actually exist in the loaded nodes
-    const currentSkeletons = coord
-      .getNodes()
-      .filter(
-        (n) =>
-          n.type === "skeleton" && persisted.skeletonNodeIds.includes(n.id),
-      );
-    if (currentSkeletons.length === 0) return;
-
-    hasResumedRef.current = true;
-
-    // Restore generation state
-    coord.setGenerationInfoEager(persisted);
-    coord.setIsGeneratingEager(true);
-
-    // Reconnect SSE and kick off an immediate scan to pick up any
-    // iterations that landed while the page was reloading
-    startGenerationEventSource();
-    scanForIterations(false, persisted);
-  }, [
-    resumeGenerationInfo,
-    coord.getNodes,
-    coord.setGenerationInfoEager,
-    coord.setIsGeneratingEager,
-    startGenerationEventSource,
-    scanForIterations,
-  ]);
 
   // Handle generation lifecycle events
   useEffect(() => {
@@ -340,7 +283,7 @@ export function useGenerationLifecycle({
 
       // Create skeleton nodes
       const skeletonNodes: Node[] = [];
-      const skeletonEdges: Edge[] = [];
+      const skeletonRelations: CanvasRelation[] = [];
       const skeletonNodeIds: string[] = [];
 
       // Build candidate positions for all skeletons first
@@ -385,19 +328,16 @@ export function useGenerationLifecycle({
           },
         });
 
-        skeletonEdges.push({
-          id: `edge_${parentNodeId}_${nodeId}`,
-          source: parentNodeId,
-          target: nodeId,
-          type: "smoothstep",
-          animated: true,
-          style: SKELETON_EDGE_STYLE,
+        skeletonRelations.push({
+          parentId: parentNodeId,
+          childId: nodeId,
+          kind: "iteration",
         });
       }
 
       // Add skeleton nodes to canvas
       setNodes((nds) => [...nds, ...skeletonNodes]);
-      setEdges((eds) => [...eds, ...skeletonEdges]);
+      setRelations((rels) => [...rels, ...skeletonRelations]);
 
       // Update generation state — sync ref eagerly so that a fast
       // generationEvents.complete can read the skeleton IDs before React
@@ -417,7 +357,6 @@ export function useGenerationLifecycle({
       };
       coord.setGenerationInfoEager(newInfo);
       coord.setIsGeneratingEager(true);
-      setLastGenerationDuration(null);
 
       // Subscribe to server-sent events for progressive iteration detection
       startGenerationEventSource();
@@ -428,15 +367,6 @@ export function useGenerationLifecycle({
 
       const info = coord.getGenerationInfo();
       const savedScanContext = info ? { ...info } : null;
-
-      if (info?.startTime) {
-        const durationMs = Date.now() - info.startTime;
-        const totalSeconds = Math.floor(durationMs / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        const formatted = `${minutes}m:${seconds.toString().padStart(2, "0")}s`;
-        setLastGenerationDuration(formatted);
-      }
 
       const savedPositions = info?.skeletonPositions ?? info?.gridPositions;
       const savedParentNodeId = info?.parentNodeId;
@@ -493,11 +423,11 @@ export function useGenerationLifecycle({
                 !replacedSkeletonIds.has(n.id),
             ),
           );
-          setEdges((eds) =>
-            eds.filter(
-              (e) =>
+          setRelations((rels) =>
+            rels.filter(
+              (r) =>
                 !savedScanContext.skeletonNodeIds.some(
-                  (id) => e.target === id && replacedSkeletonIds.has(id),
+                  (id) => r.childId === id && replacedSkeletonIds.has(id),
                 ),
             ),
           );
@@ -505,9 +435,9 @@ export function useGenerationLifecycle({
           setNodes((nds) =>
             nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
           );
-          setEdges((eds) =>
-            eds.filter(
-              (e) => !info.skeletonNodeIds.some((id) => e.target === id),
+          setRelations((rels) =>
+            rels.filter(
+              (r) => !info.skeletonNodeIds.some((id) => r.childId === id),
             ),
           );
         }
@@ -580,9 +510,9 @@ export function useGenerationLifecycle({
         setNodes((nds) =>
           nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
         );
-        setEdges((eds) =>
-          eds.filter(
-            (e) => !info.skeletonNodeIds.some((id) => e.target === id),
+        setRelations((rels) =>
+          rels.filter(
+            (r) => !info.skeletonNodeIds.some((id) => r.childId === id),
           ),
         );
       }
@@ -604,7 +534,7 @@ export function useGenerationLifecycle({
   }, [
     getNodeId,
     setNodes,
-    setEdges,
+    setRelations,
     scanForIterations,
     startGenerationEventSource,
     stopGenerationEventSource,
