@@ -11,9 +11,16 @@ import { resolvePlaygroundDir } from '../../shared/lib/resolve-playground-dir';
 import { discoveryPrompt } from '../../features/generation/prompts/discovery.prompt';
 import { discoveryAnalyzePrompt } from '../../features/generation/prompts/discovery-analyze.prompt';
 import { fetchPropsSnapshot } from '../../shared/lib/props-fetchers.server';
-import type { ProviderId } from '../../shared/lib/providers';
-import { spawnAgent, getProviderNotFoundMessage, getProviderDisplayName } from '../../shared/lib/providers';
+import { AGENT_DISPLAY_NAME, AGENT_NOT_FOUND_MESSAGE } from '../../shared/lib/agent-config';
+import { spawnAgent } from '../../shared/lib/spawn-agent';
 import { readJson } from '../lib/hono-helpers';
+import {
+  readManifest,
+  writeManifest,
+  regenerateModule,
+  ensureModuleExists,
+  type DiscoveredRegistryEntry,
+} from '../lib/discovered-registry';
 
 const LOG_PREFIX = '[Playground][discover]';
 const DEBUG = process.env.NODE_ENV !== 'production';
@@ -52,12 +59,15 @@ function buildAgentErrorMessage(
 
 const PLAYGROUND_DIR = resolvePlaygroundDir();
 const DISCOVERY_JSON_PATH = path.join(PLAYGROUND_DIR, DISCOVERY_MANIFEST_FILENAME);
-const REGISTRY_FILE = path.join(PLAYGROUND_DIR, 'registry.tsx');
 const TEMP_DIR = path.join(process.cwd(), TEMP_DIR_RELATIVE);
 const LOCKFILE_PATH = path.join(TEMP_DIR, DISCOVERY_LOCKFILE_FILENAME);
 
 log(` Playground dir resolved to: ${PLAYGROUND_DIR}`);
 log(` Discovery JSON path: ${DISCOVERY_JSON_PATH}`);
+
+// Make sure the generated registry module exists on a fresh project so the
+// static import in registry.tsx always resolves (Vite fails on a missing one).
+ensureModuleExists(PLAYGROUND_DIR);
 
 // ---------------------------------------------------------------------------
 // Global state
@@ -84,100 +94,6 @@ interface DiscoveryEntry {
     registryId?: string;
     [key: string]: unknown;
   };
-}
-
-interface PagesGroupBounds {
-  groupOpen: number;
-  childrenOpen: number;
-  childrenClose: number;
-}
-
-function locatePagesGroup(source: string): PagesGroupBounds | null {
-  const groupMatch = /id:\s*['"]pages['"][\s\S]*?children:\s*\[/.exec(source);
-  if (!groupMatch) return null;
-  const groupOpen = groupMatch.index;
-  const childrenOpen = groupMatch.index + groupMatch[0].length;
-
-  let depth = 1;
-  let pos = childrenOpen;
-  while (pos < source.length && depth > 0) {
-    const ch = source[pos];
-    if (ch === '[' || ch === '{') depth++;
-    else if (ch === ']' || ch === '}') {
-      depth--;
-      if (depth === 0) break;
-    }
-    pos++;
-  }
-  if (depth !== 0) return null;
-  return { groupOpen, childrenOpen, childrenClose: pos };
-}
-
-function findLeafBounds(source: string, registryId: string, bounds: PagesGroupBounds): [number, number] | null {
-  const childrenSlice = source.slice(bounds.childrenOpen, bounds.childrenClose);
-  const idRegex = new RegExp(`id:\\s*['"]${registryId.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}['"]`);
-  const idMatch = idRegex.exec(childrenSlice);
-  if (!idMatch) return null;
-  const idPos = bounds.childrenOpen + idMatch.index;
-
-  let openPos = idPos;
-  let openDepth = 0;
-  while (openPos > bounds.childrenOpen) {
-    openPos--;
-    const ch = source[openPos];
-    if (ch === '}') openDepth++;
-    else if (ch === '{') {
-      if (openDepth === 0) break;
-      openDepth--;
-    }
-  }
-  if (source[openPos] !== '{') return null;
-
-  let closePos = openPos;
-  let closeDepth = 0;
-  while (closePos < bounds.childrenClose) {
-    const ch = source[closePos];
-    if (ch === '{') closeDepth++;
-    else if (ch === '}') {
-      closeDepth--;
-      if (closeDepth === 0) break;
-    }
-    closePos++;
-  }
-  if (source[closePos] !== '}') return null;
-
-  let endPos = closePos + 1;
-  while (endPos < source.length && (source[endPos] === ',' || source[endPos] === ' ' || source[endPos] === '\t')) endPos++;
-  if (source[endPos] === '\n') endPos++;
-
-  let startPos = openPos;
-  while (startPos > 0 && (source[startPos - 1] === ' ' || source[startPos - 1] === '\t')) startPos--;
-
-  return [startPos, endPos];
-}
-
-function removeComponentImportLine(source: string, componentName: string): string {
-  const escaped = componentName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-  const defaultImport = new RegExp(`^[ \\t]*import\\s+${escaped}\\s+from\\s+['"][^'"]+['"];?\\s*\\n`, 'gm');
-  const namedImport = new RegExp(`^[ \\t]*import\\s*\\{\\s*${escaped}\\s*\\}\\s*from\\s+['"][^'"]+['"];?\\s*\\n`, 'gm');
-  return source.replace(defaultImport, '').replace(namedImport, '');
-}
-
-function stripRegistryEntry(registryId: string, componentName?: string): boolean {
-  if (!fs.existsSync(REGISTRY_FILE)) return false;
-  const source = fs.readFileSync(REGISTRY_FILE, 'utf-8');
-  const bounds = locatePagesGroup(source);
-  if (!bounds) return false;
-
-  const leafBounds = findLeafBounds(source, registryId, bounds);
-  if (!leafBounds) return false;
-
-  let updated = source.slice(0, leafBounds[0]) + source.slice(leafBounds[1]);
-  if (componentName) {
-    updated = removeComponentImportLine(updated, componentName);
-  }
-  fs.writeFileSync(REGISTRY_FILE, updated, 'utf-8');
-  return true;
 }
 
 function toKebabCase(str: string): string {
@@ -302,10 +218,8 @@ export function discoverRoutes() {
     }
 
     let model: string | undefined;
-    let providerId: ProviderId = 'claude-code';
-    const reqBody = await readJson<{ model?: string; provider?: ProviderId }>(c);
+    const reqBody = await readJson<{ model?: string }>(c);
     model = reqBody?.model;
-    if (reqBody?.provider) providerId = reqBody.provider;
 
     const existing = readDiscoveryJson() as { entries?: { id: string; status: string }[] } | null;
     const preserveIds = (existing?.entries ?? [])
@@ -327,7 +241,7 @@ export function discoverRoutes() {
 
     isScanning = true;
 
-    const providerName = getProviderDisplayName(providerId);
+    const providerName = AGENT_DISPLAY_NAME;
     if (model) log(` Using model: ${model}`);
     log(` Using provider: ${providerName}`);
 
@@ -337,7 +251,7 @@ export function discoverRoutes() {
 
     return await new Promise<Response>((resolve) => {
     try {
-      currentProcess = spawnAgent(providerId, {
+      currentProcess = spawnAgent({
         model,
         claudeDetailedStdout: false,
       }, process.cwd());
@@ -428,7 +342,7 @@ export function discoverRoutes() {
         currentProcess = null;
 
         const message = error.message.includes('ENOENT')
-          ? getProviderNotFoundMessage(providerId)
+          ? AGENT_NOT_FOUND_MESSAGE
           : error.message;
 
         resolve(c.json({ success: false, error: message }, 500));
@@ -485,7 +399,6 @@ export function discoverRoutes() {
       type?: 'component';
       model?: string;
       parentId?: string;
-      provider?: ProviderId;
     }>(c);
 
     if (!body?.id || !body?.path || !body?.name || !body?.type) {
@@ -493,7 +406,6 @@ export function discoverRoutes() {
     }
 
     const { id, name, type, model, parentId } = body;
-    const providerId: ProviderId = body.provider ?? 'claude-code';
     const componentPath = body.path;
 
     analyzeLog(` POST — analyzing component "${name}" (id=${id}, type=${type})`);
@@ -502,10 +414,6 @@ export function discoverRoutes() {
     if (analyzingIds.has(id)) {
       console.warn(`${ANALYZE_LOG_PREFIX} Analysis already in progress for "${name}" — rejecting`);
       return c.json({ success: false, error: `Analysis already in progress for "${name}"` }, 409);
-    }
-
-    if (!fs.existsSync(REGISTRY_FILE)) {
-      analyzeLog(` Registry file not found at ${REGISTRY_FILE}`);
     }
 
     const playgroundRelPath = path.relative(process.cwd(), PLAYGROUND_DIR).replace(/\\/g, '/');
@@ -534,7 +442,7 @@ export function discoverRoutes() {
 
     analyzingIds.add(id);
 
-    const providerName = getProviderDisplayName(providerId);
+    const providerName = AGENT_DISPLAY_NAME;
     if (model) analyzeLog(` Using model: ${model}`);
     analyzeLog(` Using provider: ${providerName}`);
 
@@ -542,7 +450,7 @@ export function discoverRoutes() {
 
     return await new Promise<Response>((resolve) => {
     try {
-      const agentProcess = spawnAgent(providerId, {
+      const agentProcess = spawnAgent({
         model,
         claudeDetailedStdout: false,
       }, process.cwd());
@@ -583,11 +491,37 @@ export function discoverRoutes() {
 
         if (code === 0) {
           try {
+            // The agent writes a data entry into the discovered-registry manifest.
+            // Confirm it landed, then regenerate the module and update discovery.json
+            // ourselves (status + analysis) so bookkeeping stays server-owned.
+            const manifest = readManifest(PLAYGROUND_DIR);
+            const manifestEntry = manifest.entries.find((e) => e.discoveryId === id);
+
+            if (!manifestEntry) {
+              console.error(`${ANALYZE_LOG_PREFIX} Agent completed but no manifest entry for "${id}"`);
+              resolve(c.json({
+                success: false,
+                error: 'Agent completed but did not write a discovered-registry.json entry.',
+              }, 500));
+              return;
+            }
+
+            regenerateModule(PLAYGROUND_DIR);
+            analyzeLog(` Regenerated discovered-registry module for "${manifestEntry.id}"`);
+
             const data = JSON.parse(fs.readFileSync(DISCOVERY_JSON_PATH, 'utf-8'));
             const entry = (data.entries || []).find((e: DiscoveryEntry) => e.id === id);
 
             if (entry) {
-              analyzeLog(` Updated entry for "${name}" — status=${entry.status}, analysis=${JSON.stringify(entry.analysis || {})}`);
+              entry.status = 'added';
+              entry.analysis = {
+                showcasePath: manifestEntry.sourcePath,
+                componentName: manifestEntry.componentName,
+                registryId: manifestEntry.id,
+                propsInterface: manifestEntry.propsInterface,
+                size: manifestEntry.size,
+              };
+              analyzeLog(` Marked "${name}" added — registryId=${manifestEntry.id}`);
             } else {
               console.warn(`${ANALYZE_LOG_PREFIX} Entry "${id}" not found in discovery.json after analysis`);
             }
@@ -612,10 +546,12 @@ export function discoverRoutes() {
                   analyzeLog(` Promoted child component "${child.name}" as "${childId}"`);
                 }
               }
-              if (childEntries.length > 0) {
-                fs.writeFileSync(DISCOVERY_JSON_PATH, JSON.stringify(data, null, 2) + '\n', 'utf-8');
-                analyzeLog(` Wrote ${childEntries.length} child entries to discovery.json`);
-              }
+            }
+
+            // Persist the status/analysis update plus any promoted children.
+            fs.writeFileSync(DISCOVERY_JSON_PATH, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+            if (childEntries.length > 0) {
+              analyzeLog(` Wrote ${childEntries.length} child entries to discovery.json`);
             }
 
             resolve(c.json({
@@ -624,7 +560,7 @@ export function discoverRoutes() {
               childEntries,
             }));
           } catch (e) {
-            console.error(`${ANALYZE_LOG_PREFIX} Error reading discovery.json after analysis:`, e);
+            console.error(`${ANALYZE_LOG_PREFIX} Error updating discovery.json after analysis:`, e);
             resolve(c.json({
               success: true,
               entry: null,
@@ -644,7 +580,7 @@ export function discoverRoutes() {
 
         analyzingIds.delete(id);
         const message = error.message.includes('ENOENT')
-          ? getProviderNotFoundMessage(providerId)
+          ? AGENT_NOT_FOUND_MESSAGE
           : error.message;
         resolve(c.json({ success: false, error: message }, 500));
       });
@@ -683,15 +619,31 @@ export function discoverRoutes() {
         return c.json({ success: false, error: `Entry "${id}" not found` }, 404);
       }
 
-      const registryId =
-        (entry.analysis?.registryId as string | undefined) || id;
-      const componentName = entry.analysis?.componentName as string | undefined;
-      const stripped = stripRegistryEntry(registryId, componentName);
-      if (stripped) {
-        analyzeLog(` Stripped registry entry "${registryId}" from registry.tsx`);
-      } else {
-        console.warn(`${ANALYZE_LOG_PREFIX} Registry entry "${registryId}" not found — skipping strip`);
+      // New discoveries live in the playground-owned manifest — remove from there
+      // and regenerate the module. Legacy entries that were machine-added into the
+      // hand-written registry.tsx (before the manifest existed) are not in the
+      // manifest; those are valid user code now, so fail gracefully instead of
+      // regex-stripping someone's source.
+      const manifest = readManifest(PLAYGROUND_DIR);
+      const idx = manifest.entries.findIndex((e: DiscoveredRegistryEntry) => e.discoveryId === id);
+
+      if (idx === -1) {
+        if (entry.status === 'added') {
+          const registryId = (entry.analysis?.registryId as string | undefined) || id;
+          analyzeLog(` "${id}" is a legacy registry.tsx entry — refusing to strip`);
+          return c.json({
+            success: false,
+            error: `"${entry.name}" was added directly to registry.tsx (registry id "${registryId}"). Remove it there — the playground no longer edits registry.tsx.`,
+          }, 409);
+        }
+        console.warn(`${ANALYZE_LOG_PREFIX} No manifest entry for "${id}" — nothing to remove`);
+        return c.json({ success: false, error: `Entry "${id}" is not a managed discovered component` }, 404);
       }
+
+      manifest.entries.splice(idx, 1);
+      writeManifest(PLAYGROUND_DIR, manifest);
+      regenerateModule(PLAYGROUND_DIR);
+      analyzeLog(` Removed "${id}" from manifest and regenerated module`);
 
       entry.status = 'discovered';
       delete entry.analysis;

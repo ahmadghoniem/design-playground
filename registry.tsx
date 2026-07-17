@@ -33,6 +33,7 @@ import {
   getStylingQualityItem
 } from "@pg/features/generation/prompts/shared-sections"
 import { iterationsFile } from "@pg/shared/lib/playground-paths"
+import { discoveredRegistry } from "./discovered-registry.gen"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,11 +76,10 @@ export function isLeaf(item: RegistryItem): item is RegistryLeafItem {
 // Registry tree
 // ---------------------------------------------------------------------------
 
-export const registry: RegistryItem[] = [
-  // ---------------------------------------------------------------------------
-  // Discovered components — added via the playground discovery flow.
-  // Props live inline on each entry; run discovery → Add in the playground UI.
-  // ---------------------------------------------------------------------------
+// Hand-written registry. Discovered components are NOT spliced in here anymore —
+// they live in the playground-owned `discovered-registry.json` manifest and are
+// merged in below via the generated `discoveredRegistry` module.
+const baseRegistry: RegistryItem[] = [
   {
     id: "pages",
     label: "Pages",
@@ -339,6 +339,19 @@ type DrawdownConfigCardProps = Record<string, never>`
     ]
   }
 ]
+
+// ---------------------------------------------------------------------------
+// Merged registry
+// ---------------------------------------------------------------------------
+
+/**
+ * The full component list consumers see: the hand-written entries plus the
+ * playground-discovered ones (generated from `discovered-registry.json`).
+ * Merging at this single seam means the sidebar, canvas, flat lookup, and
+ * preload all see one combined list without any of them knowing about the
+ * discovery manifest.
+ */
+export const registry: RegistryItem[] = [...baseRegistry, ...discoveredRegistry]
 
 // ---------------------------------------------------------------------------
 // Flatten helper
