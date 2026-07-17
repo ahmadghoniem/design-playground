@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { Dispatch, SetStateAction } from "react";
-import type { Node } from "@xyflow/react";
+import { useCallback } from "react";
 import { getProviderFields } from "@pg/shared/lib/generation-body";
-import { DEFAULT_PROVIDER_ID } from "@pg/shared/lib/providers/registry";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
-import type { ProviderId } from "@pg/shared/lib/providers/types";
 import { loadDefaultSkillPrompt } from "@pg/shared/lib/load-default-skill-prompt";
 import {
   generateIterationPrompt,
@@ -26,13 +22,11 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  POST_GENERATION_SCAN_DELAY,
   DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
   DEFAULT_STYLING_MODE,
   CHAT_DEFAULT_COUNT,
   EDIT_COMPLETE_EVENT,
   type StylingMode,
-  type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
   type ChatSubmitPayload,
@@ -43,8 +37,6 @@ import { toast } from "sonner";
 
 export interface UseChatSubmitParams {
   coord: GenerationCoordination;
-  getNodeId: () => string;
-  setNodes: Dispatch<SetStateAction<Node[]>>;
   scanForIterations: (
     resetTimeoutOnFind?: boolean,
     scanContext?: GenerationInfo | null,
@@ -53,17 +45,13 @@ export interface UseChatSubmitParams {
 
 export function useChatSubmit({
   coord,
-  getNodeId,
-  setNodes,
   scanForIterations,
 }: UseChatSubmitParams) {
-  const generationQueueRef = useRef<ChatSubmitPayload[]>([]);
-
   const handleChatSubmit = useCallback(
     async (payload: ChatSubmitPayload) => {
-      // If generation already in progress, queue it
+      // If generation already in progress, reject this submission
       if (coord.getIsGenerating()) {
-        generationQueueRef.current.push(payload);
+        toast.info("Generation in progress — wait for it to finish");
         return;
       }
 
@@ -153,13 +141,7 @@ export function useChatSubmit({
           elementSelections: payload.elementSelections,
         });
 
-        const editPf = getProviderFields();
-        const editProvider = (editPf.provider ??
-          DEFAULT_PROVIDER_ID) as ProviderId;
-        const editResolvedModel = resolveAgentModel(
-          editProvider,
-          payload.model,
-        );
+        const editResolvedModel = resolveAgentModel(payload.model);
         // Dispatch generation start to kick off generation tracking
         generationEvents.start.emit({
           componentId: editComponentId,
@@ -167,7 +149,6 @@ export function useChatSubmit({
           parentNodeId: payload.targetNodeId,
           iterationCount: 0,
           model: editResolvedModel,
-          provider: editPf.provider as GenerationStartPayload["provider"],
           flowPosition: payload.canvasPosition,
           targetNodeId: payload.targetNodeId,
           editMode: true,
@@ -243,10 +224,7 @@ export function useChatSubmit({
         sourceFilename,
       } = payload;
 
-      const canvasGenPfEarly = getProviderFields();
-      const genProvider = (canvasGenPfEarly.provider ??
-        DEFAULT_PROVIDER_ID) as ProviderId;
-      const resolvedModel = resolveAgentModel(genProvider, payloadModel);
+      const resolvedModel = resolveAgentModel(payloadModel);
 
       // Combine skill prompts — explicit skills always apply (including raw / text-only refs)
       let combinedSkillPrompt: string | undefined;
@@ -408,8 +386,6 @@ export function useChatSubmit({
           iterationCount,
           startNumber,
           model: resolvedModel,
-          provider:
-            canvasGenPf.provider as GenerationStartPayload["provider"],
           flowPosition: payload.canvasPosition,
           targetNodeId,
         });
@@ -478,8 +454,6 @@ export function useChatSubmit({
           parentNodeId: "",
           iterationCount: 0,
           model: resolvedModel,
-          provider:
-            canvasGenPf.provider as GenerationStartPayload["provider"],
           flowPosition: payload.canvasPosition ?? undefined,
         });
 
@@ -561,28 +535,8 @@ export function useChatSubmit({
         }
       }
     },
-    [coord, getNodeId, setNodes],
+    [coord],
   );
-
-  // Also drain queue after normal generation completes
-  // (hook into generation complete/error to check queue)
-  useEffect(() => {
-    const drainQueue = () => {
-      setTimeout(() => {
-        if (generationQueueRef.current.length > 0) {
-          const next = generationQueueRef.current.shift()!;
-          handleChatSubmit(next);
-        }
-      }, POST_GENERATION_SCAN_DELAY + 500);
-    };
-
-    const offComplete = generationEvents.complete.on(drainQueue);
-    const offError = generationEvents.error.on(drainQueue);
-    return () => {
-      offComplete();
-      offError();
-    };
-  }, [handleChatSubmit]);
 
   return { handleChatSubmit };
 }
