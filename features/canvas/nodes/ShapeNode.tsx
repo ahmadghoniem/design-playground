@@ -16,8 +16,6 @@ interface ShapeNodeData {
   stroke?: string;
   strokeWidth?: number;
   fill?: string;
-  /** Hand-drawn wobbly border (rect/ellipse only). */
-  rough?: boolean;
   /** Optional centered annotation label (rect/ellipse only). */
   label?: string;
   /** Set briefly after drag-to-draw so a fresh shape focuses its label. */
@@ -28,9 +26,6 @@ const DEFAULT_STROKE = "#1c1917";
 const DEFAULT_FILL = "transparent";
 const DEFAULT_STROKE_WIDTH = 2;
 const MIN_SIZE = 12;
-
-// A hand-drawn-looking double border via the classic asymmetric border-radius trick.
-const ROUGH_RADIUS = "255px 15px 225px 15px / 15px 225px 15px 255px";
 
 function ShapeNodeInner({
   id,
@@ -49,7 +44,6 @@ function ShapeNodeInner({
   const stroke = data.stroke ?? DEFAULT_STROKE;
   const strokeWidth = data.strokeWidth ?? DEFAULT_STROKE_WIDTH;
   const fill = data.fill ?? DEFAULT_FILL;
-  const rough = data.rough ?? true;
 
   const editorRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -136,7 +130,7 @@ function ShapeNodeInner({
 
   // --- Rect / ellipse ---
   const isEllipse = data.shape === "ellipse";
-  const borderRadius = isEllipse ? "50%" : rough ? ROUGH_RADIUS : "6px";
+  const borderRadius = isEllipse ? "50%" : "6px";
   const label = data.label ?? "";
   const showPlaceholder = label.length === 0 && !isEditing && selected;
 
@@ -155,10 +149,6 @@ function ShapeNodeInner({
           border: `${strokeWidth}px solid ${stroke}`,
           background: fill,
           borderRadius,
-          // Softer offset "pencil" line for the sketchy double-stroke look —
-          // a touch more spread + lower alpha reads as hand-drawn, not a hard shadow.
-          boxShadow:
-            !isEllipse && rough ? `1.5px 2.5px 0 -2px ${stroke}26` : undefined,
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -175,7 +165,7 @@ function ShapeNodeInner({
             showPlaceholder && "text-stone-400",
           )}
           style={{
-            fontFamily: "var(--pg-font-hand, var(--pg-font-sans))",
+            fontFamily: "var(--pg-font-sans)",
             color: stroke,
           }}
           contentEditable={isEditing}

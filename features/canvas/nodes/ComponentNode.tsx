@@ -6,19 +6,10 @@ import {
   useEffect,
 } from "react";
 import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
-import { EdgeAnchorHandles } from "@pg/features/canvas/canvas-edge-handles";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@pg/shared/ui/tooltip";
 import { resolveRegistryItem } from "@pg/registry";
-import {
-  ResizeGripIcon,
-  PlayButtonIcon,
-} from "@pg/shared/ui/playground-nav-icons";
+import { ResizeGripIcon } from "@pg/shared/ui/playground-nav-icons";
 import { SizeButtons } from "@pg/shared/ui/SizeButtons";
-import { NodeLabel, useInverseZoom } from "@pg/shared/ui/NodeLabel";
+import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 
 import {
   useAsyncProps,
@@ -51,10 +42,6 @@ interface ComponentNodeProps {
 }
 
 function ComponentNode({ data, selected = false }: ComponentNodeProps) {
-  const labelInvScale = useInverseZoom();
-  // Hide the play button once its visual width (14px × inv) overruns its
-  // layout slot (14 + 6 gap) so it doesn't visually overlap the label.
-  const hidePlayButton = labelInvScale * 14 > 14 + 6;
   const componentId = data.componentId;
   const registryItem = resolveRegistryItem(componentId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -189,7 +176,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         fontFamily: "var(--pg-font-sans)",
       }}
     >
-      <EdgeAnchorHandles />
       {/* Resize handle — bottom-right corner, only when selected */}
       <NodeResizeControl
         position="bottom-right"
@@ -214,34 +200,8 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
 
       {/* ── Top bar — always visible label, controls only when selected ── */}
       <div className="flex items-center justify-between px-0.5 pb-1.5 cursor-grab">
-        {/* Left: open-in-new-tab + label (always visible) */}
+        {/* Left: label (always visible) */}
         <div className="flex items-center gap-1.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  const url = `/playground/iterations/${componentId}`;
-                  if (url) window.open(url, "_blank", "noopener,noreferrer");
-                }}
-                className="nodrag shrink-0 p-0 leading-none rounded-[5px] transition-colors"
-                style={{
-                  color: selected ? "#0B99FF" : "#A8A29E",
-                  display: "inline-block",
-                  transform: `scale(${labelInvScale})`,
-                  transformOrigin: "left bottom",
-                  willChange: "transform",
-                  visibility: hidePlayButton ? "hidden" : "visible",
-                  pointerEvents: hidePlayButton ? "none" : undefined,
-                }}
-                aria-label="Open in new tab"
-              >
-                <PlayButtonIcon />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Open in new tab</p>
-            </TooltipContent>
-          </Tooltip>
           <NodeLabel color="#0B99FF">{label}</NodeLabel>
         </div>
 

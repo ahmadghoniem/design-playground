@@ -49,12 +49,10 @@ export function designPlaygroundPlugin(): Plugin {
         }
 
         // 2. Clean-URL entry. Serve the `playground.html` MPA entry for
-        //    `/playground` and any client-routed deep link beneath it (e.g.
-        //    `/playground/iterations/:slug`), so the playground is reachable at
-        //    `/playground` with no `.html` suffix. This is an INTERNAL rewrite —
-        //    the browser URL stays clean; Vite reads + transforms the HTML.
-        //    NB: the host's react-router `basename` must be `/playground` to
-        //    match (the only host-side change this requires).
+        //    `/playground` and any path beneath it, so the playground is
+        //    reachable at `/playground` with no `.html` suffix. This is an
+        //    INTERNAL rewrite — the browser URL stays clean; Vite reads +
+        //    transforms the HTML.
         const method = req.method ?? 'GET';
         const isDocumentRequest = method === 'GET' || method === 'HEAD';
         if (

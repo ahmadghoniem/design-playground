@@ -9,7 +9,6 @@ import {
   type ComponentType,
 } from "react";
 import { useReactFlow, NodeResizeControl } from "@xyflow/react";
-import { EdgeAnchorHandles } from "@pg/features/canvas/canvas-edge-handles";
 import { GitMerge, Trash2, Loader2, ChevronRight, AlertTriangle } from "lucide-react";
 import {
   Tooltip,
@@ -27,13 +26,10 @@ import {
   AlertDialogTitle,
 } from "@pg/shared/ui/alert-dialog";
 import { resolveRegistryItem } from "@pg/registry";
-import {
-  ResizeGripIcon,
-  PlayButtonIcon,
-} from "@pg/shared/ui/playground-nav-icons";
+import { ResizeGripIcon } from "@pg/shared/ui/playground-nav-icons";
 import { loadIterationComponentModule } from "@pg/shared/lib/iteration-loader";
 import { SizeButtons } from "@pg/shared/ui/SizeButtons";
-import { NodeLabel, useInverseZoom } from "@pg/shared/ui/NodeLabel";
+import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
@@ -89,8 +85,6 @@ interface IterationNodeProps {
 }
 
 function IterationNode({ id, data, selected = false }: IterationNodeProps) {
-  const labelInvScale = useInverseZoom();
-  const hidePlayButton = labelInvScale * 14 > 14 + 6;
   const { deleteElements, setNodes, updateNodeData } = useReactFlow();
 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -332,7 +326,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         fontFamily: "var(--pg-font-sans)",
       }}
     >
-      <EdgeAnchorHandles />
       {/* Resize handle — bottom-right corner, only when selected */}
       <NodeResizeControl
         position="bottom-right"
@@ -357,34 +350,8 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
       {/* ── Top bar — label always, controls only when selected ── */}
       <div className="flex items-center justify-between px-0.5 pb-1.5 cursor-grab">
-        {/* Left: open-in-new-tab + collapse toggle + label */}
+        {/* Left: collapse toggle + label */}
         <div className="flex items-center gap-1.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  const url = `/playground/iterations/${data.filename.replace(/\.tsx$/, "")}`;
-                  window.open(url, "_blank", "noopener,noreferrer");
-                }}
-                className="nodrag shrink-0 p-0 leading-none rounded-[5px] transition-colors"
-                style={{
-                  color: selected ? "#0B99FF" : "#A8A29E",
-                  display: "inline-block",
-                  transform: `scale(${labelInvScale})`,
-                  transformOrigin: "left bottom",
-                  willChange: "transform",
-                  visibility: hidePlayButton ? "hidden" : "visible",
-                  pointerEvents: hidePlayButton ? "none" : undefined,
-                }}
-                aria-label="Open in new tab"
-              >
-                <PlayButtonIcon />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Open in new tab</p>
-            </TooltipContent>
-          </Tooltip>
           {data.hasChildren && (
             <button
               onClick={() =>

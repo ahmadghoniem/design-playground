@@ -72,8 +72,9 @@ export function useCanvasDrawTool({
       startFlow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       startScreen = { x: e.clientX, y: e.clientY };
       previewEl = document.createElement("div");
-      previewEl.style.cssText =
-        "position:fixed;z-index:9999;pointer-events:none;border:2px dashed #1e9bff;background:rgba(30,155,255,0.06);border-radius:4px;";
+      const previewRadius =
+        shapeKindRef.current === "ellipse" ? "50%" : "4px";
+      previewEl.style.cssText = `position:fixed;z-index:9999;pointer-events:none;border:2px dashed #1e9bff;background:rgba(30,155,255,0.06);border-radius:${previewRadius};`;
       previewEl.style.left = `${e.clientX}px`;
       previewEl.style.top = `${e.clientY}px`;
       document.body.appendChild(previewEl);
