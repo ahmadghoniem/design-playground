@@ -22,11 +22,8 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  DEFAULT_EMPTY_ITERATION_INSTRUCTIONS,
-  DEFAULT_STYLING_MODE,
   CHAT_DEFAULT_COUNT,
   EDIT_COMPLETE_EVENT,
-  type StylingMode,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
   type ChatSubmitPayload,
@@ -236,15 +233,8 @@ export function useChatSubmit({
         combinedSkillPrompt = defaultPrompt || undefined;
       }
 
-      const customInstructions = isRawMode
-        ? rawPrompt
-        : text || DEFAULT_EMPTY_ITERATION_INSTRUCTIONS;
+      const customInstructions = isRawMode ? rawPrompt : text;
       const hasElementSelections = (payload.elementSelections?.length ?? 0) > 0;
-      const stylingMode: StylingMode = payload.skillIds?.includes(
-        "no-bound-explore",
-      )
-        ? "inline-css"
-        : DEFAULT_STYLING_MODE;
 
       // Build reference nodes section from canvas selection (text/image/component refs)
       let referenceNodesSection = "";
@@ -337,7 +327,6 @@ export function useChatSubmit({
               payload.elementSelections,
               customInstructions,
               combinedSkillPrompt,
-              stylingMode,
               referenceNodesSection,
             );
           } else {
@@ -348,7 +337,6 @@ export function useChatSubmit({
               startNumber,
               customInstructions,
               combinedSkillPrompt,
-              stylingMode,
               referenceNodesSection,
             );
           }
@@ -362,7 +350,6 @@ export function useChatSubmit({
               payload.elementSelections,
               customInstructions,
               combinedSkillPrompt,
-              stylingMode,
               referenceNodesSection,
             );
           } else {
@@ -372,7 +359,6 @@ export function useChatSubmit({
               startNumber,
               customInstructions,
               combinedSkillPrompt,
-              stylingMode,
               referenceNodesSection,
             );
           }
@@ -469,7 +455,7 @@ export function useChatSubmit({
               customInstructionsSection: formatCustomInstructionsSection(
                 rawPrompt || customInstructions,
               ),
-              stylingConstraint: getStylingConstraint(stylingMode),
+              stylingConstraint: getStylingConstraint(),
             });
           } else {
             freeformPrompt = rawPrompt;
@@ -482,7 +468,7 @@ export function useChatSubmit({
             referenceNodesSection,
             customInstructionsSection:
               formatCustomInstructionsSection(customInstructions),
-            stylingConstraint: getStylingConstraint(stylingMode),
+            stylingConstraint: getStylingConstraint(),
           });
         } else {
           freeformPrompt = customInstructions;

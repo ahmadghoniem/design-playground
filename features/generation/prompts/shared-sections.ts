@@ -4,7 +4,6 @@
 // Reusable prompt content shared across iteration templates.
 // ---------------------------------------------------------------------------
 
-import type { StylingMode } from '@pg/shared/lib/constants';
 import {
   iterationsFile,
   iterationsTree,
@@ -14,19 +13,13 @@ import {
 // Styling constraint resolvers
 // ---------------------------------------------------------------------------
 
-/** Returns the styling constraint instruction for a given mode */
-export function getStylingConstraint(mode: StylingMode): string {
-  if (mode === 'inline-css') {
-    return 'You may use inline style={{}} for any CSS property. Do NOT use Tailwind utility classes for visual styling. Use inline styles for maximum creative expressiveness.';
-  }
+/** Returns the styling constraint instruction */
+export function getStylingConstraint(): string {
   return "Use only existing Tailwind classes already present in the codebase. Prefer the host app's semantic theme tokens (bg-background, text-foreground, bg-primary, text-primary-foreground, bg-card, bg-muted, text-muted-foreground, border-border, etc.) over literal colors so the result inherits the host's theme — including light/dark mode. Do NOT hardcode hex/rgb colors. Do not use inline style={{}}.";
 }
 
 /** Returns the quality checklist line item for styling */
-export function getStylingQualityItem(mode: StylingMode): string {
-  if (mode === 'inline-css') {
-    return 'Uses inline style={{}} for styling (no Tailwind utility classes)';
-  }
+export function getStylingQualityItem(): string {
   return "Uses the host's semantic theme tokens (no hardcoded hex); only allowed Tailwind classes already present in the codebase";
 }
 
@@ -43,14 +36,14 @@ export function importConstraint(): string {
 }
 
 /** Returns the full quality checklist with the appropriate styling line */
-export function getQualityChecklist(mode: StylingMode = 'tailwind'): string {
+export function getQualityChecklist(): string {
   return `QUALITY CHECKLIST (FOR EACH ITERATION)
 - [ ] Props interface unchanged from original
 - [ ] No relative ("../" or "./") imports copied from the original — every one rewritten to the "@/" host alias
 - [ ] All imports resolve correctly with no TypeScript errors
 - [ ] Metadata comment included with correct @iteration/@parent (and @sourceIteration when applicable)
 - [ ] File named correctly: PascalCaseComponentName.iteration-{n}.tsx (must match the default export function name)
-- [ ] ${getStylingQualityItem(mode)}
+- [ ] ${getStylingQualityItem()}
 - [ ] Entry added/updated in iterations/tree.json with correct parent
 - [ ] @sourceIteration set when derived from another iteration`;
 }
