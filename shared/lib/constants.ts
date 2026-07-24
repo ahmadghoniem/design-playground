@@ -10,26 +10,8 @@
 /** Fired to request an immediate iteration fetch/scan */
 export const ITERATION_FETCH_EVENT = 'iteration-fetch-requested';
 
-/** Fired when a component enters/exits fullscreen */
-const FULLSCREEN_NODE_EVENT = 'playground:fullscreen-node';
-
 /** Fired when a ComponentNode changes its viewport size */
 export const COMPONENT_SIZE_CHANGE_EVENT = 'playground:component-size-change';
-
-/** Fired when an adoption completes successfully */
-export const ADOPTION_COMPLETE_EVENT = 'playground:adoption-complete';
-
-/** Fired when an adoption encounters an error */
-export const ADOPTION_ERROR_EVENT = 'playground:adoption-error';
-
-/** Fired to pan the canvas to a specific flow position */
-const PAN_TO_POSITION_EVENT = 'playground:pan-to-position';
-
-/** Fired to fit the viewport around all nodes for a given component */
-export const FIT_COMPONENT_NODES_EVENT = 'playground:fit-component-nodes';
-
-/** Fired to trigger auto-arrange of canvas nodes */
-export const PLAYGROUND_AUTO_ARRANGE_EVENT = 'PLAYGROUND_AUTO_ARRANGE';
 
 /** Fired to open the Skills catalog modal */
 export const OPEN_SKILLS_CATALOG_EVENT = 'playground:open-skills-catalog';
@@ -39,56 +21,10 @@ export const SKILLS_CHANGED_EVENT = 'playground:skills-changed';
 
 /** Fired when an iteration node's collapse/expand state is toggled */
 export const ITERATION_COLLAPSE_TOGGLE_EVENT = 'playground:iteration-collapse-toggle';
-
-/** Fired to open the clear-all confirmation dialog */
-export const PLAYGROUND_CLEAR_EVENT = 'playground:clear-requested';
 // ---------------------------------------------------------------------------
 
 /** Key for persisting canvas state (nodes, edges, counter) */
 export const STORAGE_KEY = 'playground-canvas-state';
-
-/** Key for persisting the list of available AI models */
-const MODELS_STORAGE_KEY = 'playground-ai-models';
-
-/** Key for persisting the user's last selected AI model */
-export const SELECTED_MODEL_STORAGE_KEY = 'playground-selected-model';
-
-/** Key for persisting enabled model selections in settings */
-const ENABLED_MODELS_STORAGE_KEY = 'playground-model-settings';
-
-
-/** Key for persisting the preview color-scheme override ('auto' | 'light' | 'dark') */
-export const PREVIEW_COLOR_SCHEME_STORAGE_KEY = 'playground-preview-color-scheme';
-
-// ---------------------------------------------------------------------------
-// Timing Constants
-// ---------------------------------------------------------------------------
-
-/** TTL for the shared async-props cache (ms) */
-export const PROPS_CACHE_TTL_MS = 60_000; // 60 seconds
-
-/** TTL for the server-side AI models cache (ms) */
-export const MODELS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-// ---------------------------------------------------------------------------
-// Canvas Zoom Limits
-// ---------------------------------------------------------------------------
-
-/** Maximum zoom level for the playground canvas */
-export const CANVAS_MAX_ZOOM = 2;
-
-/** Minimum zoom level for the playground canvas */
-export const CANVAS_MIN_ZOOM = 0.1;
-
-// ---------------------------------------------------------------------------
-// Node Label Zoom Scaling
-// ---------------------------------------------------------------------------
-
-/** Threshold zoom at/above which labels stay at their natural size (no inverse scaling) */
-export const NODE_LABEL_SCALE_THRESHOLD = 0.8;
-
-/** Maximum inverse-scale factor applied to node labels when zoomed out */
-export const NODE_LABEL_MAX_INV_SCALE = 7;
 
 // ---------------------------------------------------------------------------
 // Canvas Layout Constants
@@ -151,28 +87,6 @@ export function getDisplayDimensions(size: ComponentSize) {
 }
 
 // ---------------------------------------------------------------------------
-// Iteration Dialog Defaults
-// ---------------------------------------------------------------------------
-
-/** Available iteration count options */
-export const ITERATION_COUNT_OPTIONS = [1, 2, 3, 4] as const;
-
-/** Default number of iterations to generate */
-const DEFAULT_ITERATION_COUNT = 3;
-
-/** Default instructions used when the iterate chat is empty or drag-to-iterate is used */
-export const DEFAULT_EMPTY_ITERATION_INSTRUCTIONS = 'make the layout professional and polished. elements should not overlap or clash.';
-
-// ---------------------------------------------------------------------------
-// Styling Mode
-// ---------------------------------------------------------------------------
-
-export type StylingMode = 'tailwind' | 'inline-css';
-
-/** Default styling mode when no skill overrides it */
-export const DEFAULT_STYLING_MODE: StylingMode = 'tailwind';
-
-// ---------------------------------------------------------------------------
 // AI Models
 // ---------------------------------------------------------------------------
 
@@ -180,60 +94,6 @@ export interface ModelOption {
   value: string;
   label: string;
 }
-
-// ---------------------------------------------------------------------------
-// FitView Configurations
-// ---------------------------------------------------------------------------
-
-/** FitView config when entering fullscreen on a specific node */
-const FITVIEW_FULLSCREEN_ENTER = {
-  padding: 0.02,
-  duration: 400,
-  maxZoom: 2,
-  minZoom: 0.1,
-} as const;
-
-/** FitView config when exiting fullscreen (show all nodes) */
-const FITVIEW_FULLSCREEN_EXIT = {
-  padding: 0.2,
-  duration: 300,
-} as const;
-
-/** FitView config after auto-arrange */
-export const FITVIEW_AFTER_ARRANGE = {
-  padding: 0.15,
-  duration: 400,
-  maxZoom: 1,
-} as const;
-
-// ---------------------------------------------------------------------------
-// Animation / Transition Delays (ms)
-// ---------------------------------------------------------------------------
-
-/** Delay before fitting view after entering fullscreen (waits for sidebar animation) */
-const FULLSCREEN_ENTER_DELAY = 350;
-
-/** Delay before fitting view after exiting fullscreen */
-const FULLSCREEN_EXIT_DELAY = 100;
-
-/** Delay after generation completes before scanning for iterations */
-export const POST_GENERATION_SCAN_DELAY = 1000;
-
-// ---------------------------------------------------------------------------
-// ReactFlow Background
-// ---------------------------------------------------------------------------
-
-/** Solid pane fill behind nodes/dots (see `--xy-background-color` + Background `bgColor`) */
-export const CANVAS_BACKGROUND_COLOR = '#ebebeb';
-
-/** Gap between background dots (px) */
-export const BACKGROUND_GAP = 10;
-
-/** Size of each background dot (px) */
-export const BACKGROUND_DOT_SIZE = 1;
-
-/** Color of background dots */
-export const BACKGROUND_COLOR = '#efefef';
 
 // ---------------------------------------------------------------------------
 // Server-Side API Constants (used in route handlers)
@@ -295,9 +155,6 @@ export const DND_DATA_KEY = 'application/x-playground-component';
 
 /** Filename for the iteration tree manifest */
 export const TREE_MANIFEST_FILENAME = 'tree.json';
-
-/** Horizontal spacing between depth columns in tree layout (px) */
-const TREE_COLUMN_WIDTH = 500;
 
 // ---------------------------------------------------------------------------
 // Chat Constants

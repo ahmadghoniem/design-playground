@@ -11,7 +11,6 @@ import React, {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { ITERATION_COUNT_OPTIONS } from "@pg/shared/lib/constants";
 import { VariationStackIcon } from "@pg/shared/ui/playground-nav-icons";
 
 // ---------------------------------------------------------------------------
@@ -67,8 +66,8 @@ export function PillLeadingRemoveSlot({
 // ---------------------------------------------------------------------------
 
 const DRAG_STEP_PX = 24; // pixels of vertical drag per ±1 count
-const MIN_COUNT = ITERATION_COUNT_OPTIONS[0];
-const MAX_COUNT = ITERATION_COUNT_OPTIONS[ITERATION_COUNT_OPTIONS.length - 1];
+const MIN_COUNT = 1;
+const MAX_COUNT = 4;
 
 export function IterationCountDragger({
   count,

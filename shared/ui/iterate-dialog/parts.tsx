@@ -5,7 +5,6 @@
  */
 
 import { useEffect } from "react";
-import { SELECTED_MODEL_STORAGE_KEY } from "@pg/shared/lib/constants";
 import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
 import { AGENT_DEFAULT_ENABLED_MODELS } from "@pg/shared/lib/agent-config";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
@@ -13,6 +12,9 @@ import { migrateModelId, isModelEnabled } from "@pg/shared/lib/model-catalog";
 
 // Re-export ModelOption for consumers
 export type { ModelOption } from "@pg/shared/lib/constants";
+
+/** Key for persisting the user's last selected AI model */
+const SELECTED_MODEL_STORAGE_KEY = 'playground-selected-model';
 
 // Legacy provider-scoped key written by older builds; still read for migration.
 const LEGACY_SCOPED_KEY = `${SELECTED_MODEL_STORAGE_KEY}-claude-code`;

@@ -23,12 +23,14 @@ import {
   DEFAULT_COMPONENT_NODE_HEIGHT,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_HEIGHT,
-  POST_GENERATION_SCAN_DELAY,
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
 } from "@pg/shared/lib/constants";
 import { toast } from "sonner";
+
+/** Delay after generation completes before scanning for iterations */
+const POST_GENERATION_SCAN_DELAY = 1000;
 
 export interface UseGenerationLifecycleParams {
   coord: GenerationCoordination;

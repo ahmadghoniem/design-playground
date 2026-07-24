@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, RefObject } from "react";
 import { flatRegistry } from "@pg/registry";
-import { PROPS_CACHE_TTL_MS } from "@pg/shared/lib/constants";
+
+/** TTL for the shared async-props cache (ms) */
+const PROPS_CACHE_TTL_MS = 60_000; // 60 seconds
+
 const propsCache = new Map<
   string,
   { ts: number; props: Record<string, unknown> }

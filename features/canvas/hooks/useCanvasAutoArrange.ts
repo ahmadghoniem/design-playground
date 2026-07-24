@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
@@ -8,10 +7,6 @@ import {
 import type { FitViewOptions, Node, Viewport } from "@xyflow/react";
 import { computeAutoArrangePositions } from "@pg/features/canvas/canvas-auto-arrange";
 import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
-import {
-  PLAYGROUND_AUTO_ARRANGE_EVENT,
-  FITVIEW_AFTER_ARRANGE,
-} from "@pg/shared/lib/constants";
 
 export interface UseCanvasAutoArrangeParams {
   nodes: Node[];
@@ -57,29 +52,12 @@ export function useCanvasAutoArrange({
       if (andFitView) {
         // Small delay so the arranged positions commit before fitting.
         setTimeout(() => {
-          fitView(FITVIEW_AFTER_ARRANGE);
+          fitView({ padding: 0.15, duration: 400, maxZoom: 1 });
         }, 50);
       }
     },
     [nodes, relations, setNodes, fitView, getViewport, collapsedNodeIdsRef],
   );
-
-  useEffect(() => {
-    const handleAutoArrange = (e: CustomEvent<{ fitView: boolean }>) => {
-      autoArrangeNodes(e.detail.fitView);
-    };
-
-    window.addEventListener(
-      PLAYGROUND_AUTO_ARRANGE_EVENT,
-      handleAutoArrange as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        PLAYGROUND_AUTO_ARRANGE_EVENT,
-        handleAutoArrange as EventListener,
-      );
-    };
-  }, [autoArrangeNodes]);
 
   return { autoArrangeNodes };
 }

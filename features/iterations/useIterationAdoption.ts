@@ -7,16 +7,18 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  EDIT_COMPLETE_EVENT,
-  ADOPTION_COMPLETE_EVENT,
-  ADOPTION_ERROR_EVENT,
-  FIT_COMPONENT_NODES_EVENT,
   type GenerationStartPayload,
   type GenerationCompletePayload,
   type GenerationErrorPayload,
   type AdoptionCompletePayload,
   type AdoptionErrorPayload,
 } from "@pg/shared/lib/constants";
+
+/** Fired when an adoption completes successfully */
+const ADOPTION_COMPLETE_EVENT = 'playground:adoption-complete';
+
+/** Fired when an adoption encounters an error */
+const ADOPTION_ERROR_EVENT = 'playground:adoption-error';
 
 // ---------------------------------------------------------------------------
 // useIterationAdoption
@@ -148,15 +150,6 @@ export function useIterationAdoption({
         );
         setAdoptionStatus("adopted");
         updateNodeData(id, { adopted: true });
-
-        // Pan canvas to the original (parent) component so the user sees the update
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent(FIT_COMPONENT_NODES_EVENT, {
-              detail: { componentId },
-            }),
-          );
-        }, 600);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Network error";
