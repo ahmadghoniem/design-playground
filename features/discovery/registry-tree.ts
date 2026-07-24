@@ -3,32 +3,22 @@
  * safe to unit-test directly with sample registry trees.
  */
 
-import { RegistryItem, RegistryLeafItem, isGroup, isLeaf } from '@pg/registry';
+import { RegistryLeafItem } from '@pg/registry';
 
-/** Build a map of parentId -> child leaf items from the registry tree. */
-export function buildChildrenMap(items: RegistryItem[]): Map<string, RegistryLeafItem[]> {
+/** Build a map of parentId -> child leaf items from the flat registry list. */
+export function buildChildrenMap(items: RegistryLeafItem[]): Map<string, RegistryLeafItem[]> {
   const map = new Map<string, RegistryLeafItem[]>();
-  function collect(list: RegistryItem[]) {
-    for (const item of list) {
-      if (isLeaf(item) && item.parentId) {
-        const existing = map.get(item.parentId) || [];
-        existing.push(item);
-        map.set(item.parentId, existing);
-      } else if (isGroup(item)) {
-        collect(item.children);
-      }
+  for (const item of items) {
+    if (item.parentId) {
+      const existing = map.get(item.parentId) || [];
+      existing.push(item);
+      map.set(item.parentId, existing);
     }
   }
-  collect(items);
   return map;
 }
 
-/** Flatten all leaves under a group (including nested children with parentId). */
-export function flattenLeaves(items: RegistryItem[]): RegistryLeafItem[] {
-  const out: RegistryLeafItem[] = [];
-  for (const item of items) {
-    if (isLeaf(item)) out.push(item);
-    else if (isGroup(item)) out.push(...flattenLeaves(item.children));
-  }
-  return out;
+/** Identity pass-through — kept for call-site clarity where a flat leaf list is expected. */
+export function flattenLeaves(items: RegistryLeafItem[]): RegistryLeafItem[] {
+  return items;
 }

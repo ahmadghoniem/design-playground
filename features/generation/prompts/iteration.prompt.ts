@@ -19,8 +19,6 @@ Component: {{componentName}}
 Source: {{sourcePath}}
 Iterations requested: {{iterationCount}}
 {{childrenSection}}
-Props interface (DO NOT MODIFY):
-{{propsInterface}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -61,7 +59,6 @@ export interface IterationPromptVars {
   sourcePath: string;
   iterationCount: string;
   childrenSection?: string;
-  propsInterface: string;
   cleanComponentName: string;
   componentId: string;
   customInstructionsSection?: string;

@@ -10,7 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { ProjectBoxIcon } from "@pg/shared/ui/playground-nav-icons";
-import { registry, RegistryItem, isGroup, isLeaf } from "@pg/registry";
+import { registry, RegistryLeafItem } from "@pg/registry";
 import type { PendingChild } from "@pg/app/PlaygroundClient";
 import { buildChildrenMap, flattenLeaves } from "@pg/features/discovery/registry-tree";
 import ComponentPreviewCard from "@pg/features/discovery/ComponentPreviewCard";
@@ -49,35 +49,16 @@ export default function PlaygroundSidebar({
   const childrenMap = useMemo(() => buildChildrenMap(registry), []);
 
   const filterRegistryForGrid = (
-    items: RegistryItem[],
+    items: RegistryLeafItem[],
     query: string,
-  ): RegistryItem[] => {
+  ): RegistryLeafItem[] => {
     if (!query.trim()) return items;
     const lowerQuery = query.toLowerCase();
-    return items
-      .map((item): RegistryItem | null => {
-        if (isGroup(item)) {
-          const allLeaves = flattenLeaves(item.children);
-          const matchedLeaves = allLeaves.filter((l) =>
-            l.label.toLowerCase().includes(lowerQuery),
-          );
-          if (
-            matchedLeaves.length === 0 &&
-            !item.label.toLowerCase().includes(lowerQuery)
-          )
-            return null;
-          return { ...item, children: matchedLeaves };
-        }
-        if (isLeaf(item)) {
-          if (item.label.toLowerCase().includes(lowerQuery)) return item;
-          const kids = childrenMap.get(item.id) || [];
-          if (kids.some((k) => k.label.toLowerCase().includes(lowerQuery)))
-            return item;
-          return null;
-        }
-        return null;
-      })
-      .filter((item): item is RegistryItem => item !== null);
+    return items.filter((item) => {
+      if (item.label.toLowerCase().includes(lowerQuery)) return true;
+      const kids = childrenMap.get(item.id) || [];
+      return kids.some((k) => k.label.toLowerCase().includes(lowerQuery));
+    });
   };
 
   const filteredRegistry = filterRegistryForGrid(registry, search);

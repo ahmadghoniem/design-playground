@@ -80,8 +80,7 @@ Each entry has exactly this shape:
   "exportKind": "<default | named — how the component is exported from importPath>",
   "sourcePath": "<repo-relative path to the actual component file being registered>",
   "size": "<default | laptop | tablet | mobile>",
-  "props": { "/* inline prop values */": "…" },
-  "propsInterface": "<the component's TypeScript props interface as a string>"${parentId ? `,\n  "parentId": "${parentId}"` : ''}
+  "props": { "/* inline prop values */": "…" }${parentId ? `,\n  "parentId": "${parentId}"` : ''}
 }
 \`\`\`
 
@@ -90,7 +89,6 @@ Each entry has exactly this shape:
 - \`id\` MUST be the component name in kebab-case, not the discovery entry ID. The iteration system uses this ID to link generated variants back to the registry.
 - \`componentName\` + \`importPath\` + \`exportKind\` MUST let \`import { <componentName> } from "<importPath>"\` (named) or \`import <componentName> from "<importPath>"\` (default) resolve to the component. Use the \`@/\` alias (maps to \`src/\`) — the same convention the host uses.
 - \`props\` MUST be realistic (real names, plausible copy — NOT "Lorem ipsum" or "test123") and **pure JSON-serialisable data only** — no functions, no \`new Date(...)\`, no JSX. Use ISO strings for dates. This object is embedded verbatim into the generated module.
-- \`propsInterface\` is a plain string containing the TS interface source.
 
 Size guidelines:
 - \`laptop\` — full-page layouts, dashboards, landing pages

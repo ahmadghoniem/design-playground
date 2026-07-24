@@ -20,8 +20,6 @@ Component: {{componentName}}
 Source: {{sourcePath}}
 Iterations requested: {{iterationCount}}
 {{childrenSection}}
-Props interface (DO NOT MODIFY):
-{{propsInterface}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -71,7 +69,6 @@ export interface ElementIterationPromptVars {
   componentName: string;
   sourcePath: string;
   childrenSection?: string;
-  propsInterface: string;
   cleanComponentName: string;
   componentId: string;
   customInstructionsSection?: string;
@@ -98,8 +95,6 @@ Original source: {{sourcePath}}
 Base iteration: {{iterationSourcePath}}
 Iterations requested: {{iterationCount}}
 {{childrenSection}}
-Props interface (DO NOT MODIFY):
-{{propsInterface}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -155,7 +150,6 @@ export interface ElementIterationFromIterationPromptVars {
   sourcePath: string;
   iterationSourcePath: string;
   childrenSection?: string;
-  propsInterface: string;
   cleanComponentName: string;
   componentId: string;
   customInstructionsSection?: string;

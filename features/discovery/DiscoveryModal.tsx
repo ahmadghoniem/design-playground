@@ -36,7 +36,6 @@ export interface DiscoveryEntry {
     componentName: string;
     registryId: string;
     discoveredFilename: string;
-    propsInterface: string;
     size: string;
   };
 }

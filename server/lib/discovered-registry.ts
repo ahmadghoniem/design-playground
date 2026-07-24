@@ -36,8 +36,6 @@ export interface DiscoveredRegistryEntry {
   size: DiscoveredComponentSize;
   /** Inline, JSON-serialisable prop values. */
   props: Record<string, unknown>;
-  /** The component's TS props interface, as a string. */
-  propsInterface: string;
   /** Parent registry id for sidebar nesting, when this is a child component. */
   parentId?: string;
 }
@@ -123,14 +121,6 @@ function localName(id: string): string {
   return `Cmp_${id.replace(/[^A-Za-z0-9]/g, '_')}`;
 }
 
-/** Escape a string for safe embedding inside a template literal. */
-function escapeTemplate(s: string): string {
-  return s
-    .replace(/\\/g, '\\\\')
-    .replace(/`/g, '\\`')
-    .replace(/\$\{/g, '\\${');
-}
-
 /** Serialise inline props as a JS object literal, indented under `props:`. */
 function renderProps(props: Record<string, unknown> | undefined): string {
   const json = JSON.stringify(props ?? {}, null, 2);
@@ -149,8 +139,7 @@ function renderEntry(e: DiscoveredRegistryEntry): string {
     Component: ${local} as unknown as ComponentType<Record<string, unknown>>,
     props: ${renderProps(e.props)} as Record<string, unknown>,
     sourcePath: ${JSON.stringify(e.sourcePath)},
-    size: ${JSON.stringify(e.size ?? 'default')},
-    propsInterface: \`${escapeTemplate(e.propsInterface ?? '')}\`,${parentLine}
+    size: ${JSON.stringify(e.size ?? 'default')},${parentLine}
   },`;
 }
 

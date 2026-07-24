@@ -518,7 +518,6 @@ export function discoverRoutes() {
                 showcasePath: manifestEntry.sourcePath,
                 componentName: manifestEntry.componentName,
                 registryId: manifestEntry.id,
-                propsInterface: manifestEntry.propsInterface,
                 size: manifestEntry.size,
               };
               analyzeLog(` Marked "${name}" added — registryId=${manifestEntry.id}`);

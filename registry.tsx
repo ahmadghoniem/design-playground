@@ -1,21 +1,5 @@
-import DailyRecapItem from "@/features/daily-recap/components/DailyRecapItem"
-import MaxDrawdownCard from "@/features/objectives-tracking/components/MaxDrawdownCard"
-import DrawdownConfigCard from "@/features/challenge-configuration/components/DrawdownConfigCard"
-import SessionChangeManager from "@/features/session-management/components/SessionChangeManager"
-import SessionDataManager from "@/features/session-management/components/SessionDataManager"
-import SyncButton from "@/features/session-management/components/SyncButton"
-import Footer from "@/components/layout/Footer"
-import Header from "@/components/layout/Header"
-import { Button } from "@/components/ui/button"
-import { ProgressBar } from "@/components/ui/progressbar"
-import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import StatusBadge from "@/components/ui/status-badge"
-import { ThemeToggleButton } from "@/components/ui/ThemeToggleButton"
-import React, { ComponentType } from "react"
-import type { ChatSubmitPayload, ComponentSize, StylingMode } from "@pg/shared/lib/constants"
-import { DEFAULT_STYLING_MODE } from "@pg/shared/lib/constants"
+import type { ComponentType } from "react"
+import type { ChatSubmitPayload, ComponentSize } from "@pg/shared/lib/constants"
 import { adoptIterationPrompt } from "@pg/features/generation/prompts/adopt.prompt"
 import {
   elementIterationFromIterationPrompt,
@@ -39,12 +23,6 @@ import { discoveredRegistry } from "./discovered-registry.gen"
 // Types
 // ---------------------------------------------------------------------------
 
-export interface RegistryGroupItem {
-  id: string
-  label: string
-  children: RegistryItem[]
-}
-
 // Re-export ComponentSize from constants for backward compatibility
 export type { ComponentSize } from "@pg/shared/lib/constants"
 
@@ -57,316 +35,31 @@ export interface RegistryLeafItem {
   parentId?: string // Optional parent component id for nested discovered components
   // Iteration metadata
   sourcePath: string
-  propsInterface: string
   childComponents?: string[] // Child component names that can be iterated
   size?: ComponentSize // Display size for the component preview
 }
-
-export type RegistryItem = RegistryGroupItem | RegistryLeafItem
-
-export function isGroup(item: RegistryItem): item is RegistryGroupItem {
-  return "children" in item && !("Component" in item)
-}
-
-export function isLeaf(item: RegistryItem): item is RegistryLeafItem {
-  return "Component" in item
-}
-
-// ---------------------------------------------------------------------------
-// Registry tree
-// ---------------------------------------------------------------------------
-
-// Hand-written registry. Discovered components are NOT spliced in here anymore —
-// they live in the playground-owned `discovered-registry.json` manifest and are
-// merged in below via the generated `discoveredRegistry` module.
-const baseRegistry: RegistryItem[] = [
-  {
-    id: "pages",
-    label: "Pages",
-    children: [
-      {
-        id: "header",
-        label: "Header",
-        Component: Header as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          showConfiguration: false,
-          onToggleConfiguration: () => {}
-        } as Record<string, unknown>,
-        sourcePath: "src/components/layout/Header.tsx",
-        size: "default",
-        propsInterface: `interface HeaderProps {
-  showConfiguration: boolean
-  onToggleConfiguration: () => void
-}`
-      },
-      {
-        id: "footer",
-        label: "Footer",
-        Component: Footer as unknown as ComponentType<Record<string, unknown>>,
-        props: {} as Record<string, unknown>,
-        sourcePath: "src/components/layout/Footer.tsx",
-        size: "default",
-        propsInterface: `interface FooterProps {\n  className?: string\n}`
-      },
-      {
-        id: "status-badge",
-        label: "StatusBadge",
-        Component: StatusBadge as unknown as ComponentType<Record<string, unknown>>,
-        props: { status: "funded" } as Record<string, unknown>,
-        sourcePath: "src/components/ui/status-badge.tsx",
-        size: "default",
-        propsInterface: `interface StatusBadgeProps {\n  status: "sync" | "funded" | "in-progress" | "failed"\n  className?: string\n}`,
-        parentId: "header"
-      },
-      {
-        id: "theme-toggle-button",
-        label: "ThemeToggleButton",
-        Component: ThemeToggleButton as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          theme: "light",
-          showLabel: false,
-          variant: "circle",
-          start: "center"
-        } as Record<string, unknown>,
-        sourcePath: "src/components/ui/ThemeToggleButton.tsx",
-        size: "default",
-        propsInterface: `interface ThemeToggleButtonProps {
-  theme?: "light" | "dark"
-  showLabel?: boolean
-  variant?: "circle" | "circle-blur" | "gif" | "polygon"
-  start?: "center" | "top-left" | "top-right" | "bottom-left" | "bottom-right"
-  url?: string
-  className?: string
-  onClick?: () => void
-}`,
-        parentId: "header"
-      },
-      {
-        id: "button",
-        label: "Button",
-        Component: Button as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          children: "Get Started",
-          variant: "default",
-          size: "default"
-        } as Record<string, unknown>,
-        sourcePath: "src/components/ui/button.tsx",
-        size: "default",
-        propsInterface: `interface ButtonProps {
-  className?: string
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
-  size?: "default" | "sm" | "lg" | "icon"
-  asChild?: boolean
-  children: React.ReactNode
-  onClick?: () => void
-}`,
-        parentId: "header"
-      },
-      {
-        id: "sync-button",
-        label: "SyncButton",
-        Component: SyncButton as unknown as ComponentType<Record<string, unknown>>,
-        props: {} as Record<string, unknown>,
-        sourcePath: "src/features/session-management/components/SyncButton.tsx",
-        size: "default",
-        propsInterface: `// SyncButton takes no props — it reads isInSync and handleSync
-// from the Zustand app store (useAppStore).
-type SyncButtonProps = Record<string, never>`,
-        parentId: "header"
-      },
-      {
-        id: "session-change-manager",
-        label: "SessionChangeManager",
-        Component: SessionChangeManager as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          sessionData: {
-            id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            accountId: "ACC-29381",
-            status: "funded",
-            startDate: "2026-06-01T09:00:00.000Z",
-            endDate: "2026-07-05T17:00:00.000Z",
-            balance: 52480.75,
-            initialBalance: 50000
-          }
-        } as Record<string, unknown>,
-        sourcePath: "src/features/session-management/components/SessionChangeManager.tsx",
-        size: "default",
-        propsInterface: `interface SessionChangeManagerProps {
-  sessionData: Session
-}`,
-        parentId: "header"
-      },
-      {
-        id: "session-data-manager",
-        label: "SessionDataManager",
-        Component: SessionDataManager as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          sessionId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-        } as Record<string, unknown>,
-        sourcePath: "src/features/session-management/components/SessionDataManager.tsx",
-        size: "default",
-        propsInterface: `interface SessionDataManagerProps {\n  sessionId: string\n}`,
-        parentId: "header"
-      },
-      {
-        id: "drawdown-config-card",
-        label: "Drawdown Config Card",
-        Component: DrawdownConfigCard as unknown as ComponentType<Record<string, unknown>>,
-        props: {} as Record<string, unknown>,
-        sourcePath: "src/features/challenge-configuration/components/DrawdownConfigCard.tsx",
-        size: "default",
-        propsInterface: `// DrawdownConfigCard takes no props — it reads
-// config.dailyDrawdown, config.maxDrawdown, and config.maxDrawdownType
-// from the Zustand app store (useAppStore).
-type DrawdownConfigCardProps = Record<string, never>`
-      },
-      {
-        id: "daily-recap-item",
-        label: "Daily Recap Item",
-        Component: DailyRecapItem as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          day: {
-            date: new Date("2026-07-03T00:00:00.000Z"),
-            dateKey: "2026-07-03",
-            trades: [
-              { realized: "$245.80", maxRR: "2.4" },
-              { realized: "$132.50", maxRR: "1.8" },
-              { realized: "-$67.20", maxRR: "0.6" },
-              { realized: "$89.10", maxRR: "1.5" }
-            ],
-            totalPnL: 400.2,
-            percentageChange: 0.8
-          }
-        } as Record<string, unknown>,
-        sourcePath: "src/features/daily-recap/components/DailyRecapItem.tsx",
-        size: "default",
-        propsInterface: `interface DailyRecapItemProps {
-  day: {
-    date: Date
-    dateKey: string
-    trades: Trade[]
-    totalPnL: number
-    percentageChange?: number
-  }
-}`
-      },
-      {
-        id: "separator",
-        label: "Separator",
-        Component: Separator as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          orientation: "horizontal"
-        } as Record<string, unknown>,
-        sourcePath: "src/components/ui/separator.tsx",
-        size: "default",
-        propsInterface: `interface SeparatorProps extends React.HTMLAttributes<HTMLDivElement> {
-  orientation?: "horizontal" | "vertical"
-  decorative?: boolean
-}`,
-        parentId: "daily-recap-item"
-      },
-      {
-        id: "progress-bar",
-        label: "ProgressBar",
-        Component: ProgressBar as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          progress: 0.72,
-          height: 8,
-          filledColor: "bg-primary",
-          emptyColor: "bg-accent"
-        } as Record<string, unknown>,
-        sourcePath: "src/components/ui/progressbar.tsx",
-        size: "default",
-        propsInterface: `interface ProgressBarProps {
-  progress: number
-  height?: number
-  filledColor?: string
-  emptyColor?: string
-  className?: string
-}`,
-        parentId: "max-drawdown-card"
-      },
-      {
-        id: "max-drawdown-card",
-        label: "Max Drawdown Card",
-        Component: MaxDrawdownCard as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          className: "bg-background"
-        } as Record<string, unknown>,
-        sourcePath: "src/features/objectives-tracking/components/MaxDrawdownCard.tsx",
-        size: "default",
-        propsInterface: `interface MaxDrawdownCardProps {\n  className?: string\n}`
-      },
-      {
-        id: "card",
-        label: "Card",
-        Component: Card as unknown as ComponentType<Record<string, unknown>>,
-        props: {
-          className: "bg-background max-w-sm",
-          children: "Account Overview"
-        } as Record<string, unknown>,
-        sourcePath: "src/components/ui/card.tsx",
-        size: "default",
-        propsInterface: `interface CardProps {\n  className?: string\n  children: React.ReactNode\n}`,
-        parentId: "max-drawdown-card"
-      },
-      {
-        id: "tooltip",
-        label: "Tooltip",
-        Component: (() => (
-          <Tooltip defaultOpen>
-            <TooltipTrigger asChild>
-              <button className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground">
-                Hover me
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Maximum drawdown threshold reached
-            </TooltipContent>
-          </Tooltip>
-        )) as unknown as ComponentType<Record<string, unknown>>,
-        props: {} as Record<string, unknown>,
-        sourcePath: "src/components/ui/tooltip.tsx",
-        size: "default",
-        propsInterface: `interface TooltipProps extends React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root> {
-  children: React.ReactNode
-  defaultOpen?: boolean
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}`,
-        parentId: "max-drawdown-card"
-      }
-    ]
-  }
-]
 
 // ---------------------------------------------------------------------------
 // Merged registry
 // ---------------------------------------------------------------------------
 
 /**
- * The full component list consumers see: the hand-written entries plus the
- * playground-discovered ones (generated from `discovered-registry.json`).
- * Merging at this single seam means the sidebar, canvas, flat lookup, and
- * preload all see one combined list without any of them knowing about the
- * discovery manifest.
+ * The full component list consumers see: the playground-discovered components
+ * (generated from `discovered-registry.json`). Discovery is the only source —
+ * there is no hand-written base list to merge in.
  */
-export const registry: RegistryItem[] = [...baseRegistry, ...discoveredRegistry]
+export const registry: RegistryLeafItem[] = discoveredRegistry
 
 // ---------------------------------------------------------------------------
 // Flatten helper
 // ---------------------------------------------------------------------------
 
 export function flattenRegistry(
-  items: RegistryItem[],
-  result: Record<string, RegistryLeafItem> = {}
+  items: RegistryLeafItem[]
 ): Record<string, RegistryLeafItem> {
+  const result: Record<string, RegistryLeafItem> = {}
   for (const item of items) {
-    if (isLeaf(item)) {
-      result[item.id] = item
-    } else if (isGroup(item)) {
-      flattenRegistry(item.children, result)
-    }
+    result[item.id] = item
   }
   return result
 }
@@ -423,7 +116,6 @@ export function generateIterationPrompt(
   startNumber: number = 1,
   customInstructions?: string,
   skillPrompt?: string,
-  stylingMode: StylingMode = DEFAULT_STYLING_MODE,
   referenceNodesSection?: string
 ): string {
   const item = resolveRegistryItem(componentId)
@@ -450,12 +142,11 @@ export function generateIterationPrompt(
     sourcePath: item.sourcePath,
     iterationCount: String(iterationCount),
     childrenSection,
-    propsInterface: item.propsInterface,
     cleanComponentName,
     componentId,
     customInstructionsSection,
-    stylingConstraint: getStylingConstraint(stylingMode),
-    qualityChecklist: getQualityChecklist(stylingMode),
+    stylingConstraint: getStylingConstraint(),
+    qualityChecklist: getQualityChecklist(),
     iterationNumbersList: iterationNumbers.join(", "),
     iterationSavesBlock,
     referenceNodesSection: referenceNodesSection || ""
@@ -473,7 +164,6 @@ export function generateIterationFromIterationPrompt(
   startNumber: number,
   customInstructions?: string,
   skillPrompt?: string,
-  stylingMode: StylingMode = DEFAULT_STYLING_MODE,
   referenceNodesSection?: string
 ): string {
   const item = resolveRegistryItem(componentId)
@@ -505,13 +195,12 @@ export function generateIterationFromIterationPrompt(
     startNumber: String(startNumber),
     endNumber: String(endNumber),
     childrenSection,
-    propsInterface: item.propsInterface,
     iterationSavesBlock,
     treeParent: sourceIterationFilename,
     customInstructionsSection,
     iterationNumbersList: iterationNumbers.join(", "),
     sourceIterationFilename,
-    stylingConstraint: getStylingConstraint(stylingMode),
+    stylingConstraint: getStylingConstraint(),
     referenceNodesSection: referenceNodesSection || ""
   })
 }
@@ -527,7 +216,6 @@ export function generateElementIterationPrompt(
   elementSelections: ChatSubmitPayload["elementSelections"],
   customInstructions?: string,
   skillPrompt?: string,
-  stylingMode: StylingMode = DEFAULT_STYLING_MODE,
   referenceNodesSection?: string
 ): string {
   const item = flatRegistry[componentId]
@@ -554,7 +242,6 @@ export function generateElementIterationPrompt(
     componentName,
     sourcePath: item.sourcePath,
     childrenSection,
-    propsInterface: item.propsInterface,
     cleanComponentName,
     componentId,
     customInstructionsSection,
@@ -562,7 +249,7 @@ export function generateElementIterationPrompt(
     iterationCount: String(iterationCount),
     iterationNumbersList: iterationNumbers.join(", "),
     iterationSavesBlock,
-    stylingQualityItem: getStylingQualityItem(stylingMode),
+    stylingQualityItem: getStylingQualityItem(),
     referenceNodesSection: referenceNodesSection || ""
   })
 }
@@ -575,7 +262,6 @@ export function generateElementIterationFromIterationPrompt(
   elementSelections: ChatSubmitPayload["elementSelections"],
   customInstructions?: string,
   skillPrompt?: string,
-  stylingMode: StylingMode = DEFAULT_STYLING_MODE,
   referenceNodesSection?: string
 ): string {
   const item = flatRegistry[componentId]
@@ -604,7 +290,6 @@ export function generateElementIterationFromIterationPrompt(
     sourcePath: item.sourcePath,
     iterationSourcePath,
     childrenSection,
-    propsInterface: item.propsInterface,
     cleanComponentName,
     componentId,
     customInstructionsSection,
@@ -614,7 +299,7 @@ export function generateElementIterationFromIterationPrompt(
     iterationSavesBlock,
     treeParent: sourceIterationFilename,
     sourceIterationFilename,
-    stylingQualityItem: getStylingQualityItem(stylingMode),
+    stylingQualityItem: getStylingQualityItem(),
     referenceNodesSection: referenceNodesSection || ""
   })
 }

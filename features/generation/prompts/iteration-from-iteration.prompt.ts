@@ -17,8 +17,6 @@ Original source: {{sourcePath}}
 Base iteration: {{iterationSourcePath}}
 Iterations requested: {{iterationCount}} (numbered {{startNumber}}–{{endNumber}})
 {{childrenSection}}
-Props interface (DO NOT MODIFY):
-{{propsInterface}}
 {{referenceNodesSection}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -62,7 +60,6 @@ export interface IterationFromIterationPromptVars {
   startNumber: string;
   endNumber: string;
   childrenSection?: string;
-  propsInterface: string;
   iterationSavesBlock: string;
   treeParent: string;
   customInstructionsSection?: string;
