@@ -46,6 +46,10 @@ export interface CanvasFlowState {
   undo: () => void;
   /** Re-apply the last undone snapshot (no-op when there is nothing to redo). */
   redo: () => void;
+  /** True when there is at least one snapshot to undo (drives button state). */
+  canUndo: boolean;
+  /** True when there is at least one undone snapshot to re-apply. */
+  canRedo: boolean;
 }
 
 interface CanvasSnapshot {
@@ -80,12 +84,25 @@ function SoloFlowProvider({ children, storageKey }: { children: ReactNode; stora
   const futureRef = useRef<CanvasSnapshot[]>([]);
   const draggingRef = useRef(false);
 
+  // The stacks themselves are refs (so a snapshot can be taken mid-mutation,
+  // before React re-renders). Refs don't re-render, so these two booleans mirror
+  // the stack depths purely to drive UI enabled/disabled state. Every mutation
+  // of either stack must call syncHistoryFlags(). Re-render cost is nil when the
+  // value is unchanged — React bails out on an identical setState value.
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const syncHistoryFlags = useCallback(() => {
+    setCanUndo(pastRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
+  }, []);
+
   // Capture the CURRENT (pre-mutation) state as a history entry.
   const commit = useCallback(() => {
     pastRef.current.push({ nodes: nodesRef.current, relations: relationsRef.current });
     if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
     futureRef.current = [];
-  }, []);
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
 
   // Imperative setters used across the canvas — each call is a discrete action,
   // so snapshot first, then apply.
@@ -135,7 +152,8 @@ function SoloFlowProvider({ children, storageKey }: { children: ReactNode; stora
     futureRef.current.push({ nodes: nodesRef.current, relations: relationsRef.current });
     setNodes(prev.nodes);
     setRelations(prev.relations);
-  }, [setNodes]);
+    syncHistoryFlags();
+  }, [setNodes, syncHistoryFlags]);
 
   const redo = useCallback(() => {
     const next = futureRef.current.pop();
@@ -143,7 +161,8 @@ function SoloFlowProvider({ children, storageKey }: { children: ReactNode; stora
     pastRef.current.push({ nodes: nodesRef.current, relations: relationsRef.current });
     setNodes(next.nodes);
     setRelations(next.relations);
-  }, [setNodes]);
+    syncHistoryFlags();
+  }, [setNodes, syncHistoryFlags]);
 
   const value: CanvasFlowState = {
     nodes,
@@ -155,6 +174,8 @@ function SoloFlowProvider({ children, storageKey }: { children: ReactNode; stora
     initialState: initial,
     undo,
     redo,
+    canUndo,
+    canRedo,
   };
   return <CanvasFlowContext.Provider value={value}>{children}</CanvasFlowContext.Provider>;
 }

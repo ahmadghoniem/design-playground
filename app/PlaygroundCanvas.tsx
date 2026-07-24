@@ -4,13 +4,15 @@
   useRef,
   useEffect,
   useState,
-  type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
   useReactFlow,
+  useViewport,
   Node,
   SelectionMode,
   type NodeChange,
@@ -24,6 +26,7 @@ import {
 } from "@pg/shared/lib/canvas-persistence";
 import { useCanvasFlow } from "@pg/features/canvas/canvas-flow";
 import PlaygroundCanvasToolbar from "@pg/features/canvas/components/PlaygroundCanvasToolbar";
+import PlaygroundCanvasViewControls from "@pg/features/canvas/components/PlaygroundCanvasViewControls";
 import PlaygroundCanvasDialogs from "@pg/features/canvas/components/PlaygroundCanvasDialogs";
 import PlaygroundCanvasContextMenu from "@pg/features/canvas/components/PlaygroundCanvasContextMenu";
 import { useCanvasDrawTool } from "@pg/features/canvas/hooks/useCanvasDrawTool";
@@ -47,25 +50,25 @@ import TextNode from "@pg/features/canvas/nodes/TextNode";
 import ShapeNode, { type ShapeKind } from "@pg/features/canvas/nodes/ShapeNode";
 import FrameNode from "@pg/features/canvas/nodes/FrameNode";
 import HelperLines from "@pg/features/canvas/nodes/HelperLines";
-import {
-  CANVAS_BACKGROUND_COLOR,
-  BACKGROUND_COLOR,
-  BACKGROUND_GAP,
-  BACKGROUND_DOT_SIZE,
-  CANVAS_MAX_ZOOM,
-  CANVAS_MIN_ZOOM,
-  ITERATION_COLLAPSE_TOGGLE_EVENT,
-  FIT_COMPONENT_NODES_EVENT,
-} from "@pg/shared/lib/constants";
+import { ITERATION_COLLAPSE_TOGGLE_EVENT } from "@pg/shared/lib/constants";
 import DockedChatBar from "@pg/features/chat/DockedChatBar";
 import ElementHighlight from "@pg/features/canvas/components/ElementHighlight";
 import { useElementSelection } from "@pg/features/canvas/hooks/useElementSelection";
 import { useNodeSelection } from "@pg/features/chat/useNodeSelection";
 import { useInteractiveNodeStore } from "@pg/shared/stores/interactive-node-store";
-import {
-  computeVisibleNodes,
-  computeVisibleEdges,
-} from "@pg/features/canvas/canvas-visibility";
+import { computeVisibleNodes } from "@pg/features/canvas/canvas-visibility";
+
+/** Gap between background dots (px) */
+const BACKGROUND_GAP = 10;
+
+/** Size of each background dot (px) */
+const BACKGROUND_DOT_SIZE = 1;
+
+/** Maximum zoom level for the playground canvas */
+const CANVAS_MAX_ZOOM = 2;
+
+/** Minimum zoom level for the playground canvas */
+const CANVAS_MIN_ZOOM = 0.1;
 
 const nodeTypes = {
   component: ComponentNode,
@@ -84,6 +87,8 @@ interface PlaygroundCanvasProps {
   onHideSidebar: () => void;
   /** Stable per-project id used to scope persisted canvas state to this project. */
   projectId?: string;
+  showClearDialog: boolean;
+  setShowClearDialog: Dispatch<SetStateAction<boolean>>;
 }
 
 export default function PlaygroundCanvas({
@@ -92,6 +97,8 @@ export default function PlaygroundCanvas({
   onShowSidebar,
   onHideSidebar,
   projectId,
+  showClearDialog,
+  setShowClearDialog,
 }: PlaygroundCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
@@ -110,6 +117,8 @@ export default function PlaygroundCanvas({
     initialState,
     undo,
     redo,
+    canUndo,
+    canRedo,
   } = useCanvasFlow();
 
   const initialKnownIterations = initialState?.knownIterations
@@ -190,7 +199,9 @@ export default function PlaygroundCanvas({
     setKnownIterations,
   });
   const { isGenerating, generationInfo } = coord;
-  const { screenToFlowPosition, fitView, getViewport } = useReactFlow();
+  const { screenToFlowPosition, fitView, getViewport, zoomIn, zoomOut } =
+    useReactFlow();
+  const { zoom } = useViewport();
 
   // Undo / redo: Ctrl/⌘+Z undoes, Ctrl/⌘+Y (or Ctrl/⌘+Shift+Z) redoes. Ignored
   // while typing in an input/textarea/contentEditable so it never eats an edit.
@@ -300,14 +311,15 @@ export default function PlaygroundCanvas({
     handleIterationDelete,
   });
 
-  const { showClearDialog, setShowClearDialog, confirmClearAllNodes } =
-    useCanvasClear({
-      setNodes,
-      setRelations,
-      setKnownIterations,
-      setCollapsedNodeIds,
-      storageKey,
-    });
+  const { confirmClearAllNodes } = useCanvasClear({
+    showClearDialog,
+    setShowClearDialog,
+    setNodes,
+    setRelations,
+    setKnownIterations,
+    setCollapsedNodeIds,
+    storageKey,
+  });
 
   useGenerationLifecycle({
     coord,
@@ -328,47 +340,6 @@ export default function PlaygroundCanvas({
     coord,
     scanForIterations,
   });
-
-  // Fit viewport around all nodes for a given component (e.g. after an
-  // iteration adoption completes — see useIterationAdoption).
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { componentId } = (e as CustomEvent<{ componentId: string }>)
-        .detail;
-      if (!componentId) return;
-
-      const parentNode = coord
-        .getNodes()
-        .find(
-          (n) =>
-            n.type === "component" &&
-            (n.data.componentId as string)?.includes(componentId),
-        );
-      const childNodes = coord
-        .getNodes()
-        .filter(
-          (n) =>
-            (n.type === "iteration" || n.type === "skeleton") &&
-            parentNode &&
-            n.data.parentNodeId === parentNode.id,
-        );
-
-      const nodeIds = [
-        ...(parentNode ? [parentNode.id] : []),
-        ...childNodes.map((n) => n.id),
-      ];
-
-      if (nodeIds.length > 0) {
-        fitView({
-          nodes: nodeIds.map((id) => ({ id })),
-          duration: 400,
-          padding: 0.15,
-        });
-      }
-    };
-    window.addEventListener(FIT_COMPONENT_NODES_EVENT, handler);
-    return () => window.removeEventListener(FIT_COMPONENT_NODES_EVENT, handler);
-  }, [coord, fitView]);
 
   const { onDragOver, onDrop } = useCanvasDragDrop({
     coord,
@@ -507,13 +478,6 @@ export default function PlaygroundCanvas({
     [nodes, relations, collapsedNodeIds],
   );
 
-  // Render-only edges derived from the relation records (never stored). Both
-  // endpoints must be visible, so a collapsed subtree hides its connectors.
-  const visibleEdges = useMemo(
-    () => computeVisibleEdges(nodes, relations, collapsedNodeIds),
-    [nodes, relations, collapsedNodeIds],
-  );
-
   // Image upload via toolbar button (reuses same logic as drag-drop)
   const handleImageFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -591,10 +555,10 @@ export default function PlaygroundCanvas({
         ref={reactFlowWrapper}
         className={`w-full h-full${activeTool === "text" ? " playground-text-tool" : ""}${activeTool === "hand" ? " playground-hand-tool" : ""}${activeTool === "shape" ? " playground-shape-tool" : ""}`}
       >
-        {/* XY Flow reads pane fill from `--xy-background-color`; Tailwind bg-* often loses to `.react-flow` in the cascade. */}
+        {/* Pane fill (`--xy-background-color`) and grid line `stroke` are set in
+            playground-global.css, scoped under `.playground-main-view .react-flow`. */}
         <ReactFlow
           nodes={visibleNodes}
-          edges={visibleEdges}
           onNodesChange={handleNodesChange}
           onNodesDelete={onNodesDelete}
           onDragOver={onDragOver}
@@ -610,11 +574,6 @@ export default function PlaygroundCanvas({
           {...(initialState?.viewport
             ? { defaultViewport: initialState.viewport }
             : { fitView: true })}
-          style={
-            {
-              "--xy-background-color": CANVAS_BACKGROUND_COLOR,
-            } as CSSProperties
-          }
           proOptions={{ hideAttribution: true }}
           minZoom={CANVAS_MIN_ZOOM}
           maxZoom={CANVAS_MAX_ZOOM}
@@ -628,8 +587,6 @@ export default function PlaygroundCanvas({
           nodesDraggable={activeTool !== "hand"}
           nodesConnectable={false}
           elementsSelectable
-          edgesFocusable={false}
-          edgesReconnectable={false}
           deleteKeyCode={["Delete", "Backspace"]}
         >
           {/* <Controls
@@ -639,8 +596,6 @@ export default function PlaygroundCanvas({
             variant={BackgroundVariant.Dots}
             gap={BACKGROUND_GAP}
             size={BACKGROUND_DOT_SIZE}
-            bgColor={CANVAS_BACKGROUND_COLOR}
-            color={BACKGROUND_COLOR}
           />
           <HelperLines
             vertical={helperLines.vertical}
@@ -668,6 +623,16 @@ export default function PlaygroundCanvas({
           shapeKind={shapeKind}
           setShapeKind={setShapeKind}
           imageInputRef={imageInputRef}
+        />
+
+        <PlaygroundCanvasViewControls
+          zoom={zoom}
+          onZoomIn={() => zoomIn()}
+          onZoomOut={() => zoomOut()}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
         />
 
         {/* Element selection highlights */}

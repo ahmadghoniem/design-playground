@@ -1,15 +1,10 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { Node } from "@xyflow/react";
 import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
-import { PLAYGROUND_CLEAR_EVENT } from "@pg/shared/lib/constants";
 
 export interface UseCanvasClearParams {
+  showClearDialog: boolean;
+  setShowClearDialog: Dispatch<SetStateAction<boolean>>;
   setNodes: Dispatch<SetStateAction<Node[]>>;
   setRelations: Dispatch<SetStateAction<CanvasRelation[]>>;
   setKnownIterations: Dispatch<SetStateAction<string[]>>;
@@ -18,21 +13,13 @@ export interface UseCanvasClearParams {
 }
 
 export function useCanvasClear({
+  setShowClearDialog,
   setNodes,
   setRelations,
   setKnownIterations,
   setCollapsedNodeIds,
   storageKey,
 }: UseCanvasClearParams) {
-  const [showClearDialog, setShowClearDialog] = useState(false);
-
-  useEffect(() => {
-    const handleClear = () => setShowClearDialog(true);
-    window.addEventListener(PLAYGROUND_CLEAR_EVENT, handleClear);
-    return () =>
-      window.removeEventListener(PLAYGROUND_CLEAR_EVENT, handleClear);
-  }, []);
-
   const confirmClearAllNodes = useCallback(async () => {
     try {
       await fetch("/playground/api/generate", {
@@ -93,8 +80,6 @@ export function useCanvasClear({
   ]);
 
   return {
-    showClearDialog,
-    setShowClearDialog,
     confirmClearAllNodes,
   };
 }

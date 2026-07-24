@@ -77,6 +77,7 @@ export default function PlaygroundClient() {
   );
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [skillsCatalogOpen, setSkillsCatalogOpen] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [pendingAdds, setPendingAdds] = useState<PendingSidebarAdd[]>([]);
   const [pendingChildren, setPendingChildren] = useState<
@@ -383,6 +384,7 @@ export default function PlaygroundClient() {
           projectName={projectName}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={handleToggleSidebar}
+          onClear={() => setShowClearDialog(true)}
         />
 
         {/* Body: sidebar + canvas */}
@@ -422,6 +424,8 @@ export default function PlaygroundClient() {
                 onShowSidebar={handleShowSidebar}
                 onHideSidebar={startSidebarHideTimer}
                 projectId={projectId}
+                showClearDialog={showClearDialog}
+                setShowClearDialog={setShowClearDialog}
               />
             </CanvasFlowProvider>
           </div>

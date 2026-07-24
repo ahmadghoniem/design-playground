@@ -72,5 +72,7 @@
   --color-pg-input: var(--pg-input);
   --color-pg-ring: var(--pg-ring);
   --color-pg-destructive: var(--pg-destructive);
+  --color-pg-canvas: var(--pg-canvas);
+  --color-pg-canvas-grid: var(--pg-canvas-grid);
 }
 /* stylelint-enable at-rule-no-unknown, csstools/use-nesting */

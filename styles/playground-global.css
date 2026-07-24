@@ -13,11 +13,6 @@
  */
 /* stylelint-disable at-rule-no-unknown, csstools/use-nesting */
 
-/* Hand-drawn font for annotation shape labels (--pg-font-hand). @import must
-   precede all style rules. Local-dev-only tool, so a remote font is acceptable;
-   it degrades to the system fallbacks in the token below when offline. */
-@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap");
-
 /* Private, host-independent chrome tokens. Defined on :root (not on
    .playground-main-view) so Radix portals — dropdown/tooltip/dialog content
    rendered at document.body, OUTSIDE the chrome wrapper — can still resolve
@@ -38,9 +33,10 @@
   --pg-destructive: #dc2626;
   --pg-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --pg-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  /* Hand-drawn font for annotation shape labels. Loaded from Google Fonts when
-     online (this is a local-dev-only tool); falls back to system cursive/sans. */
-  --pg-font-hand: "Caveat", "Patrick Hand", "Comic Sans MS", ui-rounded, var(--pg-font-sans);
+
+  /* Backs the ReactFlow canvas (PlaygroundCanvas): pane fill + grid line color. */
+  --pg-canvas: #ebebeb;
+  --pg-canvas-grid: #efefef;
 }
 
 .playground-main-view {
@@ -70,8 +66,7 @@
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
 }
 
-body:has(.playground-main-view),
-body:has(.playground-iteration-view) {
+body:has(.playground-main-view) {
   scrollbar-gutter: stable;
 }
 
@@ -112,11 +107,7 @@ body:has(.playground-iteration-view) {
   color: rgb(245, 245, 244);
 }
 
-/* aiverse-specific font classes (.font-louize/.font-pixelify/.font-bricolage)
-   and the .theme-products-dark example theme were removed — hosts theme their
-   own previews from their globals.css, and demo content carries literal CSS. */
-
-:where(.playground-main-view, .playground-iteration-view) .prose blockquote {
+.playground-main-view .prose blockquote {
   border-left-width: 4px;
   border-style: solid;
   border-color: var(--muted);
@@ -125,198 +116,117 @@ body:has(.playground-iteration-view) {
   color: var(--muted-foreground);
 }
 
-:is(.playground-main-view, .playground-iteration-view) .prose img {
+.playground-main-view .prose img {
   border-radius: 1rem;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .community-blog-content blockquote {
-  background-color: #F3EBE5 !important;
-  border-left: 6px solid #916757 !important;
-  border-radius: 8px 8px 8px 8px;
-  padding: 1rem 1rem 1rem 1rem;
-  margin: 1.5rem 0;
-  color: #333333;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-:is(.playground-main-view, .playground-iteration-view) .community-blog-content blockquote p {
-  margin: 0;
-  font-style: italic;
-  color: #333333;
-  line-height: 2.2;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .community-blog-content blockquote p + p {
-  margin-top: 1rem;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .embed-contained iframe,
-:is(.playground-main-view, .playground-iteration-view) .embed-fullwidth iframe {
-  overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid var(--border);
-}
-
-:is(.playground-main-view, .playground-iteration-view) .embed-fullwidth {
-  width: 100%;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-@media (min-width: 900px) {
-  :is(.playground-main-view, .playground-iteration-view) .embed-fullwidth {
-    padding-left: 10%;
-    padding-right: 10%;
-  }
-}
 /* stylelint-enable at-rule-no-unknown, csstools/use-nesting */
 
 /* Utility patterns also used inside embedded previews (scoped to playground). */
-:is(.playground-main-view, .playground-iteration-view) .hide-scrollbar {
+.playground-main-view .hide-scrollbar {
   scrollbar-width: none;
 }
-:is(.playground-main-view, .playground-iteration-view) .hide-scrollbar::-webkit-scrollbar {
+.playground-main-view .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar {
+.playground-main-view .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #a8a29e transparent;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar {
+.playground-main-view .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-track {
+.playground-main-view .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-thumb {
+.playground-main-view .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #a8a29e;
   border-radius: 3px;
   border: none;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+.playground-main-view .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #78716c;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .custom-scrollbar::-webkit-scrollbar-corner {
+.playground-main-view .custom-scrollbar::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element:focus {
+.playground-main-view .interactive-element:focus {
   outline: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element:focus-visible {
+.playground-main-view .interactive-element:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element:active:focus {
+.playground-main-view .interactive-element:active:focus {
   outline: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element:focus:not(:focus-visible) {
+.playground-main-view .interactive-element:focus:not(:focus-visible) {
   outline: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) button:focus,
-:is(.playground-main-view, .playground-iteration-view) [role="button"]:focus,
-:is(.playground-main-view, .playground-iteration-view) .clickable:focus {
+.playground-main-view button:focus,
+.playground-main-view [role="button"]:focus,
+.playground-main-view .clickable:focus {
   outline: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) button:focus-visible,
-:is(.playground-main-view, .playground-iteration-view) [role="button"]:focus-visible,
-:is(.playground-main-view, .playground-iteration-view) .clickable:focus-visible {
+.playground-main-view button:focus-visible,
+.playground-main-view [role="button"]:focus-visible,
+.playground-main-view .clickable:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
-:is(.playground-main-view, .playground-iteration-view) button:active:focus,
-:is(.playground-main-view, .playground-iteration-view) [role="button"]:active:focus,
-:is(.playground-main-view, .playground-iteration-view) .clickable:active:focus {
+.playground-main-view button:active:focus,
+.playground-main-view [role="button"]:active:focus,
+.playground-main-view .clickable:active:focus {
   outline: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) motion.div:focus,
-:is(.playground-main-view, .playground-iteration-view) motion.div:active:focus,
-:is(.playground-main-view, .playground-iteration-view) motion.div:focus-visible {
+.playground-main-view [data-framer-motion]:focus,
+.playground-main-view [data-framer-motion]:active:focus,
+.playground-main-view [data-framer-motion]:focus-visible,
+.playground-main-view [data-framer-motion]:focus:not(:focus-visible) {
   outline: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) motion.div:focus:not(:focus-visible),
-:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:focus,
-:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:active:focus,
-:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:focus-visible,
-:is(.playground-main-view, .playground-iteration-view) [data-framer-motion]:focus:not(:focus-visible) {
-  outline: none !important;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .interactive-element:hover {
+.playground-main-view .interactive-element:hover {
   transition: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element * {
+.playground-main-view .interactive-element * {
   transition: none !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element:hover * {
+.playground-main-view .interactive-element:hover * {
   transition-delay: 0s !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element {
+.playground-main-view .interactive-element {
   transition: color 0.1s ease-out, background-color 0.1s ease-out !important;
 }
 
-:is(.playground-main-view, .playground-iteration-view) .interactive-element.transition-all,
-:is(.playground-main-view, .playground-iteration-view) .interactive-element.transition-all:hover {
+.playground-main-view .interactive-element.transition-all,
+.playground-main-view .interactive-element.transition-all:hover {
   transition: all 0.2s ease-out !important;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .insight-editor-content {
-  font-size: 18px;
-  line-height: 1.7;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .insight-editor-content:focus {
-  outline: none;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .insight-editor-content p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: var(--muted-foreground);
-  opacity: 0.5;
-  pointer-events: none;
-  height: 0;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .insight-editor-content img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 1rem;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .insight-editor-content img.ProseMirror-selectednode {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-  border-radius: 1rem;
-}
-
-:is(.playground-main-view, .playground-iteration-view) .canvas-embed-node.ProseMirror-selectednode {
-  outline: none;
 }
 
 /* ---------------------------------------------------------------------------
    Default cursor — Lucide `mouse-pointer-2`
    ---------------------------------------------------------------------------
    Replaces the system arrow on every playground page. Scoped via
-   playground-global.css (only imported by app/playground/layout.tsx) so it
-   does not leak to the rest of the app.
+   playground-global.css (only imported by dev-entry.tsx) so it does not leak
+   to the rest of the app.
 
    The data URI is hoisted onto :root as `--pg-default-cursor` so we can
    reuse it on body AND on ReactFlow elements (which would otherwise win the
@@ -335,8 +245,7 @@ body:has(.playground-iteration-view) {
     3 3, default;
 }
 
-body:has(.playground-main-view),
-body:has(.playground-iteration-view) {
+body:has(.playground-main-view) {
   cursor: var(--pg-default-cursor);
 }
 
@@ -409,6 +318,26 @@ body:has(.playground-iteration-view) {
 .playground-main-view .playground-shape-tool .react-flow__pane.dragging,
 .playground-main-view .playground-shape-tool .react-flow__pane.selection {
   cursor: crosshair;
+}
+
+/* Canvas pane fill + background pattern. XY Flow reads the pane fill from its
+   own `--xy-background-color` var; we just point it at our token.
+
+   Both pattern variants are styled below so `<Background variant={...}>` can be
+   switched in PlaygroundCanvas without touching this file. They need DIFFERENT
+   properties: the Dots variant renders an SVG <circle> (coloured by `fill`),
+   the Lines/Cross variants render an SVG <path> (coloured by `stroke`). CSS
+   wins over the presentational attribute XY Flow sets, so these take effect
+   without `!important`. */
+.playground-main-view .react-flow {
+  --xy-background-color: var(--pg-canvas);
+}
+.playground-main-view .react-flow__background-pattern.dots {
+  fill: var(--pg-canvas-grid);
+}
+.playground-main-view .react-flow__background-pattern.lines,
+.playground-main-view .react-flow__background-pattern.cross {
+  stroke: var(--pg-canvas-grid);
 }
 
 /* Once a node is double-clicked into "interactive" mode (Component/Iteration
@@ -646,12 +575,6 @@ body:has(.playground-iteration-view) {
   line-height: 1.4;
 }
 
-/* Prevent iframes from capturing mouse events during node drag */
-.react-flow__node.dragging iframe,
-.react-flow__node.dragging [data-screenshot-target] iframe {
-  pointer-events: none !important;
-}
-
 /* Element selection mode — override all cursors when Alt is held */
 .element-select-mode,
 .element-select-mode *,
@@ -664,5 +587,3 @@ body:has(.playground-iteration-view) {
 .element-select-mode [data-iframe-overlay] {
   pointer-events: none !important;
 }
-
-nextjs-portal { display: none !important; }
