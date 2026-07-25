@@ -9,8 +9,6 @@ interface DiscoveryAnalyzeParams {
   name: string;
   componentPath: string;
   playgroundDir: string;
-  /** Real data fetched from the app's data source. Use verbatim for mock props. */
-  propsSnapshot?: Record<string, unknown>;
   /** If this is a child component, the parent's registry ID. */
   parentId?: string;
 }
@@ -20,25 +18,11 @@ export function discoveryAnalyzePrompt({
   name,
   componentPath,
   playgroundDir,
-  propsSnapshot,
   parentId,
 }: DiscoveryAnalyzeParams): string {
   const componentInstructions = `This is a standalone component. Register it directly using its actual import path.
 
 If it uses server-only or environment-only features, find the underlying presentational component and register that instead.`;
-
-  const snapshotSection = propsSnapshot
-    ? `## Real data snapshot — use this for inline props
-
-The following is live data fetched directly from this app's data source.
-**Use these exact values** when writing the inline \`props\` object. Do NOT copy any fetch logic — just inline the data as constants.
-
-\`\`\`json
-${JSON.stringify(propsSnapshot, null, 2)}
-\`\`\`
-
-`
-    : '';
 
   return `You are adding a component to the design playground. Follow each step exactly.
 
@@ -51,7 +35,7 @@ ${JSON.stringify(propsSnapshot, null, 2)}
 
 ${componentInstructions}
 
-${snapshotSection}## Step 2: Add an entry to the discovered-registry manifest
+## Step 2: Add an entry to the discovered-registry manifest
 
 You do NOT edit \`registry.tsx\`. Instead, add a data entry to the
 playground-owned manifest at \`${playgroundDir}/discovered-registry.json\`. The
@@ -97,30 +81,6 @@ Size guidelines:
 
 **Background colour (important):** Some components may have no explicit background — they inherit \`bg-background\` from the \`<body>\`. In the playground the component is rendered inside a wrapper, NOT a \`<body>\`, so that inheritance is lost. If the component or any of its children rely on the page background colour (e.g. the outermost \`<div>\` has no \`bg-*\` class), add a \`className: "bg-background"\` prop value so the correct theme colour is resolved via CSS variables. Do NOT use a hardcoded \`bg-white\`.
 
-## Step 3: Add a props fetcher (if the component uses real data)
-
-Open \`${playgroundDir}/lib/props-fetchers.server.ts\`.
-
-Examine the component at \`${componentPath}\` and its data-fetching logic (look at fetch/async calls, server actions, database queries, or API calls it delegates to):
-
-- **If the component fetches real data** (from a database, API, CMS, etc.), add an async fetcher entry to the \`propsFetchers\` map. The key must be the same **kebab-case registry ID** you used in Step 2 (e.g. \`'article-card'\`, \`'team'\`).
-  - Mirror the real data-fetching logic from the source component — same imports, same client, same query.
-  - Return the data shaped exactly like the props the component expects (same structure as the inline props you wrote in Step 2).
-  - Keep the snapshot small: use \`.limit()\`, \`.slice()\`, or similar to cap lists to 5–10 items.
-  - Only import what the host app already has (e.g. its existing DB client, fetch helpers, etc.). Do NOT add new dependencies.
-  - Add any required imports at the top of the file (alongside existing imports).
-
-- **If the component is purely static** (no data fetching — it only uses props, hardcoded values, or context), skip this step entirely.
-
-Example entry shape:
-
-\`\`\`ts
-'registry-id': async () => {
-  const data = await fetchSomething();
-  return { propA: data.x, propB: data.y };
-},
-\`\`\`
-
 ## That's it — do NOT edit discovery.json
 
 Do NOT touch \`${playgroundDir}/discovery.json\` — the playground updates the
@@ -135,9 +95,8 @@ you have written the manifest entry. Just make sure your
 - Do NOT edit \`${playgroundDir}/discovery.json\` — the playground maintains it
 - Do NOT create any wrapper or \`discovered/\` files — there is no \`discovered/\` directory
 - Do NOT create a \`data/\` directory or any \`*.mockData.ts\` file — props are always inline object literals in the manifest entry
-- Only touch: \`${playgroundDir}/discovered-registry.json\`, and (if the component fetches data) \`${playgroundDir}/lib/props-fetchers.server.ts\`
+- Only touch: \`${playgroundDir}/discovered-registry.json\`
 - All import paths must be correct relative to the project root (\`@/\` alias maps to \`src/\`)
 - Inline props must look visually appealing and realistic when rendered
-- The props fetcher key MUST match the kebab-case registry ID exactly — this is how the analyze route links the two
 `;
 }

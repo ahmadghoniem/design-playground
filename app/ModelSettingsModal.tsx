@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@pg/shared/ui/dialog";
-import { useAvailableModels } from "@pg/shared/ui/iterate-dialog/parts";
+import { useAvailableModels } from "@pg/shared/lib/model-selection";
 import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
 import { getModelIconConfig } from "@pg/shared/lib/model-icons";
 import { type ModelOption } from "@pg/shared/lib/constants";

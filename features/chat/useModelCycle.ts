@@ -2,9 +2,9 @@ import { useCallback, useState } from "react";
 import {
   loadSelectedModel,
   saveSelectedModel,
-} from "@pg/shared/ui/iterate-dialog/parts";
+} from "@pg/shared/lib/model-selection";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
-import type { ModelOption } from "@pg/shared/ui/iterate-dialog/parts";
+import type { ModelOption } from "@pg/shared/lib/model-selection";
 
 // ---------------------------------------------------------------------------
 // useModelCycle

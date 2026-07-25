@@ -108,9 +108,6 @@ export const TEMP_DIR_RELATIVE = '.playground-temp';
 /** Filename for the generation lockfile */
 export const GENERATION_LOCKFILE_FILENAME = 'generation.lock';
 
-/** Filename for the discovery scan lockfile */
-export const DISCOVERY_LOCKFILE_FILENAME = 'discovery.lock';
-
 /** Filename for the discovery manifest */
 export const DISCOVERY_MANIFEST_FILENAME = 'discovery.json';
 

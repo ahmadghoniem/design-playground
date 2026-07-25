@@ -1,16 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { toast, Toaster } from "sonner";
-import PlaygroundSidebar, {
-  type PendingSidebarAdd,
-} from "@pg/app/PlaygroundSidebar";
+import { Toaster } from "sonner";
+import PlaygroundSidebar from "@pg/app/PlaygroundSidebar";
 import PlaygroundCanvas from "./PlaygroundCanvas";
 import PlaygroundHeader from "./PlaygroundHeader";
-import DiscoveryModal, {
-  type DiscoveryEntry,
-} from "@pg/features/discovery/DiscoveryModal";
 import SkillsCatalogModal from "@pg/features/skills/SkillsCatalogModal";
-import { getProviderFields } from "@pg/shared/lib/generation-body";
 import {
   OPEN_SKILLS_CATALOG_EVENT,
   SKILLS_CHANGED_EVENT,
@@ -23,13 +17,6 @@ import {
   previewSchemeClass,
   usePreviewColorSchemeStore,
 } from "@pg/shared/stores/preview-color-scheme-store";
-
-export interface PendingChild {
-  id: string;
-  name: string;
-  path: string;
-  status: "pending" | "analyzing" | "done" | "error";
-}
 
 interface ProjectBootstrap {
   projectId: string;
@@ -75,14 +62,8 @@ export default function PlaygroundClient() {
   const sidebarHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [skillsCatalogOpen, setSkillsCatalogOpen] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
-  const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
-  const [pendingAdds, setPendingAdds] = useState<PendingSidebarAdd[]>([]);
-  const [pendingChildren, setPendingChildren] = useState<
-    Map<string, PendingChild[]>
-  >(new Map());
 
   const cancelSidebarHideTimer = useCallback(() => {
     if (sidebarHideTimerRef.current) {
@@ -158,209 +139,6 @@ export default function PlaygroundClient() {
     return () => window.removeEventListener(OPEN_SKILLS_CATALOG_EVENT, handler);
   }, []);
 
-  // Notify sidebar to refresh discovered components
-  const notifySidebar = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("playground:discovery-updated"));
-  }, []);
-
-  // Analyze a list of child components sequentially, showing them as pending in the sidebar.
-  const analyzeChildren = useCallback(
-    async (
-      parentRegistryId: string,
-      children: { id: string; name: string; path: string }[],
-    ) => {
-      if (children.length === 0) return;
-
-      const initialPending: PendingChild[] = children.map((c) => ({
-        id: c.id,
-        name: c.name,
-        path: c.path,
-        status: "pending" as const,
-      }));
-
-      setPendingChildren((prev) => {
-        const next = new Map(prev);
-        next.set(parentRegistryId, initialPending);
-        return next;
-      });
-
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-
-        // Update status to 'analyzing'
-        setPendingChildren((prev) => {
-          const next = new Map(prev);
-          const list = [...(next.get(parentRegistryId) || [])];
-          list[i] = { ...list[i], status: "analyzing" };
-          next.set(parentRegistryId, list);
-          return next;
-        });
-
-        try {
-          const childRes = await fetch("/playground/api/discover/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: child.id,
-              path: child.path,
-              name: child.name,
-              type: "component",
-              // Pass parent's registry ID so the child's registry entry references
-              // the correct parent ID for sidebar nesting.
-              parentId: parentRegistryId,
-              ...getProviderFields(),
-            }),
-          });
-          const childData = await childRes.json();
-
-          setPendingChildren((prev) => {
-            const next = new Map(prev);
-            const list = [...(next.get(parentRegistryId) || [])];
-            list[i] = {
-              ...list[i],
-              status: childData.success ? "done" : "error",
-            };
-            next.set(parentRegistryId, list);
-            return next;
-          });
-
-          if (childData.success) {
-            notifySidebar();
-          }
-        } catch {
-          setPendingChildren((prev) => {
-            const next = new Map(prev);
-            const list = [...(next.get(parentRegistryId) || [])];
-            list[i] = { ...list[i], status: "error" };
-            next.set(parentRegistryId, list);
-            return next;
-          });
-        }
-      }
-
-      // Clear pending children after all are done
-      setPendingChildren((prev) => {
-        const next = new Map(prev);
-        next.delete(parentRegistryId);
-        return next;
-      });
-      notifySidebar();
-    },
-    [notifySidebar],
-  );
-
-  // Catch-up: detect orphaned children (parent added, children still "discovered") and auto-analyze them.
-  // This handles cases where a parent was analyzed before the child auto-analysis feature existed.
-  const hasCatchupRun = useRef(false);
-  useEffect(() => {
-    if (hasCatchupRun.current) return;
-    hasCatchupRun.current = true;
-
-    (async () => {
-      try {
-        const res = await fetch("/playground/api/discover");
-        const data = await res.json();
-        if (data.status !== "complete" || !data.entries) return;
-
-        const entries: DiscoveryEntry[] = data.entries;
-
-        // Find parent entries that are "added" and have children still "discovered"
-        for (const parent of entries) {
-          if (parent.status !== "added" || !parent.analysis?.registryId)
-            continue;
-
-          const parentRegistryId = parent.analysis.registryId;
-
-          // Find child entries that reference this parent and are not yet analyzed
-          const orphanedChildren = entries.filter(
-            (e) => e.parentId === parent.id && e.status === "discovered",
-          );
-
-          if (orphanedChildren.length > 0) {
-            analyzeChildren(
-              parentRegistryId,
-              orphanedChildren.map((c) => ({
-                id: c.id,
-                name: c.name,
-                path: c.path,
-              })),
-            );
-          }
-        }
-      } catch {
-        // Silently fail — catch-up is best-effort
-      }
-    })();
-  }, [analyzeChildren]);
-
-  // Add a component — runs at the PlaygroundClient level so it persists across modal open/close
-  const handleAddComponent = useCallback(
-    async (entry: DiscoveryEntry) => {
-      setAddingIds((prev) => new Set(prev).add(entry.id));
-      setPendingAdds((prev) => {
-        if (prev.some((p) => p.id === entry.id)) return prev;
-        return [...prev, { id: entry.id, name: entry.name }];
-      });
-
-      const toastId = toast.loading(`Setting up "${entry.name}"…`, {
-        duration: Infinity,
-        closeButton: true,
-        dismissible: true,
-      });
-
-      try {
-        const res = await fetch("/playground/api/discover/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: entry.id,
-            path: entry.path,
-            name: entry.name,
-            type: entry.type,
-            ...getProviderFields(),
-          }),
-        });
-
-        const data = await res.json();
-
-        if (data.success && data.entry) {
-          toast.success(`"${entry.name}" added to playground`, {
-            id: toastId,
-            duration: 4000,
-          });
-          notifySidebar();
-
-          // Handle child components — analyze them sequentially
-          const children: { id: string; name: string; path: string }[] =
-            data.childEntries || [];
-          if (children.length > 0) {
-            const parentRegistryId =
-              data.entry.analysis?.registryId || entry.id;
-            analyzeChildren(parentRegistryId, children);
-          }
-        } else {
-          toast.error(data.error || `Failed to add "${entry.name}"`, {
-            id: toastId,
-            duration: 5000,
-          });
-        }
-      } catch {
-        toast.error(`Failed to add "${entry.name}"`, {
-          id: toastId,
-          duration: 5000,
-        });
-      } finally {
-        setAddingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(entry.id);
-          return next;
-        });
-        setPendingAdds((prev) => prev.filter((p) => p.id !== entry.id));
-      }
-    },
-    [notifySidebar, analyzeChildren],
-  );
-
   // Per-canvas preview color-scheme override. '' = auto (mirror the host); the
   // `dark`/`light` class sits on the canvas root so the host's own `.dark`
   // token overrides cascade into every preview while the chrome (which reads
@@ -405,9 +183,6 @@ export default function PlaygroundClient() {
                 sidebarHoverRef.current = false;
                 setSidebarVisible(false);
               }}
-              onOpenDiscovery={() => setDiscoveryOpen(true)}
-              pendingChildren={pendingChildren}
-              pendingAdds={pendingAdds}
             />
           </div>
 
@@ -431,14 +206,6 @@ export default function PlaygroundClient() {
           </div>
         </div>
       </div>
-
-      {/* Discovery modal */}
-      <DiscoveryModal
-        open={discoveryOpen}
-        onOpenChange={setDiscoveryOpen}
-        addingIds={addingIds}
-        onAdd={handleAddComponent}
-      />
 
       {/* Skills catalog modal */}
       <SkillsCatalogModal

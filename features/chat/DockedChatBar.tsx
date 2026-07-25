@@ -13,7 +13,7 @@ import { ImpeccableSkillPicker } from "@pg/shared/ui/impeccable-skill-picker";
 import { ImpeccableDemoteMenu } from "@pg/shared/ui/impeccable-demote-menu";
 import { useImpeccableSkillPicker } from "@pg/shared/lib/useImpeccableSkillPicker";
 import { impeccablePromptFromSegment } from "@pg/shared/lib/impeccable-skill";
-import { useAvailableModels } from "@pg/shared/ui/iterate-dialog/parts";
+import { useAvailableModels } from "@pg/shared/lib/model-selection";
 import { useModelCycle } from "@pg/features/chat/useModelCycle";
 import { useSkills } from "@pg/features/chat/useSkills";
 import { getModelIconConfig } from "@pg/shared/lib/model-icons";
