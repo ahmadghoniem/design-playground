@@ -8,7 +8,7 @@ import {
   useEffect,
   type ComponentType,
 } from "react";
-import { useReactFlow, NodeResizeControl } from "@xyflow/react";
+import { useReactFlow } from "@xyflow/react";
 import { GitMerge, Trash2, Loader2, ChevronRight, AlertTriangle } from "lucide-react";
 import {
   Tooltip,
@@ -26,7 +26,6 @@ import {
   AlertDialogTitle,
 } from "@pg/shared/ui/alert-dialog";
 import { resolveRegistryItem } from "@pg/registry";
-import { ResizeGripIcon } from "@pg/shared/ui/playground-nav-icons";
 import { loadIterationComponentModule } from "@pg/shared/lib/iteration-loader";
 import { ViewportButtons } from "@pg/shared/ui/ViewportButtons";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
@@ -39,8 +38,6 @@ import {
   ITERATION_COLLAPSE_TOGGLE_EVENT,
   SIZE_CONFIG,
   getDisplayDimensions,
-  RESIZE_MIN_WIDTH,
-  RESIZE_MIN_HEIGHT,
   type ComponentSize,
 } from "@pg/shared/lib/constants";
 import {
@@ -73,8 +70,6 @@ interface IterationNodeProps {
     registryId?: string;
     /** Size of the parent ComponentNode at the time this iteration was created */
     parentSize?: ComponentSize;
-    /** Whether this node has been freeform-resized */
-    customResized?: boolean;
     hasChildren?: boolean;
     isCollapsed?: boolean;
     /** Whether this iteration has been adopted into the original component */
@@ -85,7 +80,7 @@ interface IterationNodeProps {
 }
 
 function IterationNode({ id, data, selected = false }: IterationNodeProps) {
-  const { deleteElements, setNodes, updateNodeData } = useReactFlow();
+  const { deleteElements, updateNodeData } = useReactFlow();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
@@ -201,15 +196,12 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
       resolveRegistryItem(registryId)?.size ||
       "default",
   );
-  const [isResizing, setIsResizing] = useState(false);
-  const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
-
-  // Listen for parent size changes — only apply if not custom-resized
+  // Listen for parent size changes
   useEffect(() => {
     const handleParentSizeChange = (
       e: CustomEvent<{ nodeId: string; size: ComponentSize }>,
     ) => {
-      if (e.detail.nodeId === data.parentNodeId && !isCustomResized) {
+      if (e.detail.nodeId === data.parentNodeId) {
         setSize(e.detail.size);
       }
     };
@@ -222,7 +214,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         COMPONENT_SIZE_CHANGE_EVENT,
         handleParentSizeChange as EventListener,
       );
-  }, [data.parentNodeId, isCustomResized]);
+  }, [data.parentNodeId]);
 
   useEffect(() => {
     const on = () => setIsGlobalGenerating(true);
@@ -238,35 +230,10 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   }, []);
 
 
-  const handleResizeStart = useCallback(() => {
-    setIsResizing(true);
-    setSize("default");
-  }, []);
-
   const handleSizeChange = (newSize: ComponentSize) => {
     setSize(newSize);
-    setIsCustomResized(false);
-    updateNodeData(id, { size: newSize, customResized: false });
-    // Clear any width/height that NodeResizeControl may have set on the node
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === id
-          ? {
-              ...n,
-              width: undefined,
-              height: undefined,
-              style: { ...n.style, width: undefined, height: undefined },
-            }
-          : n,
-      ),
-    );
+    updateNodeData(id, { size: newSize });
   };
-
-  const handleResizeEndFull = useCallback(() => {
-    setIsResizing(false);
-    setIsCustomResized(true);
-    updateNodeData(id, { customResized: true });
-  }, [id, updateNodeData]);
 
   // ---------------------------------------------------------------------------
   // Adoption hook
@@ -309,8 +276,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
   const config = SIZE_CONFIG[size];
   const isPreset = size !== "default";
-  const isFillMode = isResizing || isCustomResized;
-  const isLargeComponent = isPreset || isFillMode;
+  const isLargeComponent = isPreset;
   const displayDims = getDisplayDimensions(size);
   const handleWheel = useScrollCapture(scrollContainerRef);
 
@@ -322,32 +288,9 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
       className={`flex flex-col ${isLargeComponent ? "" : "min-w-[280px]"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
-        ...(isFillMode ? { width: "100%", height: "100%" } : {}),
         fontFamily: "var(--pg-font-sans)",
       }}
     >
-      {/* Resize handle — bottom-right corner, only when selected */}
-      <NodeResizeControl
-        position="bottom-right"
-        minWidth={RESIZE_MIN_WIDTH}
-        minHeight={RESIZE_MIN_HEIGHT}
-        onResizeStart={handleResizeStart}
-        onResizeEnd={handleResizeEndFull}
-        style={{
-          background: "transparent",
-          border: "none",
-          width: 10,
-          height: 10,
-          bottom: 2,
-          right: 2,
-          opacity: selected ? 1 : 0,
-          pointerEvents: selected ? "auto" : "none",
-          cursor: "nwse-resize",
-        }}
-      >
-        <ResizeGripIcon className="text-stone-300 hover:text-stone-500 transition-colors" />
-      </NodeResizeControl>
-
       {/* ── Top bar — label always, controls only when selected ── */}
       <div className="flex items-center justify-between px-0.5 pb-1.5 cursor-grab">
         {/* Left: collapse toggle + label */}
@@ -400,9 +343,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
       </div>
 
       {/* ── Frame + right-side vertical toolbar ── */}
-      <div
-        className={`relative flex items-start ${isFillMode ? "flex-1 min-h-0" : ""}`}
-      >
+      <div className="relative flex items-start">
         {/* Component frame */}
         <div
           data-screenshot-target
@@ -411,55 +352,15 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
           onPointerDown={hoverHint.onPointerDown}
-          className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
+          className={`relative app-theme bg-background overflow-hidden rounded-xl transition-all ${
             adoption.adoptionStatus === "adopted"
               ? "ring-2 ring-green-400"
               : selected
                 ? "ring-2 ring-[#0B99FF]"
                 : ""
-          } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? "w-full h-full" : ""}`}
+          } ${isInteractive ? "ring-offset-2" : ""}`}
         >
-          {isFillMode ? (
-            /* Freeform / active resize: fill the node with centered content */
-            <div
-              ref={scrollContainerRef}
-              className={`grid place-items-center overflow-auto w-full h-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
-              onWheel={isInteractive ? handleWheel : undefined}
-            >
-              {RenderComponent ? (
-                <Suspense
-                  fallback={
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                  }
-                >
-                  <div className="w-full">
-                    {isLoadingProps && !Object.keys(effectiveProps).length ? (
-                      <div className="text-xs text-gray-500">
-                        Loading live data…
-                      </div>
-                    ) : propsError && !Object.keys(effectiveProps).length ? (
-                      <div className="text-xs text-red-600">
-                        Failed to load data: {propsError}
-                      </div>
-                    ) : (
-                      <ComponentErrorBoundary
-                        componentName={`${data.componentName} #${data.iterationNumber}`}
-                      >
-                        <RenderComponent {...effectiveProps} />
-                      </ComponentErrorBoundary>
-                    )}
-                  </div>
-                </Suspense>
-              ) : (
-                <div className="text-center">
-                  <p className="text-[10px] text-gray-400">{data.filename}</p>
-                  <p className="text-[9px] text-amber-500 mt-1">
-                    Waiting for registration — try refreshing
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : isPreset ? (
+          {isPreset ? (
             /* Preset mode (Desktop/Mobile): fixed viewport with zoom scaling */
             <div
               ref={scrollContainerRef}

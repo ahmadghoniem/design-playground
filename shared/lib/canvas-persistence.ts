@@ -136,6 +136,24 @@ export function loadCanvasState(storageKey: string = STORAGE_KEY): CanvasState |
           r => !skeletonIds.has(r.parentId) && !skeletonIds.has(r.childId),
         );
       }
+      // Freeform NodeResizeControl was removed from component/iteration nodes;
+      // scrub persisted width/height so old stretched wrappers don't stick.
+      state.nodes = state.nodes.map((n) => {
+        if (n.type !== 'component' && n.type !== 'iteration') return n;
+        const next = { ...n };
+        delete next.width;
+        delete next.height;
+        if (next.style) {
+          next.style = { ...next.style };
+          delete next.style.width;
+          delete next.style.height;
+        }
+        if (next.data && 'customResized' in next.data) {
+          next.data = { ...next.data };
+          delete (next.data as { customResized?: unknown }).customResized;
+        }
+        return next;
+      });
       delete (state as { generationInfo?: unknown }).generationInfo;
       if (state.knownIterations?.length) {
         state.knownIterations = pruneKnownIterations(state.knownIterations, state.nodes);

@@ -5,9 +5,8 @@ import {
   useRef,
   useEffect,
 } from "react";
-import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
+import { useNodeId, useReactFlow } from "@xyflow/react";
 import { resolveRegistryItem } from "@pg/registry";
-import { ResizeGripIcon } from "@pg/shared/ui/playground-nav-icons";
 import { ViewportButtons } from "@pg/shared/ui/ViewportButtons";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 
@@ -25,8 +24,6 @@ import {
   COMPONENT_SIZE_CHANGE_EVENT,
   SIZE_CONFIG,
   getDisplayDimensions,
-  RESIZE_MIN_WIDTH,
-  RESIZE_MIN_HEIGHT,
   type ComponentSize,
 } from "@pg/shared/lib/constants";
 
@@ -35,8 +32,6 @@ interface ComponentNodeProps {
     componentId: string;
     /** Persisted across reloads — reflects the last user-chosen size */
     size?: ComponentSize;
-    /** Whether this node has been freeform-resized */
-    customResized?: boolean;
   };
   selected?: boolean;
 }
@@ -51,7 +46,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const handleWheel = useScrollCapture(scrollContainerRef);
 
   const nodeId = useNodeId();
-  const { updateNodeData, setNodes } = useReactFlow();
+  const { updateNodeData } = useReactFlow();
   const isInteractive = useIsInteractiveNode(nodeId);
   const setInteractiveNodeId = useInteractiveNodeStore(
     (s) => s.setInteractiveNodeId,
@@ -84,53 +79,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   const [size, setSize] = useState<ComponentSize>(
     data.size || registryItem?.size || "default",
   );
-  const [isResizing, setIsResizing] = useState(false);
-  const [isCustomResized, setIsCustomResized] = useState(!!data.customResized);
-
-  const handleResizeStart = useCallback(() => {
-    setIsResizing(true);
-    setSize("default");
-  }, []);
-
-  const handleResizeEnd = useCallback(() => {
-    setIsResizing(false);
-    setIsCustomResized(true);
-    if (nodeId) {
-      updateNodeData(nodeId, { customResized: true, size: "default" });
-      // Width-only for React components: drop the height the resize control
-      // set so the frame hugs its content vertically (no trapped vertical gap).
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId
-            ? {
-                ...n,
-                height: undefined,
-                style: { ...n.style, height: undefined },
-              }
-            : n,
-        ),
-      );
-    }
-  }, [nodeId, updateNodeData, setNodes]);
 
   const handleSizeChange = (newSize: ComponentSize) => {
     setSize(newSize);
-    setIsCustomResized(false);
     if (nodeId) {
-      updateNodeData(nodeId, { size: newSize, customResized: false });
-      // Clear any width/height that NodeResizeControl may have set on the node
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId
-            ? {
-                ...n,
-                width: undefined,
-                height: undefined,
-                style: { ...n.style, width: undefined, height: undefined },
-              }
-            : n,
-        ),
-      );
+      updateNodeData(nodeId, { size: newSize });
     }
     window.dispatchEvent(
       new CustomEvent(COMPONENT_SIZE_CHANGE_EVENT, {
@@ -148,11 +101,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   >;
   const config = SIZE_CONFIG[size];
   const isPreset = size !== "default";
-  const isFillMode = isResizing || isCustomResized;
-  const isLargeComponent = isPreset || isFillMode;
-  // React components resize width-only and hug their content height (no
-  // vertical padding).
-  const isAutoHeightFill = isFillMode;
+  const isLargeComponent = isPreset;
   const displayDims = getDisplayDimensions(size);
 
   if (!registryItem) {
@@ -168,36 +117,9 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       className={`flex flex-col ${isLargeComponent ? "" : "min-w-[200px]"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
-        ...(isFillMode
-          ? isAutoHeightFill
-            ? { width: "100%" }
-            : { width: "100%", height: "100%" }
-          : {}),
         fontFamily: "var(--pg-font-sans)",
       }}
     >
-      {/* Resize handle — bottom-right corner, only when selected */}
-      <NodeResizeControl
-        position="bottom-right"
-        minWidth={RESIZE_MIN_WIDTH}
-        minHeight={RESIZE_MIN_HEIGHT}
-        onResizeStart={handleResizeStart}
-        onResizeEnd={handleResizeEnd}
-        style={{
-          background: "transparent",
-          border: "none",
-          width: 10,
-          height: 10,
-          bottom: 2,
-          right: 2,
-          opacity: selected ? 1 : 0,
-          pointerEvents: selected ? "auto" : "none",
-          cursor: "nwse-resize",
-        }}
-      >
-        <ResizeGripIcon className="text-stone-300 hover:text-stone-500 transition-colors" />
-      </NodeResizeControl>
-
       {/* ── Top bar — always visible label, controls only when selected ── */}
       <div className="flex items-center justify-between px-0.5 pb-1.5 cursor-grab">
         {/* Left: label (always visible) */}
@@ -214,9 +136,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
       </div>
 
       {/* ── Frame + right-side vertical toolbar ── */}
-      <div
-        className={`relative flex items-start ${isFillMode && !isAutoHeightFill ? "flex-1 min-h-0" : ""}`}
-      >
+      <div className="relative flex items-start">
         {/* Component frame */}
         <div
           data-screenshot-target
@@ -225,31 +145,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
           onPointerDown={hoverHint.onPointerDown}
-          className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
+          className={`relative app-theme bg-background overflow-hidden rounded-xl transition-all ${
             selected ? "ring-2 ring-[#0B99FF]" : ""
-          } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? (isAutoHeightFill ? "w-full" : "w-full h-full") : ""}`}
+          } ${isInteractive ? "ring-offset-2" : ""}`}
         >
-          {isFillMode ? (
-            /* Freeform / active resize: fill the node width; height hugs content
-               (width-only resize) so the frame never traps vertical padding. */
-            <div
-              ref={scrollContainerRef}
-              className={`grid place-items-center overflow-auto w-full ${isInteractive ? "nodrag nowheel nopan" : ""}`}
-              onWheel={isInteractive ? handleWheel : undefined}
-            >
-              {isLoadingProps && !Object.keys(effectiveProps).length ? (
-                <div className="text-xs text-gray-500">Loading live data…</div>
-              ) : propsError && !Object.keys(effectiveProps).length ? (
-                <div className="text-xs text-red-600">
-                  Failed to load data: {propsError}
-                </div>
-              ) : Component ? (
-                <ComponentErrorBoundary componentName={label}>
-                  <Component {...effectiveProps} />
-                </ComponentErrorBoundary>
-              ) : null}
-            </div>
-          ) : isPreset ? (
+          {isPreset ? (
             /* Preset mode (Desktop/Mobile): fixed viewport with zoom scaling */
             <div
               ref={scrollContainerRef}
