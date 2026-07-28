@@ -1,10 +1,9 @@
+/** Replace `{{key}}` placeholders in a prompt template. Missing keys become ''. */
 export function fillTemplate(template: string, vars: Record<string, string>): string {
-  const result = template.replace(/{{(\w+)}}/g, (match, key) => {
+  return template.replace(/{{(\w+)}}/g, (_match, key) => {
     if (Object.prototype.hasOwnProperty.call(vars, key)) {
       return vars[key] ?? '';
     }
     return '';
   });
-
-  return result;
 }

@@ -1,11 +1,14 @@
 /**
  * @name: adopt-iteration-prompt
  * @description: Prompt used to adopt an iteration's layout and styling into the original source component without breaking its public API.
- * @variables :
- *   originalPath: Relative path to the original source component file.
- *   iterationPath: Relative path to the iteration file being adopted.
+ *
+ * Owned by the iterations feature: adoption is an iteration-node action
+ * (`useIterationAdoption`), so both the template and the builder live here
+ * rather than in the generation feature.
  */
-import { fillTemplate } from './utility';
+import { fillTemplate } from "@pg/shared/lib/fill-template";
+import { iterationsFile } from "@pg/shared/lib/playground-paths";
+import { resolveRegistryItem } from "@pg/registry";
 
 const prompt = `
 ADOPT ITERATION
@@ -56,12 +59,16 @@ Before saving, verify:
 
 Adopt the iteration now. Only modify the original component file.`;
 
-export interface AdoptIterationPromptVars {
-  originalPath: string;
-  iterationPath: string;
-}
+/** Build the adopt prompt for an iteration of `componentId` saved as `iterationFilename`. */
+export function generateAdoptPrompt(
+  componentId: string,
+  iterationFilename: string,
+): string {
+  const item = resolveRegistryItem(componentId);
+  const originalPath =
+    item?.sourcePath ||
+    `src/components/${iterationFilename.split(".iteration")[0]}.tsx`;
+  const iterationPath = iterationsFile(iterationFilename);
 
-export function adoptIterationPrompt(vars: AdoptIterationPromptVars): string {
-  return fillTemplate(prompt, vars as unknown as Record<string, string>);
+  return fillTemplate(prompt, { originalPath, iterationPath });
 }
-
