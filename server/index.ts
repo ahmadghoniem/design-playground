@@ -1,47 +1,57 @@
 /**
  * Hono server for the design-playground API.
  *
- * Every route under the old `api/**\/route.ts` tree is mounted here at the same
- * path, with handler bodies ported nearly verbatim — only the request/response
- * plumbing changes (Express req/res -> Hono Context). Hono handlers receive a
- * native Web `Request` via `c.req.raw`, so no compatibility shim is needed for
- * shared `lib/` helpers.
- *
  * Usage:
  *   - Standalone: `bun server/index.ts` listens on PORT (default 4319). Use Bun
- *     (not plain `node`) so tsconfig `paths` (`@pg/*`) resolve at runtime.
+ *     (not plain `node`) — the entry guard is `import.meta.main`. Server files
+ *     use relative imports, so no alias resolution is needed at runtime.
  *   - Embedded: `import { createPlaygroundServer } from './server'` and serve
  *     `createPlaygroundServer().fetch`, or mount it into a host dev server (see
  *     server/vite-plugin.ts, which uses `@hono/node-server`'s getRequestListener).
  */
 
+import fs from 'fs';
+import path from 'path';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { bodyLimit } from 'hono/body-limit';
 
-import { discoverRoutes } from './routes/discover';
+import { ensureModuleExists } from './lib/discovered-registry';
+import { resolvePlaygroundDir } from '../shared/lib/resolve-playground-dir';
 import { generateRoutes } from './routes/generate';
 import { imagesRoutes } from './routes/images';
 import { iterationsRoutes } from './routes/iterations';
 import { modelsRoutes } from './routes/models';
-import { playgroundRootRoutes } from './routes/playground-root';
 import { projectIdRoutes } from './routes/project-id';
 import { skillsRoutes } from './routes/skills';
 
 /**
- * Build the Hono app exposing every ported playground API route. Each route
- * module already registers its handlers at `/api/...`, matching the paths the
- * old Next.js/Express app used, so they mount at the root of this app.
+ * Locate the directory holding `registry.tsx`, so the generated registry module
+ * is written beside it. `resolvePlaygroundDir()` finds the host-embedded layout;
+ * a standalone package checkout keeps `registry.tsx` at the process root.
+ */
+function resolveRegistryPlaygroundDir(): string {
+  const resolved = resolvePlaygroundDir();
+  if (fs.existsSync(path.join(resolved, 'registry.tsx'))) return resolved;
+  if (fs.existsSync(path.join(process.cwd(), 'registry.tsx'))) return process.cwd();
+  return resolved;
+}
+
+// Fresh projects need an empty generated registry module on disk so
+// registry.tsx's static import of `./discovered-registry.gen` always resolves.
+ensureModuleExists(resolveRegistryPlaygroundDir());
+
+/**
+ * Build the Hono app exposing every playground API route. Each route module
+ * registers its handlers at `/api/...` and mounts at the root of this app.
  */
 export function createPlaygroundRouter(): Hono {
   const router = new Hono();
 
-  router.route('/', discoverRoutes());
   router.route('/', generateRoutes());
   router.route('/', imagesRoutes());
   router.route('/', iterationsRoutes());
   router.route('/', modelsRoutes());
-  router.route('/', playgroundRootRoutes());
   router.route('/', projectIdRoutes());
   router.route('/', skillsRoutes());
   return router;

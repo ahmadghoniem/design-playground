@@ -1,16 +1,14 @@
 import type { DragEvent } from "react";
 import { DND_DATA_KEY } from "@pg/shared/lib/constants";
-import { RegistryLeafItem } from "@pg/registry";
-import { useFocusNode } from "@pg/features/discovery/useFocusNode";
+import type { RegistryLeafItem } from "@pg/registry-types";
+import { useFocusNode } from "@pg/features/registry-sidebar/useFocusNode";
 
-interface ComponentPreviewCardProps {
+interface RegistryDragRowProps {
   item: RegistryLeafItem;
 }
 
-/** Draggable list row for a registry component (name only, no live preview). */
-export default function ComponentPreviewCard({
-  item,
-}: ComponentPreviewCardProps) {
+/** Draggable list row for a registry component (name only — not a live preview). */
+export default function RegistryDragRow({ item }: RegistryDragRowProps) {
   const { focusNode } = useFocusNode();
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>) => {

@@ -2,12 +2,12 @@
  * Discovered-registry manifest I/O + code generation.
  *
  * Discovered components live in a playground-owned JSON manifest
- * (`discovered-registry.json`). The analyze agent writes registry entries into
- * that manifest as pure data; this module regenerates a real TSX module
- * (`discovered-registry.gen.tsx`) from it on every add/remove. Because JSON
- * can't hold a component reference, the generated module carries the actual
- * component imports and is written wholesale from the manifest each time —
- * safe (never spliced into user source) and picked up by Vite HMR.
+ * (`discovered-registry.json`). Writers (static discovery / future adopt flows)
+ * put registry entries into that manifest as pure data; this module regenerates
+ * a real TSX module (`discovered-registry.gen.tsx`) from it. Because JSON can't
+ * hold a component reference, the generated module carries the actual component
+ * imports and is written wholesale from the manifest each time — safe (never
+ * spliced into user source) and picked up by Vite HMR.
  */
 
 import fs from 'fs';
@@ -48,16 +48,15 @@ export interface DiscoveredRegistryManifest {
 const GEN_HEADER = `/**
  * AUTO-GENERATED — do not edit by hand.
  *
- * Regenerated wholesale from \`${DISCOVERED_REGISTRY_MANIFEST_FILENAME}\` by the
- * discovery analyze/remove flow (server/routes/discover.ts). Discovered
- * components live in that JSON manifest, which the playground owns; this module
- * turns the manifest into a real registry array with live component imports so
- * Vite HMR reflects additions/removals. It is never spliced into the
+ * Regenerated wholesale from \`${DISCOVERED_REGISTRY_MANIFEST_FILENAME}\`.
+ * Discovered components live in that JSON manifest, which the playground owns;
+ * this module turns the manifest into a real registry array with live component
+ * imports so Vite HMR reflects additions/removals. It is never spliced into the
  * hand-written registry.tsx — the whole file is replaced from data each time.
  */
 `;
 
-const EMPTY_MODULE = `${GEN_HEADER}import type { RegistryLeafItem } from "./registry"
+const EMPTY_MODULE = `${GEN_HEADER}import type { RegistryLeafItem } from "./registry-types"
 
 export const discoveredRegistry: RegistryLeafItem[] = []
 `;
@@ -107,9 +106,11 @@ export function regenerateModule(playgroundDir: string): void {
 /** Ensure the generated module exists on disk (empty default for fresh projects). */
 export function ensureModuleExists(playgroundDir: string): void {
   const p = modulePath(playgroundDir);
-  if (!fs.existsSync(p)) {
-    fs.writeFileSync(p, EMPTY_MODULE, 'utf-8');
-  }
+  if (fs.existsSync(p)) return;
+  // Standalone package checkouts may resolve a host-shaped path that isn't
+  // present yet — only write when the playground directory itself exists.
+  if (!fs.existsSync(playgroundDir)) return;
+  fs.writeFileSync(p, EMPTY_MODULE, 'utf-8');
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +157,7 @@ function buildModule(entries: DiscoveredRegistryEntry[]): string {
   const items = entries.map(renderEntry).join('\n');
 
   return `${GEN_HEADER}import type { ComponentType } from "react"
-import type { RegistryLeafItem } from "./registry"
+import type { RegistryLeafItem } from "./registry-types"
 
 ${imports}
 

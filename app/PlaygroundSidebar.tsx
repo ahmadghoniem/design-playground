@@ -8,9 +8,10 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { ProjectBoxIcon } from "@pg/shared/ui/playground-nav-icons";
-import { registry, RegistryLeafItem } from "@pg/registry";
-import { buildChildrenMap, flattenLeaves } from "@pg/features/discovery/registry-tree";
-import ComponentPreviewCard from "@pg/features/discovery/ComponentPreviewCard";
+import type { RegistryLeafItem } from "@pg/registry-types";
+import { buildRegistryChildrenMap } from "@pg/features/registry-sidebar/registry-children";
+import RegistryDragRow from "@pg/features/registry-sidebar/RegistryDragRow";
+import { useRegistryItems } from "@pg/features/registry-sidebar/useRegistryItems";
 
 interface PlaygroundSidebarProps {
   onCollapse: () => void;
@@ -21,8 +22,12 @@ export default function PlaygroundSidebar({
 }: PlaygroundSidebarProps) {
   const [search, setSearch] = useState("");
   const [componentsExpanded, setComponentsExpanded] = useState(true);
+  const registryItems = useRegistryItems();
 
-  const childrenMap = useMemo(() => buildChildrenMap(registry), []);
+  const childrenMap = useMemo(
+    () => buildRegistryChildrenMap(registryItems),
+    [registryItems],
+  );
 
   const filterRegistryForGrid = (
     items: RegistryLeafItem[],
@@ -37,9 +42,8 @@ export default function PlaygroundSidebar({
     });
   };
 
-  const filteredRegistry = filterRegistryForGrid(registry, search);
-  const registryLeaves = flattenLeaves(filteredRegistry);
-  const hasComponents = registryLeaves.length > 0;
+  const filteredRegistry = filterRegistryForGrid(registryItems, search);
+  const hasComponents = filteredRegistry.length > 0;
 
   return (
     <aside className="w-[280px] h-full bg-white rounded-2xl border border-pg-border flex flex-col overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -96,16 +100,13 @@ export default function PlaygroundSidebar({
             </div>
             {componentsExpanded && (
               <div className="flex flex-col pt-2 pb-4">
-                {registryLeaves.map((leaf) => (
-                  <ComponentPreviewCard key={leaf.id} item={leaf} />
+                {filteredRegistry.map((leaf) => (
+                  <RegistryDragRow key={leaf.id} item={leaf} />
                 ))}
               </div>
             )}
           </div>
         ) : !search.trim() ? (
-          // The agent-driven "Add components" flow is gone; the deterministic
-          // scan that replaces it (plan Part 2) lists everything on first load,
-          // so there is nothing to click here in the meantime.
           <p className="text-xs text-stone-400 text-center py-6 px-3 leading-relaxed select-none">
             No components in the registry yet.
           </p>
@@ -118,7 +119,7 @@ export default function PlaygroundSidebar({
 
       <div className="px-3 py-2 flex-shrink-0 border-t border-stone-100">
         <p className="text-[11px] text-stone-400 text-center select-none">
-          Drag drop any component
+          Drag onto canvas
         </p>
       </div>
     </aside>
