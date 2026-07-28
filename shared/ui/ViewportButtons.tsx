@@ -6,8 +6,8 @@ import {
 } from "@pg/shared/ui/tooltip";
 import type { ComponentSize } from "@pg/shared/lib/constants";
 
-// Icon-only size switcher: Auto · Desktop · Mobile
-export function SizeButtons({
+/** Icon-only preview viewport switcher: Auto · Desktop · Mobile */
+export function ViewportButtons({
   currentSize,
   onSizeChange,
 }: {

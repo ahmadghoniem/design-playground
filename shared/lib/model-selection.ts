@@ -3,9 +3,7 @@
  *   - loadSelectedModel / saveSelectedModel (localStorage)
  *   - useAvailableModels hook
  *
- * Previously `shared/ui/iterate-dialog/parts.tsx`, which outlived the dialog it
- * was named after — the node-level IterateDialog is gone, and its only
- * consumers are now ModelSettingsModal, DockedChatBar, and useModelCycle.
+ * Consumers: ModelSettingsModal, DockedChatBar, useModelCycle.
  */
 
 import { useEffect } from "react";

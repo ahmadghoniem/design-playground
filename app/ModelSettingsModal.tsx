@@ -9,7 +9,6 @@ import {
 } from "@pg/shared/ui/dialog";
 import { useAvailableModels } from "@pg/shared/lib/model-selection";
 import { useModelSettingsStore } from "@pg/shared/stores/model-settings-store";
-import { getModelIconConfig } from "@pg/shared/lib/model-icons";
 import { type ModelOption } from "@pg/shared/lib/constants";
 import type { ClaudeCodeOptions } from "@pg/shared/lib/agent-config";
 import { AGENT_DEFAULT_ENABLED_MODELS } from "@pg/shared/lib/agent-config";
@@ -72,7 +71,6 @@ export default function ModelSettingsModal({
 
   const renderModelRow = (m: ModelOption) => {
     const checked = selected.has(m.value);
-    const iconConfig = getModelIconConfig(m.value);
     return (
       <button
         key={m.value || "__auto__"}
@@ -89,13 +87,7 @@ export default function ModelSettingsModal({
         <span className="text-xs text-stone-700 truncate flex-1 text-left">
           {m.label}
         </span>
-        <span
-          className="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 bg-center bg-no-repeat bg-[length:70%] ml-auto"
-          style={{
-            backgroundColor: iconConfig.bg,
-            backgroundImage: `url(${iconConfig.src})`,
-          }}
-        />
+        <span className="claude-agent-mark ml-auto h-5 w-5 shrink-0 rounded" />
       </button>
     );
   };
@@ -270,26 +262,6 @@ export default function ModelSettingsModal({
                       maxBudgetUsd: e.target.value
                         ? Number(e.target.value)
                         : null,
-                    })
-                  }
-                  className="w-full px-2 py-1.5 text-xs bg-white border border-stone-200 rounded-md text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-stone-600 font-medium">
-                  Max Turns
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  step={1}
-                  placeholder="No limit"
-                  value={localClaudeOpts.maxTurns ?? ""}
-                  onChange={(e) =>
-                    setLocalClaudeOpts({
-                      ...localClaudeOpts,
-                      maxTurns: e.target.value ? Number(e.target.value) : null,
                     })
                   }
                   className="w-full px-2 py-1.5 text-xs bg-white border border-stone-200 rounded-md text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"

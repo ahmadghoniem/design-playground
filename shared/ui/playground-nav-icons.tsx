@@ -42,12 +42,7 @@ function PageDocumentIcon({ className, size = 14 }: { className?: string; size?:
   );
 }
 
-/**
- * Stacked-cards glyph — iteration/variation count control.
- * Canonical copy: previously duplicated between
- * nodes/shared/iterate-dialog/icons.tsx (VariationStackIcon) and the inline
- * SVG inside IterationCountDragger (components/ui/chat-bits.tsx).
- */
+/** Stacked-cards glyph — iteration/variation count control. */
 export function VariationStackIcon({
   className,
   size = 18,
@@ -90,19 +85,6 @@ export function ResizeGripIcon({ className }: { className?: string }) {
       <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.2" />
       <line x1="9" y1="4" x2="4" y2="9" stroke="currentColor" strokeWidth="1.2" />
       <line x1="9" y1="7" x2="7" y2="9" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-/**
- * Rounded-square "open in new tab" play button — duplicated verbatim across
- * ComponentNode and IterationNode top bars.
- */
-export function PlayButtonIcon({ className }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={className}>
-      <rect x="2" y="2" width="20" height="20" rx="5" fill="currentColor" />
-      <path d="M10 8 L16 12 L10 16 Z" fill="white" />
     </svg>
   );
 }
