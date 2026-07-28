@@ -27,10 +27,19 @@ previews/
 discovery.json
 data/*.mockData.ts
 
+# Skill markdown installed into the host project — matched at any depth, so it
+# also covers .claude/skills/ and .agents/skills/.
 skills/
+# ...but features/skills/ is this package's own source. Without this negation
+# the rule above silently ignores any new file added to that feature.
+!/features/skills/
 
 # Eval harness run artifacts (per-run, not tracked)
 evals/runs/
+
+# Scratch dir for delegated-agent briefs and their raw output (Cursor CLI, etc.).
+# Anything worth keeping gets copied into .claude/plans/research/.
+tasks/
 
 # ============================================================================
 # FRAMEWORK FILES (tracked in git)
