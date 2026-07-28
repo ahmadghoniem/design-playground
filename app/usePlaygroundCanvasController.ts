@@ -238,5 +238,6 @@ export function usePlaygroundCanvasController({
     nodeSelection,
     confirmClearAllNodes,
     autoArrangeNodes,
+    scanForIterations,
   };
 }

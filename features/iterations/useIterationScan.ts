@@ -19,7 +19,6 @@ import {
 } from "@pg/shared/lib/iteration-scan";
 import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import {
-  ITERATION_FETCH_EVENT,
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_WIDTH,
@@ -235,17 +234,6 @@ export function useIterationScan({
       setRelations,
     ],
   );
-
-  useEffect(() => {
-    const handleFetchRequest = () => {
-      scanForIterations(true);
-    };
-
-    window.addEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
-    return () => {
-      window.removeEventListener(ITERATION_FETCH_EVENT, handleFetchRequest);
-    };
-  }, [scanForIterations]);
 
   // Initial scan on mount. scanForIterations changes identity every render
   // (it closes over `coord`), so guard with a ref to keep this run-once while

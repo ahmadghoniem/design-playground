@@ -21,7 +21,6 @@ import {
 } from "@pg/shared/stores/interactive-node-store";
 import { useFrameHoverHint } from "@pg/shared/ui/FrameHoverHint";
 import {
-  COMPONENT_SIZE_CHANGE_EVENT,
   SIZE_CONFIG,
   getDisplayDimensions,
   type ComponentSize,
@@ -85,11 +84,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     if (nodeId) {
       updateNodeData(nodeId, { size: newSize });
     }
-    window.dispatchEvent(
-      new CustomEvent(COMPONENT_SIZE_CHANGE_EVENT, {
-        detail: { nodeId, size: newSize },
-      }),
-    );
   };
 
   const Component = registryItem?.Component;
@@ -101,7 +95,6 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
   >;
   const config = SIZE_CONFIG[size];
   const isPreset = size !== "default";
-  const isLargeComponent = isPreset;
   const displayDims = getDisplayDimensions(size);
 
   if (!registryItem) {
@@ -114,7 +107,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
 
   return (
     <div
-      className={`flex flex-col ${isLargeComponent ? "" : "min-w-[200px]"}`}
+      className={`flex flex-col ${isPreset ? "" : "min-w-[200px]"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
         fontFamily: "var(--pg-font-sans)",

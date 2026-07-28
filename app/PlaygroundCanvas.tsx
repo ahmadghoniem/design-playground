@@ -37,10 +37,10 @@ import TextNode from "@pg/features/canvas/nodes/TextNode";
 import ShapeNode, { type ShapeKind } from "@pg/features/canvas/nodes/ShapeNode";
 import FrameNode from "@pg/features/canvas/nodes/FrameNode";
 import HelperLines from "@pg/features/canvas/nodes/HelperLines";
-import { ITERATION_COLLAPSE_TOGGLE_EVENT } from "@pg/shared/lib/constants";
 import DockedChatBar from "@pg/features/chat/DockedChatBar";
 import ElementHighlight from "@pg/features/canvas/components/ElementHighlight";
 import { useInteractiveNodeStore } from "@pg/shared/stores/interactive-node-store";
+import { useCollapsedNodesStore } from "@pg/shared/stores/collapsed-nodes-store";
 import { computeVisibleNodes } from "@pg/features/canvas/canvas-visibility";
 
 /** Gap between background dots (px) */
@@ -74,6 +74,8 @@ interface PlaygroundCanvasProps {
   projectId?: string;
   showClearDialog: boolean;
   setShowClearDialog: Dispatch<SetStateAction<boolean>>;
+  /** Register the header's refresh → scanForIterations(true) callback. */
+  onRegisterIterationRefresh?: (refresh: () => void) => void;
 }
 
 export default function PlaygroundCanvas({
@@ -84,6 +86,7 @@ export default function PlaygroundCanvas({
   projectId,
   showClearDialog,
   setShowClearDialog,
+  onRegisterIterationRefresh,
 }: PlaygroundCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
@@ -115,22 +118,24 @@ export default function PlaygroundCanvas({
   const [knownIterations, setKnownIterations] = useState<string[]>(
     initialKnownIterations,
   );
-  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(
-    new Set(initialState?.collapsedNodeIds || []),
+
+  // Store owns collapsedNodeIds — hydrate once from the persisted snapshot.
+  useState(() => {
+    useCollapsedNodesStore
+      .getState()
+      .hydrate(initialState?.collapsedNodeIds || []);
+    return true;
+  });
+  const collapsedNodeIds = useCollapsedNodesStore((s) => s.collapsedNodeIds);
+  const setCollapsedNodeIds = useCollapsedNodesStore(
+    (s) => s.setCollapsedNodeIds,
   );
-  const collapsedNodeIdsRef = useRef<Set<string>>(null!);
-  if (collapsedNodeIdsRef.current === null) {
-    collapsedNodeIdsRef.current = new Set(initialState?.collapsedNodeIds || []);
-  }
+  const collapsedNodeIdsRef = useRef(collapsedNodeIds);
+  collapsedNodeIdsRef.current = collapsedNodeIds;
 
   // Node ID counter as a ref (survives re-renders, initialized from localStorage)
   const nodeIdCounterRef = useRef<number>(initialState?.nodeIdCounter || 0);
   const getNodeId = useCallback(() => `node_${++nodeIdCounterRef.current}`, []);
-
-  // Keep collapsed ref in sync
-  useEffect(() => {
-    collapsedNodeIdsRef.current = collapsedNodeIds;
-  }, [collapsedNodeIds]);
 
   // Right-click context menu
   const [contextMenu, setContextMenu] = useState<{
@@ -201,6 +206,7 @@ export default function PlaygroundCanvas({
     nodeSelection,
     confirmClearAllNodes,
     autoArrangeNodes,
+    scanForIterations,
   } = usePlaygroundCanvasController({
     nodes,
     setNodes,
@@ -223,6 +229,12 @@ export default function PlaygroundCanvas({
     setActiveTool,
     shapeKind,
   });
+
+  useEffect(() => {
+    onRegisterIterationRefresh?.(() => {
+      void scanForIterations(true);
+    });
+  }, [onRegisterIterationRefresh, scanForIterations]);
 
   // Undo / redo: Ctrl/⌘+Z undoes, Ctrl/⌘+Y (or Ctrl/⌘+Shift+Z) redoes. Ignored
   // while typing in an input/textarea/contentEditable so it never eats an edit.
@@ -327,35 +339,6 @@ export default function PlaygroundCanvas({
 
     wrapper.addEventListener("wheel", handleWheel, { passive: false });
     return () => wrapper.removeEventListener("wheel", handleWheel);
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Collapse/expand toggle event
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const handleCollapseToggle = (e: CustomEvent<{ nodeId: string }>) => {
-      const { nodeId } = e.detail;
-      setCollapsedNodeIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(nodeId)) {
-          next.delete(nodeId);
-        } else {
-          next.add(nodeId);
-        }
-        return next;
-      });
-    };
-
-    window.addEventListener(
-      ITERATION_COLLAPSE_TOGGLE_EVENT,
-      handleCollapseToggle as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        ITERATION_COLLAPSE_TOGGLE_EVENT,
-        handleCollapseToggle as EventListener,
-      );
-    };
   }, []);
 
   const visibleNodes = useMemo(

@@ -3,20 +3,6 @@
 // All fixed variables used across the playground feature.
 // ============================================================================
 
-// ---------------------------------------------------------------------------
-// Custom Event Names
-// ---------------------------------------------------------------------------
-
-/** Fired to request an immediate iteration fetch/scan */
-export const ITERATION_FETCH_EVENT = 'iteration-fetch-requested';
-
-/** Fired when a ComponentNode changes its viewport size */
-export const COMPONENT_SIZE_CHANGE_EVENT = 'playground:component-size-change';
-
-/** Fired when an iteration node's collapse/expand state is toggled */
-export const ITERATION_COLLAPSE_TOGGLE_EVENT = 'playground:iteration-collapse-toggle';
-// ---------------------------------------------------------------------------
-
 /** Key for persisting canvas state (nodes, relations, counter, viewport) */
 export const STORAGE_KEY = 'playground-canvas-state';
 
@@ -122,13 +108,6 @@ export const ITERATION_FILENAME_PATTERN = /^[A-Za-z0-9]+\.iteration-\d+\.tsx$/;
 
 /** Regex pattern to parse iteration filenames into componentName + number */
 export const ITERATION_FILENAME_PARSE_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
-
-// ---------------------------------------------------------------------------
-// Edit Mode Constants
-// ---------------------------------------------------------------------------
-
-/** Fired when an in-place edit completes (iteration preview refresh trigger) */
-export const EDIT_COMPLETE_EVENT = 'playground:edit-complete';
 
 // ---------------------------------------------------------------------------
 // Drag & Drop

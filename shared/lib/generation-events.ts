@@ -25,8 +25,14 @@ function createChannel<T>() {
   };
 }
 
+/** Payload for an in-place edit finishing (same filename — force preview reload). */
+export interface EditCompletePayload {
+  nodeId: string;
+}
+
 export const generationEvents = {
   start: createChannel<GenerationStartPayload>(),
   complete: createChannel<GenerationCompletePayload>(),
   error: createChannel<GenerationErrorPayload>(),
+  editComplete: createChannel<EditCompletePayload>(),
 };

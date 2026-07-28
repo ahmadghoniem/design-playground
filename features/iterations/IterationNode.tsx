@@ -8,7 +8,7 @@ import {
   useEffect,
   type ComponentType,
 } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, useNodesData } from "@xyflow/react";
 import { GitMerge, Trash2, Loader2, ChevronRight, AlertTriangle } from "lucide-react";
 import {
   Tooltip,
@@ -33,9 +33,6 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  COMPONENT_SIZE_CHANGE_EVENT,
-  EDIT_COMPLETE_EVENT,
-  ITERATION_COLLAPSE_TOGGLE_EVENT,
   SIZE_CONFIG,
   getDisplayDimensions,
   type ComponentSize,
@@ -49,6 +46,7 @@ import {
   useInteractiveNodeStore,
   useIsInteractiveNode,
 } from "@pg/shared/stores/interactive-node-store";
+import { useCollapsedNodesStore } from "@pg/shared/stores/collapsed-nodes-store";
 import { useFrameHoverHint } from "@pg/shared/ui/FrameHoverHint";
 import { useIterationAdoption } from "@pg/features/iterations/useIterationAdoption";
 import {
@@ -70,6 +68,8 @@ interface IterationNodeProps {
     registryId?: string;
     /** Size of the parent ComponentNode at the time this iteration was created */
     parentSize?: ComponentSize;
+    /** Local viewport override — when set, wins over the live parent size */
+    size?: ComponentSize;
     hasChildren?: boolean;
     isCollapsed?: boolean;
     /** Whether this iteration has been adopted into the original component */
@@ -81,6 +81,7 @@ interface IterationNodeProps {
 
 function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   const { deleteElements, updateNodeData } = useReactFlow();
+  const toggleCollapsed = useCollapsedNodesStore((s) => s.toggleCollapsed);
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGlobalGenerating, setIsGlobalGenerating] = useState(false);
@@ -121,7 +122,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   // Bumped when an in-place edit targeting this node completes, so the
   // dynamically-loaded component is re-imported and the fresh version shown
   // (the file keeps the same name on an edit, so data.filename alone can't
-  // detect it — see EDIT_COMPLETE_EVENT listener below).
+  // detect it — see generationEvents.editComplete below).
   const [reloadAttempt, setReloadAttempt] = useState(0);
 
   useEffect(() => {
@@ -161,18 +162,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     };
   }, [data.filename, reloadAttempt]);
 
-  // An in-place edit keeps the same filename, so nothing above re-runs. Listen
-  // for EDIT_COMPLETE_EVENT targeting this node and bump the reload counter so
-  // the freshly-written component is re-imported and rendered.
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.nodeId === id) setReloadAttempt((n) => n + 1);
-    };
-    window.addEventListener(EDIT_COMPLETE_EVENT, handler);
-    return () => window.removeEventListener(EDIT_COMPLETE_EVENT, handler);
-  }, [id]);
-
   const registryId = useMemo(
     () => data.registryId ?? componentNameToRegistryId(data.componentName),
     [data.registryId, data.componentName],
@@ -189,49 +178,41 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     unknown
   >;
 
-  // Independent size — persisted in node data, initially from parent at creation time
-  const [size, setSize] = useState<ComponentSize>(
-    () =>
-      data.parentSize ||
-      resolveRegistryItem(registryId)?.size ||
-      "default",
+  // Local override wins; otherwise follow the live parent size (via React Flow).
+  const parentData = useNodesData(data.parentNodeId)?.data as
+    | { size?: ComponentSize }
+    | undefined;
+  const [localSize, setLocalSize] = useState<ComponentSize | null>(
+    () => data.size ?? null,
   );
-  // Listen for parent size changes
-  useEffect(() => {
-    const handleParentSizeChange = (
-      e: CustomEvent<{ nodeId: string; size: ComponentSize }>,
-    ) => {
-      if (e.detail.nodeId === data.parentNodeId) {
-        setSize(e.detail.size);
-      }
-    };
-    window.addEventListener(
-      COMPONENT_SIZE_CHANGE_EVENT,
-      handleParentSizeChange as EventListener,
-    );
-    return () =>
-      window.removeEventListener(
-        COMPONENT_SIZE_CHANGE_EVENT,
-        handleParentSizeChange as EventListener,
-      );
-  }, [data.parentNodeId]);
+  const size: ComponentSize =
+    localSize ??
+    parentData?.size ??
+    data.parentSize ??
+    resolveRegistryItem(registryId)?.size ??
+    "default";
 
   useEffect(() => {
     const on = () => setIsGlobalGenerating(true);
     const off = () => setIsGlobalGenerating(false);
+    const onEditComplete = (payload: { nodeId: string }) => {
+      if (payload.nodeId === id) setReloadAttempt((n) => n + 1);
+    };
     const offStart = generationEvents.start.on(on);
     const offComplete = generationEvents.complete.on(off);
     const offError = generationEvents.error.on(off);
+    const offEdit = generationEvents.editComplete.on(onEditComplete);
     return () => {
       offStart();
       offComplete();
       offError();
+      offEdit();
     };
-  }, []);
+  }, [id]);
 
 
   const handleSizeChange = (newSize: ComponentSize) => {
-    setSize(newSize);
+    setLocalSize(newSize);
     updateNodeData(id, { size: newSize });
   };
 
@@ -276,7 +257,6 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
   const config = SIZE_CONFIG[size];
   const isPreset = size !== "default";
-  const isLargeComponent = isPreset;
   const displayDims = getDisplayDimensions(size);
   const handleWheel = useScrollCapture(scrollContainerRef);
 
@@ -285,7 +265,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
   return (
     <div
-      className={`flex flex-col ${isLargeComponent ? "" : "min-w-[280px]"}`}
+      className={`flex flex-col ${isPreset ? "" : "min-w-[280px]"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
         fontFamily: "var(--pg-font-sans)",
@@ -297,13 +277,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         <div className="flex items-center gap-1.5">
           {data.hasChildren && (
             <button
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent(ITERATION_COLLAPSE_TOGGLE_EVENT, {
-                    detail: { nodeId: id },
-                  }),
-                )
-              }
+              onClick={() => toggleCollapsed(id)}
               className="p-0.5 rounded text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors shrink-0"
               aria-label={
                 data.isCollapsed ? "Expand children" : "Collapse children"

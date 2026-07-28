@@ -64,6 +64,13 @@ export default function PlaygroundClient() {
   const setSkillsCatalogOpen = useSkillsUiStore((s) => s.setCatalogOpen);
   const bumpSkillsVersion = useSkillsUiStore((s) => s.bumpSkillsVersion);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const refreshIterationsRef = useRef<(() => void) | null>(null);
+  const registerIterationRefresh = useCallback((fn: () => void) => {
+    refreshIterationsRef.current = fn;
+  }, []);
+  const handleRefreshIterations = useCallback(() => {
+    refreshIterationsRef.current?.();
+  }, []);
 
   const cancelSidebarHideTimer = useCallback(() => {
     if (sidebarHideTimerRef.current) {
@@ -154,6 +161,7 @@ export default function PlaygroundClient() {
         <PlaygroundHeader
           projectName={projectName}
           onClear={() => setShowClearDialog(true)}
+          onRefreshIterations={handleRefreshIterations}
         />
 
         {/* Body: sidebar + canvas */}
@@ -192,6 +200,7 @@ export default function PlaygroundClient() {
                 projectId={projectId}
                 showClearDialog={showClearDialog}
                 setShowClearDialog={setShowClearDialog}
+                onRegisterIterationRefresh={registerIterationRefresh}
               />
             </CanvasFlowProvider>
           </div>

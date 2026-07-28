@@ -15,7 +15,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@pg/shared/ui/tooltip";
-import { ITERATION_FETCH_EVENT } from "@pg/shared/lib/constants";
 import { useSkillsUiStore } from "@pg/shared/stores/skills-ui-store";
 import ModelSettingsModal from "@pg/app/ModelSettingsModal";
 
@@ -26,6 +25,7 @@ import ModelSettingsModal from "@pg/app/ModelSettingsModal";
 interface PlaygroundHeaderProps {
   projectName: string;
   onClear: () => void;
+  onRefreshIterations: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,15 +35,12 @@ interface PlaygroundHeaderProps {
 export default function PlaygroundHeader({
   projectName,
   onClear,
+  onRefreshIterations,
 }: PlaygroundHeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSkillsCatalog = useSkillsUiStore((s) => s.openCatalog);
   const previewScheme = usePreviewColorSchemeStore((s) => s.scheme);
   const togglePreviewScheme = usePreviewColorSchemeStore((s) => s.toggle);
-
-  const handleRefresh = () => {
-    window.dispatchEvent(new CustomEvent(ITERATION_FETCH_EVENT));
-  };
 
   return (
     <TooltipProvider>
@@ -125,7 +122,7 @@ export default function PlaygroundHeader({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={handleRefresh}
+                onClick={onRefreshIterations}
                 className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
                 aria-label="Refresh variations"
               >

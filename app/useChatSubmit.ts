@@ -6,7 +6,6 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  EDIT_COMPLETE_EVENT,
   type ChatSubmitPayload,
 } from "@pg/shared/lib/constants";
 import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
@@ -161,11 +160,9 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
         } else {
           // Tell the targeted node to re-import its freshly-edited component
           // (same filename, so the loader can't detect the change itself).
-          window.dispatchEvent(
-            new CustomEvent(EDIT_COMPLETE_EVENT, {
-              detail: { nodeId: payload.targetNodeId },
-            }),
-          );
+          generationEvents.editComplete.emit({
+            nodeId: payload.targetNodeId,
+          });
           generationEvents.complete.emit({
             componentId: editComponentId,
             parentNodeId: payload.targetNodeId,
