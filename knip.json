@@ -15,6 +15,5 @@
     "@tailwindcss/typography",
     "tw-animate-css",
     "dependency-cruiser"
-  ],
-  "ignoreBinaries": ["dependency-cruiser"]
+  ]
 }
