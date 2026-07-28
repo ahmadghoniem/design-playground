@@ -102,6 +102,55 @@ async function loadSkillsFromDir(
   return skills;
 }
 
+/**
+ * NOT IMPLEMENTED — the skills *installer*.
+ *
+ * `features/skills/SkillsCatalogModal.tsx` already POSTs to four endpoints this
+ * router does not serve, so each 404s and the whole catalog UI is dead:
+ *
+ *   POST /api/skills/add      { source }              install a skill
+ *   POST /api/skills/preview  { source }              inspect before installing
+ *   POST /api/skills/update   { id }                  re-pull an installed skill
+ *   POST /api/skills/remove   { id }                  uninstall
+ *
+ * Predates the cleanup branch — a long-standing gap, not a regression. Reading
+ * skills works; only these four do not exist.
+ *
+ * Note what the payloads say about the design: this is **not** a CRUD editor.
+ * There is no name/description/body in any request. `source` is a package
+ * coordinate — `owner/repo` or `owner/repo@skill` (see `FEATURED_SKILLS` in
+ * `features/skills/featured-skills.ts`), and the free-text field accepts "a
+ * GitHub URL, or `npx skills add …`". `update` carries only an id, so it means
+ * "re-fetch from where this came from". It is a package manager for skills,
+ * backed by skills.sh / GitHub.
+ *
+ * Constraints worth knowing before implementing:
+ *
+ * 1. **This fetches from the network and writes to disk.** That is a materially
+ *    different risk profile from every other route here, all of which are local.
+ *    A skill is agent instructions that get injected into generation prompts, so
+ *    installing one from an arbitrary GitHub repo is executing someone else's
+ *    prompt. `preview` exists so the user can read it first — keep that
+ *    mandatory in the UI rather than optional.
+ * 2. **Only ever write to `USER_SKILLS_DIR`.** `BUILTIN_SKILLS_DIR` ships with
+ *    the package. `loadSkillsFromDir` already tags each skill
+ *    `source: 'builtin' | 'user'` — reject any mutation targeting a builtin.
+ * 3. **Validate `id` as a single path segment before touching the filesystem.**
+ *    Ids become directory names, and both `update` and `remove` take one
+ *    straight from the client. Match an explicit safe regex, as
+ *    `ITERATION_FILENAME_PATTERN` (`shared/lib/constants.ts`) does — do not
+ *    sanitise by stripping characters.
+ * 4. **A skill is a directory containing `SKILL.md`**, not a single file (see
+ *    `loadSkillsFromDir`). Install creates the directory; remove deletes it
+ *    recursively — which is the operation most worth getting the id check right.
+ * 5. **Builtin ids shadow user ids** in the GET dedupe below. Decide explicitly
+ *    whether installing a skill may shadow a builtin, or whether a colliding id
+ *    is rejected.
+ * 6. **`/skills/` is gitignored**, so installed skills are
+ *    never committed and a remove is unrecoverable.
+ * 7. **`preview` must not write.** Fetch and return; no directory creation, no
+ *    caching to disk.
+ */
 export function skillsRoutes() {
   const app = new Hono();
 
