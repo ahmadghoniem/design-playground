@@ -1,5 +1,5 @@
 /**
- * DOM/pill engine for the InlineReference contenteditable.
+ * DOM/pill engine for the MentionInput contenteditable.
  *
  * Pure DOM functions: operate on HTMLDivElement / Node and return/mutate
  * DOM nodes or segment data. No React imports — testable with jsdom.
@@ -31,12 +31,12 @@ export type Segment = TextSegment | ReferenceSegment
 // ---------------------------------------------------------------------------
 
 export const ZERO_WIDTH_SPACE = "​"
-export const PILL_ATTR = "data-inline-ref"
-export const PILL_TRIGGER_ATTR = "data-inline-ref-trigger"
+export const PILL_ATTR = "data-mention"
+export const PILL_TRIGGER_ATTR = "data-mention-trigger"
 /** Internal-only: not part of the module's public surface. */
-const PILL_VALUE_ATTR = "data-inline-ref-value"
-export const PILL_LABEL_ATTR = "data-inline-ref-label"
-export const PILL_DATA_ATTR = "data-inline-ref-data"
+const PILL_VALUE_ATTR = "data-mention-value"
+export const PILL_LABEL_ATTR = "data-mention-label"
+export const PILL_DATA_ATTR = "data-mention-data"
 export const PILL_IMPECCABLE_CMD_ATTR = "data-impeccable-command"
 export const PILL_IMPECCABLE_CLEARED_ATTR = "data-command-cleared"
 
@@ -112,9 +112,9 @@ export function createPillElement(
 
   pill.contentEditable = "false"
   pill.className = cn(
-    "inline-reference-pill inline-flex items-center select-all whitespace-nowrap",
+    "mention-pill inline-flex items-center select-all whitespace-nowrap",
     isSkill
-      ? "inline-reference-pill--skill"
+      ? "mention-pill--skill"
       : "gap-0.5 rounded-sm bg-pg-accent/50 border border-pg-accent px-1.5 py-0.5 align-baseline mx-0.5"
   )
 
@@ -122,7 +122,7 @@ export function createPillElement(
   labelSpan.textContent = isSkill ? `/${segment.label}` : segment.label
   labelSpan.className = cn(
     "pointer-events-none",
-    isSkill ? "inline-reference-pill__label" : undefined
+    isSkill ? "mention-pill__label" : undefined
   )
   pill.appendChild(labelSpan)
 
@@ -155,7 +155,7 @@ export function updateImpeccablePillElement(pillEl: HTMLElement, command: string
   data.impeccableCommand = command
   pillEl.setAttribute(PILL_DATA_ATTR, JSON.stringify(data))
 
-  const labelEl = pillEl.querySelector(".inline-reference-pill__label")
+  const labelEl = pillEl.querySelector(".mention-pill__label")
   if (labelEl) labelEl.textContent = `/impeccable ${command}`
 
   return readSegmentsFromDOM(inputEl)

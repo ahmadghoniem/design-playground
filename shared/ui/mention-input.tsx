@@ -1,3 +1,18 @@
+/**
+ * MentionInput — a contenteditable field where a trigger character (`/` today)
+ * opens a picker and inserts a **pill**: a `contenteditable="false"` span the
+ * browser treats as a single atom, so it can't be typed into and deletes whole.
+ *
+ * Same shape as the rest of shared/ui (see dialog.tsx): every part of the
+ * compound component lives here, exported together at the bottom, each carrying
+ * a `data-slot`. The DOM/pill engine is the one piece that lives apart —
+ * `mention-input-dom.ts` imports no React and is testable under jsdom.
+ *
+ * The value is `Segment[]` (`text` | `reference`), re-read from the DOM on every
+ * keystroke by `readSegmentsFromDOM` — the DOM is the source of truth here,
+ * because the user edits it directly.
+ */
+
 import * as React from "react"
 
 import { cn } from "@pg/shared/lib/utils"
@@ -5,8 +20,8 @@ import {
   readSegmentsFromDOM,
   createPillElement,
   updateImpeccablePillElement,
-  detectTrigger,
   placeCursorAfter,
+  detectTrigger,
   ZERO_WIDTH_SPACE,
   PILL_ATTR,
   PILL_TRIGGER_ATTR,
@@ -17,48 +32,98 @@ import {
   type Segment,
   type ReferenceSegment,
   type TriggerState,
-} from "@pg/shared/ui/inline-reference/dom-engine"
-import {
-  InlineReferenceContext,
-  useInlineReferenceContext,
-  type InlineReferenceContextValue,
-  type InlineReferenceItemData,
-  type OnSelectItemResult,
-} from "@pg/shared/ui/inline-reference/context"
+} from "@pg/shared/ui/mention-input-dom"
 
-// Re-export public types consumed by external modules (e.g. DockedChatBar)
-export type {
-  OnSelectItemResult,
-  InlineReferenceItemData,
-} from "@pg/shared/ui/inline-reference/context"
 export type {
   Segment,
   TextSegment,
   ReferenceSegment,
-} from "@pg/shared/ui/inline-reference/dom-engine"
+} from "@pg/shared/ui/mention-input-dom"
 
 // ---------------------------------------------------------------------------
-// InlineReference (Root)
+// Types + context
 // ---------------------------------------------------------------------------
 
-export type InlineReferenceHandle = {
+export type MentionItemData = {
+  id: string
+  label: string
+  [key: string]: unknown
+}
+
+/**
+ * Callback fired before an item is selected. Return value controls what happens:
+ * - `{ preventDefault: true }` — cancels the normal pill insertion
+ * - `{ overrideItem: item }` — inserts `item` instead of the originally-selected one
+ * - `undefined` / `{}` — normal insertion
+ */
+export type OnSelectItemResult = {
+  preventDefault?: boolean
+  overrideItem?: MentionItemData
+} | undefined
+
+type MentionInputContextValue = {
+  segments: Segment[]
+  setSegments: React.Dispatch<React.SetStateAction<Segment[]>>
+  triggerState: TriggerState
+  setTriggerState: React.Dispatch<React.SetStateAction<TriggerState>>
+  activeIndex: number
+  setActiveIndex: React.Dispatch<React.SetStateAction<number>>
+  inputRef: React.RefObject<HTMLDivElement | null>
+  selectItem: (trigger: string, item: MentionItemData) => void
+  registeredTriggers: Set<string>
+  registerTrigger: (trigger: string) => void
+  unregisterTrigger: (trigger: string) => void
+  /**
+   * Currently-filtered items per trigger. Written by MentionInputContent (which
+   * owns the filtering) and read by MentionInputField's keydown handler (which
+   * owns arrow/enter navigation) — the two are siblings, so this is their only
+   * shared channel.
+   *
+   * A plain mutable Map rather than state, like `registeredTriggers` above: it
+   * changes on every keystroke and nothing renders from it, so putting it in
+   * state would re-render the whole subtree per character for no visible effect.
+   */
+  itemsByTrigger: Map<string, MentionItemData[]>
+  listId: string
+  onImpeccableCommandCleared?: (pillEl: HTMLElement) => void
+  onSkillPillPendingDelete?: (pillEl: HTMLElement) => void
+}
+
+const MentionInputContext =
+  React.createContext<MentionInputContextValue | null>(null)
+
+function useMentionInputContext() {
+  const context = React.useContext(MentionInputContext)
+  if (!context) {
+    throw new Error(
+      "MentionInput components must be used within <MentionInput>"
+    )
+  }
+  return context
+}
+
+// ---------------------------------------------------------------------------
+// MentionInput (root)
+// ---------------------------------------------------------------------------
+
+export type MentionInputHandle = {
   updateImpeccablePill(pillEl: HTMLElement, command: string): void
 }
 
-type InlineReferenceProps = {
+type MentionInputProps = {
   children: React.ReactNode
   value?: Segment[]
   onValueChange?: (segments: Segment[]) => void
-  onSelectItem?: (trigger: string, item: InlineReferenceItemData) => OnSelectItemResult
+  onSelectItem?: (trigger: string, item: MentionItemData) => OnSelectItemResult
   onImpeccableCommandCleared?: (pillEl: HTMLElement) => void
   onSkillPillPendingDelete?: (pillEl: HTMLElement) => void
   className?: string
 }
 
-const InlineReference = React.forwardRef<
-  InlineReferenceHandle,
-  InlineReferenceProps & Omit<React.ComponentProps<"div">, "value">
->(function InlineReference({
+const MentionInput = React.forwardRef<
+  MentionInputHandle,
+  MentionInputProps & Omit<React.ComponentProps<"div">, "value">
+>(function MentionInput({
   children,
   value,
   onValueChange,
@@ -75,6 +140,9 @@ const InlineReference = React.forwardRef<
   const [activeIndex, setActiveIndex] = React.useState(0)
   const inputRef = React.useRef<HTMLDivElement | null>(null)
   const [registeredTriggers] = React.useState(() => new Set<string>())
+  const [itemsByTrigger] = React.useState(
+    () => new Map<string, MentionItemData[]>(),
+  )
   const listId = React.useId()
 
   const isControlled = value !== undefined
@@ -96,7 +164,7 @@ const InlineReference = React.forwardRef<
     )
 
   const selectItem = React.useCallback(
-    (trigger: string, item: InlineReferenceItemData) => {
+    (trigger: string, item: MentionItemData) => {
       const result = onSelectItem?.(trigger, item)
       if (result?.preventDefault) return
       const effectiveItem = result?.overrideItem ?? item
@@ -181,7 +249,7 @@ const InlineReference = React.forwardRef<
     [setSegments]
   )
 
-  const contextValue = React.useMemo<InlineReferenceContextValue>(
+  const contextValue = React.useMemo<MentionInputContextValue>(
     () => ({
       segments,
       setSegments,
@@ -194,6 +262,7 @@ const InlineReference = React.forwardRef<
       registeredTriggers,
       registerTrigger,
       unregisterTrigger,
+      itemsByTrigger,
       listId,
       onImpeccableCommandCleared,
       onSkillPillPendingDelete,
@@ -207,6 +276,7 @@ const InlineReference = React.forwardRef<
       registeredTriggers,
       registerTrigger,
       unregisterTrigger,
+      itemsByTrigger,
       listId,
       onImpeccableCommandCleared,
       onSkillPillPendingDelete,
@@ -218,32 +288,32 @@ const InlineReference = React.forwardRef<
   }), [updateImpeccablePill])
 
   return (
-    <InlineReferenceContext.Provider value={contextValue}>
+    <MentionInputContext.Provider value={contextValue}>
       <div
-        data-slot="inline-reference"
+        data-slot="mention-input"
         className={cn("relative", className)}
         {...props}
       >
         {children}
       </div>
-    </InlineReferenceContext.Provider>
+    </MentionInputContext.Provider>
   )
 })
 
 // ---------------------------------------------------------------------------
-// InlineReferenceInput
+// MentionInputField — the contenteditable itself
 // ---------------------------------------------------------------------------
 
-type InlineReferenceInputProps = {
+type MentionInputFieldProps = {
   placeholder?: string
   className?: string
 } & Omit<React.ComponentProps<"div">, "contentEditable" | "role">
 
-function InlineReferenceInput({
+function MentionInputField({
   placeholder,
   className,
   ...props
-}: InlineReferenceInputProps) {
+}: MentionInputFieldProps) {
   const {
     setSegments,
     triggerState,
@@ -253,10 +323,11 @@ function InlineReferenceInput({
     inputRef,
     selectItem,
     registeredTriggers,
+    itemsByTrigger,
     listId,
     onImpeccableCommandCleared,
     onSkillPillPendingDelete,
-  } = useInlineReferenceContext()
+  } = useMentionInputContext()
 
   const isComposing = React.useRef(false)
   const [isEmpty, setIsEmpty] = React.useState(true)
@@ -270,20 +341,6 @@ function InlineReferenceInput({
       pendingDeletePillRef.current = null
     }
   }, [])
-
-  const itemsMapRef = React.useRef<
-    Map<string, InlineReferenceItemData[]>
-  >(null!)
-  if (itemsMapRef.current === null) {
-    itemsMapRef.current = new Map()
-  }
-
-  React.useEffect(() => {
-    const el = inputRef.current
-    if (el) {
-      ;(el as HTMLDivElement & { __itemsMapRef?: typeof itemsMapRef }).__itemsMapRef = itemsMapRef
-    }
-  }, [inputRef])
 
   const checkEmpty = React.useCallback(() => {
     const el = inputRef.current
@@ -332,7 +389,7 @@ function InlineReferenceInput({
       if (!el) return
 
       if (triggerState) {
-        const items = itemsMapRef.current.get(triggerState.trigger) ?? []
+        const items = itemsByTrigger.get(triggerState.trigger) ?? []
         const count = items.length
 
         if (e.key === "ArrowDown") {
@@ -411,7 +468,7 @@ function InlineReferenceInput({
             // Stage 1 (impeccable): clear the command, show yellow + picker
             clearPendingDelete()
             pill.setAttribute(PILL_IMPECCABLE_CLEARED_ATTR, "")
-            const labelEl = pill.querySelector(".inline-reference-pill__label")
+            const labelEl = pill.querySelector(".mention-pill__label")
             if (labelEl) labelEl.textContent = "/impeccable"
             pill.setAttribute(PILL_LABEL_ATTR, "impeccable")
             const dataStr = pill.getAttribute(PILL_DATA_ATTR)
@@ -448,6 +505,7 @@ function InlineReferenceInput({
       setActiveIndex,
       setTriggerState,
       setSegments,
+      itemsByTrigger,
       checkEmpty,
       clearPendingDelete,
       onImpeccableCommandCleared,
@@ -486,7 +544,7 @@ function InlineReferenceInput({
   return (
     <div
       ref={inputRef}
-      data-slot="inline-reference-input"
+      data-slot="mention-input-field"
       contentEditable
       suppressContentEditableWarning
       role="combobox"
@@ -497,7 +555,7 @@ function InlineReferenceInput({
       className={cn(
         "border-pg-input placeholder:text-pg-muted-foreground focus-visible:border-pg-ring focus-visible:ring-pg-ring/50 aria-invalid:ring-pg-destructive/20 aria-invalid:border-pg-destructive w-full rounded-md border bg-transparent px-3 py-2 shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
         "whitespace-pre-wrap wrap-break-word",
-        "inline-reference-input",
+        "mention-input-field",
         className
       )}
       data-placeholder={placeholder}
@@ -514,13 +572,31 @@ function InlineReferenceInput({
 }
 
 // ---------------------------------------------------------------------------
-// InlineReferenceContent
+// MentionInputContent — the dropdown
 // ---------------------------------------------------------------------------
 
-type InlineReferenceContentProps = {
+type MentionInputContentContextValue = {
+  filteredItems: MentionItemData[]
   trigger: string
-  items: InlineReferenceItemData[]
-  filterFn?: (item: InlineReferenceItemData, query: string) => boolean
+}
+
+const MentionInputContentContext =
+  React.createContext<MentionInputContentContextValue | null>(null)
+
+function useMentionInputContentContext() {
+  const context = React.useContext(MentionInputContentContext)
+  if (!context) {
+    throw new Error(
+      "MentionInputList/Item must be used within <MentionInputContent>"
+    )
+  }
+  return context
+}
+
+type MentionInputContentProps = {
+  trigger: string
+  items: MentionItemData[]
+  filterFn?: (item: MentionItemData, query: string) => boolean
   children: React.ReactNode
   className?: string
   /** When true, show the dropdown even without an active trigger (e.g. impeccable demote). */
@@ -532,7 +608,7 @@ type InlineReferenceContentProps = {
   placement?: "top" | "bottom"
 }
 
-function InlineReferenceContent({
+function MentionInputContent({
   trigger,
   items,
   filterFn,
@@ -541,16 +617,17 @@ function InlineReferenceContent({
   forceOpen = false,
   forcePosition = null,
   placement = "bottom",
-}: InlineReferenceContentProps) {
+}: MentionInputContentProps) {
   const {
     triggerState,
     registerTrigger,
     unregisterTrigger,
     inputRef,
+    itemsByTrigger,
     listId,
     activeIndex,
     setActiveIndex,
-  } = useInlineReferenceContext()
+  } = useMentionInputContext()
 
   React.useEffect(() => {
     registerTrigger(trigger)
@@ -561,7 +638,7 @@ function InlineReferenceContent({
   const query = triggerState?.trigger === trigger ? (triggerState?.query ?? "") : ""
 
   const defaultFilter = React.useCallback(
-    (item: InlineReferenceItemData, q: string) =>
+    (item: MentionItemData, q: string) =>
       item.label.toLowerCase().includes(q.toLowerCase()),
     []
   )
@@ -571,23 +648,15 @@ function InlineReferenceContent({
     [items, query, filter]
   )
 
+  // Publish the filtered list so MentionInputField's keydown handler can
+  // navigate it. Cleanup runs on unmount and before each re-publish, so a
+  // closed dropdown never leaves a stale list behind for Enter to select from.
   React.useEffect(() => {
-    const el = inputRef.current
-    if (!el) return
-    const mapRef = (
-      el as HTMLDivElement & {
-        __itemsMapRef?: React.RefObject<Map<string, InlineReferenceItemData[]>>
-      }
-    ).__itemsMapRef
-    if (mapRef?.current) {
-      mapRef.current.set(trigger, filteredItems)
-    }
+    itemsByTrigger.set(trigger, filteredItems)
     return () => {
-      if (mapRef?.current) {
-        mapRef.current.delete(trigger)
-      }
+      itemsByTrigger.delete(trigger)
     }
-  }, [trigger, filteredItems, inputRef])
+  }, [trigger, filteredItems, itemsByTrigger])
 
   React.useEffect(() => {
     if (forceOpen) {
@@ -660,7 +729,7 @@ function InlineReferenceContent({
 
   return (
     <div
-      data-slot="inline-reference-content"
+      data-slot="mention-input-content"
       role="listbox"
       id={listId}
       aria-label={`Suggestions for ${trigger}`}
@@ -672,51 +741,33 @@ function InlineReferenceContent({
         className
       )}
     >
-      <InlineReferenceContentContext.Provider
+      <MentionInputContentContext.Provider
         value={{ filteredItems, trigger }}
       >
         {children}
-      </InlineReferenceContentContext.Provider>
+      </MentionInputContentContext.Provider>
     </div>
   )
 }
 
-type InlineReferenceContentContextValue = {
-  filteredItems: InlineReferenceItemData[]
-  trigger: string
-}
-
-const InlineReferenceContentContext =
-  React.createContext<InlineReferenceContentContextValue | null>(null)
-
-function useInlineReferenceContentContext() {
-  const context = React.useContext(InlineReferenceContentContext)
-  if (!context) {
-    throw new Error(
-      "InlineReferenceList/Item must be used within <InlineReferenceContent>"
-    )
-  }
-  return context
-}
-
 // ---------------------------------------------------------------------------
-// InlineReferenceList
+// MentionInputList / Item / Empty / Group
 // ---------------------------------------------------------------------------
 
-type InlineReferenceListProps = {
-  children: (item: InlineReferenceItemData) => React.ReactNode
+type MentionInputListProps = {
+  children: (item: MentionItemData) => React.ReactNode
   className?: string
 }
 
-function InlineReferenceList({
+function MentionInputList({
   children,
   className,
-}: InlineReferenceListProps) {
-  const { filteredItems } = useInlineReferenceContentContext()
+}: MentionInputListProps) {
+  const { filteredItems } = useMentionInputContentContext()
 
   return (
     <div
-      data-slot="inline-reference-list"
+      data-slot="mention-input-list"
       className={cn("max-h-[300px] overflow-y-auto p-1", className)}
     >
       {filteredItems.map((item) => children(item))}
@@ -724,36 +775,32 @@ function InlineReferenceList({
   )
 }
 
-// ---------------------------------------------------------------------------
-// InlineReferenceItem
-// ---------------------------------------------------------------------------
-
-type InlineReferenceItemProps = {
-  value: InlineReferenceItemData
+type MentionInputItemProps = {
+  value: MentionItemData
   children: React.ReactNode
   className?: string
-  onSelect?: (item: InlineReferenceItemData) => void
+  onSelect?: (item: MentionItemData) => void
 } & Omit<React.ComponentProps<"div">, "value">
 
-function InlineReferenceItem({
+function MentionInputItem({
   value,
   children,
   className,
   onSelect,
   ...props
-}: InlineReferenceItemProps) {
+}: MentionInputItemProps) {
   const { activeIndex, setActiveIndex, selectItem } =
-    useInlineReferenceContext()
-  const { filteredItems, trigger } = useInlineReferenceContentContext()
+    useMentionInputContext()
+  const { filteredItems, trigger } = useMentionInputContentContext()
 
   const index = filteredItems.indexOf(value)
   const isActive = index === activeIndex
-  const itemId = `inline-ref-item-${value.id}`
+  const itemId = `mention-item-${value.id}`
 
   const description =
-    typeof (value as InlineReferenceItemData & { description?: unknown })
+    typeof (value as MentionItemData & { description?: unknown })
       .description === "string"
-      ? (value as InlineReferenceItemData & { description?: string })
+      ? (value as MentionItemData & { description?: string })
           .description
       : undefined
 
@@ -775,7 +822,7 @@ function InlineReferenceItem({
 
   return (
     <div
-      data-slot="inline-reference-item"
+      data-slot="mention-input-item"
       id={itemId}
       role="option"
       aria-selected={isActive}
@@ -794,26 +841,22 @@ function InlineReferenceItem({
   )
 }
 
-// ---------------------------------------------------------------------------
-// InlineReferenceEmpty
-// ---------------------------------------------------------------------------
-
-type InlineReferenceEmptyProps = {
+type MentionInputEmptyProps = {
   children: React.ReactNode
   className?: string
 }
 
-function InlineReferenceEmpty({
+function MentionInputEmpty({
   children,
   className,
-}: InlineReferenceEmptyProps) {
-  const { filteredItems } = useInlineReferenceContentContext()
+}: MentionInputEmptyProps) {
+  const { filteredItems } = useMentionInputContentContext()
 
   if (filteredItems.length > 0) return null
 
   return (
     <div
-      data-slot="inline-reference-empty"
+      data-slot="mention-input-empty"
       className={cn("py-6 text-center text-sm text-pg-muted-foreground", className)}
     >
       {children}
@@ -821,24 +864,20 @@ function InlineReferenceEmpty({
   )
 }
 
-// ---------------------------------------------------------------------------
-// InlineReferenceGroup
-// ---------------------------------------------------------------------------
-
-type InlineReferenceGroupProps = {
+type MentionInputGroupProps = {
   heading?: string
   children: React.ReactNode
   className?: string
 }
 
-function InlineReferenceGroup({
+function MentionInputGroup({
   heading,
   children,
   className,
-}: InlineReferenceGroupProps) {
+}: MentionInputGroupProps) {
   return (
     <div
-      data-slot="inline-reference-group"
+      data-slot="mention-input-group"
       className={cn("overflow-hidden p-1", className)}
     >
       {heading && (
@@ -851,25 +890,12 @@ function InlineReferenceGroup({
   )
 }
 
-function InlineReferenceSeparator({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="inline-reference-separator"
-      className={cn("bg-pg-border -mx-1 h-px", className)}
-      {...props}
-    />
-  )
-}
-
 export {
-  InlineReference,
-  InlineReferenceInput,
-  InlineReferenceContent,
-  InlineReferenceList,
-  InlineReferenceItem,
-  InlineReferenceEmpty,
-  InlineReferenceGroup,
+  MentionInput,
+  MentionInputField,
+  MentionInputContent,
+  MentionInputList,
+  MentionInputItem,
+  MentionInputEmpty,
+  MentionInputGroup,
 }

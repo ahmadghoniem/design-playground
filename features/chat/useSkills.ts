@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import type { PlaygroundSkill } from "@pg/skills";
-import { SKILLS_CHANGED_EVENT } from "@pg/shared/lib/constants";
+import { useSkillsUiStore } from "@pg/shared/stores/skills-ui-store";
 
 // ---------------------------------------------------------------------------
 // useSkills — shared, deduped skills fetch
 // ---------------------------------------------------------------------------
 // The docked chat bar (DockedChatBar) and the skills catalog modal both need
 // the skills list. A module-level cache + in-flight promise means they share a
-// single `/playground/api/skills` request instead of each firing their own. Refreshes
-// when a SKILLS_CHANGED_EVENT is dispatched (skill added/removed).
+// single `/playground/api/skills` request instead of each firing their own.
+// Refreshes when skillsVersion bumps (skill added/removed).
 // ---------------------------------------------------------------------------
 
 let cache: PlaygroundSkill[] | null = null;
@@ -35,27 +35,29 @@ function loadSkills(): Promise<PlaygroundSkill[]> {
 
 export function useSkills(): PlaygroundSkill[] {
   const [skills, setSkills] = useState<PlaygroundSkill[]>(() => cache ?? []);
+  const skillsVersion = useSkillsUiStore((s) => s.skillsVersion);
 
   useEffect(() => {
     let cancelled = false;
-    const load = () =>
-      loadSkills().then((s) => {
-        if (!cancelled) setSkills(s);
-      });
-    load();
-
-    // Invalidate + refetch when the catalog changes. Nulling only `cache`
-    // (not `inflight`) lets concurrent listeners dedupe onto one request.
-    const onChanged = () => {
-      cache = null;
-      load();
-    };
-    window.addEventListener(SKILLS_CHANGED_EVENT, onChanged);
+    loadSkills().then((s) => {
+      if (!cancelled) setSkills(s);
+    });
     return () => {
       cancelled = true;
-      window.removeEventListener(SKILLS_CHANGED_EVENT, onChanged);
     };
   }, []);
+
+  useEffect(() => {
+    if (skillsVersion === 0) return;
+    let cancelled = false;
+    cache = null;
+    loadSkills().then((s) => {
+      if (!cancelled) setSkills(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [skillsVersion]);
 
   return skills;
 }

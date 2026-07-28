@@ -351,54 +351,34 @@ body:has(.playground-main-view) {
 }
 
 /* ---------------------------------------------------------------------------
-   Chat Model Bubble + Flip Animation (docked chat bar model avatar)
+   Claude agent mark (only agent — no per-model icon lookup)
    --------------------------------------------------------------------------- */
+
+.claude-agent-mark {
+  background-color: #d77655;
+  background-image: url("../assets/claude-icon-white.svg");
+  background-size: 70%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 
 .chat-bubble {
   position: relative;
   width: 28px;
   height: 28px;
-  perspective: 200px;
   flex-shrink: 0;
 }
 
-.bubble-face {
+.chat-bubble .claude-agent-mark {
   position: absolute;
   inset: 0;
-  backface-visibility: hidden;
   border-radius: 50% 50% 50% 6px;
-  /* background set per-model via inline style from model-icons.ts */
-  background-size: 70%;
-  background-position: center;
-  background-repeat: no-repeat;
   outline: 2.5px solid rgba(255, 255, 255, 0.9);
   padding-right: 10%;
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.18),
     inset 0 -4px 6px 0 rgba(0, 0, 0, 0.08),
     inset 0 4px 4px 0 rgba(255, 255, 255, 0.25);
-}
-
-.bubble-face--next {
-  transform: rotateY(180deg);
-}
-
-@keyframes flip-out {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(-180deg); }
-}
-
-@keyframes flip-in {
-  from { transform: rotateY(180deg); }
-  to   { transform: rotateY(0deg); }
-}
-
-.chat-bubble.is-switching .bubble-face--current {
-  animation: flip-out 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.chat-bubble.is-switching .bubble-face--next {
-  animation: flip-in 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* ---------------------------------------------------------------------------
@@ -508,7 +488,7 @@ body:has(.playground-main-view) {
 
 /* Inline-reference placeholder — rendered as ::before so it naturally
    sits inside the contentEditable's padding box. No JS sync needed. */
-.inline-reference-input[data-empty]::before {
+.mention-input-field[data-empty]::before {
   content: attr(data-placeholder);
   color: var(--pg-muted-foreground);
   pointer-events: none;
@@ -516,12 +496,12 @@ body:has(.playground-main-view) {
 }
 
 /* Cursor Chat input — lighter placeholder */
-.cursor-chat-inline-input .inline-reference-input[data-empty]::before {
+.cursor-chat-inline-input .mention-input-field[data-empty]::before {
   color: rgb(185, 183, 181); /* stone-400 */
 }
 
 /* Skill pill — looks like normal inline text, just blue */
-.inline-reference-pill--skill {
+.mention-pill--skill {
   gap: 0;
   margin: 0 1px;
   padding: 1px 2px;
@@ -532,7 +512,7 @@ body:has(.playground-main-view) {
   box-shadow: none;
 }
 
-.inline-reference-pill--skill .inline-reference-pill__label {
+.mention-pill--skill .mention-pill__label {
   font-size: inherit;
   font-weight: 500;
   line-height: inherit;
@@ -540,22 +520,22 @@ body:has(.playground-main-view) {
 }
 
 /* First backspace: selection highlight before delete */
-.inline-reference-pill--skill[data-pending-delete] {
+.mention-pill--skill[data-pending-delete] {
   background: rgb(219, 234, 254);
   border-radius: 3px;
 }
 
-.inline-reference-pill--skill[data-pending-delete] .inline-reference-pill__label {
+.mention-pill--skill[data-pending-delete] .mention-pill__label {
   color: rgb(29, 78, 216);
 }
 
 /* Impeccable pill: command cleared state (stage 1 of 3-stage deletion). */
-.inline-reference-pill--skill[data-command-cleared] {
+.mention-pill--skill[data-command-cleared] {
   background: rgb(254, 243, 199);
   border-radius: 3px;
 }
 
-.inline-reference-pill--skill[data-command-cleared] .inline-reference-pill__label {
+.mention-pill--skill[data-command-cleared] .mention-pill__label {
   color: rgb(146, 64, 14);
 }
 
@@ -583,7 +563,7 @@ body:has(.playground-main-view) {
   cursor: crosshair !important;
 }
 
-/* Allow mouse events through the iframe overlay during element selection */
-.element-select-mode [data-iframe-overlay] {
+/* Allow mouse events through the interact catcher during element selection */
+.element-select-mode [data-pg-interact-catcher] {
   pointer-events: none !important;
 }
