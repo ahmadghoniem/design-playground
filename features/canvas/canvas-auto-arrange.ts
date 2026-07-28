@@ -1,5 +1,6 @@
 import type { Node } from '@xyflow/react';
-import { buildChildrenMap, type CanvasRelation } from './canvas-relations';
+import type { CanvasRelation } from '@pg/shared/lib/canvas-persistence';
+import { buildChildrenMap } from './canvas-relations';
 import {
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_HEIGHT,

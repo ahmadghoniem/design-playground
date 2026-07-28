@@ -10,7 +10,7 @@ import {
   DEFAULT_COMPONENT_NODE_WIDTH,
 } from "@pg/shared/lib/constants";
 import type { HelperLineState } from "@pg/features/canvas/nodes/HelperLines";
-import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 
 type CanvasContextMenu = {
   x: number;

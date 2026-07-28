@@ -28,7 +28,7 @@ import {
 import { resolveRegistryItem } from "@pg/registry";
 import { ResizeGripIcon } from "@pg/shared/ui/playground-nav-icons";
 import { loadIterationComponentModule } from "@pg/shared/lib/iteration-loader";
-import { SizeButtons } from "@pg/shared/ui/SizeButtons";
+import { ViewportButtons } from "@pg/shared/ui/ViewportButtons";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 import {
   generationEvents,
@@ -395,7 +395,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         <div
           className={`flex items-center gap-1.5 transition-opacity nodrag ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          <SizeButtons currentSize={size} onSizeChange={handleSizeChange} />
+          <ViewportButtons currentSize={size} onSizeChange={handleSizeChange} />
         </div>
       </div>
 
@@ -410,6 +410,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
           onDoubleClick={handleFrameDoubleClick}
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
+          onPointerDown={hoverHint.onPointerDown}
           className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
             adoption.adoptionStatus === "adopted"
               ? "ring-2 ring-green-400"
@@ -549,9 +550,9 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
               )}
             </div>
           )}
-          {/* Click-blocker for React render mode */}
+          {/* Transparent click catcher — blocks preview until double-click interact */}
           {!isInteractive && (
-            <div className="absolute inset-0" data-iframe-overlay />
+            <div className="absolute inset-0" data-pg-interact-catcher />
           )}
         </div>
 

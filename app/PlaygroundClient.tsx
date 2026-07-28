@@ -5,18 +5,18 @@ import PlaygroundSidebar from "@pg/app/PlaygroundSidebar";
 import PlaygroundCanvas from "./PlaygroundCanvas";
 import PlaygroundHeader from "./PlaygroundHeader";
 import SkillsCatalogModal from "@pg/features/skills/SkillsCatalogModal";
-import {
-  OPEN_SKILLS_CATALOG_EVENT,
-  SKILLS_CHANGED_EVENT,
-  STORAGE_KEY,
-} from "@pg/shared/lib/constants";
+import { STORAGE_KEY } from "@pg/shared/lib/constants";
 import { preloadAllComponents } from "@pg/registry";
 import { CanvasFlowProvider } from "@pg/features/canvas/canvas-flow";
-import { ensurePlaygroundRelativeRoot } from "@pg/shared/lib/playground-paths";
+import { hydratePlaygroundRelativeRoot } from "@pg/shared/lib/playground-paths";
 import {
   previewSchemeClass,
   usePreviewColorSchemeStore,
 } from "@pg/shared/stores/preview-color-scheme-store";
+import { useSkillsUiStore } from "@pg/shared/stores/skills-ui-store";
+
+// Vite injects the host-relative playground root at bundle time — no HTTP.
+hydratePlaygroundRelativeRoot();
 
 interface ProjectBootstrap {
   projectId: string;
@@ -27,24 +27,22 @@ function useProjectBootstrap(): ProjectBootstrap | null {
   const [project, setProject] = useState<ProjectBootstrap | null>(null);
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetch("/playground/api/project-id")
-        .then((res) => res.json())
-        .then((data: { projectId: string; projectName?: string }) => ({
-          projectId: data.projectId,
-          projectName:
-            typeof data.projectName === "string" && data.projectName
-              ? data.projectName
-              : "project",
-        }))
-        .catch(() => ({
-          projectId: "unknown-project",
-          projectName: "project",
-        })),
-      ensurePlaygroundRelativeRoot(),
-    ]).then(([bootstrap]) => {
-      if (!cancelled) setProject(bootstrap);
-    });
+    fetch("/playground/api/project-id")
+      .then((res) => res.json())
+      .then((data: { projectId: string; projectName?: string }) => ({
+        projectId: data.projectId,
+        projectName:
+          typeof data.projectName === "string" && data.projectName
+            ? data.projectName
+            : "project",
+      }))
+      .catch(() => ({
+        projectId: "unknown-project",
+        projectName: "project",
+      }))
+      .then((bootstrap) => {
+        if (!cancelled) setProject(bootstrap);
+      });
     return () => {
       cancelled = true;
     };
@@ -62,7 +60,9 @@ export default function PlaygroundClient() {
   const sidebarHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const [skillsCatalogOpen, setSkillsCatalogOpen] = useState(false);
+  const skillsCatalogOpen = useSkillsUiStore((s) => s.catalogOpen);
+  const setSkillsCatalogOpen = useSkillsUiStore((s) => s.setCatalogOpen);
+  const bumpSkillsVersion = useSkillsUiStore((s) => s.bumpSkillsVersion);
   const [showClearDialog, setShowClearDialog] = useState(false);
 
   const cancelSidebarHideTimer = useCallback(() => {
@@ -132,13 +132,6 @@ export default function PlaygroundClient() {
     };
   }, []);
 
-  // Listen for requests to open the Skills catalog
-  useEffect(() => {
-    const handler = () => setSkillsCatalogOpen(true);
-    window.addEventListener(OPEN_SKILLS_CATALOG_EVENT, handler);
-    return () => window.removeEventListener(OPEN_SKILLS_CATALOG_EVENT, handler);
-  }, []);
-
   // Per-canvas preview color-scheme override. '' = auto (mirror the host); the
   // `dark`/`light` class sits on the canvas root so the host's own `.dark`
   // token overrides cascade into every preview while the chrome (which reads
@@ -160,8 +153,6 @@ export default function PlaygroundClient() {
         {/* Top header — full width */}
         <PlaygroundHeader
           projectName={projectName}
-          sidebarVisible={sidebarVisible}
-          onToggleSidebar={handleToggleSidebar}
           onClear={() => setShowClearDialog(true)}
         />
 
@@ -211,9 +202,7 @@ export default function PlaygroundClient() {
       <SkillsCatalogModal
         open={skillsCatalogOpen}
         onOpenChange={setSkillsCatalogOpen}
-        onSkillsChanged={() => {
-          window.dispatchEvent(new CustomEvent(SKILLS_CHANGED_EVENT));
-        }}
+        onSkillsChanged={bumpSkillsVersion}
       />
     </ReactFlowProvider>
   );

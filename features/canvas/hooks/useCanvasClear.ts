@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { Node } from "@xyflow/react";
-import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
+import type { CanvasRelation } from "@pg/shared/lib/canvas-persistence";
 
 export interface UseCanvasClearParams {
   showClearDialog: boolean;

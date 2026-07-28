@@ -6,7 +6,8 @@
 // effects — PlaygroundCanvas memoizes the results.
 
 import type { Node } from "@xyflow/react";
-import { buildChildrenMap, type CanvasRelation } from "./canvas-relations";
+import type { CanvasRelation } from "@pg/shared/lib/canvas-persistence";
+import { buildChildrenMap } from "./canvas-relations";
 
 /**
  * Ids of every node hidden because an ancestor is collapsed. The collapsed node
