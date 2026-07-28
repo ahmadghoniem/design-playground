@@ -7,7 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { Node } from "@xyflow/react";
-import type { GenerationInfo } from "@pg/shared/lib/canvas-persistence";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 
 export interface UseGenerationCoordinationParams {
   nodes: Node[];
@@ -15,38 +15,9 @@ export interface UseGenerationCoordinationParams {
   setKnownIterations: Dispatch<SetStateAction<string[]>>;
 }
 
-export interface GenerationCoordination {
-  isGenerating: boolean;
-  generationInfo: GenerationInfo | null;
-  setIsGenerating: Dispatch<SetStateAction<boolean>>;
-  setGenerationInfo: Dispatch<SetStateAction<GenerationInfo | null>>;
-
-  getGenerationInfo: () => GenerationInfo | null;
-  getIsGenerating: () => boolean;
-  getNodes: () => Node[];
-  getKnownIterations: () => string[];
-  peekScanContextOverride: () => GenerationInfo | null | undefined;
-
-  setGenerationInfoEager: (info: GenerationInfo | null) => void;
-  setIsGeneratingEager: (value: boolean) => void;
-  clearGenerationEager: () => void;
-  appendKnownIterations: (filenames: string[]) => void;
-  removeKnownIterations: (keys: string[]) => void;
-  setScanContextOverride: (ctx: GenerationInfo | null | undefined) => void;
-  takeScanContextOverride: () => GenerationInfo | null | undefined;
-
-  tryAcquireScanLock: () => boolean;
-  releaseScanLock: () => {
-    queued: boolean;
-    override: GenerationInfo | null | undefined;
-  };
-  markScanQueued: (override?: GenerationInfo | null) => void;
-
-}
-
 /**
- * Owns the five shared coordination refs (generationInfo, isGenerating, nodes,
- * knownIterations, scanContextOverride) plus scan mutex and reconcile streak refs.
+ * Owns generationInfo/isGenerating state, refs mirroring nodes /
+ * knownIterations / scanContextOverride, and the scan mutex (lock + queued).
  * Exposes typed accessors so downstream seams never reach into parent refs directly.
  */
 export function useGenerationCoordination({
@@ -55,20 +26,19 @@ export function useGenerationCoordination({
   setKnownIterations,
 }: UseGenerationCoordinationParams): GenerationCoordination {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationInfo, setGenerationInfo] = useState<GenerationInfo | null>(
-    null,
-  );
+  const [generationInfo, setGenerationInfo] = useState<
+    GenerationCoordination["generationInfo"]
+  >(null);
 
   const isGeneratingRef = useRef(false);
-  const generationInfoRef = useRef<GenerationInfo | null>(null);
-  const nodesRef = useRef<Node[]>(nodes);
-  const knownIterationsRef = useRef<string[]>(knownIterations);
-  const scanContextOverrideRef = useRef<GenerationInfo | null | undefined>(
-    undefined,
-  );
+  const generationInfoRef = useRef<GenerationCoordination["generationInfo"]>(null);
+  const nodesRef = useRef(nodes);
+  const knownIterationsRef = useRef(knownIterations);
+  const scanContextOverrideRef = useRef<
+    GenerationCoordination["generationInfo"] | undefined
+  >(undefined);
   const scanLockRef = useRef(false);
   const scanQueuedRef = useRef(false);
-
 
   useEffect(() => {
     isGeneratingRef.current = isGenerating;
@@ -95,10 +65,13 @@ export function useGenerationCoordination({
     [],
   );
 
-  const setGenerationInfoEager = useCallback((info: GenerationInfo | null) => {
-    generationInfoRef.current = info;
-    setGenerationInfo(info);
-  }, []);
+  const setGenerationInfoEager = useCallback(
+    (info: GenerationCoordination["generationInfo"]) => {
+      generationInfoRef.current = info;
+      setGenerationInfo(info);
+    },
+    [],
+  );
 
   const setIsGeneratingEager = useCallback((value: boolean) => {
     isGeneratingRef.current = value;
@@ -135,7 +108,7 @@ export function useGenerationCoordination({
   );
 
   const setScanContextOverride = useCallback(
-    (ctx: GenerationInfo | null | undefined) => {
+    (ctx?: GenerationCoordination["generationInfo"] | null) => {
       scanContextOverrideRef.current = ctx;
     },
     [],
@@ -153,12 +126,15 @@ export function useGenerationCoordination({
     return true;
   }, []);
 
-  const markScanQueued = useCallback((override?: GenerationInfo | null) => {
-    scanQueuedRef.current = true;
-    if (override !== undefined) {
-      scanContextOverrideRef.current = override;
-    }
-  }, []);
+  const markScanQueued = useCallback(
+    (override?: GenerationCoordination["generationInfo"]) => {
+      scanQueuedRef.current = true;
+      if (override !== undefined) {
+        scanContextOverrideRef.current = override;
+      }
+    },
+    [],
+  );
 
   const releaseScanLock = useCallback(() => {
     scanLockRef.current = false;

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 import { getRequestListener } from '@hono/node-server';
 import { createPlaygroundServer } from './index';
+import { resolvePlaygroundDirRelative } from '../shared/lib/resolve-playground-dir';
 
 // This file lives in `server/`, so the package root is one directory up.
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -15,6 +16,10 @@ const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
  * `getRequestListener` adapts the Hono `fetch` handler into a Node
  * `(req, res)` listener that Vite's connect-style middleware stack expects.
  *
+ * Also bakes the host-relative playground root (`src/app/playground` vs
+ * `app/playground`) into the client via `define`, so prompts don't need an
+ * HTTP round-trip to know where on disk they live.
+ *
  * Usage in vite.config.ts:
  *   import { designPlaygroundPlugin } from 'design-playground/server/vite-plugin';
  *   export default defineConfig({ plugins: [react(), designPlaygroundPlugin()] });
@@ -26,9 +31,23 @@ export function designPlaygroundPlugin(): Plugin {
     // mergeConfig APPENDS it to (rather than clobbers) the host's own
     // `resolve.alias`. Vite returns this and merges it into its config.
     config() {
+      // Vite's cwd is the host project root — same truth the API route used.
+      let relativeRoot = 'src/app/playground';
+      try {
+        relativeRoot = resolvePlaygroundDirRelative();
+      } catch (err) {
+        console.warn(
+          '[design-playground] Could not resolve playground relative root; using default.',
+          err,
+        );
+      }
+
       return {
         resolve: {
           alias: [{ find: /^@pg\//, replacement: PACKAGE_ROOT + '/' }],
+        },
+        define: {
+          __PG_RELATIVE_ROOT__: JSON.stringify(relativeRoot),
         },
       };
     },

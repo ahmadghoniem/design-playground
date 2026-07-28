@@ -1,17 +1,16 @@
 import { useModelSettingsStore } from '@pg/shared/stores/model-settings-store';
 
 /**
- * Build the request body fields for generation API calls.
- * Usage: `{ ...basePayload, ...getProviderFields() }`
+ * Build the Claude Code request-body fields for generation API calls.
+ * Usage: `{ ...basePayload, ...getClaudeCodeFields() }`
  */
-export function getProviderFields(): Record<string, unknown> {
+export function getClaudeCodeFields(): Record<string, unknown> {
   const { claudeCodeOptions } = useModelSettingsStore.getState();
 
   const fields: Record<string, unknown> = {};
 
   if (claudeCodeOptions.effort) fields.effort = claudeCodeOptions.effort;
   if (claudeCodeOptions.maxBudgetUsd != null) fields.maxBudgetUsd = claudeCodeOptions.maxBudgetUsd;
-  if (claudeCodeOptions.maxTurns != null) fields.maxTurns = claudeCodeOptions.maxTurns;
   fields.claudeDetailedStdout = claudeCodeOptions.detailedStdout;
 
   return fields;

@@ -14,7 +14,7 @@ import {
   countBatchIterationNodes,
   calculateIterationPosition,
 } from "@pg/shared/lib/iteration-scan";
-import type { GenerationCoordination } from "./useGenerationCoordination";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
@@ -28,6 +28,7 @@ import {
   type GenerationErrorPayload,
 } from "@pg/shared/lib/constants";
 import { toast } from "sonner";
+import { subscribeGenerationSse } from "@pg/features/generation/subscribe-generation-sse";
 
 /** Delay after generation completes before scanning for iterations */
 const POST_GENERATION_SCAN_DELAY = 1000;
@@ -54,7 +55,7 @@ export function useGenerationLifecycle({
   getNodeId,
   scanForIterations,
 }: UseGenerationLifecycleParams): void {
-  const generationEventSourceRef = useRef<EventSource | null>(null);
+  const unsubscribeSseRef = useRef<(() => void) | null>(null);
 
   // Safety timeout for orphaned skeletons
   useEffect(() => {
@@ -98,35 +99,21 @@ export function useGenerationLifecycle({
   // event per written file (the 4s poll in useIterationScan remains as
   // belt-and-braces fallback).
   const stopGenerationEventSource = useCallback(() => {
-    if (generationEventSourceRef.current) {
-      generationEventSourceRef.current.close();
-      generationEventSourceRef.current = null;
+    if (unsubscribeSseRef.current) {
+      unsubscribeSseRef.current();
+      unsubscribeSseRef.current = null;
     }
   }, []);
 
   const startGenerationEventSource = useCallback(() => {
     stopGenerationEventSource();
-    const es = new EventSource("/playground/api/generate?action=events");
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "iteration-added") {
-          const ctx = coord.getGenerationInfo();
-          // data.filePath / data.iterationNumber identify the exact file written (from the agent's tool events)
-          scanForIterations(false, ctx ?? undefined);
-        } else if (data.type === "done") {
-          es.close();
-        }
-      } catch {
-        /* ignore parse errors */
-      }
-    };
-    es.onerror = () => {
-      // Connection lost — server will close when generation ends.
-      // The final scan in handleGenerationComplete catches anything missed.
-      es.close();
-    };
-    generationEventSourceRef.current = es;
+    unsubscribeSseRef.current = subscribeGenerationSse({
+      onIterationAdded: () => {
+        const ctx = coord.getGenerationInfo();
+        // filePath / iterationNumber identify the exact file written (from the agent's tool events)
+        scanForIterations(false, ctx ?? undefined);
+      },
+    });
   }, [scanForIterations, stopGenerationEventSource, coord.getGenerationInfo]);
 
   // Handle generation lifecycle events
@@ -147,14 +134,14 @@ export function useGenerationLifecycle({
 
     /**
      * Given a set of candidate skeleton rects, shift the entire group
-     * downward until none of them overlap any existing node on the canvas.
+     * rightward until none of them overlap any existing node on the canvas.
      * Also avoids overlapping previously placed skeletons in the same batch.
      */
     const resolveOverlaps = (
       rects: { x: number; y: number; w: number; h: number }[],
       existingNodes: Node[],
     ) => {
-      const SHIFT_STEP = 80; // px to shift down per iteration
+      const SHIFT_STEP = 80; // px to shift right per attempt
       const MAX_ATTEMPTS = 20;
 
       // Build bounding boxes for all existing canvas nodes
@@ -487,9 +474,8 @@ export function useGenerationLifecycle({
         fullDetail: payload,
       };
 
-      // Use ref to get latest generation info to distinguish dialog vs drag-to-iterate flows.
+      // Read through the ref so this handler sees the latest generation info.
       const info = coord.getGenerationInfo();
-      const isDragFlow = !!info?.gridPositions;
 
       if (errorMessage === "Cancelled by user") {
         console.info("[Playground] Generation cancelled by user.", logPayload);

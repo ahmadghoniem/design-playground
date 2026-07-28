@@ -17,7 +17,7 @@ import {
   findParentNode,
   findIterationNodeByFilename,
 } from "@pg/shared/lib/iteration-scan";
-import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import {
   ITERATION_FETCH_EVENT,
   ARRANGE_HORIZONTAL_GAP,

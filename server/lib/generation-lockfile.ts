@@ -6,7 +6,7 @@ import { TEMP_DIR_RELATIVE, GENERATION_LOCKFILE_FILENAME } from '../../shared/li
  * Lockfile-based generation process recovery (survives HMR / host restarts).
  *
  * A single generation lockfile records the PID of the running agent process.
- * On module load, `reclaimOrphan()` should be called once to kill/clean up
+ * On module load, `cleanupOrphanedProcess()` should be called once to kill/clean up
  * any stale lock left behind by a previous process that died without
  * releasing it (e.g. the dev server was killed mid-generation).
  */

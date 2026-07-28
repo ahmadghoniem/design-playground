@@ -5,8 +5,8 @@ import { CLAUDE_FALLBACK_MODELS, CLAUDE_FEATURED_MODEL_IDS } from './model-catal
 // Agent configuration — Claude Code is the only agent CLI.
 //
 // This module is pure data + pure functions (no side effects, no child_process)
-// so it is safe to import from client code. Process spawning lives in the
-// server-only `spawn-agent.ts` sibling.
+// so it is safe to import from client code. Process spawning lives in
+// `server/lib/spawn-agent.ts`.
 // ---------------------------------------------------------------------------
 
 /** Options passed to `spawnAgent()`. */
@@ -14,7 +14,6 @@ export interface AgentSpawnOptions {
   model?: string;
   effort?: 'low' | 'medium' | 'high' | 'max';
   maxBudgetUsd?: number;
-  maxTurns?: number;
   /**
    * When true, use `--output-format stream-json` with `--include-partial-messages`
    * for live UI parsing (not written to chat `.txt`).
@@ -27,7 +26,6 @@ export interface AgentSpawnOptions {
 export interface ClaudeCodeOptions {
   effort: 'low' | 'medium' | 'high' | 'max';
   maxBudgetUsd: number | null;
-  maxTurns: number | null;
   /** When true, stream-json for live tooltip; chat download omits raw stream. When false, plain text in chat log. */
   detailedStdout: boolean;
 }
@@ -35,7 +33,6 @@ export interface ClaudeCodeOptions {
 export const DEFAULT_CLAUDE_CODE_OPTIONS: ClaudeCodeOptions = {
   effort: 'high',
   maxBudgetUsd: null,
-  maxTurns: null,
   detailedStdout: true,
 };
 
@@ -73,6 +70,5 @@ export function buildAgentArgs(opts: AgentSpawnOptions): string[] {
   if (opts.model)        args.push('--model', opts.model);
   if (opts.effort)       args.push('--effort', opts.effort);
   if (opts.maxBudgetUsd) args.push('--max-budget-usd', String(opts.maxBudgetUsd));
-  if (opts.maxTurns)     args.push('--max-turns', String(opts.maxTurns));
   return args;
 }

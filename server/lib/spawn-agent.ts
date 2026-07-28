@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process';
-import type { AgentSpawnOptions } from './agent-config';
-import { AGENT_BINARY, buildAgentArgs } from './agent-config';
+import type { AgentSpawnOptions } from '../../shared/lib/agent-config';
+import { AGENT_BINARY, buildAgentArgs } from '../../shared/lib/agent-config';
 
 /**
  * Spawn the Claude Code agent process.
