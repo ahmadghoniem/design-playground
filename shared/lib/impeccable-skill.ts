@@ -1,5 +1,5 @@
-import type { Segment } from '@pg/shared/ui/inline-reference';
-import type { InlineReferenceItemData } from '@pg/shared/ui/inline-reference';
+import type { Segment } from '@pg/shared/ui/mention-input';
+import type { MentionItemData } from '@pg/shared/ui/mention-input';
 
 /** Stable ID for the parent impeccable item in the skills picker. */
 export const IMPECCABLE_ITEM_ID = 'impeccable';
@@ -11,7 +11,7 @@ export interface ImpeccableCommand {
   category: 'Create' | 'Evaluate' | 'Refine' | 'Simplify' | 'Harden';
 }
 
-/** Most-used commands first — matches the IterateDialog reference UI. */
+/** Most-used commands first — this is the chat skill-picker order. */
 export const IMPECCABLE_COMMANDS: ImpeccableCommand[] = [
   { id: 'polish',    label: 'polish',    category: 'Harden',   description: 'Full pass — alignment, type, spacing, states' },
   { id: 'critique',  label: 'critique',  category: 'Evaluate', description: 'Design review with scoring & persona tests' },
@@ -42,8 +42,8 @@ Read ${root}/SKILL.md and ${root}/reference/${command}.md.
 After creating each iteration file, follow the "${command}" command flow from those files and apply the result directly to the iteration file before moving to the next one.`;
 }
 
-/** Synthetic InlineReferenceItemData for the parent impeccable picker entry. */
-export const IMPECCABLE_PARENT_ITEM: InlineReferenceItemData = {
+/** Synthetic MentionItemData for the parent impeccable picker entry. */
+export const IMPECCABLE_PARENT_ITEM: MentionItemData = {
   id: IMPECCABLE_ITEM_ID,
   label: 'impeccable',
   description: 'Design tool — polish, audit, craft and more',
@@ -51,7 +51,7 @@ export const IMPECCABLE_PARENT_ITEM: InlineReferenceItemData = {
 };
 
 /** Synthetic items shown in the commands sub-menu, keyed by "impeccable:<command>". */
-export function buildImpeccableCommandItems(query: string): InlineReferenceItemData[] {
+export function buildImpeccableCommandItems(query: string): MentionItemData[] {
   const q = query.toLowerCase();
   return IMPECCABLE_COMMANDS
     .filter((c) => !q || c.id.includes(q) || c.description.toLowerCase().includes(q))

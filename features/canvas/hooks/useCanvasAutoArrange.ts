@@ -6,7 +6,7 @@ import {
 } from "react";
 import type { FitViewOptions, Node, Viewport } from "@xyflow/react";
 import { computeAutoArrangePositions } from "@pg/features/canvas/canvas-auto-arrange";
-import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
+import type { CanvasRelation } from "@pg/shared/lib/canvas-persistence";
 
 export interface UseCanvasAutoArrangeParams {
   nodes: Node[];

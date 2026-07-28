@@ -162,6 +162,10 @@ export default function SkillsCatalogModal({
       return next;
     });
 
+  // NOTE: this and the update/remove/preview handlers below call endpoints the
+  // server does not implement — they 404 today. See the block comment above
+  // `skillsRoutes()` in server/routes/skills.ts for the contract they expect and
+  // the constraints an implementation has to respect.
   const handleAdd = useCallback(
     async (source: string, displayName: string, dedupeId: string) => {
       markBusy(dedupeId, true);

@@ -21,6 +21,8 @@ export interface IterationFile {
   parentId: string;
   description: string;
   sourceIteration: string | null;
+  /** Directory the file was found in (alternate playground layouts). */
+  dir: string;
 }
 
 interface TreeManifest {
@@ -106,6 +108,7 @@ function parseIterationFile(filename: string, iterationsDir = ITERATIONS_DIR): I
     parentId,
     description,
     sourceIteration,
+    dir: iterationsDir,
   };
 }
 
@@ -140,7 +143,17 @@ export function getIterationComponent(filename: string): ComponentType<any> | un
     for (const iter of iters.sort((a, b) => a.iterationNumber - b.iterationNumber)) {
       const importName = `${componentName}Iteration${iter.iterationNumber}`;
       const moduleName = iter.filename.replace('.tsx', '');
-      imports.push(`import ${importName} from './${moduleName}';`);
+      // Files can live in an alternate playground layout dir; the index is
+      // always written to the canonical dir, so import relative to it.
+      const specifier =
+        iter.dir === ITERATIONS_DIR
+          ? `./${moduleName}`
+          : path
+              .relative(ITERATIONS_DIR, path.join(iter.dir, moduleName))
+              .split(path.sep)
+              .join('/')
+              .replace(/^(?!\.)/, './');
+      imports.push(`import ${importName} from '${specifier}';`);
     }
     imports.push('');
   }
@@ -175,27 +188,16 @@ export function getIterationComponent(filename: string): ComponentType<any> | un
  * so the generate route can call it as soon as a new iteration file is
  * written, instead of relying solely on the agent hand-editing the index
  * per its prompt instructions (that step is easy to skip/miss, which used
- * to silently leave the index — and anything reading it, like the isolated
- * preview page — stale).
+ * to silently leave the index — and IterationNode's dynamic import — stale).
  */
 export function regenerateIterationsIndex(): void {
   regenerateIndex();
 }
 
 function regenerateIndex(): void {
-  const files = fs.readdirSync(ITERATIONS_DIR);
-  const iterations: IterationFile[] = [];
-
-  for (const file of files) {
-    if (file === 'index.ts' || file === TREE_MANIFEST_FILENAME) continue;
-
-    if (file.endsWith('.tsx')) {
-      const parsed = parseIterationFile(file);
-      if (parsed) {
-        iterations.push(parsed);
-      }
-    }
-  }
+  // Same multi-layout merge as GET /api/iterations — regenerating from only
+  // the canonical dir would silently drop files in alternate layouts.
+  const iterations = scanAllIterationFiles();
 
   iterations.sort((a, b) => {
     if (a.componentName !== b.componentName) {

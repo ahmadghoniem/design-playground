@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Q&amp;A — Shadcn pivot, layout, registry, canvas</title>
+<style>
+  :root {
+    --bg: #f6f3ee; --ink: #1c1917; --muted: #78716c; --faint: #a8a29e;
+    --card: #fffcf8; --line: #e8e2d8; --teal: #0f766e; --teal-soft: #ccfbf1;
+    --warn-bg: #fff7ed; --warn-line: #fdba74; --plan-bg: #f5f5f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 20px 72px;
+    font: 15px/1.55 Georgia, "Iowan Old Style", serif;
+    color: var(--ink); background: var(--bg);
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 28px; letter-spacing: -.03em; margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 28px; max-width: 52ch; }
+  h2 {
+    font-size: 13px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--teal); margin: 32px 0 12px; font-weight: 700;
+  }
+  .q {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px; margin: 0 0 10px;
+  }
+  .q h3 { font-size: 15px; margin: 0 0 6px; letter-spacing: -.01em; }
+  .q p { margin: 0; color: #44403c; font-size: 14px; }
+  .q p + p { margin-top: 8px; }
+  code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: .82em; background: #f0ebe3; padding: .1em .35em; border-radius: 4px;
+  }
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; margin-bottom: 6px;
+  }
+  .do { background: var(--teal-soft); color: #115e59; }
+  .fix { background: #ffe4e6; color: #9f1239; }
+  .note { background: var(--warn-bg); border: 1px solid var(--warn-line); }
+  .plan {
+    background: var(--plan-bg); border: 1.5px dashed #a8a29e; color: var(--muted);
+  }
+  .flow {
+    font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;
+    background: #1c1917; color: #e7e5e4; border-radius: 10px;
+    padding: 12px 14px; margin: 10px 0 0; line-height: 1.65;
+  }
+  .flow .hi { color: #5eead4; }
+  ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; color: #44403c; }
+  li { margin: 3px 0; }
+  footer { margin-top: 36px; font-size: 12px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Plain answers for the Shadcn pivot</h1>
+  <p class="lead">
+    Short answers only. Companion scan prompt:
+    <code>handoff-shadcn-first-playground.md</code>.
+  </p>
+
+  <!-- LAYOUT -->
+  <h2>Layout &amp; naming</h2>
+
+  <div class="q">
+    <span class="tag do">Name</span>
+    <h3>What’s the “floating helper widget” called?</h3>
+    <p>
+      Today it’s the <strong>docked chat bar</strong> / <strong>prompt dock</strong>
+      (<code>DockedChatBar</code>) — a bottom HUD that expands on proximity.
+    </p>
+    <p>
+      In design-tool language: left rail = <strong>sidebar / layers panel</strong>;
+      right rail (your Tailwind editor) = <strong>inspector</strong> or
+      <strong>properties panel</strong>; chat on the side =
+      <strong>agent panel</strong> / <strong>composer sidebar</strong>.
+      “Dock” = pinned to an edge; “HUD” = floats over the canvas.
+    </p>
+  </div>
+
+  <div class="q">
+    <span class="tag do">Done</span>
+    <h3>Max turns removed</h3>
+    <p>
+      Gone from settings UI, client options, and spawn args. Effort / budget remain.
+    </p>
+  </div>
+
+  <!-- CWD / ROOT -->
+  <h2>Paths: cwd &amp; playground-root</h2>
+
+  <div class="q">
+    <h3>What does <code>cwd</code> mean?</h3>
+    <p>
+      <strong>Current working directory</strong> — the folder the host process was started from
+      (usually the host app root when you run <code>bun dev</code>).
+      Server code uses <code>process.cwd()</code> as “where is the project on disk?”
+    </p>
+  </div>
+
+  <div class="q">
+    <span class="tag do">Done</span>
+    <h3>What does playground root do?</h3>
+    <p>
+      Hosts install at either <code>src/app/playground</code> or <code>app/playground</code>.
+      Vite plugin resolves that once and injects <code>__PG_RELATIVE_ROOT__</code> into the
+      client — prompts use the right disk path with no HTTP. The old
+      <code>/api/playground-root</code> route is gone.
+    </p>
+  </div>
+
+  <!-- REGISTRY -->
+  <h2>Discovered registry (why three?)</h2>
+
+  <div class="q">
+    <h3>Three pieces, one pipeline</h3>
+    <ul>
+      <li><code>discovered-registry.json</code> — <strong>data</strong> only (ids, import paths, props). Safe to write.</li>
+      <li><code>discovered-registry.gen.tsx</code> — <strong>generated imports</strong> Vite can HMR. JSON can’t hold live components.</li>
+      <li><code>registry.tsx</code> — <strong>runtime API</strong> (subscribe, resolve, preload) + HMR accept of the <code>.gen</code> file.</li>
+    </ul>
+    <p style="margin-top:8px">
+      Writers: <code>server/lib/discovered-registry.ts</code>. Today static scan
+      <em>doesn’t</em> write the JSON yet — that’s the unfinished Phase‑2 wire.
+    </p>
+  </div>
+
+  <div class="q">
+    <span class="tag do">Done</span>
+    <h3><code>RegistryDragRow</code> (was ComponentPreviewCard)</h3>
+    <p>PascalCase component + file — drag row, not a preview card.</p>
+  </div>
+
+  <!-- JSX STAMP -->
+  <h2>Why JSX stamp?</h2>
+
+  <div class="q">
+    <h3><code>data-pg-src="file:line:col"</code></h3>
+    <p>
+      Alt‑select today <em>guesses</em> what you clicked (DOM walk + React fiber names).
+      That’s brittle (<code>forwardRef</code>, wrappers, wrong labels).
+    </p>
+    <p>
+      A Vite <strong>transform</strong> stamps origin onto each JSX element <em>as it’s served</em>
+      — never written to host git. Selection becomes “read the attribute,” and prompts get
+      real anchors. We skip Onlook’s approach of rewriting your source files.
+    </p>
+    <p class="plan" style="padding:8px 10px;border-radius:8px;margin-top:8px">
+      Still planned — measure HMR cost before committing.
+    </p>
+  </div>
+
+  <!-- RELATIONS -->
+  <h2>Relations &amp; visibility</h2>
+
+  <div class="q">
+    <h3><code>canvas-relations</code> vs <code>canvas-visibility</code></h3>
+    <p>
+      <strong>Relations</strong> = parent→child links between canvas nodes (which variation
+      came from which). Not drawn as edges — just the family tree.
+    </p>
+    <p>
+      <strong>Visibility</strong> = when you collapse a parent, hide its descendants.
+    </p>
+    <p>
+      <strong>Future:</strong> layers panel sync, “collapse branch,” cascade delete,
+      auto-arrange by tree, and (later) a source render-tree that mirrors the same shape.
+    </p>
+  </div>
+
+  <!-- PASTE -->
+  <h2>Paste: two files</h2>
+
+  <div class="q">
+    <h3><code>canvas-paste.ts</code> vs <code>useCanvasPaste.ts</code></h3>
+    <p>
+      <code>canvas-paste.ts</code> = pure “what is on the clipboard?” → image or nothing.
+      No React, no upload.
+    </p>
+    <p>
+      <code>useCanvasPaste.ts</code> = listens for paste, uploads the image, drops an
+      <code>ImageNode</code> at viewport center.
+    </p>
+    <p>Split so the decision is testable without mocking the DOM.</p>
+  </div>
+
+  <!-- HINT BUG -->
+  <div class="q">
+    <span class="tag do">Fixed</span>
+    <h3>Hold-to-interact tooltip stuck while dragging</h3>
+    <p>
+      Was: node-local <code>onMouseMove</code> died when React Flow stole the drag, so the
+      tip froze. Now: hide on <code>pointerdown</code>, and track <code>window</code>
+      <code>pointermove</code> while visible.
+    </p>
+  </div>
+
+  <!-- IFRAME -->
+  <h2>How a component lands on canvas</h2>
+
+  <div class="q">
+    <h3>Iframe?</h3>
+    <p>
+      <strong>No.</strong> Drag → <code>useCanvasDragDrop</code> creates a React Flow
+      <code>ComponentNode</code> → it renders the host component <strong>inline in the same document</strong>
+      via the registry’s live import.
+    </p>
+    <p>
+      <code>data-iframe-overlay</code> is a legacy name for a transparent click-catcher
+      (block links until double-click “interact”). Not a real iframe. That’s why Radix
+      portals escape the card — they’re in the same <code>document.body</code>.
+    </p>
+  </div>
+
+  <!-- FRAMES -->
+  <div class="q">
+    <h3><code>useCanvasFrameOps</code> vs <code>FrameNode</code></h3>
+    <p>
+      <strong>FrameNode</strong> = the visual group box on the canvas (a node type).
+    </p>
+    <p>
+      <strong>useCanvasFrameOps</strong> = the behaviors: group selection into a frame,
+      ungroup, z-order, alignment helper lines, context-menu wiring.
+    </p>
+    <p>One is the thing; the other is the verbs.</p>
+  </div>
+
+  <!-- TEXT NODE -->
+  <div class="q">
+    <h3>Sticky text notes (<code>TextNode</code>)?</h3>
+    <p>
+      A canvas node you place with the <strong>text tool</strong> (toolbar). Editable sticky
+      copy. When you @-reference it in chat, its text is injected into the prompt as a
+      reference — hence “prompt refs.” Easy to miss if you never used the text tool.
+    </p>
+  </div>
+
+  <div class="q">
+    <span class="tag do">Done</span>
+    <h3><code>PreviewViewportButtons</code> (was SizeButtons)</h3>
+    <p>PascalCase — Auto / Desktop / Mobile preview width, not font size.</p>
+  </div>
+
+  <!-- PROMPTS -->
+  <h2>Prompts &amp; fill-template</h2>
+
+  <div class="q">
+    <h3>Why four explore prompts?</h3>
+    <ul>
+      <li>From <strong>source component</strong></li>
+      <li>From an <strong>existing iteration</strong></li>
+      <li>Same two, but scoped to an <strong>Alt-selected element</strong></li>
+    </ul>
+    <p style="margin-top:8px">
+      Plus separate templates for <strong>edit</strong>, <strong>freeform</strong>, and
+      <strong>adopt</strong>. That’s why the folder feels fat.
+    </p>
+    <p>
+      Leaner approach: one explore template with flags
+      (<code>fromIteration</code>, <code>elementSelections</code>) assembled in
+      <code>prompt-builders.ts</code> — delete duplicate template files once the
+      shared sections cover the differences. Keep adopt with iterations (already moved).
+    </p>
+    <p>
+      <code>fill-template.ts</code>: agree it’s too thin as a solo file. Inline
+      <code>{{key}}</code> replace next to the builders, or a private helper in
+      <code>prompt-builders.ts</code> / <code>adopt-prompt.ts</code> — don’t keep a
+      dedicated module for 8 lines.
+    </p>
+  </div>
+
+  <!-- LIFECYCLE -->
+  <h2>Lifecycle &amp; coordination (SSE, mutex)</h2>
+
+  <div class="q">
+    <h3>In plain English</h3>
+    <ul>
+      <li><strong>Coordination</strong> (<code>useGenerationCoordination</code>) — “is something generating?”, what was requested, latest nodes list. Shared blackboard so scan + lifecycle + chat don’t fight.</li>
+      <li><strong>Mutex / scan lock</strong> — only one “look for new iteration files” pass at a time; if another ask arrives mid-scan, queue one more. Prevents double-placing the same card.</li>
+      <li><strong>Lifecycle</strong> (<code>useGenerationLifecycle</code>) — on start: drop skeleton cards; subscribe to progress; on complete/error: final scan + cleanup.</li>
+      <li><strong>SSE</strong> — server watches Claude’s tool stream, pushes “file written” events; browser updates without waiting for the whole job.</li>
+      <li><strong>Two buses</strong> — server SSE ≠ client <code>generationEvents</code> (start/complete/error inside the React app). Different jobs, similar names on purpose after rename.</li>
+    </ul>
+  </div>
+
+  <!-- AGREED CLEANUPS -->
+  <h2>Agreed cleanups</h2>
+
+  <div class="q">
+    <ul>
+      <li>Inline/delete <code>model-icons.ts</code></li>
+      <li>Split or reunify <code>inline-reference/parts.tsx</code> honestly</li>
+      <li>Drop useless re-exports on <code>useGenerationCoordination</code> and <code>canvas-relations</code></li>
+      <li>Rename preview card + size buttons before the inspector phase</li>
+      <li>Delete max-turns UI</li>
+    </ul>
+  </div>
+
+  <div class="q plan">
+    <span class="tag">Next focus</span>
+    <h3>Shadcn-first + right Tailwind inspector</h3>
+    <p>
+      Scan prompt is ready in <code>handoff-shadcn-first-playground.md</code>.
+      First slice: read-only class inspector shell + layout move (chat → side,
+      inspector → right) + the renames above. Don’t write host source yet.
+    </p>
+  </div>
+
+  <footer>
+    Not a full codebase map — see <code>codebase-end-to-end.html</code> for that.
+  </footer>
+</div>
+</body>
+</html>

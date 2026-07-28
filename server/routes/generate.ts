@@ -1,12 +1,10 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
 import { ChildProcess } from 'child_process';
-import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
 import { TEMP_DIR_RELATIVE } from '../../shared/lib/constants';
 import { AGENT_DISPLAY_NAME, AGENT_NOT_FOUND_MESSAGE } from '../../shared/lib/agent-config';
-import { spawnAgent } from '../../shared/lib/spawn-agent';
+import { spawnAgent } from '../lib/spawn-agent';
 import { resolveAgentModel } from '../../shared/lib/resolve-agent-model';
 import { regenerateIterationsIndex } from './iterations';
 
@@ -25,15 +23,19 @@ import {
   extractStreamJsonError,
   formatAgentErrorMessage,
 } from '../lib/claude-jsonl';
+import {
+  emitIterationAdded,
+  emitGenerationDone,
+  streamGenerationEvents,
+} from '../lib/generation-sse';
 
 /**
  * When a Write/Edit tool_result lands on a React iteration file
  * (`Name.iteration-N.tsx` under an `iterations/` dir), rebuild
- * iterations/index.ts so consumers that resolve
- * the component by filename (IterationNode's live preview, the isolated
- * preview page) see it immediately instead of depending on the agent
- * remembering to hand-edit the index itself. Best-effort — must never break
- * generation.
+ * iterations/index.ts so IterationNode's live preview — which resolves the
+ * component by filename — sees it immediately instead of depending on the
+ * agent remembering to hand-edit the index itself. Best-effort — must never
+ * break generation.
  */
 function syncIterationsIndexForToolEvent(filePath: string): void {
   if (!/\.iteration-\d+\.tsx$/.test(filePath)) return;
@@ -62,11 +64,6 @@ let currentProcess: ChildProcess | null = null;
 let currentChatLogPath: string | null = null;
 let currentLogStream: fs.WriteStream | null = null;
 let isGenerating = false;
-
-// ---------------------------------------------------------------------------
-// File-watching event emitter for progressive iteration detection
-// ---------------------------------------------------------------------------
-const generationEvents = new EventEmitter();
 
 function ensureTempDir() {
   if (!fs.existsSync(TEMP_DIR)) {
@@ -145,7 +142,6 @@ export function generateRoutes() {
         model?: string;
         effort?: string;
         maxBudgetUsd?: number;
-        maxTurns?: number;
         claudeDetailedStdout?: boolean;
         source?: string;
         skillIds?: string[];
@@ -200,7 +196,6 @@ export function generateRoutes() {
           model,
           effort: body.effort as 'low' | 'medium' | 'high' | 'max' | undefined,
           maxBudgetUsd: body.maxBudgetUsd,
-          maxTurns: body.maxTurns,
           claudeDetailedStdout: body.claudeDetailedStdout !== false,
         }, process.cwd());
 
@@ -250,7 +245,7 @@ export function generateRoutes() {
           for (const evt of toolEvents) {
             const numMatch = /iteration-(\d+)/.exec(evt.filePath);
             syncIterationsIndexForToolEvent(evt.filePath);
-            generationEvents.emit('iteration-added', {
+            emitIterationAdded({
               filePath: evt.filePath,
               iterationNumber: numMatch ? Number(numMatch[1]) : undefined,
             });
@@ -279,7 +274,7 @@ export function generateRoutes() {
             for (const evt of closeToolEvents) {
               const numMatch = /iteration-(\d+)/.exec(evt.filePath);
               syncIterationsIndexForToolEvent(evt.filePath);
-              generationEvents.emit('iteration-added', {
+              emitIterationAdded({
                 filePath: evt.filePath,
                 iterationNumber: numMatch ? Number(numMatch[1]) : undefined,
               });
@@ -289,7 +284,7 @@ export function generateRoutes() {
           currentLogStream?.write(`\n=== Generation ended with code ${code} at ${new Date().toISOString()} ===\n`);
           closeLogStream();
           removeLockfile();
-          generationEvents.emit('done');
+          emitGenerationDone();
 
           isGenerating = false;
           currentProcess = null;
@@ -339,7 +334,7 @@ export function generateRoutes() {
           currentLogStream?.write(`\n=== Error: ${errorMessage} ===\n`);
           closeLogStream();
           removeLockfile();
-          generationEvents.emit('done');
+          emitGenerationDone();
 
           isGenerating = false;
           currentProcess = null;
@@ -351,6 +346,9 @@ export function generateRoutes() {
         clearGenerationTimer();
         closeLogStream();
         removeLockfile();
+        // SSE subscribers only learn about termination via `done` — without
+        // this, a spawn failure leaves the EventSource hanging.
+        emitGenerationDone();
         isGenerating = false;
         currentProcess = null;
 
@@ -362,6 +360,7 @@ export function generateRoutes() {
       clearGenerationTimer();
       closeLogStream();
       removeLockfile();
+      emitGenerationDone();
       isGenerating = false;
       const message = error instanceof Error ? error.message : 'Unknown error in generate route';
       console.error('[Playground][generate] POST error:', error);
@@ -420,41 +419,8 @@ export function generateRoutes() {
     }
 
     if (action === 'events') {
-      // SSE stream for progressive iteration detection.
       const status = getGenerationStatus();
-
-      return streamSSE(c, async (stream) => {
-        if (!status.generationActive) {
-          await stream.writeSSE({ data: '{"type":"done"}' });
-          return;
-        }
-
-        await new Promise<void>((resolve) => {
-          const onIteration = (payload?: { filePath?: string; iterationNumber?: number }) => {
-            stream.writeSSE({ data: JSON.stringify({ type: 'iteration-added', filePath: payload?.filePath, iterationNumber: payload?.iterationNumber }) }).catch(() => {});
-          };
-
-          const onDone = () => {
-            stream.writeSSE({ data: '{"type":"done"}' }).catch(() => {});
-            cleanup();
-            resolve();
-          };
-
-          const cleanup = () => {
-            generationEvents.removeListener('iteration-added', onIteration);
-            generationEvents.removeListener('done', onDone);
-          };
-
-          generationEvents.on('iteration-added', onIteration);
-          generationEvents.on('done', onDone);
-
-          // Client disconnect — mirror the old req.on('close') cleanup.
-          stream.onAbort(() => {
-            cleanup();
-            resolve();
-          });
-        });
-      });
+      return streamGenerationEvents(c, status.generationActive);
     }
 
     if (action === 'status') {

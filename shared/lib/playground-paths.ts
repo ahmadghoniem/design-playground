@@ -3,14 +3,19 @@
  * targets, and agent instructions. Callers must not hardcode the root or
  * subdirectory folklore.
  *
- * On the server, the root resolves from disk via resolvePlaygroundDirRelative.
- * In the browser, call ensurePlaygroundRelativeRoot() once at startup (or
- * setPlaygroundRelativeRoot) so prompts match the host layout.
+ * Resolution order (Vite-only product):
+ *   1. Explicit override (`setPlaygroundRelativeRoot`) — tests
+ *   2. Vite-injected `__PG_RELATIVE_ROOT__` (plugin `define` from disk)
+ *   3. Server-side `resolvePlaygroundDirRelative()` when `process.cwd` is real
+ *   4. Default `src/app/playground`
  */
 
 import { resolvePlaygroundDirRelative } from './resolve-playground-dir';
 
 const DEFAULT_RELATIVE_ROOT = 'src/app/playground';
+
+/** Injected by `designPlaygroundPlugin` via Vite `define`. */
+declare const __PG_RELATIVE_ROOT__: string | undefined;
 
 let relativeRootOverride: string | null = null;
 
@@ -18,7 +23,19 @@ function normalizeRoot(root: string): string {
   return root.replace(/\\/g, '/').replace(/\/+$/, '');
 }
 
-/** Set the cached relative root (browser bootstrap). */
+/** Root baked into the client bundle by the Vite plugin (if present). */
+function injectedRoot(): string | null {
+  try {
+    if (typeof __PG_RELATIVE_ROOT__ === 'string' && __PG_RELATIVE_ROOT__.length > 0) {
+      return normalizeRoot(__PG_RELATIVE_ROOT__);
+    }
+  } catch {
+    /* not defined in this environment */
+  }
+  return null;
+}
+
+/** Set the cached relative root (tests / rare manual bootstrap). */
 export function setPlaygroundRelativeRoot(root: string): void {
   relativeRootOverride = normalizeRoot(root);
 }
@@ -32,7 +49,6 @@ function canResolveFromDisk(): boolean {
   return (
     typeof process !== 'undefined' &&
     typeof process.cwd === 'function' &&
-    // Vite client bundles often define process without a real cwd.
     typeof window === 'undefined'
   );
 }
@@ -42,6 +58,8 @@ function canResolveFromDisk(): boolean {
  */
 export function relativeRoot(): string {
   if (relativeRootOverride) return relativeRootOverride;
+  const injected = injectedRoot();
+  if (injected) return injected;
   if (canResolveFromDisk()) {
     try {
       return normalizeRoot(resolvePlaygroundDirRelative());
@@ -53,24 +71,14 @@ export function relativeRoot(): string {
 }
 
 /**
- * Fetch and cache the relative root from the playground API.
- * Safe to call multiple times; no-ops when already set from a successful fetch.
+ * Cache the Vite-injected (or disk) root for the session. Synchronous — call
+ * once at client boot. No HTTP; the product always runs under Vite.
  */
-export async function ensurePlaygroundRelativeRoot(): Promise<string> {
+export function hydratePlaygroundRelativeRoot(): string {
   if (relativeRootOverride) return relativeRootOverride;
-  try {
-    const res = await fetch('/playground/api/playground-root');
-    if (res.ok) {
-      const data = (await res.json()) as { relativeRoot?: string };
-      if (typeof data.relativeRoot === 'string' && data.relativeRoot.length > 0) {
-        setPlaygroundRelativeRoot(data.relativeRoot);
-        return relativeRootOverride!;
-      }
-    }
-  } catch {
-    /* keep default until next attempt */
-  }
-  return relativeRoot();
+  const root = relativeRoot();
+  relativeRootOverride = root;
+  return root;
 }
 
 /** Join segments under the playground root (POSIX). */

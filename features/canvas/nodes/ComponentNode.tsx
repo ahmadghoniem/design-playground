@@ -8,7 +8,7 @@ import {
 import { useNodeId, useReactFlow, NodeResizeControl } from "@xyflow/react";
 import { resolveRegistryItem } from "@pg/registry";
 import { ResizeGripIcon } from "@pg/shared/ui/playground-nav-icons";
-import { SizeButtons } from "@pg/shared/ui/SizeButtons";
+import { ViewportButtons } from "@pg/shared/ui/ViewportButtons";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 
 import {
@@ -209,7 +209,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
         <div
           className={`flex items-center gap-1.5 transition-opacity nodrag ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          <SizeButtons currentSize={size} onSizeChange={handleSizeChange} />
+          <ViewportButtons currentSize={size} onSizeChange={handleSizeChange} />
         </div>
       </div>
 
@@ -224,6 +224,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           onDoubleClick={handleFrameDoubleClick}
           onMouseMove={hoverHint.onMouseMove}
           onMouseLeave={hoverHint.onMouseLeave}
+          onPointerDown={hoverHint.onPointerDown}
           className={`relative app-theme bg-background overflow-hidden rounded-xl ${isResizing ? "" : "transition-all"} ${
             selected ? "ring-2 ring-[#0B99FF]" : ""
           } ${isInteractive ? "ring-offset-2" : ""} ${isFillMode ? (isAutoHeightFill ? "w-full" : "w-full h-full") : ""}`}
@@ -299,12 +300,11 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
               ) : null}
             </div>
           )}
-          {/* Click-blocker for React render mode — gates link/button activity
-              on a double-click. Element-select mode disables this via
-              `[data-iframe-overlay] { pointer-events: none !important }` in
-              playground-global.css. */}
+          {/* Transparent click catcher — blocks preview links/buttons until
+              double-click enters interact mode. Element-select mode disables
+              this via `[data-pg-interact-catcher]` in playground-global.css. */}
           {!isInteractive && (
-            <div className="absolute inset-0" data-iframe-overlay />
+            <div className="absolute inset-0" data-pg-interact-catcher />
           )}
         </div>
 

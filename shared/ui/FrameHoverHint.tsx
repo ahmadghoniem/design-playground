@@ -1,12 +1,31 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-interface FrameHoverHintProps {
-  enabled: boolean;
-}
-
+/**
+ * Cursor-following tip on component/iteration frames.
+ *
+ * Important: while React Flow is dragging a node it steals pointer events from
+ * the node, so a node-local `onMouseMove` stops firing and a naive tooltip
+ * freezes at the drag-start coordinates. We (1) hide on pointer-down (drag
+ * about to start) and (2) track `window` pointermove while the tip is visible.
+ */
 export function useFrameHoverHint(enabled: boolean) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!enabled) setPos(null);
+  }, [enabled]);
+
+  // Keep the tip under the cursor even if the node stops receiving moves
+  // (e.g. brief event gaps). Cleared on pointer-down before a drag begins.
+  useEffect(() => {
+    if (!pos || !enabled) return;
+    const onMove = (e: PointerEvent) => {
+      setPos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [pos, enabled]);
 
   const onMouseMove = useCallback(
     (e: React.MouseEvent) => {
@@ -17,6 +36,10 @@ export function useFrameHoverHint(enabled: boolean) {
   );
 
   const onMouseLeave = useCallback(() => setPos(null), []);
+
+  // Hide immediately when the user presses — RF drag would otherwise leave
+  // the tip stranded at the press coordinates.
+  const onPointerDown = useCallback(() => setPos(null), []);
 
   const tooltip =
     enabled && pos && typeof document !== "undefined"
@@ -37,5 +60,5 @@ export function useFrameHoverHint(enabled: boolean) {
         )
       : null;
 
-  return { onMouseMove, onMouseLeave, tooltip };
+  return { onMouseMove, onMouseLeave, onPointerDown, tooltip };
 }

@@ -6,8 +6,8 @@ import {
 } from "react";
 import type { Node } from "@xyflow/react";
 import { getIterationKeysOnCanvas } from "@pg/shared/lib/canvas-persistence";
-import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
-import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+import type { CanvasRelation } from "@pg/shared/lib/canvas-persistence";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import {
   DND_DATA_KEY,
   ARRANGE_HORIZONTAL_GAP,

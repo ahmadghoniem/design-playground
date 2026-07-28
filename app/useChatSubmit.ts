@@ -1,49 +1,86 @@
 import { useCallback } from "react";
-import { getProviderFields } from "@pg/shared/lib/generation-body";
+import { getClaudeCodeFields } from "@pg/shared/lib/generation-body";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
 import { loadDefaultSkillPrompt } from "@pg/shared/lib/load-default-skill-prompt";
-import {
-  generateIterationPrompt,
-  generateIterationFromIterationPrompt,
-  generateElementIterationPrompt,
-  generateElementIterationFromIterationPrompt,
-  resolveRegistryItem,
-} from "@pg/registry";
-import {
-  formatReferenceNodesSection,
-  formatSkillSection,
-  formatCustomInstructionsSection,
-  getStylingConstraint,
-} from "@pg/features/generation/prompts/shared-sections";
-import { freeformReferencePrompt } from "@pg/features/generation/prompts/freeform-reference.prompt";
-import { editPrompt } from "@pg/features/generation/prompts/edit.prompt";
-import { iterationsFile } from "@pg/shared/lib/playground-paths";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  CHAT_DEFAULT_COUNT,
   EDIT_COMPLETE_EVENT,
-  type GenerationCompletePayload,
-  type GenerationErrorPayload,
   type ChatSubmitPayload,
 } from "@pg/shared/lib/constants";
-import type { GenerationInfo } from "@pg/shared/lib/canvas-persistence";
-import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import { toast } from "sonner";
+import {
+  buildReferenceNodesSection,
+  resolveEditFilePath,
+  buildEditChatPrompt,
+  buildTargetedExplorePrompt,
+  buildFreeformChatPrompt,
+} from "@pg/app/build-chat-prompt";
 
 export interface UseChatSubmitParams {
   coord: GenerationCoordination;
-  scanForIterations: (
-    resetTimeoutOnFind?: boolean,
-    scanContext?: GenerationInfo | null,
-  ) => Promise<void>;
 }
 
-export function useChatSubmit({
-  coord,
-  scanForIterations,
-}: UseChatSubmitParams) {
+/**
+ * Join explicit skill prompts, or fall back to the default skill prompt when
+ * `useDefault` (no explicit skills and the mode allows the fallback).
+ */
+async function resolveSkillPrompt(
+  skillPrompts: string[],
+  useDefault: boolean,
+): Promise<string | undefined> {
+  if (skillPrompts.length > 0) return skillPrompts.join("\n\n");
+  if (!useDefault) return undefined;
+  const defaultPrompt = await loadDefaultSkillPrompt();
+  return defaultPrompt || undefined;
+}
+
+/**
+ * Discriminated on a *string* literal, not a boolean, and deliberately so.
+ *
+ * The host compiles this package with `strictNullChecks: false`, and without
+ * it TypeScript widens `true`/`false` literal types back to `boolean` in a
+ * discriminant position — so `if (!result.ok)` fails to narrow and every
+ * `result.error` access is an error. A string discriminant narrows under both
+ * configs. The playground's own tsconfig is `strict: true`, so this class of
+ * bug is invisible until you typecheck from the host.
+ */
+type PostGenerateResult =
+  | { status: "ok"; data: Record<string, unknown> }
+  | { status: "error"; error: string };
+
+/** POST to the generate API and normalize transport/HTTP/body errors. */
+async function postGenerate(
+  body: Record<string, unknown>,
+): Promise<PostGenerateResult> {
+  try {
+    const response = await fetch("/playground/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await response
+      .json()
+      .catch(() => ({ success: false, error: "Failed to parse response" }));
+    if (!response.ok || !data.success) {
+      const error =
+        typeof data?.error === "string"
+          ? data.error
+          : `Generation failed (${response.status})`;
+      return { status: "error", error };
+    }
+    return { status: "ok", data };
+  } catch (err) {
+    return {
+      status: "error",
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+export function useChatSubmit({ coord }: UseChatSubmitParams) {
   const handleChatSubmit = useCallback(
     async (payload: ChatSubmitPayload) => {
       // If generation already in progress, reject this submission
@@ -62,80 +99,33 @@ export function useChatSubmit({
         (payload.referenceNodes?.length ?? 0) > 0;
       if (isRawMode && !rawPrompt && !hasFreeformContext) return;
 
+      const getPromptNodes = () =>
+        coord.getNodes().map((n) => ({
+          id: n.id,
+          data: n.data as Record<string, unknown>,
+        }));
+
       // ── Edit Mode: modify file in-place, no iterations ──
       if (chatMode === "edit" && payload.targetNodeId) {
-        const editComponentId = payload.targetComponentId || "edit-mode";
-        const editComponentName =
-          payload.targetComponentName || editComponentId;
-        let filePath: string;
+        const { filePath, componentId: editComponentId, componentName: editComponentName } =
+          resolveEditFilePath(payload);
 
-        if (
-          payload.targetType === "iteration" &&
-          payload.sourceFilename
-        ) {
-          filePath = iterationsFile(payload.sourceFilename);
-        } else {
-          const item = resolveRegistryItem(editComponentId);
-          filePath =
-            item?.sourcePath ||
-            iterationsFile(editComponentId);
-        }
+        const editSkillPrompt = await resolveSkillPrompt(
+          payload.skillPrompts,
+          !payload.text,
+        );
 
-        // Gather skill prompts (same logic as normal path)
-        let editSkillPrompt: string | undefined;
-        if (payload.skillPrompts.length > 0) {
-          editSkillPrompt = payload.skillPrompts.join("\n\n");
-        } else if (!payload.text) {
-          const defaultPrompt = await loadDefaultSkillPrompt();
-          editSkillPrompt = defaultPrompt || undefined;
-        }
+        const editRefSection = buildReferenceNodesSection(
+          payload.referenceNodes,
+          getPromptNodes,
+          payload.targetNodeId,
+        );
 
-        // Build reference nodes section
-        let editRefSection = "";
-        if (payload.referenceNodes && payload.referenceNodes.length > 0) {
-          const refNodes = payload.referenceNodes.filter(
-            (n) => n.nodeId !== payload.targetNodeId,
-          );
-          if (refNodes.length > 0) {
-            const refNodesResolved = refNodes.map((node) => {
-              if (node.type === "text") {
-                const textNode = coord
-                  .getNodes()
-                  .find((n) => n.id === node.nodeId);
-                return {
-                  ...node,
-                  textContent:
-                    ((textNode?.data as Record<string, unknown>)
-                      ?.text as string) || "",
-                  sourcePath: undefined,
-                };
-              }
-              if (node.type === "image") {
-                return {
-                  ...node,
-                  sourcePath: undefined,
-                };
-              }
-              let sourcePath: string | undefined;
-              if (node.type === "component") {
-                const regItem = resolveRegistryItem(node.componentId);
-                sourcePath = regItem?.sourcePath;
-              }
-              return {
-                ...node,
-                sourcePath,
-              };
-            });
-            editRefSection = formatReferenceNodesSection(refNodesResolved);
-          }
-        }
-
-        const prompt = editPrompt({
+        const prompt = buildEditChatPrompt({
+          payload,
           filePath,
-          customInstructions: payload.text || "Improve the design",
           skillPrompt: editSkillPrompt,
-          referenceNodesSection: editRefSection || undefined,
-          elementSelections: payload.elementSelections,
+          referenceNodesSection: editRefSection,
         });
 
         const editResolvedModel = resolveAgentModel(payload.model);
@@ -151,60 +141,35 @@ export function useChatSubmit({
           editMode: true,
         });
 
-        try {
-          const response = await fetch("/playground/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt,
-              componentId: editComponentId,
-              model: editResolvedModel,
-              source: "chat_edit",
-              skillIds: payload.skillIds,
-              ...getProviderFields(),
-            }),
-          });
-          const data = await response.json().catch(() => ({ success: false }));
-          if (!response.ok || !data.success) {
-            console.error(
-              "[EditMode] Generation failed:",
-              data?.error,
-              "status:",
-              response.status,
-              "data:",
-              data,
-            );
-            toast.error(data?.error || `Edit failed (${response.status})`, {
-              duration: 6000,
-            });
-            generationEvents.error.emit({
-              componentId: editComponentId,
-              parentNodeId: payload.targetNodeId,
-              error: data?.error || "Edit failed",
-            });
-          } else {
-            // Tell the targeted node to re-import its freshly-edited component
-            // (same filename, so the loader can't detect the change itself).
-            window.dispatchEvent(
-              new CustomEvent(EDIT_COMPLETE_EVENT, {
-                detail: { nodeId: payload.targetNodeId },
-              }),
-            );
-            generationEvents.complete.emit({
-              componentId: editComponentId,
-              parentNodeId: payload.targetNodeId,
-              output: "",
-            });
-          }
-        } catch (err) {
-          console.error("[EditMode] Error:", err);
-          toast.error(err instanceof Error ? err.message : "Unknown error", {
-            duration: 6000,
-          });
+        const result = await postGenerate({
+          prompt,
+          componentId: editComponentId,
+          model: editResolvedModel,
+          source: "chat_edit",
+          skillIds: payload.skillIds,
+          ...getClaudeCodeFields(),
+        });
+
+        if (result.status === "error") {
+          console.error("[EditMode] Generation failed:", result.error);
+          toast.error(result.error, { duration: 6000 });
           generationEvents.error.emit({
             componentId: editComponentId,
             parentNodeId: payload.targetNodeId,
-            error: String(err),
+            error: result.error,
+          });
+        } else {
+          // Tell the targeted node to re-import its freshly-edited component
+          // (same filename, so the loader can't detect the change itself).
+          window.dispatchEvent(
+            new CustomEvent(EDIT_COMPLETE_EVENT, {
+              detail: { nodeId: payload.targetNodeId },
+            }),
+          );
+          generationEvents.complete.emit({
+            componentId: editComponentId,
+            parentNodeId: payload.targetNodeId,
+            output: "",
           });
         }
         return;
@@ -212,73 +177,31 @@ export function useChatSubmit({
 
       const {
         text,
-        skillPrompts,
         model: payloadModel,
         targetNodeId,
         targetComponentId,
         targetComponentName,
         targetType,
-        sourceFilename,
       } = payload;
 
       const resolvedModel = resolveAgentModel(payloadModel);
 
-      // Combine skill prompts — explicit skills always apply (including raw / text-only refs)
-      let combinedSkillPrompt: string | undefined;
-      if (skillPrompts.length > 0) {
-        combinedSkillPrompt = skillPrompts.join("\n\n");
-      } else if (!isRawMode && !text) {
-        // Use default skills only when no explicit skills selected and text is empty
-        const defaultPrompt = await loadDefaultSkillPrompt();
-        combinedSkillPrompt = defaultPrompt || undefined;
-      }
+      // Explicit skills always apply (including raw / text-only refs); the
+      // default skill only kicks in for non-raw submissions with empty text.
+      const combinedSkillPrompt = await resolveSkillPrompt(
+        payload.skillPrompts,
+        !isRawMode && !text,
+      );
 
       const customInstructions = isRawMode ? rawPrompt : text;
-      const hasElementSelections = (payload.elementSelections?.length ?? 0) > 0;
 
-      // Build reference nodes section from canvas selection (text/image/component refs)
-      let referenceNodesSection = "";
-      if (payload.referenceNodes && payload.referenceNodes.length > 0) {
-        // Filter out the target node from references (no need to reference itself)
-        const refNodes = payload.referenceNodes.filter(
-          (n) => n.nodeId !== targetNodeId,
-        );
+      const referenceNodesSection = buildReferenceNodesSection(
+        payload.referenceNodes,
+        getPromptNodes,
+        targetNodeId,
+      );
 
-        if (refNodes.length > 0) {
-          const refNodesResolved = refNodes.map((node) => {
-            if (node.type === "text") {
-              const textNode = coord
-                .getNodes()
-                .find((n) => n.id === node.nodeId);
-              return {
-                ...node,
-                textContent:
-                  ((textNode?.data as Record<string, unknown>)
-                    ?.text as string) || "",
-                sourcePath: undefined,
-              };
-            }
-            if (node.type === "image") {
-              return {
-                ...node,
-                sourcePath: undefined,
-              };
-            }
-            let sourcePath: string | undefined;
-            if (node.type === "component") {
-              const item = resolveRegistryItem(node.componentId);
-              sourcePath = item?.sourcePath;
-            }
-            return {
-              ...node,
-              sourcePath,
-            };
-          });
-          referenceNodesSection = formatReferenceNodesSection(refNodesResolved);
-        }
-      }
-
-      const canvasGenPf = getProviderFields();
+      const claudeCodeFields = getClaudeCodeFields();
 
       if (
         targetNodeId &&
@@ -287,16 +210,12 @@ export function useChatSubmit({
         targetType
       ) {
         // --- WITH TARGET NODE ---
-        let prompt = rawPrompt;
-        const componentId = targetComponentId;
-        const componentName = targetComponentName;
-        const iterationCount = payload.iterationCount ?? CHAT_DEFAULT_COUNT;
         let startNumber = 1;
 
         if (!isRawMode) {
           // Fetch next available iteration number
           try {
-            const cleanName = componentName.replace(/\s+/g, "");
+            const cleanName = targetComponentName.replace(/\s+/g, "");
             const response = await fetch("/playground/api/iterations");
             if (response.ok) {
               const { iterations } = await response.json();
@@ -316,53 +235,15 @@ export function useChatSubmit({
           }
         }
 
-        if (!isRawMode && targetType === "iteration" && sourceFilename) {
-          // Iterate from iteration
-          if (hasElementSelections) {
-            prompt = generateElementIterationFromIterationPrompt(
-              componentId,
-              sourceFilename,
-              startNumber,
-              iterationCount,
-              payload.elementSelections,
-              customInstructions,
-              combinedSkillPrompt,
-              referenceNodesSection,
-            );
-          } else {
-            prompt = generateIterationFromIterationPrompt(
-              componentId,
-              sourceFilename,
-              iterationCount,
-              startNumber,
-              customInstructions,
-              combinedSkillPrompt,
-              referenceNodesSection,
-            );
-          }
-        } else if (!isRawMode) {
-          // Component iteration
-          if (hasElementSelections) {
-            prompt = generateElementIterationPrompt(
-              componentId,
-              startNumber,
-              iterationCount,
-              payload.elementSelections,
-              customInstructions,
-              combinedSkillPrompt,
-              referenceNodesSection,
-            );
-          } else {
-            prompt = generateIterationPrompt(
-              componentId,
-              iterationCount,
-              startNumber,
-              customInstructions,
-              combinedSkillPrompt,
-              referenceNodesSection,
-            );
-          }
-        }
+        const { prompt, componentId, componentName, iterationCount } =
+          buildTargetedExplorePrompt({
+            payload,
+            isRawMode,
+            customInstructions,
+            combinedSkillPrompt,
+            referenceNodesSection,
+            startNumber,
+          });
 
         // Dispatch generation start (creates skeleton nodes)
         generationEvents.start.emit({
@@ -376,62 +257,39 @@ export function useChatSubmit({
           targetNodeId,
         });
 
-        // Call the generate API
-        try {
-          const response = await fetch("/playground/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt,
-              componentId,
-              iterationCount,
-              model: resolvedModel,
-              source: "chat",
-              skillIds: payload.skillIds,
-              ...canvasGenPf,
-            }),
-          });
+        const result = await postGenerate({
+          prompt,
+          componentId,
+          iterationCount,
+          model: resolvedModel,
+          source: "chat",
+          skillIds: payload.skillIds,
+          ...claudeCodeFields,
+        });
 
-          let data;
-          try {
-            data = await response.json();
-          } catch {
-            generationEvents.error.emit({
-              componentId,
-              parentNodeId: targetNodeId,
-              error: "Failed to parse response",
-            });
-            return;
-          }
-
-          if (!response.ok || !data.success) {
-            const error =
-              typeof data?.error === "string"
-                ? data.error
-                : "Generation failed";
-            generationEvents.error.emit({
-              componentId,
-              parentNodeId: targetNodeId,
-              error,
-            });
-          } else {
-            generationEvents.complete.emit({
-              componentId,
-              parentNodeId: targetNodeId,
-              output: "",
-            });
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Unknown error";
+        if (result.status === "error") {
           generationEvents.error.emit({
             componentId,
             parentNodeId: targetNodeId,
-            error: msg,
+            error: result.error,
+          });
+        } else {
+          generationEvents.complete.emit({
+            componentId,
+            parentNodeId: targetNodeId,
+            output: "",
           });
         }
       } else {
         // --- FREEFORM (no target) ---
-        const freeformComponentId = "chat-freeform";
+        const { prompt: freeformPrompt, componentId: freeformComponentId } =
+          buildFreeformChatPrompt({
+            isRawMode,
+            rawPrompt,
+            customInstructions,
+            combinedSkillPrompt,
+            referenceNodesSection,
+          });
 
         // Dispatch start event — creates skeleton node
         generationEvents.start.emit({
@@ -443,81 +301,35 @@ export function useChatSubmit({
           flowPosition: payload.canvasPosition ?? undefined,
         });
 
-        // Build prompt — freeform-reference template or raw text
-        let freeformPrompt: string;
-        if (isRawMode) {
-          if (referenceNodesSection || combinedSkillPrompt) {
-            freeformPrompt = freeformReferencePrompt({
-              skillSection: combinedSkillPrompt
-                ? formatSkillSection(combinedSkillPrompt)
-                : "",
-              referenceNodesSection: referenceNodesSection || "",
-              customInstructionsSection: formatCustomInstructionsSection(
-                rawPrompt || customInstructions,
-              ),
-              stylingConstraint: getStylingConstraint(),
-            });
-          } else {
-            freeformPrompt = rawPrompt;
-          }
-        } else if (referenceNodesSection) {
-          freeformPrompt = freeformReferencePrompt({
-            skillSection: combinedSkillPrompt
-              ? formatSkillSection(combinedSkillPrompt)
-              : "",
-            referenceNodesSection,
-            customInstructionsSection:
-              formatCustomInstructionsSection(customInstructions),
-            stylingConstraint: getStylingConstraint(),
-          });
-        } else {
-          freeformPrompt = customInstructions;
-        }
+        const result = await postGenerate({
+          prompt: freeformPrompt,
+          componentId: freeformComponentId,
+          iterationCount: 0,
+          model: resolvedModel,
+          source: "chat_freeform",
+          skillIds: payload.skillIds,
+          ...claudeCodeFields,
+        });
 
-        try {
-          const response = await fetch("/playground/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: freeformPrompt,
-              componentId: "chat-freeform",
-              iterationCount: 0,
-              model: resolvedModel,
-              source: "chat_freeform",
-              skillIds: payload.skillIds,
-              ...canvasGenPf,
-            }),
-          });
-
-          const data = await response.json().catch(() => ({ success: false }));
-          if (!response.ok || !data.success) {
-            console.error("[Chat] Freeform generation failed:", data?.error);
-            generationEvents.error.emit({
-              componentId: freeformComponentId,
-              parentNodeId: "",
-              error: data?.error || "Generation failed",
-            });
-          } else {
-            generationEvents.complete.emit({
-              componentId: freeformComponentId,
-              parentNodeId: "",
-              output: "",
-            });
-          }
-        } catch (err) {
-          console.error("[Chat] Freeform generation error:", err);
-          const msg = err instanceof Error ? err.message : "Unknown error";
+        if (result.status === "error") {
+          console.error("[Chat] Freeform generation failed:", result.error);
           generationEvents.error.emit({
             componentId: freeformComponentId,
             parentNodeId: "",
-            error: msg,
+            error: result.error,
           });
-        } finally {
-          // State cleanup and queue draining handled by generationEvents.complete/error handlers
-          // Only clear state here as a safety net if events didn't fire (e.g. network error before dispatch)
-          if (coord.getGenerationInfo()?.componentId === freeformComponentId) {
-            coord.clearGenerationEager();
-          }
+        } else {
+          generationEvents.complete.emit({
+            componentId: freeformComponentId,
+            parentNodeId: "",
+            output: "",
+          });
+        }
+
+        // State cleanup and queue draining handled by generationEvents
+        // complete/error handlers. Safety net if events didn't land.
+        if (coord.getGenerationInfo()?.componentId === freeformComponentId) {
+          coord.clearGenerationEager();
         }
       }
     },

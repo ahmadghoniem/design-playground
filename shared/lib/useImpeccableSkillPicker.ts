@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
 import type { PlaygroundSkill } from "@pg/skills";
 import type {
-  InlineReferenceItemData,
+  MentionItemData,
   OnSelectItemResult,
-} from "@pg/shared/ui/inline-reference";
+} from "@pg/shared/ui/mention-input";
 import {
   IMPECCABLE_ITEM_ID,
   IMPECCABLE_PARENT_ITEM,
@@ -21,7 +21,7 @@ export function useImpeccableSkillPicker(skills: PlaygroundSkill[]) {
     null,
   );
 
-  const skillPickerItems = useMemo((): InlineReferenceItemData[] => {
+  const skillPickerItems = useMemo((): MentionItemData[] => {
     if (impeccableSubMenuOpen) {
       return buildImpeccableCommandItems("");
     }
@@ -36,7 +36,7 @@ export function useImpeccableSkillPicker(skills: PlaygroundSkill[]) {
   }, [impeccableSubMenuOpen, skills]);
 
   const skillPickerFilterFn = useCallback(
-    (item: InlineReferenceItemData, query: string): boolean => {
+    (item: MentionItemData, query: string): boolean => {
       if (impeccableSubMenuOpen) {
         const q = query.toLowerCase();
         const desc =
@@ -54,7 +54,7 @@ export function useImpeccableSkillPicker(skills: PlaygroundSkill[]) {
   );
 
   const handleSelectItem = useCallback(
-    (trigger: string, item: InlineReferenceItemData): OnSelectItemResult => {
+    (trigger: string, item: MentionItemData): OnSelectItemResult => {
       if (trigger !== "/") return undefined;
 
       if (item.id === IMPECCABLE_ITEM_ID) {

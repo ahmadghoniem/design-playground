@@ -20,11 +20,13 @@ bun dev
 ## Requirements
 
 - **Bun** (https://bun.sh) — used to install the playground's nested dependencies
-- **Vite 5 or 6** (the playground API mounts into the dev server via a Vite plugin)
+- **Vite 5, 6, or 7** (the playground API mounts into the dev server via a Vite plugin)
 - **React 18 or 19**
 - **Tailwind CSS v4**
 - **Node.js 18+**
-- At least one AI provider CLI installed (see [Providers](#providers) below)
+- **Claude Code CLI** on your PATH (see [Provider](#provider) below)
+
+This is a **local-dev-only** tool. It is never built into CI or production — it runs only in your dev server.
 
 ## What Gets Installed
 
@@ -36,11 +38,11 @@ The setup script checks your project and installs the playground's dependencies 
 
 ## How It Works
 
-1. **Discover** your project's existing components with one click
-2. **Drag** components onto an infinite canvas
-3. **Iterate** — the AI generates layout and style variations automatically
-4. **Compare** variations side-by-side on the canvas
-5. **Copy** the code you like back into your project
+1. **Open** the playground — your components are already listed in the sidebar
+2. **Drag** one onto the infinite canvas
+3. **Describe** what you want in the chat bar at the bottom
+4. **Compare** the generated variations side-by-side
+5. **Adopt** the one you like — it overwrites the original component file
 
 Everything happens locally. Your code stays on your machine.
 
@@ -50,85 +52,80 @@ Everything happens locally. Your code stays on your machine.
 
 **Claude Code** is the only AI provider. Install the CLI and keep it on your PATH.
 
-### Claude Code
-
-Anthropic's command-line coding agent.
-
 ```bash
 bun add -g @anthropic-ai/claude-code
 ```
 
-Claude Code offers additional options you can configure in Model Settings:
+Two options are configurable in Model Settings:
 
-| Option       | Description                              | Default |
-| ------------ | ---------------------------------------- | ------- |
-| Effort Level | How thoroughly the AI explores solutions | High    |
-| Budget Limit | Maximum spend per generation (USD)       | No limit|
-| Max Turns    | Maximum conversation turns per generation| No limit|
+| Option       | Description                              | Default  |
+| ------------ | ---------------------------------------- | -------- |
+| Effort Level | How thoroughly the AI explores solutions (Low / Med / High / Max) | High |
+| Budget Limit | Maximum spend per generation (USD)       | No limit |
 
 ---
 
 ## Canvas Basics
 
 - **Pan** — Click and drag on empty space, or use the scroll wheel
-- **Zoom** — Pinch or Ctrl/Cmd + scroll
+- **Zoom** — Pinch or Ctrl/Cmd + scroll, or the zoom controls at bottom-left
+- **Undo / Redo** — `Ctrl/Cmd + Z` and `Ctrl/Cmd + Shift + Z` (or `Y`), or the buttons beside the zoom controls
+- **Snap to guides** — Hold `Ctrl/Cmd` while dragging
 - **Select** — Click a component card
 - **Multi-select** — Shift + click, or drag a selection box
 - **Delete** — Select a card and press Backspace/Delete
+- **Interact with a preview** — Double-click to enter interact mode (previews are click-shielded by default so canvas dragging works)
+- **Select an element inside a preview** — Hold `Alt` and hover/click. The selection is passed to the AI as context.
 
 ### Component Cards
 
-Each card on the canvas shows a live preview of a component variation. Cards display:
-
-- A rendered preview of the component
-- The model that generated it
-- The iteration number
-- Actions: copy code, iterate further, view full screen
+Each card on the canvas shows a live preview rendered inline — not in an iframe. Cards display the component, its iteration number, a viewport switcher (Auto / Desktop / Mobile), and actions to copy the code or adopt the variation.
 
 ---
 
 ## Generating Variations
 
-### From the Canvas
+Everything runs through the docked chat bar at the bottom of the canvas. It has three modes:
 
-1. Select a component card
-2. Click **Iterate** or press **Enter**
-3. Optionally add a prompt describing what you want changed
-4. Choose how many variations to generate
-5. New variations appear as connected cards on the canvas
+| Mode        | What it does                                                              |
+| ----------- | ------------------------------------------------------------------------- |
+| **Explore** | Generates 1–4 new variation files alongside the original. Drag the counter to set how many. |
+| **Edit**    | Modifies the targeted file in place — no new iterations                    |
+| **Raw**     | Sends your prompt through untouched, without the built-in scaffolding      |
 
-### From Chat
+Drop a component or iteration onto the chat bar (or select it first) to target it. With no target, the prompt is freeform and produces a standalone result.
 
-Use the built-in chat panel to describe what you want in natural language. The AI will generate or modify components based on your description.
-
-- **Shift + Tab** — Cycle through available models in chat
-- **Enter** — Send your message
+- **Shift + Tab** — Cycle through available models
+- **Enter** — Send
 - **Shift + Enter** — New line
+- **`/`** — Insert a skill (see below)
 
 ---
 
-## Project Discovery
+## Component Discovery
 
-Click **Discover** in the toolbar to scan your project for existing React components. The playground will:
+Discovery is **deterministic static analysis** — no AI agent, no scanning delay. On load, the playground walks your app's render tree starting from your entry point (`createRoot(...).render(...)`), resolves import specifiers against your `tsconfig` paths, and lists what it finds. Everything discovered is immediately draggable; there is no "add" step.
 
-1. Find all component files in your project
-2. Analyze each component's props, variants, and structure
-3. Add them to your component library for use on the canvas
+It also reads your `components/ui/` directory for primitives and parses theme tokens out of your CSS entry.
+
+> **Note:** overlay components (Dialog, Sheet, Popover, DropdownMenu…) are listed but never mounted live. They portal to `document.body` and would escape the canvas card to cover the whole viewport.
 
 ---
 
 ## Skills
 
-The playground includes built-in prompt templates (called "skills") for common tasks:
+Skills are prompt templates you attach to a generation by typing `/` in the chat bar. Built-in:
 
-| Skill             | What It Does                                        |
-| ----------------- | --------------------------------------------------- |
-| **Iterate**       | Generate style and layout variations of a component |
-| **Landing Page**  | Create full landing page designs                    |
-| **Design System** | Build consistent component libraries                |
-| **Dashboard**     | Generate data dashboard layouts                     |
+| Skill                         | What It Does                                                        |
+| ----------------------------- | ------------------------------------------------------------------- |
+| **design-variations**         | Generates multiple distinct visual directions of a component or page |
+| **frontend-design**           | Guidance for distinctive, intentional visual design                  |
+| **make-interfaces-feel-better** | Polish pass — animation, hover states, shadows, optical alignment  |
+| **stick-to-design-system**    | Constrains output to Tailwind classes already used in your codebase  |
+| **ux-variation-designer**     | Structural and interaction variations, not just cosmetic ones        |
+| **nothing-design**            | Applies the Nothing design system (only when asked for by name)      |
 
-Skills provide optimized prompts so you get better results without needing to write detailed instructions yourself.
+You can add your own from the skills catalog.
 
 ---
 
@@ -137,10 +134,10 @@ Skills provide optimized prompts so you get better results without needing to wr
 Open **Model Settings** from the toolbar gear icon to:
 
 - Enable or disable specific Claude models
-- Configure Claude Code advanced options (effort, budget, turns)
+- Set the effort level and budget limit
 - Refresh the available model list
 
-Your model preferences are saved in your browser and persist across sessions.
+Your preferences are saved in your browser and persist across sessions.
 
 ---
 
@@ -149,30 +146,18 @@ Your model preferences are saved in your browser and persist across sessions.
 ```
 app/playground/
 ├── app/               # Composition shell (PlaygroundClient/Canvas/Header/Sidebar)
-├── features/          # One dir per feature: canvas, discovery, iterations,
+├── features/          # One dir per feature: canvas, registry-sidebar, iterations,
 │                      #   generation, chat, skills
-├── shared/            # ui/ (primitives), lib/ (cross-feature + providers), stores/
-├── server/            # Hono API (routes mounted into Vite via server/vite-plugin.ts)
+├── shared/            # ui/ (primitives), lib/ (cross-feature helpers), stores/
+├── server/            # Hono API (mounted into Vite via server/vite-plugin.ts)
 ├── skills/            # Built-in prompt templates
-├── docs/              # Technical documentation
-├── dev-entry.tsx      # React-router mount entry
-├── registry.tsx       # Component registry template + helpers
+├── iterations/        # Generated variation files
+├── dev-entry.tsx      # createRoot mount entry
+├── registry.tsx       # Component registry (fed by discovery)
 └── setup.mjs          # Setup script
 ```
 
 Client code is feature-based; cross-feature imports use the `@pg/` alias. See `CLAUDE.md` for the full layout and boundary rules.
-
----
-
-## Telemetry
-
-The playground collects **anonymous, content-free usage telemetry** in dev only
-(feature usage counts, generation durations, error categories — never prompts,
-code, file paths, or names; production
-builds of your app send nothing). Disable anytime with
-`PLAYGROUND_TELEMETRY_DISABLED=1`, `DO_NOT_TRACK=1`, or editing
-`~/.config/design-playground/telemetry.json`. Full event list, guarantees, and
-audit pointers: [TELEMETRY.md](TELEMETRY.md).
 
 ---
 
@@ -185,7 +170,10 @@ Make sure the Claude Code CLI is installed and available in your terminal's PATH
 Click the refresh button in Model Settings.
 
 **Generation seems stuck**
-Check your terminal for error output. You can cancel an in-progress generation from the canvas toolbar.
+Check your terminal for the agent's output. You can cancel an in-progress generation from the canvas toolbar.
 
-**Components not discovered**
-Make sure your components are standard React/JSX files. The discovery scan looks for `.tsx` and `.jsx` files with default exports.
+**Sidebar is empty**
+Discovery walks outward from your app's entry point. If it can't find `createRoot`, or your components aren't reachable from it, nothing is listed. Check the dev-server console for `[Playground][discover]` output.
+
+**A dialog opened by itself and covered the canvas**
+An overlay component made it into the registry. Those portal outside their card by design — remove it from `discovered-registry.json`.

@@ -1,4 +1,4 @@
-﻿import {
+import {
   useCallback,
   useMemo,
   useRef,
@@ -15,13 +15,11 @@ import {
   useViewport,
   Node,
   SelectionMode,
-  type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { TooltipProvider } from "@pg/shared/ui/tooltip";
 import {
   getCanvasStorageKey,
-  getIterationKeyFromNode,
   pruneKnownIterations,
 } from "@pg/shared/lib/canvas-persistence";
 import { useCanvasFlow } from "@pg/features/canvas/canvas-flow";
@@ -29,18 +27,7 @@ import PlaygroundCanvasToolbar from "@pg/features/canvas/components/PlaygroundCa
 import PlaygroundCanvasViewControls from "@pg/features/canvas/components/PlaygroundCanvasViewControls";
 import PlaygroundCanvasDialogs from "@pg/features/canvas/components/PlaygroundCanvasDialogs";
 import PlaygroundCanvasContextMenu from "@pg/features/canvas/components/PlaygroundCanvasContextMenu";
-import { useCanvasDrawTool } from "@pg/features/canvas/hooks/useCanvasDrawTool";
-import { useCanvasPersistence } from "@pg/features/canvas/hooks/useCanvasPersistence";
-import { useCanvasDragDrop } from "@pg/features/canvas/hooks/useCanvasDragDrop";
-import { useCanvasPaste } from "@pg/features/canvas/hooks/useCanvasPaste";
-import { useGenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
-import { useGenerationLifecycle } from "@pg/features/generation/useGenerationLifecycle";
-import { useIterationScan } from "@pg/features/iterations/useIterationScan";
-import { useChatSubmit } from "@pg/app/useChatSubmit";
-import { useCanvasFrameOps } from "@pg/features/canvas/hooks/useCanvasFrameOps";
-import { useCanvasNodeDelete } from "@pg/features/canvas/hooks/useCanvasNodeDelete";
-import { useCanvasAutoArrange } from "@pg/features/canvas/hooks/useCanvasAutoArrange";
-import { useCanvasClear } from "@pg/features/canvas/hooks/useCanvasClear";
+import { usePlaygroundCanvasController } from "@pg/app/usePlaygroundCanvasController";
 
 import ComponentNode from "@pg/features/canvas/nodes/ComponentNode";
 import IterationNode from "@pg/features/iterations/IterationNode";
@@ -53,8 +40,6 @@ import HelperLines from "@pg/features/canvas/nodes/HelperLines";
 import { ITERATION_COLLAPSE_TOGGLE_EVENT } from "@pg/shared/lib/constants";
 import DockedChatBar from "@pg/features/chat/DockedChatBar";
 import ElementHighlight from "@pg/features/canvas/components/ElementHighlight";
-import { useElementSelection } from "@pg/features/canvas/hooks/useElementSelection";
-import { useNodeSelection } from "@pg/features/chat/useNodeSelection";
 import { useInteractiveNodeStore } from "@pg/shared/stores/interactive-node-store";
 import { computeVisibleNodes } from "@pg/features/canvas/canvas-visibility";
 
@@ -167,7 +152,7 @@ export default function PlaygroundCanvas({
   const [snapEnabled, setSnapEnabled] = useState(false);
   const SNAP_GRID = 16;
 
-  // Engage snap-to-grid only while Control (or ⌘) is held; release — or losing
+  // Engage snap-to-grid only while Control (or Cmd) is held; release — or losing
   // window focus mid-hold — turns it back off so it never sticks on.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -193,15 +178,51 @@ export default function PlaygroundCanvas({
     initialized.current = true;
   }
 
-  const coord = useGenerationCoordination({
+  const { screenToFlowPosition, zoomIn, zoomOut } = useReactFlow();
+  const { zoom } = useViewport();
+
+  const {
+    isGenerating,
+    handleNodesChange,
+    onNodesDelete,
+    deleteDialogNode,
+    setDeleteDialogNode,
+    handleDeleteWithMode,
+    onDragOver,
+    onDrop,
+    onNodeDrag,
+    clearHelperLines,
+    helperLines,
+    handleZOrder,
+    handleGroupSelection,
+    handleUngroupFrame,
+    handleChatSubmit,
+    elementSelection,
+    nodeSelection,
+    confirmClearAllNodes,
+    autoArrangeNodes,
+  } = usePlaygroundCanvasController({
     nodes,
+    setNodes,
+    onNodesChange,
+    relations,
+    setRelations,
+    storageKey,
     knownIterations,
     setKnownIterations,
+    collapsedNodeIds,
+    setCollapsedNodeIds,
+    collapsedNodeIdsRef,
+    nodeIdCounterRef,
+    getNodeId,
+    contextMenu,
+    showClearDialog,
+    setShowClearDialog,
+    reactFlowWrapper,
+    activeTool,
+    setActiveTool,
+    shapeKind,
   });
-  const { isGenerating, generationInfo } = coord;
-  const { screenToFlowPosition, fitView, getViewport, zoomIn, zoomOut } =
-    useReactFlow();
-  const { zoom } = useViewport();
 
   // Undo / redo: Ctrl/⌘+Z undoes, Ctrl/⌘+Y (or Ctrl/⌘+Shift+Z) redoes. Ignored
   // while typing in an input/textarea/contentEditable so it never eats an edit.
@@ -229,126 +250,6 @@ export default function PlaygroundCanvas({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [undo, redo]);
-
-  const {
-    handleZOrder,
-    handleGroupSelection,
-    handleUngroupFrame,
-    onNodeDrag,
-    clearHelperLines,
-    helperLines,
-  } = useCanvasFrameOps({ coord, setNodes, contextMenu, getNodeId });
-
-  const {
-    onNodesDelete,
-    deleteDialogNode,
-    setDeleteDialogNode,
-    handleDeleteWithMode,
-  } = useCanvasNodeDelete({
-    nodes,
-    relations,
-    setNodes,
-    setRelations,
-    setKnownIterations,
-    setCollapsedNodeIds,
-  });
-
-  const handleNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      const removedIterationKeys: string[] = [];
-      for (const change of changes) {
-        if (change.type === "remove") {
-          const node = coord.getNodes().find((n) => n.id === change.id);
-          if (node?.type === "iteration") {
-            const key = getIterationKeyFromNode(node);
-            if (key) removedIterationKeys.push(key);
-          }
-        }
-      }
-      if (removedIterationKeys.length > 0) {
-        coord.removeKnownIterations(removedIterationKeys);
-      }
-
-      onNodesChange(changes);
-    },
-    [onNodesChange, coord.getNodes, coord.removeKnownIterations],
-  );
-
-  useCanvasPersistence({
-    storageKey,
-    nodes,
-    relations,
-    coord,
-    knownIterations,
-    collapsedNodeIds,
-    collapsedNodeIdsRef,
-    nodeIdCounterRef,
-    getViewport,
-  });
-
-  // Pointer-driven drag-to-draw shapes live behind one seam.
-  useCanvasDrawTool({
-    activeTool,
-    reactFlowWrapper,
-    screenToFlowPosition,
-    shapeKind,
-    getNodeId,
-    setNodes,
-    setActiveTool,
-  });
-
-  // Handle iteration deletion callback
-  const handleIterationDelete = useCallback((filename: string) => {
-    setKnownIterations((prev) => prev.filter((f) => f !== filename));
-  }, []);
-
-  const { scanForIterations } = useIterationScan({
-    coord,
-    isGenerating,
-    setNodes,
-    setRelations,
-    getNodeId,
-    handleIterationDelete,
-  });
-
-  const { confirmClearAllNodes } = useCanvasClear({
-    showClearDialog,
-    setShowClearDialog,
-    setNodes,
-    setRelations,
-    setKnownIterations,
-    setCollapsedNodeIds,
-    storageKey,
-  });
-
-  useGenerationLifecycle({
-    coord,
-    isGenerating,
-    generationInfo,
-    setNodes,
-    setRelations,
-    getNodeId,
-    scanForIterations,
-  });
-
-  // ---------------------------------------------------------------------------
-  // Cursor Chat submit handler + queue
-  // ---------------------------------------------------------------------------
-  const elementSelection = useElementSelection();
-  const nodeSelection = useNodeSelection();
-  const { handleChatSubmit } = useChatSubmit({
-    coord,
-    scanForIterations,
-  });
-
-  const { onDragOver, onDrop } = useCanvasDragDrop({
-    coord,
-    screenToFlowPosition,
-    getNodeId,
-    setNodes,
-    setRelations,
-    handleIterationDelete,
-  });
 
   const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
@@ -427,22 +328,6 @@ export default function PlaygroundCanvas({
     wrapper.addEventListener("wheel", handleWheel, { passive: false });
     return () => wrapper.removeEventListener("wheel", handleWheel);
   }, []);
-
-  useCanvasPaste({
-    reactFlowWrapper,
-    screenToFlowPosition,
-    getNodeId,
-    setNodes,
-  });
-
-  const { autoArrangeNodes } = useCanvasAutoArrange({
-    nodes,
-    relations,
-    collapsedNodeIdsRef,
-    setNodes,
-    fitView,
-    getViewport,
-  });
 
   // ---------------------------------------------------------------------------
   // Collapse/expand toggle event
@@ -589,9 +474,6 @@ export default function PlaygroundCanvas({
           elementsSelectable
           deleteKeyCode={["Delete", "Backspace"]}
         >
-          {/* <Controls
-            className="!bg-white !border-stone-200 !rounded-lg !shadow-sm [&>button]:!bg-white [&>button]:!border-stone-200 [&>button]:!text-stone-600 [&>button:hover]:!bg-stone-50"
-          /> */}
           <Background
             variant={BackgroundVariant.Dots}
             gap={BACKGROUND_GAP}

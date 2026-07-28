@@ -2,21 +2,20 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { ArrowUp, Image as ImageIcon, Scan } from "lucide-react";
 import {
-  InlineReference,
-  InlineReferenceInput,
-  InlineReferenceContent,
+  MentionInput,
+  MentionInputField,
+  MentionInputContent,
   type Segment,
-  type InlineReferenceHandle,
-} from "@pg/shared/ui/inline-reference";
+  type MentionInputHandle,
+} from "@pg/shared/ui/mention-input";
 import type { PlaygroundSkill } from "@pg/skills";
 import { ImpeccableSkillPicker } from "@pg/shared/ui/impeccable-skill-picker";
 import { ImpeccableDemoteMenu } from "@pg/shared/ui/impeccable-demote-menu";
 import { useImpeccableSkillPicker } from "@pg/shared/lib/useImpeccableSkillPicker";
 import { impeccablePromptFromSegment } from "@pg/shared/lib/impeccable-skill";
-import { useAvailableModels } from "@pg/shared/ui/iterate-dialog/parts";
+import { useAvailableModels } from "@pg/shared/lib/model-selection";
 import { useModelCycle } from "@pg/features/chat/useModelCycle";
 import { useSkills } from "@pg/features/chat/useSkills";
-import { getModelIconConfig } from "@pg/shared/lib/model-icons";
 import {
   CHAT_DEFAULT_COUNT,
   type ChatSubmitPayload,
@@ -26,16 +25,14 @@ import type { SelectedElement } from "@pg/shared/lib/element-context";
 import type { SelectedNodeContext } from "@pg/features/chat/useNodeSelection";
 import {
   PillLeadingRemoveSlot,
-  IterationCountDragger,
 } from "@pg/features/chat/chat-bits";
 import {
-  EditIcon,
-  ExploreIcon,
   BracketIcon,
   NodeRefIcon,
 } from "@pg/shared/ui/playground-nav-icons";
 import { useChatAttachments } from "@pg/features/chat/useChatAttachments";
 import { useChatDockProximity } from "@pg/features/chat/useChatDockProximity";
+import { ChatComposerControls } from "@pg/features/chat/ChatComposerControls";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -77,7 +74,7 @@ export default function DockedChatBar({
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inlineRefContainerRef = useRef<HTMLDivElement | null>(null);
-  const inlineRefHandle = useRef<InlineReferenceHandle | null>(null);
+  const mentionHandle = useRef<MentionInputHandle | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
   const { models, isLoading: isLoadingModels } = useAvailableModels();
@@ -104,7 +101,7 @@ export default function DockedChatBar({
   const getInputEl = useCallback(() => {
     return (
       inlineRefContainerRef.current?.querySelector<HTMLDivElement>(
-        '[data-slot="inline-reference-input"]',
+        '[data-slot="mention-input-field"]',
       ) ?? null
     );
   }, []);
@@ -173,7 +170,7 @@ export default function DockedChatBar({
 
   const pickerOpen = useCallback(
     () =>
-      !!document.querySelector('[data-slot="inline-reference-content"]') ||
+      !!document.querySelector('[data-slot="mention-input-content"]') ||
       !!document.querySelector('[data-slot="impeccable-demote-menu"]'),
     [],
   );
@@ -337,8 +334,6 @@ export default function DockedChatBar({
     return cleaned || label;
   }, [models, model, isLoadingModels]);
 
-  const currentConfig = getModelIconConfig(model);
-
   const placeholder = isFreeformMode
     ? !editTarget && referenceNodes.length > 0
       ? "Type / to pick a skill…"
@@ -352,16 +347,6 @@ export default function DockedChatBar({
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
-
-  const bubbleFaces = (
-    <span
-      className="bubble-face bubble-face--current"
-      style={{
-        backgroundColor: currentConfig.bg,
-        backgroundImage: `url(${currentConfig.src})`,
-      }}
-    />
-  );
 
   return (
     <div
@@ -388,86 +373,15 @@ export default function DockedChatBar({
             pointerEvents: "auto",
           }}
         >
-          {/* Floating model bubble — top-left */}
-          {shouldExpandFinal && (
-            <div
-              className="absolute left-1.5 flex items-center gap-1.5"
-              style={{ bottom: "calc(100% + 10px)" }}
-            >
-              <button
-                type="button"
-                aria-hidden
-                tabIndex={-1}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={cycleModel}
-                className="chat-bubble inline-block border-0 bg-transparent p-0"
-                style={{ width: 16, height: 16 }}
-              >
-                {bubbleFaces}
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={cycleModel}
-                aria-label="Switch model"
-                title="Switch model"
-                className="select-none whitespace-nowrap text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-600"
-              >
-                {shortModelName}
-              </button>
-            </div>
-          )}
-
-          {/* Floating Edit / Explore cluster — top-right, only with a selection */}
-          {showModeToggleFinal && (
-            <div
-              className="absolute right-1.5 inline-flex items-center gap-0.5 rounded-full border border-stone-200/70 bg-white/95 px-0.5 py-0.5 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] backdrop-blur"
-              style={{ bottom: "calc(100% + 10px)" }}
-            >
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setChatMode("edit")}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                  effectiveChatMode === "edit"
-                    ? "bg-stone-100 text-stone-900"
-                    : "text-stone-500 hover:text-stone-800"
-                }`}
-                aria-pressed={effectiveChatMode === "edit"}
-                title="Edit design"
-              >
-                <EditIcon className="flex-shrink-0" />
-                <span>Edit</span>
-              </button>
-              <div
-                className={`inline-flex items-center gap-1 rounded-full transition-colors ${
-                  effectiveChatMode === "explore" ? "bg-stone-100 pr-1" : ""
-                }`}
-              >
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setChatMode("explore")}
-                  className={`inline-flex items-center gap-1 rounded-full pl-2.5 text-[11px] font-medium transition-colors ${
-                    effectiveChatMode === "explore"
-                      ? "py-1 pr-0 text-stone-900"
-                      : "py-1 pr-2.5 text-stone-500 hover:text-stone-800"
-                  }`}
-                  aria-pressed={effectiveChatMode === "explore"}
-                  title="Explore"
-                >
-                  <ExploreIcon className="flex-shrink-0" />
-                  <span>Explore</span>
-                </button>
-                {effectiveChatMode === "explore" && (
-                  <IterationCountDragger
-                    count={iterationCount}
-                    onChange={setIterationCount}
-                  />
-                )}
-              </div>
-            </div>
-          )}
+          <ChatComposerControls
+            shortModelName={shortModelName}
+            onCycleModel={cycleModel}
+            showModeToggle={showModeToggleFinal}
+            effectiveChatMode={effectiveChatMode}
+            onChatModeChange={setChatMode}
+            iterationCount={iterationCount}
+            onIterationCountChange={setIterationCount}
+          />
 
           {/* The pill */}
           <div
@@ -487,7 +401,7 @@ export default function DockedChatBar({
                 const target = e.target as HTMLElement;
                 if (
                   target.closest("button") ||
-                  target.closest('[data-slot="inline-reference-input"]')
+                  target.closest('[data-slot="mention-input-field"]')
                 ) {
                   return;
                 }
@@ -610,8 +524,8 @@ export default function DockedChatBar({
                 className="flex items-center gap-2 px-3.5 py-2.5"
                 onKeyDownCapture={handleKeyDownCapture}
               >
-                <InlineReference
-                  ref={inlineRefHandle}
+                <MentionInput
+                  ref={mentionHandle}
                   value={segments}
                   onValueChange={setSegments}
                   onSelectItem={handleSelectItem}
@@ -624,7 +538,7 @@ export default function DockedChatBar({
                   onSkillPillPendingDelete={() => closeDemoteMenu()}
                   className="w-full cursor-chat-inline-input"
                 >
-                  <InlineReferenceInput
+                  <MentionInputField
                     placeholder={placeholder}
                     aria-label="Chat prompt"
                     className="w-full rounded-none border-none px-0 py-1 text-left leading-[1.4] shadow-none outline-none ring-0 focus-visible:border-none focus-visible:ring-0"
@@ -636,7 +550,7 @@ export default function DockedChatBar({
                       caretColor: "rgb(87, 83, 78)",
                     }}
                   />
-                  <InlineReferenceContent
+                  <MentionInputContent
                     trigger="/"
                     items={skillPickerItems}
                     filterFn={skillPickerFilterFn}
@@ -648,13 +562,13 @@ export default function DockedChatBar({
                       onBackFromSubMenu={() => setImpeccableSubMenuOpen(false)}
                       showAddSkillButton={false}
                     />
-                  </InlineReferenceContent>
+                  </MentionInputContent>
 
                   {demoteState && (
                     <ImpeccableDemoteMenu
                       demoteState={demoteState}
                       onSelect={(command) => {
-                        inlineRefHandle.current?.updateImpeccablePill(
+                        mentionHandle.current?.updateImpeccablePill(
                           demoteState.pillEl,
                           command,
                         );
@@ -663,7 +577,7 @@ export default function DockedChatBar({
                       onClose={closeDemoteMenu}
                     />
                   )}
-                </InlineReference>
+                </MentionInput>
 
                 {/* Send button */}
                 <button

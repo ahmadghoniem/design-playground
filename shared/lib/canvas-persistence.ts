@@ -9,9 +9,9 @@ import { STORAGE_KEY } from './constants';
 
 /**
  * Explicit parent→child iteration-tree record. Replaces the old React Flow
- * `Edge[]` state (which was never rendered). Defined here so persistence owns
- * the stored shape; `@pg/features/canvas/canvas-relations` re-exports the type
- * and provides the traversal helpers (shared/ may not import features/).
+ * `Edge[]` state (which was never rendered). Persistence owns the stored shape;
+ * `features/canvas/canvas-relations.ts` provides traversal helpers only
+ * (shared/ may not import features/).
  */
 export interface CanvasRelation {
   parentId: string;
@@ -29,12 +29,10 @@ export interface GenerationInfo {
   startNumber?: number;
   skeletonNodeIds: string[];
   startTime: number; // Timestamp when generation started
-  /** Skeleton positions for post-generation repositioning (always set) */
+  /** Skeleton positions for post-generation repositioning (set when skeletons are created) */
   skeletonPositions?: { x: number; y: number }[];
-  /** Grid layout positions for each skeleton node (ordered by variant number) */
+  /** Legacy alias for `skeletonPositions`; still read from old snapshots, never written. */
   gridPositions?: { x: number; y: number }[];
-  /** Parent node cell size so real iteration nodes can match ghost/skeleton sizing */
-  gridCellSize?: { width: number; height: number };
 }
 
 export interface CanvasState {

@@ -3,11 +3,17 @@
   "entry": [
     "dev-entry.tsx",
     "registry.tsx",
+    "registry-types.ts",
     "server/index.ts",
     "server/vite-plugin.ts",
     "setup.mjs",
     "iterations/index.ts"
   ],
   "project": ["**/*.{ts,tsx,js,mjs}"],
-  "ignore": ["iterations/**", "docs/**"]
+  "ignore": ["iterations/**"],
+  "ignoreDependencies": [
+    "@tailwindcss/typography",
+    "tw-animate-css",
+    "dependency-cruiser"
+  ]
 }

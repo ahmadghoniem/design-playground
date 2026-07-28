@@ -1,8 +1,10 @@
 import { useEffect, type MutableRefObject } from "react";
 import type { Node, Viewport } from "@xyflow/react";
 import { saveCanvasState } from "@pg/shared/lib/canvas-persistence";
-import type { CanvasRelation } from "@pg/features/canvas/canvas-relations";
-import type { GenerationCoordination } from "@pg/features/generation/useGenerationCoordination";
+import type { CanvasRelation } from "@pg/shared/lib/canvas-persistence";
+import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
+
+const SAVE_DEBOUNCE_MS = 250;
 
 export interface UseCanvasPersistenceParams {
   storageKey: string;
@@ -27,17 +29,23 @@ export function useCanvasPersistence({
   nodeIdCounterRef,
   getViewport,
 }: UseCanvasPersistenceParams): void {
-  // Save to localStorage whenever nodes or relations change.
+  // Save to localStorage whenever nodes or relations change. Trailing
+  // debounce: React Flow updates `nodes` every drag frame, so an immediate
+  // save would serialize the whole canvas to localStorage continuously while
+  // dragging. Unload is covered by the beforeunload handler below.
   useEffect(() => {
-    saveCanvasState(
-      storageKey,
-      nodes,
-      relations,
-      nodeIdCounterRef.current,
-      knownIterations,
-      Array.from(collapsedNodeIds),
-      getViewport(),
-    );
+    const timer = setTimeout(() => {
+      saveCanvasState(
+        storageKey,
+        nodes,
+        relations,
+        nodeIdCounterRef.current,
+        knownIterations,
+        Array.from(collapsedNodeIds),
+        getViewport(),
+      );
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [
     nodes,
     relations,

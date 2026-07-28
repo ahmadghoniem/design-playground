@@ -1,13 +1,13 @@
 import { ChevronLeft, Plus } from "lucide-react";
 import {
-  InlineReferenceList,
-  InlineReferenceItem,
-  InlineReferenceEmpty,
-  InlineReferenceGroup,
-  type InlineReferenceItemData,
-} from "./inline-reference";
+  MentionInputList,
+  MentionInputItem,
+  MentionInputEmpty,
+  MentionInputGroup,
+  type MentionItemData,
+} from "./mention-input";
 import { IMPECCABLE_ITEM_ID } from "@pg/shared/lib/impeccable-skill";
-import { OPEN_SKILLS_CATALOG_EVENT } from "@pg/shared/lib/constants";
+import { useSkillsUiStore } from "@pg/shared/stores/skills-ui-store";
 
 interface ImpeccableSkillPickerProps {
   impeccableSubMenuOpen: boolean;
@@ -22,8 +22,10 @@ export function ImpeccableSkillPicker({
   isLoadingSkills = false,
   showAddSkillButton = true,
 }: ImpeccableSkillPickerProps) {
+  const openSkillsCatalog = useSkillsUiStore((s) => s.openCatalog);
+
   return (
-    <InlineReferenceGroup
+    <MentionInputGroup
       heading={impeccableSubMenuOpen ? undefined : "Skills"}
     >
       {impeccableSubMenuOpen && (
@@ -45,24 +47,20 @@ export function ImpeccableSkillPicker({
         </div>
       )}
 
-      <InlineReferenceList className="max-h-[256px]">
+      <MentionInputList className="max-h-[256px]">
         {(item) => <ImpeccableSkillPickerItem key={item.id} item={item} />}
-      </InlineReferenceList>
+      </MentionInputList>
 
       {!impeccableSubMenuOpen && (
         <>
-          <InlineReferenceEmpty>
+          <MentionInputEmpty>
             {isLoadingSkills ? "Loading skills…" : "No skills available."}
-          </InlineReferenceEmpty>
+          </MentionInputEmpty>
           {showAddSkillButton && (
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                window.dispatchEvent(
-                  new CustomEvent(OPEN_SKILLS_CATALOG_EVENT),
-                );
-              }}
+              onClick={openSkillsCatalog}
               className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-stone-100 px-2 py-2 text-[12px] font-medium text-stone-500 hover:bg-stone-50 hover:text-stone-800 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -71,24 +69,24 @@ export function ImpeccableSkillPicker({
           )}
         </>
       )}
-    </InlineReferenceGroup>
+    </MentionInputGroup>
   );
 }
 
 function ImpeccableSkillPickerItem({
   item,
 }: {
-  item: InlineReferenceItemData;
+  item: MentionItemData;
 }) {
   const isImpeccableParent = item.id === IMPECCABLE_ITEM_ID;
   const isCmd = item.id.startsWith(`${IMPECCABLE_ITEM_ID}:`);
   const cmdCategory = (
-    item as InlineReferenceItemData & { impeccableCategory?: string }
+    item as MentionItemData & { impeccableCategory?: string }
   ).impeccableCategory;
 
   if (isImpeccableParent) {
     return (
-      <InlineReferenceItem
+      <MentionInputItem
         value={item}
         className="gap-2.5 rounded-lg px-2 py-1.5 data-[selected=true]:bg-stone-100 data-[selected=true]:text-stone-900"
       >
@@ -111,14 +109,14 @@ function ImpeccableSkillPickerItem({
         <span className="ml-auto text-stone-400 text-[13px] leading-none">
           ›
         </span>
-      </InlineReferenceItem>
+      </MentionInputItem>
     );
   }
 
   if (isCmd) {
     const cmdId = item.id.slice(IMPECCABLE_ITEM_ID.length + 1);
     return (
-      <InlineReferenceItem
+      <MentionInputItem
         value={item}
         className="gap-2 rounded-lg px-2 py-1.5 data-[selected=true]:bg-stone-100 data-[selected=true]:text-stone-900"
       >
@@ -131,18 +129,18 @@ function ImpeccableSkillPickerItem({
             {item.description}
           </span>
         )}
-      </InlineReferenceItem>
+      </MentionInputItem>
     );
   }
 
   return (
-    <InlineReferenceItem
+    <MentionInputItem
       value={item}
       className="gap-2.5 rounded-lg px-2 py-1.5 data-[selected=true]:bg-stone-100 data-[selected=true]:text-stone-900"
     >
       <span className="text-[13px] font-medium text-stone-800 truncate">
         {item.label}
       </span>
-    </InlineReferenceItem>
+    </MentionInputItem>
   );
 }

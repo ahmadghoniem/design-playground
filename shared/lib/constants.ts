@@ -13,17 +13,11 @@ export const ITERATION_FETCH_EVENT = 'iteration-fetch-requested';
 /** Fired when a ComponentNode changes its viewport size */
 export const COMPONENT_SIZE_CHANGE_EVENT = 'playground:component-size-change';
 
-/** Fired to open the Skills catalog modal */
-export const OPEN_SKILLS_CATALOG_EVENT = 'playground:open-skills-catalog';
-
-/** Fired after a skill is added or removed so listeners can refresh */
-export const SKILLS_CHANGED_EVENT = 'playground:skills-changed';
-
 /** Fired when an iteration node's collapse/expand state is toggled */
 export const ITERATION_COLLAPSE_TOGGLE_EVENT = 'playground:iteration-collapse-toggle';
 // ---------------------------------------------------------------------------
 
-/** Key for persisting canvas state (nodes, edges, counter) */
+/** Key for persisting canvas state (nodes, relations, counter, viewport) */
 export const STORAGE_KEY = 'playground-canvas-state';
 
 // ---------------------------------------------------------------------------
@@ -108,23 +102,18 @@ export const TEMP_DIR_RELATIVE = '.playground-temp';
 /** Filename for the generation lockfile */
 export const GENERATION_LOCKFILE_FILENAME = 'generation.lock';
 
-/** Filename for the discovery scan lockfile */
-export const DISCOVERY_LOCKFILE_FILENAME = 'discovery.lock';
-
-/** Filename for the discovery manifest */
-export const DISCOVERY_MANIFEST_FILENAME = 'discovery.json';
-
 /**
  * Filename for the discovered-components manifest — the playground-owned JSON
- * that the analyze flow writes registry entries into (instead of splicing the
- * hand-written registry.tsx). The generated module below is rebuilt from it.
+ * holding registry entries as pure data. The generated module below is rebuilt
+ * from it.
  */
 export const DISCOVERED_REGISTRY_MANIFEST_FILENAME = 'discovered-registry.json';
 
 /**
- * Filename for the generated registry module. Regenerated wholesale from the
- * manifest on every add/remove so it always reflects the manifest and Vite HMR
- * picks up changes. Committed as an empty-array module for fresh projects.
+ * Filename for the generated registry module. Rewritten wholesale from the
+ * manifest (JSON can't hold a component reference, so this module carries the
+ * real imports); `registry.tsx` accepts it over HMR. Committed as an
+ * empty-array module for fresh projects.
  */
 export const DISCOVERED_REGISTRY_MODULE_FILENAME = 'discovered-registry.gen.tsx';
 
@@ -138,7 +127,7 @@ export const ITERATION_FILENAME_PARSE_PATTERN = /^(.+)\.iteration-(\d+)\.tsx$/;
 // Edit Mode Constants
 // ---------------------------------------------------------------------------
 
-/** Fired when an in-place edit completes (iframe refresh trigger) */
+/** Fired when an in-place edit completes (iteration preview refresh trigger) */
 export const EDIT_COMPLETE_EVENT = 'playground:edit-complete';
 
 // ---------------------------------------------------------------------------
@@ -240,21 +229,3 @@ export interface GenerationErrorPayload {
   error: string;
 }
 
-// ---------------------------------------------------------------------------
-// Adoption Event Payload Types
-// ---------------------------------------------------------------------------
-
-/** Payload for ADOPTION_COMPLETE_EVENT */
-export interface AdoptionCompletePayload {
-  iterationNodeId: string;
-  componentId: string;
-  parentNodeId: string;
-}
-
-/** Payload for ADOPTION_ERROR_EVENT */
-export interface AdoptionErrorPayload {
-  iterationNodeId: string;
-  componentId: string;
-  parentNodeId: string;
-  error: string;
-}
