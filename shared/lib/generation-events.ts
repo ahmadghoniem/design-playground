@@ -6,9 +6,7 @@ import type {
 
 /**
  * Typed in-module event bus for generation lifecycle events.
- * Replaces the window CustomEvent bus (GENERATION_*_EVENT) — same
- * synchronous dispatch semantics, but typed payloads and no
- * `as EventListener` casts.
+ * Synchronous dispatch, typed payloads, no `as EventListener` casts.
  */
 type Listener<T> = (payload: T) => void;
 

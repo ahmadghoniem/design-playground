@@ -1,8 +1,8 @@
 import { create } from "zustand";
 
 /**
- * Cross-shell skills UI state. Replaces window CustomEvents for open-catalog
- * and skills-changed — both ends can reach React, so a store is enough.
+ * Cross-shell skills UI state: open-catalog and skills-changed. Both ends can
+ * reach React, so a store is enough.
  */
 interface SkillsUiState {
   catalogOpen: boolean;

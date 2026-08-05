@@ -41,6 +41,9 @@ evals/runs/
 # Anything worth keeping gets copied into .claude/plans/research/.
 tasks/
 
+# Personal scratchpad — never tracked.
+DRAFT.md
+
 # ============================================================================
 # FRAMEWORK FILES (tracked in git)
 # ============================================================================
