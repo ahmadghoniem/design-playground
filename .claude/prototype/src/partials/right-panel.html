@@ -1,0 +1,184 @@
+<aside class="rpanel" x-data="panel()">
+  <div class="tabs" role="tablist">
+    <button role="tab" type="button" @click="setTab('design')" :aria-selected="tab === 'design'">Design</button>
+    <button role="tab" type="button" @click="setTab('transcript')" :aria-selected="tab === 'transcript'">Transcript</button>
+  </div>
+  <div class="rp-body">
+    <div x-show="tab === 'design'">
+      <div class="rp-head" id="loc-signage">
+        <div class="crumb" id="crumb">
+          <button type="button" x-text="storeCrumbName">PriceCard</button><span>›</span><span class="cur" x-text="storeCrumbLeaf">root</span>
+        </div>
+        <div class="vb-row" id="loc-viewport" :class="{ locked: isLocked() }">
+          <div class="vb-group" role="group" aria-label="Preview viewport">
+            <button type="button" @click="setViewport('auto')" :aria-pressed="viewport === 'auto'" title="Auto">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <button type="button" @click="setViewport('desktop')" :aria-pressed="viewport === 'desktop'" title="Desktop">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </button>
+            <button type="button" @click="setViewport('mobile')" :aria-pressed="viewport === 'mobile'" title="Mobile">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+            </button>
+          </div>
+          <span class="vb-note" id="vbNote" x-html="vbNote"></span>
+        </div>
+      </div>
+
+      <details class="sect" open id="loc-spacing" :class="{ locked: isLocked() }">
+        <summary>Spacing</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">padding</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('p') }">
+              <button type="button" @click="stepAdjust('p', -1)">−</button><span class="val" x-text="stepVal('p')"></span><button type="button" @click="stepAdjust('p', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk">gap</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('gap') }">
+              <button type="button" @click="stepAdjust('gap', -1)">−</button><span class="val" x-text="stepVal('gap')"></span><button type="button" @click="stepAdjust('gap', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk"><abbr title="space-y-* is not CSS — Tailwind generates margin rules between siblings">space&#8209;y</abbr></span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('space-y') }">
+              <button type="button" @click="stepAdjust('space-y', -1)">−</button><span class="val" x-text="stepVal('space-y')"></span><button type="button" @click="stepAdjust('space-y', 1)">+</button></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" open id="loc-typo" :class="{ locked: isLocked() }">
+        <summary>Typography</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">size</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('text') }">
+              <button type="button" @click="stepAdjust('text', -1)">−</button><span class="val" x-text="stepVal('text')"></span><button type="button" @click="stepAdjust('text', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk">weight</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('font','normal')" :aria-pressed="segs.font === 'normal'">normal</button>
+              <button type="button" @click="setSeg('font','medium')" :aria-pressed="segs.font === 'medium'">medium</button>
+              <button type="button" @click="setSeg('font','bold')" :aria-pressed="segs.font === 'bold'">bold</button>
+            </span></span></div>
+          <div class="prow"><span class="pk"><abbr title="tracking = letter-spacing, from typesetting">tracking</abbr></span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('tracking') }">
+              <button type="button" @click="stepAdjust('tracking', -1)">−</button><span class="val" x-text="stepVal('tracking')"></span><button type="button" @click="stepAdjust('tracking', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk"><abbr title="leading = line-height, from the lead strips used in hand typesetting">leading</abbr></span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('leading') }">
+              <button type="button" @click="stepAdjust('leading', -1)">−</button><span class="val" x-text="stepVal('leading')"></span><button type="button" @click="stepAdjust('leading', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk"><abbr title="tabular-nums bundles the font-variant-numeric sub-properties">nums</abbr></span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('nums','prop')" :aria-pressed="segs.nums === 'prop'">prop</button>
+              <button type="button" @click="setSeg('nums','tabular')" :aria-pressed="segs.nums === 'tabular'">tabular</button>
+            </span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" open id="loc-colour" :class="{ locked: isLocked() }">
+        <summary>Colour</summary>
+        <div class="sect-in app-theme">
+          <div class="prow"><span class="pk">background</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-card)"></span>bg-card<span class="cap">token</span></button></span></div>
+          <div class="prow"><span class="pk">text</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-foreground)"></span>text-foreground<span class="cap">token</span></button></span></div>
+          <div class="prow"><span class="pk">accent</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-primary)"></span>bg-primary<span class="cap">token</span></button></span></div>
+        </div>
+      </details>
+
+      <details class="sect" id="loc-border" :class="{ locked: isLocked() }">
+        <summary>Border &amp; shape</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">radius</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('rounded') }">
+              <button type="button" @click="stepAdjust('rounded', -1)">−</button><span class="val" x-text="stepVal('rounded')"></span><button type="button" @click="stepAdjust('rounded', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk">border</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('border') }">
+              <button type="button" @click="stepAdjust('border', -1)">−</button><span class="val" x-text="stepVal('border')"></span><button type="button" @click="stepAdjust('border', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk"><abbr title="ring has no CSS property — it is stacked box-shadows that follow border-radius">ring</abbr></span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('ring') }">
+              <button type="button" @click="stepAdjust('ring', -1)">−</button><span class="val" x-text="stepVal('ring')"></span><button type="button" @click="stepAdjust('ring', 1)">+</button></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Effects</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">shadow</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('shadow') }">
+              <button type="button" @click="stepAdjust('shadow', -1)">−</button><span class="val" x-text="stepVal('shadow')"></span><button type="button" @click="stepAdjust('shadow', 1)">+</button></span></span></div>
+          <div class="prow"><span class="pk">opacity</span>
+            <span class="pc-ctl"><span class="stepper" :class="{ dirty: stepDirty('opacity') }">
+              <button type="button" @click="stepAdjust('opacity', -1)">−</button><span class="val" x-text="stepVal('opacity')"></span><button type="button" @click="stepAdjust('opacity', 1)">+</button></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Layout</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">display</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('disp','block')" :aria-pressed="segs.disp === 'block'">block</button>
+              <button type="button" @click="setSeg('disp','grid')" :aria-pressed="segs.disp === 'grid'">grid</button>
+              <button type="button" @click="setSeg('disp','flex')" :aria-pressed="segs.disp === 'flex'">flex</button>
+            </span></span></div>
+          <div class="prow"><span class="pk">align</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('align','start')" :aria-pressed="segs.align === 'start'">start</button>
+              <button type="button" @click="setSeg('align','center')" :aria-pressed="segs.align === 'center'">center</button>
+              <button type="button" @click="setSeg('align','end')" :aria-pressed="segs.align === 'end'">end</button>
+            </span></span></div>
+        </div>
+      </details>
+
+      <div class="keepbar" id="loc-keep">
+        <button class="kb" type="button" :disabled="keepDisabled" @click="openKeep()" x-text="keepLabel">Keep this version</button>
+        <p class="kn" x-text="keepConfig.txt"></p>
+      </div>
+    </div>
+
+    <div x-show="tab === 'transcript'" x-cloak>
+      <div x-show="simRun">
+        <div class="act-head">
+          <h4>Calmer pricing card</h4>
+          <div class="act-meta"><span>current checkout</span><span class="branch-lbl" style="font-size:10px;padding:2px 7px">⑂ master</span></div>
+          <div class="prog"><i></i></div>
+          <p class="act-sum">Three variations of PriceCard from one prompt — a text note, a reference image and the component, sent together.</p>
+        </div>
+        <div class="tl">
+          <div class="ev ok"><span class="gl">✓</span><span>Wrote PriceCard.iteration-2.tsx</span><time>now</time></div>
+          <div class="ev ok"><span class="gl">✓</span><span>Wrote PriceCard.iteration-1.tsx</span><time>12s</time></div>
+          <div class="ev err"><span class="gl">✕</span><span>iteration-3 — token not in host</span><time>14s</time></div>
+          <div class="ev"><span class="gl">·</span><span>Read stripe-pricing.png</span><time>31s</time></div>
+          <div class="ev"><span class="gl">·</span><span>Committed direction: quiet, numeric</span><time>36s</time></div>
+          <button class="more" type="button">⌄ Show more</button>
+        </div>
+      </div>
+
+      <div class="thread">
+        <div class="bubble">Make this calmer — less chrome, let the number carry it. Match the reference.</div>
+        <div class="step">
+          <div class="sh"><b>Thought</b> for 4s</div>
+          <div class="sb">The text note asks for calm, the reference is an editorial pricing table, and the target is PriceCard. Direction: <i>quiet, numeric hierarchy, one accent on the action only.</i></div>
+        </div>
+        <div class="step">
+          <div class="sh"><b>Read</b> 3 files</div>
+          <div class="sb">Found <span class="ref">PriceCard.tsx</span>, the host token list, and <span class="ref">stripe-pricing.png</span>.</div>
+        </div>
+        <div class="step">
+          <div class="sh"><b>Wrote</b> 3 iterations</div>
+          <div class="sb"><span class="ref f">iteration-1</span> <span class="ref f">iteration-2</span> <span class="ref f">iteration-3</span> — one failed on a dead token, shown on the canvas.</div>
+        </div>
+        <div class="step">
+          <div class="sb">Two of the three landed. The third reached for <code style="font-family:var(--mono)">bg-chart-1</code>, which your stylesheet maps but never defines — I've left the card visible with the reason on it rather than hiding the failure.</div>
+        </div>
+      </div>
+
+      <div class="hist" id="loc-hist">
+        <h5>History</h5>
+        <div class="hrow"><time>15:10</time><span>tighter numeric column</span><span class="d"><span class="c">~1</span></span></div>
+        <div class="hrow"><time>14:31</time><span>revert to the first</span><span class="d"><span class="r">−1</span></span></div>
+        <div class="hrow"><time>14:02</time><span>calmer, less chrome</span><span class="d"><span class="a">+2</span> <span class="c">~1</span></span></div>
+        <div class="hrow"><time>13:48</time><span>adopted iteration 2 into source</span><span class="d"><span class="c">~1</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="simrow">
+    <span>simulate:</span>
+    <button type="button" @click="toggleSimRun()" :aria-pressed="simRun">agent running</button>
+    <button type="button" @click="toggleSimDirty()" :aria-pressed="simDirty">dirty working tree</button>
+  </div>
+</aside>

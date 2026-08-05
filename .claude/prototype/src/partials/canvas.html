@@ -1,0 +1,222 @@
+<div class="canvas-wrap" x-data="canvas()" @keydown.escape.window="closeHelp()">
+  <div class="board" id="board">
+    <div class="col">
+      <div class="node" :class="{ sel: selectedNode === 'price' }" id="loc-orig" @click="selectNode('price', 'orig', $event)">
+        <div class="node-bar"><span class="kind">component</span><span class="sp"></span><span class="badge orig">original</span></div>
+        <div class="node-body">
+          <div class="pc app-theme">
+            <div class="pc-t el" data-el="p.text-xs" :class="{ elsel: isElSelected('p.text-xs') }">Growth</div>
+            <div class="pc-p el" data-el="h2.text-2xl" :class="{ elsel: isElSelected('h2.text-2xl') }">$29<sub>/mo</sub></div>
+            <ul><li>Unlimited boards</li><li>Version history</li><li>Priority support</li></ul>
+            <div class="pc-b el" data-el="button" :class="{ elsel: isElSelected('button') }">Choose Growth</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:9.5px;color:var(--pgc-muted-fg);text-align:center;padding-top:2px">alt&#8209;click a part of the card</div>
+    </div>
+
+    <span class="arrow">→</span>
+
+    <div class="row">
+      <div class="node" :class="{ sel: selectedNode === 'it1' }" @click="selectNode('it1', 'iter', $event)">
+        <div class="node-bar"><span class="kind">iteration 1</span><span class="sp"></span><span class="badge iter">editable</span></div>
+        <div class="node-body">
+          <div class="pc app-theme v2">
+            <div class="pc-t">Growth</div>
+            <div class="pc-p">$29<sub>/mo</sub></div>
+            <ul><li>Unlimited boards</li><li>Version history</li></ul>
+            <div class="pc-b">Choose Growth</div>
+          </div>
+        </div>
+      </div>
+      <div class="node" :class="{ sel: selectedNode === 'it2' }" @click="selectNode('it2', 'adopted', $event)">
+        <div class="node-bar"><span class="kind">iteration 2</span><span class="sp"></span><span class="badge adopted">adopted</span></div>
+        <div class="node-body">
+          <div class="pc app-theme v3">
+            <div class="pc-t">Growth</div>
+            <div class="pc-p">$29<sub>/mo</sub></div>
+            <ul><li>Unlimited boards</li><li>Version history</li></ul>
+            <div class="pc-b">Choose Growth</div>
+          </div>
+        </div>
+      </div>
+      <div class="node failed" :class="{ sel: selectedNode === 'it3' }" @click="selectNode('it3', 'failed', $event)">
+        <div class="node-bar"><span class="kind">iteration 3</span><span class="sp"></span><span class="badge failed">failed</span></div>
+        <div class="fail-body">
+          <span class="fail-code">token not in host</span>
+          <p class="fail-msg">Used <code style="font-family:var(--mono)">bg-chart-1</code>, which the host stylesheet maps but never defines.</p>
+          <span class="fail-act">↻ Retry with the token list</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col" style="padding-top:6px">
+      <div class="node text-node" :class="{ sel: selectedNode === 'text' }" @click="selectNode('text', 'text', $event)">
+        <div class="node-bar"><span class="kind">text</span></div>
+        <div class="node-body">calmer, less chrome — let the number carry it</div>
+      </div>
+      <div class="node img-node" :class="{ sel: selectedNode === 'img' }" @click="selectNode('img', 'img', $event)">
+        <div class="node-bar"><span class="kind">reference</span></div>
+        <div class="node-body"><div class="img-thumb">stripe-pricing.png</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tool-rail" id="loc-tools" role="group" aria-label="Canvas tools">
+    <button type="button" @click="toggleSidebar()" :aria-pressed="sidebarOpen" title="Toggle sidebar" aria-label="Toggle sidebar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+    </button>
+    <div class="rail-sep"></div>
+    <button type="button" @click="setTool('select')" :aria-pressed="activeTool === 'select'" title="Select (V)" aria-label="Select tool">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l7 17 2-7 7-2Z"/></svg>
+    </button>
+    <button type="button" @click="setTool('hand')" :aria-pressed="activeTool === 'hand'" title="Hand (H)" aria-label="Hand tool">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12V6a1.5 1.5 0 0 1 3 0v5M12 11V4.5a1.5 1.5 0 0 1 3 0V11M15 11.5V6a1.5 1.5 0 0 1 3 0v9c0 4-2.5 7-6.5 7S5 18.5 5 15v-3.5A1.5 1.5 0 0 1 8 11"/></svg>
+    </button>
+    <button type="button" @click="setTool('shapes')" :aria-pressed="activeTool === 'shapes'" title="Shapes (R)" aria-label="Shape tool">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5.5"/><rect x="12" y="12" width="9" height="9" rx="1.5"/></svg>
+    </button>
+    <button type="button" @click="setTool('text')" :aria-pressed="activeTool === 'text'" title="Text (T)" aria-label="Text tool">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 6 4 4 20 4 20 6"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="9" y1="20" x2="15" y2="20"/></svg>
+    </button>
+    <button type="button" @click="setTool('image')" :aria-pressed="activeTool === 'image'" title="Image" aria-label="Upload image">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+    </button>
+    <div class="rail-sep"></div>
+    <button type="button" @click="undo()" title="Undo" aria-label="Undo" :disabled="undone >= maxUndo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+    </button>
+    <button type="button" @click="redo()" title="Redo" aria-label="Redo" :disabled="undone <= 0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+    </button>
+  </div>
+
+  <div class="bottom-left-wrap">
+    <div class="help-wrap" x-ref="helpWrap">
+      <button class="help-btn" type="button" @click.stop="toggleHelp()" :aria-expanded="helpOpen" aria-haspopup="true" aria-label="Help and resources">?</button>
+      <div class="help-pop" x-show="helpOpen" x-transition @keydown.escape.window="closeHelp()">
+        <a href="#" @click.prevent>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6Z"/><path d="M15 2v5h5"/></svg>
+          Docs
+          <span class="ext"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+        </a>
+        <button class="hp-item" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10.01"/><line x1="10" y1="10" x2="10" y2="10.01"/><line x1="14" y1="10" x2="14" y2="10.01"/><line x1="18" y1="10" x2="18" y2="10.01"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+          Keyboard shortcuts
+        </button>
+        <button class="hp-item" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+          Give feedback
+        </button>
+        <a href="#" @click.prevent>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
+          Submit a prompt
+          <span class="ext"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+        </a>
+        <a href="#" @click.prevent>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-4 7.5"/></svg>
+          Contact us
+          <span class="ext"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+        </a>
+        <a href="#" @click.prevent>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
+          Discord community
+          <span class="ext"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+        </a>
+        <hr>
+        <div class="wn-lbl">What's new</div>
+        <template x-for="item in whatsNew" :key="item.title">
+          <a class="wn-item" href="#" @click.prevent><span class="t" x-text="item.title"></span><span class="d" x-text="item.date"></span></a>
+        </template>
+        <div class="view-all">View all</div>
+      </div>
+    </div>
+
+    <div class="view-pill" role="group" aria-label="Zoom controls">
+      <button type="button" @click="zoomOut()" title="Zoom out" aria-label="Zoom out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <span class="zv" x-text="zoom + '%'">100%</span>
+      <button type="button" @click="zoomIn()" title="Zoom in" aria-label="Zoom in">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <span class="vsep"></span>
+      <button type="button" @click="zoomToSelection()" title="Zoom to selection" aria-label="Zoom to selection">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="chat-dock" id="loc-chat" x-data="chat()">
+    <div class="chat-ctx">
+      <span class="wt-pill" title="Where the agent runs — defaults to the current checkout">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+        current checkout <span class="chev">⌄</span>
+      </span>
+      <span class="branch-lbl" id="loc-branch" x-text="'⑂ ' + branchLabel">⑂ master</span>
+    </div>
+    <div class="chat-box">
+      <div class="ccc-left">
+        <button type="button" class="agent-mark" aria-hidden="true" tabindex="-1"></button>
+        <button type="button" class="ccc-model" @click="cycleModel()" x-text="model">Claude Opus 5</button>
+      </div>
+      <div class="ccc-right" role="group" aria-label="Edit or explore">
+        <button type="button" @click="setMode('edit')" :aria-pressed="mode === 'edit'">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          Edit
+        </button>
+        <button type="button" @click="setMode('explore')" :aria-pressed="mode === 'explore'">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="12 7 14 12 12 17 10 12"/></svg>
+          Explore
+          <span class="iter-count">×3</span>
+        </button>
+      </div>
+      <div class="chat-tags">
+        <template x-for="tag in tags" :key="tag.id">
+          <span class="tag" :class="{ 'n-comp': tag.type === 'comp', 'n-text': tag.type === 'text', 'n-img': tag.type === 'img' }">
+            <i>
+              <svg x-show="tag.type === 'comp'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              <svg x-show="tag.type === 'text'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 6 4 4 20 4 20 6"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="9" y1="20" x2="15" y2="20"/></svg>
+              <svg x-show="tag.type === 'img'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+            </i><span x-text="tag.label"></span><button type="button" @click="removeTag(tag.id)" aria-label="Remove">×</button>
+          </span>
+        </template>
+      </div>
+      <div class="chat-input-row">
+        <div class="chat-input">Vary this, ask a question, <b>/</b> for skills, <b>@</b> to tag a node</div>
+        <button class="send" type="button" aria-label="Send">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="scrim" x-data="branchModal()" x-show="$store.mock.branchModalOpen" x-cloak @keydown.escape.window="close()" @click.self="close()">
+    <div class="modal" role="dialog" aria-modal="true" @click.stop>
+      <h5 x-text="title"></h5>
+      <div class="mb">
+        <div class="dirty-warn" x-show="isDirty">
+          <b>⚠ You have uncommitted changes</b>
+          <ul><li>src/lib/auth.ts</li><li>src/routes/login.tsx</li><li>vite.config.ts</li></ul>
+          <p style="font-size:10.5px">These aren’t ours, so we won’t sweep them into the branch. Stash them and we’ll put them straight back.</p>
+        </div>
+        <div class="fieldrow">
+          <label>Branch name — proposed from your prompt</label>
+          <div class="fin">⑂&nbsp;<span contenteditable="true" spellcheck="false" x-init="$el.textContent = branchName" @input="branchName = $event.target.textContent"></span><span style="color:var(--pgc-muted-fg)">✎</span></div>
+        </div>
+        <div class="plan">
+          <div><i>1</i> branch from master, in the current checkout</div>
+          <div><i>2</i> apply iteration 1 to <span style="color:var(--pgc-fg)">src/components/PriceCard.tsx</span></div>
+          <div><i>3</i> stage that file only — nothing else</div>
+          <div><i>4</i> commit “calmer pricing card, less chrome”</div>
+          <div><i>5</i> remove iterations 1–3 from the canvas</div>
+        </div>
+      </div>
+      <div class="mf">
+        <button type="button" @click="close()">Cancel</button>
+        <button type="button" class="warn" x-show="isDirty" @click="stash()">Stash my 3 files</button>
+        <button type="button" class="pri" :disabled="isDirty" @click="commit()">Create branch &amp; commit</button>
+      </div>
+    </div>
+  </div>
+</div>
