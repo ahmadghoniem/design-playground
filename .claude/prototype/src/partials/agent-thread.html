@@ -1,0 +1,41 @@
+<!-- Agent thread — session activity + conversation. Shared by the right flank's Agent
+     view (tabs/pill variants) and the left panel's Agent section (flanks variant). -->
+<div class="cp-agent">
+  <div class="cp-agent-scroll">
+    <div class="act-head">
+      <h4 x-text="$store.chat.workspace.title">Calmer pricing card</h4>
+      <div class="act-meta"><span x-text="$store.chat.worktree"></span><span class="branch-lbl" style="font-size:10px;padding:2px 7px"><span class="gl">⑂</span><span x-text="$store.chat.branch"></span></span></div>
+      <div class="prog"><i></i></div>
+      <p class="act-sum" x-text="$store.chat.workspace.summary"></p>
+    </div>
+    <div class="tl">
+      <div class="ev ok"><span class="gl">✓</span><span>Wrote PriceCard.iteration-2.tsx</span><time>now</time></div>
+      <div class="ev ok"><span class="gl">✓</span><span>Wrote PriceCard.iteration-1.tsx</span><time>12s</time></div>
+      <div class="ev err"><span class="gl">✕</span><span>iteration-3 — token not in host</span><time>14s</time></div>
+      <div class="ev"><span class="gl">·</span><span>Read stripe-pricing.png</span><time>31s</time></div>
+      <div class="ev"><span class="gl">·</span><span>Committed direction: quiet, numeric</span><time>36s</time></div>
+      <button class="more" type="button">⌄ Show more</button>
+    </div>
+    <div class="thread">
+      <div class="bubble">Make this calmer — less chrome, let the number carry it. Match the reference.</div>
+      <div class="step">
+        <div class="sh"><b>Thought</b> for 4s</div>
+        <div class="sb">The text note asks for calm, the reference is an editorial pricing table, and the target is PriceCard. Direction: <i>quiet, numeric hierarchy, one accent on the action only.</i></div>
+      </div>
+      <div class="step">
+        <div class="sh"><b>Read</b> 3 files</div>
+        <div class="sb">Found <span class="ref">PriceCard.tsx</span>, the host token list, and <span class="ref">stripe-pricing.png</span>.</div>
+      </div>
+      <div class="step">
+        <div class="sh"><b>Wrote</b> 3 iterations</div>
+        <div class="sb"><span class="ref f">iteration-1</span> <span class="ref f">iteration-2</span> <span class="ref f">iteration-3</span> — one failed on a dead token, shown on the canvas.</div>
+      </div>
+      <div class="step">
+        <div class="sb">Two of the three landed. The third reached for <code style="font-family:var(--mono)">bg-chart-1</code>, which your stylesheet maps but never defines — I've left the card visible with the reason on it rather than hiding the failure.</div>
+      </div>
+    </div>
+  </div>
+  <div class="agents-composer" x-show="$store.chat.isComposerEmbedded" x-cloak>
+    <div data-partial="src/partials/composer.html"></div>
+  </div>
+</div>

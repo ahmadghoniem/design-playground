@@ -96,6 +96,9 @@ merging, not rebuilding.
   tree stop and its one-click stash. Phase 2 of the git flow; does not block phase 1.
 
 ## Parked
+- **[canvas]** Workspace tabs / pill / stash. Replaced by the composer branch picker as the
+  workspace switcher (one canvas, checkout to move). Frozen tab prototypes stay under
+  `.claude/prototype/variant-*.html`. Don't re-propose a second canvas or a tab strip.
 - **[discovery]** Build-time JSX source stamping — `data-pg-src="file:line:col"` via the existing
   Vite transform, giving agent prompts real source anchors. Parked on an unmeasured HMR cost,
   which was flagged as the highest-risk unknown in the original plan.

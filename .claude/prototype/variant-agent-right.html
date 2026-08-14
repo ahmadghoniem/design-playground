@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playground — agent-right variant</title>
+  <link rel="stylesheet" href="dist/app.css">
+  <style>[x-cloak]{display:none!important}</style>
+  <script type="importmap">
+  {
+    "imports": {
+      "alpinejs": "./node_modules/alpinejs/dist/module.esm.js"
+    }
+  }
+  </script>
+</head>
+<body data-layout="agent-right">
+
+<div class="app app-agent-right" id="app">
+  <div class="app-body">
+    <div data-partial="src/partials/library.html"></div>
+    <div class="stage" x-data>
+      <div data-partial="src/partials/agent-rail.html"></div>
+      <div class="stage-canvas" :class="{ shifted: $store.ui.agentOpen }">
+        <div data-partial="src/partials/canvas.html"></div>
+      </div>
+      <button type="button" class="stage-open-agent"
+              x-show="!$store.ui.agentOpen" x-cloak
+              @click="$store.ui.toggleAgent()"
+              x-tip.left="'Open agent'"
+              aria-label="Open agent">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div data-partial="src/partials/goo-panel.html"></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

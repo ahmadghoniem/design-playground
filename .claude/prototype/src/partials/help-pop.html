@@ -1,0 +1,33 @@
+<!-- Help & resources popover. Rendered from two anchors: the bottom-left FAB (index,
+     agent-right) and the app rail's bottom icon (single-sidebar) — both drive $store.help. -->
+<div class="help-pop" x-show="$store.help.open" x-transition @keydown.escape.window="$store.help.close()">
+  <template x-for="item in $store.help.items" :key="item.label">
+    <div class="hp-row">
+      <a x-show="item.type === 'link'" href="#" @click.prevent>
+        <template x-if="item.icon === 'docs'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6Z"/><path d="M15 2v5h5"/></svg>
+        </template>
+        <template x-if="item.icon === 'contact'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-4 7.5"/></svg>
+        </template>
+        <span x-text="item.label"></span>
+        <span class="ext" x-show="item.external"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+      </a>
+      <button class="hp-item" type="button" x-show="item.type === 'button'">
+        <template x-if="item.icon === 'keyboard'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10.01"/><line x1="10" y1="10" x2="10" y2="10.01"/><line x1="14" y1="10" x2="14" y2="10.01"/><line x1="18" y1="10" x2="18" y2="10.01"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+        </template>
+        <template x-if="item.icon === 'feedback'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+        </template>
+        <span x-text="item.label"></span>
+      </button>
+    </div>
+  </template>
+  <hr>
+  <div class="wn-lbl">What's new</div>
+  <template x-for="item in $store.help.whatsNew" :key="item.title">
+    <a class="wn-item" href="#" @click.prevent><span class="t" x-text="item.title"></span><span class="d" x-text="item.date"></span></a>
+  </template>
+  <div class="view-all">View all</div>
+</div>

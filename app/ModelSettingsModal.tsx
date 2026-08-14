@@ -246,28 +246,6 @@ export default function ModelSettingsModal({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-stone-600 font-medium">
-                  Budget Limit (USD)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  placeholder="No limit"
-                  value={localClaudeOpts.maxBudgetUsd ?? ""}
-                  onChange={(e) =>
-                    setLocalClaudeOpts({
-                      ...localClaudeOpts,
-                      maxBudgetUsd: e.target.value
-                        ? Number(e.target.value)
-                        : null,
-                    })
-                  }
-                  className="w-full px-2 py-1.5 text-xs bg-white border border-stone-200 rounded-md text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
-                />
-              </div>
-
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"

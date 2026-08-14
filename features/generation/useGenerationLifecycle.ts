@@ -17,15 +17,15 @@ import {
 import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import {
   generationEvents,
+  type GenerationStartPayload,
+  type GenerationCompletePayload,
+  type GenerationErrorPayload,
 } from "@pg/shared/lib/generation-events";
 import {
   DEFAULT_COMPONENT_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_HEIGHT,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_ITERATION_NODE_HEIGHT,
-  type GenerationStartPayload,
-  type GenerationCompletePayload,
-  type GenerationErrorPayload,
 } from "@pg/shared/lib/constants";
 import { toast } from "sonner";
 import { subscribeGenerationSse } from "@pg/features/generation/subscribe-generation-sse";

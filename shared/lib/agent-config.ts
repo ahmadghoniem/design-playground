@@ -13,7 +13,6 @@ import { CLAUDE_FALLBACK_MODELS, CLAUDE_FEATURED_MODEL_IDS } from './model-catal
 export interface AgentSpawnOptions {
   model?: string;
   effort?: 'low' | 'medium' | 'high' | 'max';
-  maxBudgetUsd?: number;
   /**
    * When true, use `--output-format stream-json` with `--include-partial-messages`
    * for live UI parsing (not written to chat `.txt`).
@@ -25,14 +24,12 @@ export interface AgentSpawnOptions {
 /** Claude Code CLI options persisted in the client store. */
 export interface ClaudeCodeOptions {
   effort: 'low' | 'medium' | 'high' | 'max';
-  maxBudgetUsd: number | null;
   /** When true, stream-json for live tooltip; chat download omits raw stream. When false, plain text in chat log. */
   detailedStdout: boolean;
 }
 
 export const DEFAULT_CLAUDE_CODE_OPTIONS: ClaudeCodeOptions = {
   effort: 'high',
-  maxBudgetUsd: null,
   detailedStdout: true,
 };
 
@@ -69,6 +66,5 @@ export function buildAgentArgs(opts: AgentSpawnOptions): string[] {
   }
   if (opts.model)        args.push('--model', opts.model);
   if (opts.effort)       args.push('--effort', opts.effort);
-  if (opts.maxBudgetUsd) args.push('--max-budget-usd', String(opts.maxBudgetUsd));
   return args;
 }

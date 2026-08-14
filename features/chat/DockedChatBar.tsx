@@ -16,10 +16,8 @@ import { impeccablePromptFromSegment } from "@pg/shared/lib/impeccable-skill";
 import { useAvailableModels } from "@pg/shared/lib/model-selection";
 import { useModelCycle } from "@pg/features/chat/useModelCycle";
 import { useSkills } from "@pg/features/chat/useSkills";
-import {
-  CHAT_DEFAULT_COUNT,
-  type ChatSubmitPayload,
-} from "@pg/shared/lib/constants";
+import { CHAT_DEFAULT_COUNT } from "@pg/shared/lib/constants";
+import type { ChatSubmitPayload } from "@pg/shared/lib/chat-submit-payload";
 
 import type { SelectedElement } from "@pg/shared/lib/element-context";
 import type { SelectedNodeContext } from "@pg/features/chat/useNodeSelection";
@@ -463,7 +461,7 @@ export default function DockedChatBar({
                           }
                         />
                         <span>
-                          &lt;{sel.context.tagName}&gt; {sel.componentName}
+                          &lt;{sel.context.tagName}&gt; {sel.context.displayName}
                         </span>
                       </div>
                     ))}

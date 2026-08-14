@@ -28,7 +28,7 @@ Guidance for working in this repository.
 
 ## Quick facts (must match CLAUDE.md)
 
-- **Agent CLI:** Claude Code only (`claude`). No Codex, no multi-provider registry, no `shared/lib/providers/`.
+- **Agent CLI:** Claude Code only (`claude`) **for now** — a maintenance choice, not a commitment; more agents are planned. Still no provider registry and no `shared/lib/providers/`: don't pre-build the abstraction, just keep CLI knowledge inside `shared/lib/agent-config.ts` and process concerns inside `server/lib/spawn-agent.ts` so a second agent stays a contained change. `--max-budget-usd` is deliberately not exposed.
 - **Events:** no window `CustomEvent` is dispatched anywhere. Use a callback, a `shared/stores/` zustand store, or `generation-events`.
 - **Frontend:** React mounted from `dev-entry.tsx` → `<PlaygroundClient />`. No `react-router-dom`.
 - **Selection:** inline DOM (`useElementSelection` + `element-context`). No iframes, no penpal.

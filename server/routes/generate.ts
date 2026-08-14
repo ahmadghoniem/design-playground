@@ -141,7 +141,6 @@ export function generateRoutes() {
         iterationCount?: number;
         model?: string;
         effort?: string;
-        maxBudgetUsd?: number;
         claudeDetailedStdout?: boolean;
         source?: string;
         skillIds?: string[];
@@ -195,7 +194,6 @@ export function generateRoutes() {
         currentProcess = spawnAgent({
           model,
           effort: body.effort as 'low' | 'medium' | 'high' | 'max' | undefined,
-          maxBudgetUsd: body.maxBudgetUsd,
           claudeDetailedStdout: body.claudeDetailedStdout !== false,
         }, process.cwd());
 

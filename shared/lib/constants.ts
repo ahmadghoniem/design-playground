@@ -4,7 +4,7 @@
 // ============================================================================
 
 /** Key for persisting canvas state (nodes, relations, counter, viewport) */
-export const STORAGE_KEY = 'playground-canvas-state';
+export const CANVAS_STATE_STORAGE_KEY = 'playground-canvas-state';
 
 // ---------------------------------------------------------------------------
 // Canvas Layout Constants
@@ -130,81 +130,4 @@ export const TREE_MANIFEST_FILENAME = 'tree.json';
 
 /** Default iteration count when submitting via the docked chat bar */
 export const CHAT_DEFAULT_COUNT = 3;
-
-/** Payload submitted by the chat composer */
-export interface ChatSubmitPayload {
-  text: string;
-  skillPrompts: string[];
-  skillIds: string[];
-  model: string;
-  targetNodeId: string | null;
-  targetComponentId: string | null;
-  targetComponentName: string | null;
-  targetType: 'component' | 'iteration' | 'image' | 'text' | null;
-  sourceFilename?: string;
-  iterationCount?: number;
-  canvasPosition: { x: number; y: number };
-  elementSelections?: {
-    tagName: string;
-    displayName: string;
-    textContent: string;
-    cssSelector: string;
-    htmlSource: string;
-    ancestorComponents: string[];
-    nodeId: string;
-    componentName: string;
-  }[];
-  referenceNodes?: {
-    nodeId: string;
-    componentId: string;
-    componentName: string;
-    type: 'component' | 'iteration' | 'image' | 'text';
-    sourceFilename?: string;
-    imagePath?: string;
-    imageUrl?: string;
-    textContent?: string;
-  }[];
-  /** When true, edit the target file in-place instead of creating iterations */
-  editMode?: boolean;
-  /** Cursor chat behavior mode */
-  chatMode?: 'explore' | 'edit' | 'raw';
-}
-
-// ---------------------------------------------------------------------------
-// Generation Event Payload Types
-// ---------------------------------------------------------------------------
-
-/** Payload for generation start event */
-export interface GenerationStartPayload {
-  componentId: string;
-  componentName: string;
-  parentNodeId: string;
-  iterationCount: number;
-  /** First iteration number in this batch (e.g. 9 when iterations 1–8 already exist) */
-  startNumber?: number;
-  /** Model used for this generation */
-  model?: string;
-  /** Agent CLI used for this generation. Always Claude Code; kept for back-compat with consumers. */
-  provider?: string;
-  /** Flow-space position where the generation was initiated */
-  flowPosition?: { x: number; y: number };
-  /** Node this generation is anchored to, when dropped on a frame */
-  targetNodeId?: string | null;
-  /** When true, this is an edit-in-place operation — no skeleton nodes should be created */
-  editMode?: boolean;
-}
-
-/** Payload for generation complete event */
-export interface GenerationCompletePayload {
-  componentId: string;
-  parentNodeId: string;
-  output: string;
-}
-
-/** Payload for generation error event */
-export interface GenerationErrorPayload {
-  componentId: string;
-  parentNodeId: string;
-  error: string;
-}
 

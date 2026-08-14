@@ -3,7 +3,6 @@ import { Hand } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pg/shared/ui/tooltip";
 import { ShapeToolGroup } from "./ShapeToolGroup";
 import {
-  ProjectBoxIcon,
   CanvasSelectToolIcon,
   CanvasTextToolIcon,
   CanvasImageToolIcon,
@@ -11,10 +10,6 @@ import {
 import type { ShapeKind } from "@pg/features/canvas/nodes/ShapeNode";
 
 export interface PlaygroundCanvasToolbarProps {
-  sidebarVisible: boolean;
-  onSidebarButtonClick: () => void;
-  onSidebarButtonMouseEnter: () => void;
-  onHideSidebar: () => void;
   activeTool: "select" | "text" | "shape" | "hand";
   setActiveTool: (
     tool:
@@ -32,10 +27,6 @@ export interface PlaygroundCanvasToolbarProps {
 }
 
 export default function PlaygroundCanvasToolbar({
-  sidebarVisible,
-  onSidebarButtonClick,
-  onSidebarButtonMouseEnter,
-  onHideSidebar,
   activeTool,
   setActiveTool,
   shapeKind,
@@ -44,27 +35,6 @@ export default function PlaygroundCanvasToolbar({
 }: PlaygroundCanvasToolbarProps) {
   return (
     <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 bg-white rounded-2xl border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onSidebarButtonClick}
-            onMouseEnter={onSidebarButtonMouseEnter}
-            onMouseLeave={onHideSidebar}
-            className={`group flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-              sidebarVisible
-                ? "bg-stone-100 text-stone-900"
-                : "text-stone-500 hover:text-stone-800 hover:bg-stone-50"
-            }`}
-            aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
-          >
-            <ProjectBoxIcon />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">Toggle sidebar</TooltipContent>
-      </Tooltip>
-
-      <div className="h-px w-5 bg-stone-200 my-0.5" />
-
       <Tooltip>
         <TooltipTrigger asChild>
           <button

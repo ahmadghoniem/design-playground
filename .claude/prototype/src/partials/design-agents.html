@@ -1,0 +1,148 @@
+<aside class="design-agents" x-data="designAgents()">
+  <div class="tabs" role="tablist">
+    <button role="tab" type="button" @click="$store.ui.setRightTab('design')" :aria-selected="$store.ui.rightTab === 'design'">Design</button>
+    <button role="tab" type="button" @click="$store.ui.setRightTab('agents')" :aria-selected="$store.ui.rightTab === 'agents'">Agents</button>
+  </div>
+  <div class="design-agents-body">
+    <div x-show="$store.ui.rightTab === 'design'">
+      <div class="design-agents-head" id="loc-signage">
+        <div class="crumb" id="crumb">
+          <template x-if="storeCrumbLeaf === 'root'">
+            <button type="button" x-text="storeCrumbName">PriceCard</button><span>›</span><span class="cur">root</span>
+          </template>
+          <template x-if="storeCrumbLeaf !== 'root'">
+            <span class="cur" x-text="storeCrumbName + '.' + storeCrumbLeaf"></span>
+          </template>
+        </div>
+      </div>
+
+      <details class="sect" open id="loc-spacing" :class="{ locked: isLocked() }">
+        <summary>Spacing</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">padding</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('p') }" @pointerdown="scrubStart('p', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('p')"></span></span></div>
+          <div class="prow"><span class="pk">gap</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('gap') }" @pointerdown="scrubStart('gap', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('gap')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'space-y-* is not CSS — Tailwind generates margin rules between siblings'">space&#8209;y</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('space-y') }" @pointerdown="scrubStart('space-y', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('space-y')"></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" open id="loc-typo" :class="{ locked: isLocked() }">
+        <summary>Typography</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">size</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('text') }" @pointerdown="scrubStart('text', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('text')"></span></span></div>
+          <div class="prow"><span class="pk">weight</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('font','normal')" :aria-pressed="segs.font === 'normal'">normal</button>
+              <button type="button" @click="setSeg('font','medium')" :aria-pressed="segs.font === 'medium'">medium</button>
+              <button type="button" @click="setSeg('font','bold')" :aria-pressed="segs.font === 'bold'">bold</button>
+            </span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'tracking = letter-spacing, from typesetting'">tracking</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('tracking') }" @pointerdown="scrubStart('tracking', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('tracking')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'leading = line-height, from the lead strips used in hand typesetting'">leading</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('leading') }" @pointerdown="scrubStart('leading', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('leading')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'tabular-nums bundles the font-variant-numeric sub-properties'">nums</abbr></span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('nums','prop')" :aria-pressed="segs.nums === 'prop'">prop</button>
+              <button type="button" @click="setSeg('nums','tabular')" :aria-pressed="segs.nums === 'tabular'">tabular</button>
+            </span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" open id="loc-colour" :class="{ locked: isLocked() }">
+        <summary>Colour</summary>
+        <div class="sect-in app-theme">
+          <div class="prow"><span class="pk">background</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-card)"></span>bg-card<span class="cap">token</span></button></span></div>
+          <div class="prow"><span class="pk">text</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-foreground)"></span>text-foreground<span class="cap">token</span></button></span></div>
+          <div class="prow"><span class="pk">accent</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-primary)"></span>bg-primary<span class="cap">token</span></button></span></div>
+        </div>
+      </details>
+
+      <details class="sect" id="loc-border" :class="{ locked: isLocked() }">
+        <summary>Border &amp; shape</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">radius</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('rounded') }" @pointerdown="scrubStart('rounded', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('rounded')"></span></span></div>
+          <div class="prow"><span class="pk">border</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('border') }" @pointerdown="scrubStart('border', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('border')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'ring has no CSS property — it is stacked box-shadows that follow border-radius'">ring</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('ring') }" @pointerdown="scrubStart('ring', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('ring')"></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Effects</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">shadow</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('shadow') }" @pointerdown="scrubStart('shadow', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('shadow')"></span></span></div>
+          <div class="prow"><span class="pk">opacity</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('opacity') }" @pointerdown="scrubStart('opacity', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('opacity')"></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Layout</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">display</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('disp','block')" :aria-pressed="segs.disp === 'block'">block</button>
+              <button type="button" @click="setSeg('disp','grid')" :aria-pressed="segs.disp === 'grid'">grid</button>
+              <button type="button" @click="setSeg('disp','flex')" :aria-pressed="segs.disp === 'flex'">flex</button>
+            </span></span></div>
+          <div class="prow"><span class="pk">align</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('align','start')" :aria-pressed="segs.align === 'start'">start</button>
+              <button type="button" @click="setSeg('align','center')" :aria-pressed="segs.align === 'center'">center</button>
+              <button type="button" @click="setSeg('align','end')" :aria-pressed="segs.align === 'end'">end</button>
+            </span></span></div>
+        </div>
+      </details>
+    </div>
+
+    <div x-show="$store.ui.rightTab === 'agents'" x-cloak>
+      <div class="act-head">
+        <h4>Calmer pricing card</h4>
+        <div class="act-meta"><span x-text="$store.chat.worktree"></span><span class="branch-lbl" style="font-size:10px;padding:2px 7px"><span class="gl">⑂</span><span x-text="$store.chat.branch"></span></span></div>
+        <div class="prog"><i></i></div>
+        <p class="act-sum">Three variations of PriceCard from one prompt — a text note, a reference image and the component, sent together.</p>
+      </div>
+      <div class="tl">
+        <div class="ev ok"><span class="gl">✓</span><span>Wrote PriceCard.iteration-2.tsx</span><time>now</time></div>
+        <div class="ev ok"><span class="gl">✓</span><span>Wrote PriceCard.iteration-1.tsx</span><time>12s</time></div>
+        <div class="ev err"><span class="gl">✕</span><span>iteration-3 — token not in host</span><time>14s</time></div>
+        <div class="ev"><span class="gl">·</span><span>Read stripe-pricing.png</span><time>31s</time></div>
+        <div class="ev"><span class="gl">·</span><span>Committed direction: quiet, numeric</span><time>36s</time></div>
+        <button class="more" type="button">⌄ Show more</button>
+      </div>
+
+      <div class="thread">
+        <div class="bubble">Make this calmer — less chrome, let the number carry it. Match the reference.</div>
+        <div class="step">
+          <div class="sh"><b>Thought</b> for 4s</div>
+          <div class="sb">The text note asks for calm, the reference is an editorial pricing table, and the target is PriceCard. Direction: <i>quiet, numeric hierarchy, one accent on the action only.</i></div>
+        </div>
+        <div class="step">
+          <div class="sh"><b>Read</b> 3 files</div>
+          <div class="sb">Found <span class="ref">PriceCard.tsx</span>, the host token list, and <span class="ref">stripe-pricing.png</span>.</div>
+        </div>
+        <div class="step">
+          <div class="sh"><b>Wrote</b> 3 iterations</div>
+          <div class="sb"><span class="ref f">iteration-1</span> <span class="ref f">iteration-2</span> <span class="ref f">iteration-3</span> — one failed on a dead token, shown on the canvas.</div>
+        </div>
+        <div class="step">
+          <div class="sb">Two of the three landed. The third reached for <code style="font-family:var(--mono)">bg-chart-1</code>, which your stylesheet maps but never defines — I've left the card visible with the reason on it rather than hiding the failure.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="agents-composer" x-show="$store.chat.isComposerEmbedded" x-cloak>
+    <div data-partial="src/partials/composer.html"></div>
+  </div>
+</aside>

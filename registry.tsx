@@ -2,7 +2,7 @@ import type { ComponentType } from "react"
 import type { RegistryLeafItem } from "./registry-types"
 import { discoveredRegistry } from "./discovered-registry.gen"
 
-export type { ComponentSize, RegistryLeafItem } from "./registry-types"
+export type { RegistryLeafItem } from "./registry-types"
 
 /**
  * The full component list consumers see: the playground-discovered components

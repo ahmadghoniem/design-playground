@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   extractElementContext,
+  getReactComponentName,
   type SelectedElement,
 } from '@pg/shared/lib/element-context';
 
@@ -139,25 +140,9 @@ export function useElementSelection(): UseElementSelectionReturn {
       setHoveredElement(el);
       setHoveredRect(el.getBoundingClientRect());
 
-      // Lightweight info extraction (cheap)
+      // Lightweight info extraction (cheap) — same resolver as extractElementContext
       const tagName = el.tagName.toLowerCase();
-      // Try to get React component name from fiber
-      const fiberKey = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
-      let displayName = tagName;
-      if (fiberKey) {
-        let fiber = (el as unknown as Record<string, unknown>)[fiberKey] as Record<string, unknown> | null;
-        while (fiber) {
-          const type = fiber.type as ((...args: unknown[]) => unknown) | string | null;
-          if (typeof type === 'function' && (type as { name?: string }).name) {
-            const name = (type as { name: string }).name;
-            if (!name.startsWith('_') && name[0] === name[0].toUpperCase()) {
-              displayName = name;
-              break;
-            }
-          }
-          fiber = fiber.return as Record<string, unknown> | null;
-        }
-      }
+      const displayName = getReactComponentName(el) || tagName;
       setHoveredInfo({ tagName, displayName });
     };
 

@@ -5,9 +5,7 @@ import { loadDefaultSkillPrompt } from "@pg/shared/lib/load-default-skill-prompt
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
-import {
-  type ChatSubmitPayload,
-} from "@pg/shared/lib/constants";
+import type { ChatSubmitPayload } from "@pg/shared/lib/chat-submit-payload";
 import type { GenerationCoordination } from "@pg/shared/lib/generation-coordination";
 import { toast } from "sonner";
 import {

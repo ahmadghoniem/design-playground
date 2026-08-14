@@ -133,7 +133,7 @@ export default function ElementHighlight({
                   whiteSpace: "nowrap",
                 }}
               >
-                &lt;{sel.context.tagName}&gt; {sel.componentName}
+                &lt;{sel.context.tagName}&gt; {sel.context.displayName}
               </span>
             </div>
           </div>

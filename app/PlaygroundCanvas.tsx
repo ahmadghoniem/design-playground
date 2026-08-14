@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useEffect,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+import { useCallback, useMemo, useRef, useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -66,31 +58,15 @@ const nodeTypes = {
 };
 
 interface PlaygroundCanvasProps {
-  sidebarVisible: boolean;
-  onToggleSidebar: (forceOpen?: boolean) => void;
-  onShowSidebar: () => void;
-  onHideSidebar: () => void;
   /** Stable per-project id used to scope persisted canvas state to this project. */
   projectId?: string;
-  showClearDialog: boolean;
-  setShowClearDialog: Dispatch<SetStateAction<boolean>>;
-  /** Register the header's refresh → scanForIterations(true) callback. */
-  onRegisterIterationRefresh?: (refresh: () => void) => void;
 }
 
 export default function PlaygroundCanvas({
-  sidebarVisible,
-  onToggleSidebar,
-  onShowSidebar,
-  onHideSidebar,
   projectId,
-  showClearDialog,
-  setShowClearDialog,
-  onRegisterIterationRefresh,
 }: PlaygroundCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
-  const sidebarOpenedByButtonHoverRef = useRef(false);
   const storageKey = getCanvasStorageKey(projectId);
 
   // The flow provider is the single loader of persisted canvas state. It reads
@@ -204,9 +180,7 @@ export default function PlaygroundCanvas({
     handleChatSubmit,
     elementSelection,
     nodeSelection,
-    confirmClearAllNodes,
     autoArrangeNodes,
-    scanForIterations,
   } = usePlaygroundCanvasController({
     nodes,
     setNodes,
@@ -222,19 +196,11 @@ export default function PlaygroundCanvas({
     nodeIdCounterRef,
     getNodeId,
     contextMenu,
-    showClearDialog,
-    setShowClearDialog,
     reactFlowWrapper,
     activeTool,
     setActiveTool,
     shapeKind,
   });
-
-  useEffect(() => {
-    onRegisterIterationRefresh?.(() => {
-      void scanForIterations(true);
-    });
-  }, [onRegisterIterationRefresh, scanForIterations]);
 
   // Undo / redo: Ctrl/⌘+Z undoes, Ctrl/⌘+Y (or Ctrl/⌘+Shift+Z) redoes. Ignored
   // while typing in an input/textarea/contentEditable so it never eats an edit.
@@ -407,16 +373,6 @@ export default function PlaygroundCanvas({
     [screenToFlowPosition, getNodeId, setNodes],
   );
 
-  const handleSidebarButtonMouseEnter = useCallback(() => {
-    sidebarOpenedByButtonHoverRef.current = !sidebarVisible;
-    onShowSidebar();
-  }, [onShowSidebar, sidebarVisible]);
-
-  const handleSidebarButtonClick = useCallback(() => {
-    onToggleSidebar(sidebarOpenedByButtonHoverRef.current);
-    sidebarOpenedByButtonHoverRef.current = false;
-  }, [onToggleSidebar]);
-
   return (
     <TooltipProvider>
       <div
@@ -479,10 +435,6 @@ export default function PlaygroundCanvas({
         />
 
         <PlaygroundCanvasToolbar
-          sidebarVisible={sidebarVisible}
-          onSidebarButtonClick={handleSidebarButtonClick}
-          onSidebarButtonMouseEnter={handleSidebarButtonMouseEnter}
-          onHideSidebar={onHideSidebar}
           activeTool={activeTool}
           setActiveTool={setActiveTool}
           shapeKind={shapeKind}
@@ -522,9 +474,6 @@ export default function PlaygroundCanvas({
         />
 
         <PlaygroundCanvasDialogs
-          showClearDialog={showClearDialog}
-          setShowClearDialog={setShowClearDialog}
-          confirmClearAllNodes={confirmClearAllNodes}
           deleteDialogNode={deleteDialogNode}
           setDeleteDialogNode={setDeleteDialogNode}
           handleDeleteWithMode={handleDeleteWithMode}

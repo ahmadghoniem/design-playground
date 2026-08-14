@@ -7,6 +7,11 @@ view-controls, and the change-history log.
 
 ## Settled
 
+- **One canvas.** v1 is a single board. The composer branch picker *is* the workspace: checkout
+  another branch and the board (and its thread) come with it. No tab strip, pill switcher, or
+  stash/restore. Parallel explorations on the current branch live as nodes (iteration files).
+  Frozen tab/pill layout experiments stay in `.claude/prototype/variant-*.html`.
+
 - **Two panels.** Left is the three-tab sidebar container; right is its own thing, carrying both
   the design controls and the chat transcript. *Why:* the layer tree and the design controls need
   to be visible together — picking an element in the tree and immediately styling it is the core
@@ -78,18 +83,16 @@ view-controls, and the change-history log.
 - **Header already matches the settled shape.** `app/PlaygroundHeader.tsx` on `master` wires
   `usePreviewColorSchemeStore`'s `scheme`/`toggle` to a Sun/Moon button exactly as described above
   — this part of the decision is already built, not aspirational.
-- **Sidebar container does not match yet, and contradicts the "no collapse" call.** `master`'s
-  current `app/PlaygroundSidebar.tsx` is a single flat "Components" list (via
-  `useRegistryItems`/`RegistryDragRow`), not the three-tab container — the tab container exists
-  only on `feat/layers-sidebar` (detail owned by `sidebar-layers.md`). Master's current sidebar is
-  also collapsible: it takes an `onCollapse` prop and renders a `ChevronLeft`/"Collapse sidebar"
-  button, directly contradicting "docked, no collapse." `feat/layers-sidebar`'s three-tab sidebar
-  has already dropped this — its own code comment reads "Always visible — there is deliberately no
-  collapse or toggle affordance anywhere."
+- **Sidebar container is now docked; the tab container is still outstanding.** The "no collapse"
+  call is satisfied: `app/PlaygroundSidebar.tsx` takes no props, and the `onCollapse` chevron,
+  the toolbar's sidebar-toggle button, and `PlaygroundClient`'s hover-reveal/auto-hide timers were
+  all removed. What remains open is the shape: the sidebar is still a single flat "Components"
+  list (via `useRegistryItems`/`RegistryDragRow`), not the three-tab container, which exists only
+  on `feat/layers-sidebar` (detail owned by `sidebar-layers.md`).
 - **Toolbar/view-controls: confirmed by reading both components directly on `master`.**
   `features/canvas/components/PlaygroundCanvasToolbar.tsx` is already the left-edge vertical rail
-  (`absolute left-6 top-1/2`), in order: sidebar toggle, a separator, Select, Hand, the shape-tool
-  group, Text, Image — no undo/redo. `PlaygroundCanvasViewControls.tsx` is already the bottom-left
+  (`absolute left-6 top-1/2`), in order: Select, Hand, the shape-tool group, Text, Image — no
+  undo/redo, and no sidebar toggle (it and its separator were removed). `PlaygroundCanvasViewControls.tsx` is already the bottom-left
   pill (`absolute left-6 bottom-6`): zoom-out, a live `Math.round(zoom * 100)%` readout, zoom-in, a
   separator, then Undo and Redo — no zoom-to-selection. This is exactly the current-code shape the
   settled decision above supersedes.

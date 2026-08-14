@@ -1,4 +1,4 @@
-/** @typedef {{ id: string; label: string; cva?: boolean; expanded?: boolean; overlay?: boolean; groups?: { label: string; chips: string[]; defaultChip?: string }[] }} PrimitiveRow */
+/** @typedef {{ id: string; label: string; cva?: boolean; expanded?: boolean; groups?: { label: string; chips: string[]; defaultChip?: string }[] }} PrimitiveRow */
 
 /** @type {PrimitiveRow[]} */
 export const primitives = [
@@ -16,6 +16,6 @@ export const primitives = [
   { id: 'card', label: 'Card' },
   { id: 'input', label: 'Input' },
   { id: 'tabs', label: 'Tabs' },
-  { id: 'dialog', label: 'Dialog', overlay: true },
-  { id: 'sheet', label: 'Sheet', overlay: true },
+  { id: 'dialog', label: 'Dialog' },
+  { id: 'sheet', label: 'Sheet' },
 ];

@@ -26,7 +26,9 @@ The git branch flow, and the chat composer controls it drives.
   rebuilt:
   - **The project control is dropped.** Single-project playground per session, so there is nothing
     for it to select between.
-  - **The branch label shows the git branch.**
+  - **The branch picker is the workspace.** One canvas; going back and forth between git
+    branches is how you change boards. The picker stays on the composer. Tabs, pills, and
+    stash/restore stay parked.
   - **The worktree control *is* "where the agent runs"** — it replaces the separate
     where-the-agent-runs control rather than sitting beside it.
   - Model, Edit/Explore, and skills stay as they are today.

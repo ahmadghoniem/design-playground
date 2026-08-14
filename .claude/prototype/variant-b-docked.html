@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Playground — Docked chrome</title>
+<style>
+  :root {
+    --accent: #b45309;
+    --accent-soft: rgba(180, 83, 9, 0.12);
+    --canvas: #f7f6f3;
+    --chrome: #faf9f7;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+    --muted-2: #a8a29e;
+    --danger: #dc2626;
+    --ok: #16a34a;
+    --warn: #b45309;
+    --r: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    background: var(--chrome);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .app {
+    display: grid;
+    grid-template-rows: 40px 1fr;
+    height: 100%;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: stretch;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px 0 10px;
+    gap: 4px;
+    z-index: 20;
+  }
+  .logo {
+    align-self: center;
+    width: 22px; height: 22px; border-radius: 5px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; margin-right: 6px; flex-shrink: 0;
+  }
+  .tabs {
+    display: flex; align-items: flex-end; gap: 0; flex: 1; min-width: 0; overflow-x: auto;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 14px; height: 32px; margin-bottom: -1px;
+    border: 1px solid transparent; border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--muted); white-space: nowrap; font-size: 12px;
+    background: transparent;
+  }
+  .tab:hover { color: var(--text); background: rgba(0,0,0,0.02); }
+  .tab.active {
+    background: #fff; color: var(--text);
+    border-color: var(--border);
+    box-shadow: 0 1px 0 #fff;
+  }
+  .dirty {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  }
+  .tab-close {
+    width: 14px; height: 14px; border-radius: 3px;
+    display: none; align-items: center; justify-content: center;
+    color: var(--muted-2); font-size: 12px; line-height: 1;
+  }
+  .tab.active .tab-close { display: inline-flex; }
+  .tab-close:hover { background: #f5f5f4; color: var(--text); }
+  .tab-add-wrap { position: relative; align-self: center; }
+  .tab-add {
+    width: 26px; height: 26px; border-radius: 6px;
+    display: grid; place-items: center; color: var(--muted); font-size: 16px;
+  }
+  .tab-add:hover { background: #f5f5f4; color: var(--text); }
+  .add-menu {
+    display: none; position: absolute; top: calc(100% + 6px); left: 0;
+    min-width: 210px; padding: 6px; z-index: 50;
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(28,25,23,0.1);
+  }
+  .add-menu.open { display: block; }
+  .add-menu button {
+    display: block; width: 100%; text-align: left;
+    padding: 7px 10px; border-radius: 6px; font-size: 12px;
+  }
+  .add-menu button:hover { background: #f5f5f4; }
+  .add-menu .group-label {
+    padding: 8px 10px 4px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted-2);
+  }
+  .top-right {
+    display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0;
+  }
+  .share-btn {
+    padding: 5px 10px; border-radius: 6px; font-size: 12px;
+    border: 1px solid var(--border); background: #fff;
+  }
+  .share-btn:hover { background: #f5f5f4; }
+  .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(135deg, #d6d3d1, #a8a29e);
+  }
+
+  /* Body columns */
+  .body {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    min-height: 0; height: 100%;
+  }
+
+  /* Left session rail / panel */
+  .session {
+    display: flex; flex-direction: column;
+    width: 36px;
+    background: var(--chrome);
+    border-right: 1px solid var(--border);
+    transition: width 0.15s ease;
+    overflow: hidden;
+    min-height: 0;
+  }
+  body.session-open .session { width: 300px; }
+  .session-rail {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 8px 4px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  body.session-open .session-rail { flex-direction: row; padding: 6px 8px; justify-content: flex-start; }
+  .rail-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    display: grid; place-items: center; color: var(--muted); font-size: 13px;
+  }
+  .rail-btn:hover, .rail-btn.on { background: #f5f5f4; color: var(--text); }
+  .rail-btn.on { color: var(--accent); }
+  .session-hide {
+    margin-left: auto; display: none;
+    width: 26px; height: 26px; border-radius: 6px;
+    place-items: center; color: var(--muted);
+  }
+  body.session-open .session-hide { display: grid; }
+  .session-hide:hover { background: #f5f5f4; }
+  .session-content {
+    display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  body.session-open .session-content { display: flex; }
+  .session-tabs {
+    display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .session-tab {
+    padding: 6px 10px; font-size: 12px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .session-tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 550; }
+  .session-body { flex: 1; overflow: auto; padding: 12px; }
+  .session-pane { display: none; }
+  .session-pane.active { display: block; }
+
+  .agent-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .agent-meta {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-size: 11px; color: var(--muted); margin-bottom: 10px;
+  }
+  .progress {
+    height: 3px; border-radius: 2px; background: #f5f5f4; overflow: hidden; margin-bottom: 14px;
+  }
+  .progress > i { display: block; height: 100%; width: 68%; background: var(--accent); }
+  .activity { list-style: none; margin-bottom: 16px; }
+  .activity li {
+    display: flex; gap: 8px; padding: 5px 0; font-size: 11px; color: var(--muted);
+    border-bottom: 1px solid #f5f5f4;
+  }
+  .activity .ok { color: var(--ok); }
+  .activity .fail { color: var(--danger); }
+  .activity .time { margin-left: auto; flex-shrink: 0; color: var(--muted-2); }
+  .thread { display: flex; flex-direction: column; gap: 10px; }
+  .bubble {
+    background: #f5f5f4; border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.45; border-left: 2px solid var(--accent);
+  }
+  .step {
+    padding: 6px 0 6px 10px; border-left: 2px solid var(--border);
+    font-size: 11px; color: var(--muted);
+  }
+  .step strong { color: var(--text); font-weight: 550; }
+  .step .body { margin-top: 3px; color: var(--muted-2); }
+  .branch-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 6px; font-size: 11px;
+    background: #f5f5f4; border: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .file-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; cursor: pointer;
+  }
+  .file-row:hover { background: #f5f5f4; }
+  .file-row .counts { margin-left: auto; color: var(--muted); }
+  .file-row .plus { color: var(--ok); }
+  .file-row .minus { color: var(--danger); }
+  .micro {
+    font-size: 11px; color: var(--muted); padding: 4px 8px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .diff {
+    display: none; margin: 0 8px 10px; border-radius: 6px; overflow: hidden;
+    background: #1c1917; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; line-height: 1.5;
+  }
+  .diff.open { display: block; }
+  .diff .del { background: rgba(239,68,68,0.18); color: #fca5a5; padding: 2px 10px; }
+  .diff .add { background: rgba(74,222,128,0.12); color: #86efac; padding: 2px 10px; }
+  .hint {
+    margin-top: 12px; padding: 10px; border-radius: 6px;
+    background: #f5f5f4; font-size: 11px; color: var(--muted); line-height: 1.45;
+  }
+
+  /* Canvas */
+  .canvas-col {
+    position: relative; min-width: 0; min-height: 0;
+    background-color: var(--canvas);
+    background-image: radial-gradient(circle, #d6d3d1 1px, transparent 1px);
+    background-size: 18px 18px;
+    display: flex; flex-direction: column;
+  }
+  .board { flex: 1; position: relative; overflow: hidden; }
+  .board.hidden { display: none; }
+  .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--muted-2); font-size: 13px;
+  }
+  .node { position: absolute; width: 200px; }
+  .node-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted); margin-bottom: 4px; padding: 0 2px;
+  }
+  .node-label .name { font-weight: 500; }
+  .adopted {
+    font-size: 9px; padding: 1px 6px; border-radius: 999px;
+    background: rgba(22,163,74,0.15); color: #166534; font-weight: 550;
+  }
+  .preview-ico { margin-left: auto; opacity: 0.5; font-size: 11px; }
+  .card {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; box-shadow: 0 1px 2px rgba(28,25,23,0.04); position: relative;
+  }
+  .card.calm { box-shadow: none; }
+  .card h3 { font-size: 12px; font-weight: 550; color: #57534e; margin-bottom: 4px; }
+  .card .price { font-size: 28px; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; }
+  .card .price span { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .card ul { list-style: none; margin: 12px 0; }
+  .card ul li {
+    font-size: 11px; color: #57534e; padding: 3px 0 3px 14px; position: relative;
+  }
+  .card ul li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-size: 10px; }
+  .card .cta {
+    width: 100%; padding: 7px; border-radius: 7px;
+    background: var(--text); color: #fafaf8; font-size: 12px; font-weight: 500;
+  }
+  .card.calm .cta { background: transparent; color: var(--text); border: 1px solid #d6d3d1; }
+  .card.v2 .price { color: var(--accent); }
+  .pin {
+    position: absolute; top: -6px; right: -6px; z-index: 2;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700; display: grid; place-items: center;
+  }
+  .fail-card {
+    background: #fff; border: 1px solid #fecaca; border-radius: 10px; padding: 14px;
+  }
+  .fail-card .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; color: #b91c1c; margin-bottom: 6px;
+  }
+  .fail-card .msg { font-size: 12px; color: #44403c; line-height: 1.4; margin-bottom: 10px; }
+  .fail-card .retry { font-size: 11px; color: var(--accent); }
+
+  /* Composer in canvas */
+  .composer-slot {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 15; width: min(540px, calc(100% - 32px));
+  }
+  body.session-open .composer-slot {
+    position: relative; bottom: auto; left: auto; transform: none;
+    width: 100%; padding: 0; border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  body.session-open .canvas-col .composer-slot { display: none; }
+  .session-composer {
+    display: none; border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  body.session-open .session-composer { display: block; }
+  .composer {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(28,25,23,0.08); overflow: hidden;
+  }
+  body.session-open .session-composer .composer {
+    border: none; border-radius: 0; box-shadow: none;
+  }
+  .attach { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 12px 0; }
+  .achip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 5px; font-size: 11px;
+    background: #faf9f7; border: 1px solid var(--border); color: #44403c;
+  }
+  .achip.anno { border-color: rgba(180,83,9,0.35); background: var(--accent-soft); }
+  .achip .n {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .comp-top { display: flex; align-items: flex-start; gap: 6px; padding: 8px 12px 4px; }
+  .comp-top textarea {
+    flex: 1; border: none; resize: none; outline: none;
+    font: inherit; font-size: 13px; background: transparent; min-height: 40px;
+  }
+  .comp-top textarea::placeholder { color: var(--muted-2); }
+  .expand-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    display: grid; place-items: center; color: var(--muted); flex-shrink: 0;
+  }
+  .expand-btn:hover { background: #f5f5f4; }
+  .comp-foot {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px 10px; flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 5px; font-size: 11px;
+    background: #faf9f7; border: 1px solid var(--border); color: #57534e;
+  }
+  .comp-foot .spacer { flex: 1; }
+  .mode-seg {
+    display: inline-flex; background: #faf9f7; border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px;
+  }
+  .mode-seg button {
+    padding: 4px 9px; border-radius: 4px; font-size: 11px; color: var(--muted);
+  }
+  .mode-seg button.on { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .mode-count { margin-left: 2px; font-size: 10px; color: var(--accent); font-weight: 600; }
+
+  /* Right inspector */
+  .inspector {
+    width: 280px; background: var(--chrome); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  body.inspector-closed .inspector { display: none; }
+  .insp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .insp-hide {
+    width: 26px; height: 26px; border-radius: 6px;
+    display: grid; place-items: center; color: var(--muted);
+  }
+  .insp-hide:hover { background: #f5f5f4; }
+  .insp-body { flex: 1; overflow: auto; background: #fff; }
+  .insp-reopen {
+    display: none; position: absolute; top: 52px; right: 8px; z-index: 20;
+    padding: 6px 10px; font-size: 11px;
+    background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  }
+  body.inspector-closed .insp-reopen { display: block; }
+
+  .acc-sec { border-bottom: 1px solid var(--border); }
+  .acc-h {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; font-size: 12px; font-weight: 550; text-align: left;
+  }
+  .acc-h:hover { background: #faf9f7; }
+  .acc-h .chev { font-size: 10px; color: var(--muted); transition: transform .15s; }
+  .acc-sec:not(.open) .chev { transform: rotate(-90deg); }
+  .acc-body { display: none; padding: 0 12px 12px; }
+  .acc-sec.open .acc-body { display: block; }
+
+  .tree { list-style: none; font-size: 12px; }
+  .tree .row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 6px; border-radius: 4px; color: var(--muted);
+  }
+  .tree .row:hover { background: #f5f5f4; }
+  .tree .row.sel { background: var(--accent-soft); color: var(--text); }
+  .tree .indent-1 { padding-left: 14px; }
+  .tree .indent-2 { padding-left: 28px; }
+  .ico { width: 12px; text-align: center; font-size: 10px; opacity: 0.7; }
+  .group-label-sm {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted-2); margin: 10px 0 6px;
+  }
+  .prop-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;
+  }
+  .prop-row > span.label { width: 52px; color: var(--muted); font-size: 11px; flex-shrink: 0; }
+  .chip {
+    display: inline-flex; padding: 3px 7px; border-radius: 4px;
+    background: #f5f5f4; border: 1px solid var(--border);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; cursor: ew-resize;
+  }
+  .seg {
+    display: inline-flex; border-radius: 5px; overflow: hidden;
+    background: #f5f5f4; border: 1px solid var(--border); padding: 2px;
+  }
+  .seg button { padding: 3px 8px; border-radius: 3px; font-size: 11px; color: var(--muted); }
+  .seg button.on { background: #fff; color: var(--text); }
+  .swatch-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 7px; border-radius: 4px; border: 1px solid var(--border);
+    background: #faf9f7; font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .swatch {
+    width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1);
+  }
+  .prop-caption { margin-top: 10px; font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .token-row, .prim-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 4px; font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .badge-warn {
+    margin-left: auto; font-size: 9px; font-family: inherit;
+    padding: 2px 5px; border-radius: 3px;
+    background: rgba(180,83,9,0.12); color: var(--warn);
+  }
+  .cva-chips { margin: 4px 0 0 20px; display: flex; flex-direction: column; gap: 4px; }
+  .cva-line { font-size: 11px; color: var(--muted); }
+  .cva-line em { font-style: normal; display: inline-flex; gap: 3px; margin-left: 4px; }
+  .cva-line em span {
+    padding: 1px 5px; border-radius: 3px; background: #f5f5f4; border: 1px solid var(--border);
+    color: var(--text); font-size: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="logo">P</div>
+    <div class="tabs" id="tabs"></div>
+    <div class="tab-add-wrap">
+      <button class="tab-add" id="tabAdd" title="New workspace" type="button">+</button>
+      <div class="add-menu" id="addMenu" role="menu">
+        <button type="button" data-action="new">New workspace…</button>
+        <div class="group-label">Stashed</div>
+        <div id="stashList"></div>
+      </div>
+    </div>
+    <div class="top-right">
+      <button class="share-btn" type="button">Share</button>
+      <div class="avatar" title="You"></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="session" id="session" aria-label="Session">
+      <div class="session-rail">
+        <button class="rail-btn on" id="railAgent" title="Agent" type="button">◎</button>
+        <button class="rail-btn" id="railDiff" title="Changes" type="button">⇅</button>
+        <button class="session-hide" id="sessionHide" title="Collapse" type="button">‹</button>
+      </div>
+      <div class="session-content">
+        <div class="session-tabs">
+          <button class="session-tab active" data-pane="agent" type="button">Agent</button>
+          <button class="session-tab" data-pane="changes" type="button">Changes</button>
+        </div>
+        <div class="session-body">
+          <div class="session-pane active" data-pane="agent">
+            <div class="agent-title">Calmer pricing card</div>
+            <div class="agent-meta">
+              <span>rewynd-worktree</span><span>·</span><span>⑂ pg/pricing-calm</span>
+            </div>
+            <div class="progress" aria-hidden="true"><i></i></div>
+            <ul class="activity">
+              <li><span class="ok">✓</span> Wrote PriceCard.iteration-2.tsx <span class="time">now</span></li>
+              <li><span class="ok">✓</span> Wrote PriceCard.iteration-1.tsx <span class="time">12s</span></li>
+              <li><span class="fail">✕</span> iteration-3 — token not in host <span class="time">14s</span></li>
+              <li><span>·</span> Read stripe-pricing.png <span class="time">31s</span></li>
+            </ul>
+            <div class="thread">
+              <div class="bubble">Make this calmer — less chrome, let the number carry it.</div>
+              <div class="step"><strong>Thought</strong> · 4s<div class="body">Strip borders and drop the filled CTA so $29 reads first.</div></div>
+              <div class="step"><strong>Read</strong> · 3 files<div class="body">PriceCard.tsx, tokens.css, stripe-pricing.png</div></div>
+              <div class="step"><strong>Wrote</strong> · 3 iterations<div class="body">Calm variant, accent price, failed chart-1 attempt.</div></div>
+            </div>
+          </div>
+          <div class="session-pane" data-pane="changes">
+            <div class="branch-chip">⑂ pg/pricing-calm — workspace branch</div>
+            <div class="file-row"><span>PriceCard.iteration-1.tsx</span><span class="counts"><span class="plus">+42</span></span></div>
+            <div class="file-row"><span>PriceCard.iteration-2.tsx</span><span class="counts"><span class="plus">+38</span></span></div>
+            <div class="file-row" id="diffTrigger"><span>PriceCard.tsx</span><span class="counts"><span class="plus">+12</span> <span class="minus">−7</span></span></div>
+            <div class="diff" id="diffBlock">
+              <div class="del">- className="rounded-xl border bg-card p-6 shadow-sm"</div>
+              <div class="add">+ className={cn(</div>
+              <div class="add">+   "rounded-xl bg-card p-4",</div>
+            </div>
+            <div class="micro">PriceCard.tsx · p-6 → p-4 — properties panel</div>
+            <div class="hint">Closing this workspace stashes these on its branch. Reopening the tab restores them.</div>
+          </div>
+        </div>
+        <div class="session-composer" id="sessionComposer"></div>
+      </div>
+    </aside>
+
+    <main class="canvas-col" id="canvasCol">
+      <div class="board" data-board="pricing" id="boardHost">
+        <div class="node" style="left:10%; top:14%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span style="font-size:10px;color:var(--muted-2)">original</span>
+            <button class="preview-ico" title="Preview" type="button">⤢</button>
+          </div>
+          <div class="card">
+            <span class="pin" title="Annotation ①">①</span>
+            <h3>Growth</h3>
+            <div class="price">$29<span>/mo</span></div>
+            <ul><li>Up to 10 seats</li><li>Priority support</li><li>Custom domains</li></ul>
+            <button class="cta" type="button">Choose Growth</button>
+          </div>
+        </div>
+        <div class="node" style="left:38%; top:12%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span style="font-size:10px;color:var(--muted-2)">#1</span>
+            <button class="preview-ico" title="Preview" type="button">⤢</button>
+          </div>
+          <div class="card calm">
+            <h3>Growth</h3>
+            <div class="price">$29<span>/mo</span></div>
+            <ul><li>Up to 10 seats</li><li>Priority support</li><li>Custom domains</li></ul>
+            <button class="cta" type="button">Choose Growth</button>
+          </div>
+        </div>
+        <div class="node" style="left:66%; top:16%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span style="font-size:10px;color:var(--muted-2)">#2</span>
+            <span class="adopted">Adopted</span>
+            <button class="preview-ico" title="Preview" type="button">⤢</button>
+          </div>
+          <div class="card v2">
+            <h3>Growth</h3>
+            <div class="price">$29<span>/mo</span></div>
+            <ul><li>Up to 10 seats</li><li>Priority support</li><li>Custom domains</li></ul>
+            <button class="cta" type="button">Choose Growth</button>
+          </div>
+        </div>
+        <div class="node" style="left:38%; top:56%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span style="font-size:10px;color:var(--muted-2)">#3 · failed</span>
+            <button class="preview-ico" title="Preview" type="button">⤢</button>
+          </div>
+          <div class="fail-card">
+            <div class="mono">token not in host</div>
+            <div class="msg">Used <code>bg-chart-1</code>, which the host maps but never defines.</div>
+            <button class="retry" type="button">↻ Retry with the token list</button>
+          </div>
+        </div>
+      </div>
+      <div class="board hidden" data-board="pricecard">
+        <div class="empty">Nothing here yet — drag a component from Layers.</div>
+      </div>
+      <div class="board hidden" data-board="checkout">
+        <div class="empty">Nothing here yet — drag a component from Layers.</div>
+      </div>
+      <div class="composer-slot" id="composerSlot">
+        <div class="composer" id="composer">
+          <div class="attach">
+            <span class="achip">⌗ PriceCard</span>
+            <span class="achip">▦ stripe-pricing.png</span>
+            <span class="achip anno"><span class="n">①</span> too cramped</span>
+          </div>
+          <div class="comp-top">
+            <textarea rows="2" placeholder="Describe a change, or drop a reference…" aria-label="Prompt"></textarea>
+            <button class="expand-btn" id="compExpand" title="Open session panel" type="button">⤢</button>
+          </div>
+          <div class="comp-foot">
+            <button class="pill" type="button">✳ Claude Opus 5 · high</button>
+            <button class="pill" type="button">Ask before edits</button>
+            <span class="spacer"></span>
+            <div class="mode-seg">
+              <button type="button" data-mode="edit">Edit</button>
+              <button type="button" class="on" data-mode="explore">Explore <span class="mode-count">×4</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="insp-reopen" id="inspReopen" type="button">‹ Inspector</button>
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Inspector">
+      <div class="insp-head">
+        <span>Inspector</span>
+        <button class="insp-hide" id="inspHide" title="Hide right sidebar" type="button">›</button>
+      </div>
+      <div class="insp-body">
+        <section class="acc-sec open">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Layers</button>
+          <div class="acc-body">
+            <ul class="tree">
+              <li><div class="row"><span class="ico">▣</span> PricingPage</div></li>
+              <li class="indent-1"><div class="row"><span class="ico">▸</span> Hero</div></li>
+              <li class="indent-1"><div class="row"><span class="ico">▸</span> PlanGrid</div></li>
+              <li class="indent-2"><div class="row sel"><span class="ico">◇</span> PriceCard</div></li>
+              <li class="indent-1"><div class="row"><span class="ico">▸</span> Footer</div></li>
+            </ul>
+          </div>
+        </section>
+        <section class="acc-sec open">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Properties</button>
+          <div class="acc-body">
+            <div class="group-label-sm">Spacing</div>
+            <div class="prop-row"><span class="label">padding</span><span class="chip" title="Scrub">p-4</span></div>
+            <div class="prop-row"><span class="label">gap</span><span class="chip" title="Scrub">gap-3</span></div>
+            <div class="group-label-sm">Typography</div>
+            <div class="prop-row"><span class="label">size</span><span class="chip">text-4xl</span></div>
+            <div class="prop-row">
+              <span class="label">weight</span>
+              <div class="seg">
+                <button type="button">normal</button>
+                <button type="button" class="on">medium</button>
+                <button type="button">bold</button>
+              </div>
+            </div>
+            <div class="group-label-sm">Color</div>
+            <div class="prop-row">
+              <button class="swatch-btn" type="button"><span class="swatch" style="background:#fff"></span>bg-card</button>
+              <button class="swatch-btn" type="button"><span class="swatch" style="background:#1c1917"></span>text-foreground</button>
+              <button class="swatch-btn" type="button"><span class="swatch" style="background:var(--accent)"></span>bg-primary</button>
+            </div>
+            <div class="group-label-sm">Radius</div>
+            <div class="prop-row"><span class="chip">rounded-xl</span></div>
+            <p class="prop-caption">Writes Tailwind classes via cn() — staged into the session diff.</p>
+          </div>
+        </section>
+        <section class="acc-sec">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Tokens</button>
+          <div class="acc-body">
+            <div class="token-row"><span class="swatch" style="background:var(--accent)"></span>--primary</div>
+            <div class="token-row"><span class="swatch" style="background:#a8a29e"></span>--muted</div>
+            <div class="token-row"><span class="swatch" style="background:#d6d3d1"></span>--radius</div>
+            <div class="token-row"><span class="swatch" style="background:#fff"></span>--card</div>
+            <div class="token-row"><span class="swatch" style="background:#fde68a"></span>--chart-1 <span class="badge-warn">UNDEF</span></div>
+          </div>
+        </section>
+        <section class="acc-sec">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Primitives</button>
+          <div class="acc-body">
+            <div class="prim-row"><span>▾</span> Button</div>
+            <div class="cva-chips">
+              <div class="cva-line">variant: <em><span>default</span><span>ghost</span><span>outline</span></em></div>
+              <div class="cva-line">size: <em><span>sm</span><span>md</span><span>lg</span></em></div>
+            </div>
+            <div class="prim-row">Badge</div>
+            <div class="prim-row">Input</div>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  var tabs = [
+    { id: "pricing", label: "Pricing page", dirty: true, empty: false },
+    { id: "pricecard", label: "PriceCard", dirty: false, empty: true },
+    { id: "checkout", label: "Checkout", dirty: false, empty: true }
+  ];
+  var stashed = [
+    { id: "navbar", label: "navbar-experiment", branch: "⑂ navbar-experiment" }
+  ];
+  var activeId = "pricing";
+  var addOpen = false;
+  var tabsEl = document.getElementById("tabs");
+  var stashList = document.getElementById("stashList");
+  var addMenu = document.getElementById("addMenu");
+  var composer = document.getElementById("composer");
+  var composerSlot = document.getElementById("composerSlot");
+  var sessionComposer = document.getElementById("sessionComposer");
+  var canvasCol = document.getElementById("canvasCol");
+
+  function placeComposer() {
+    if (document.body.classList.contains("session-open")) {
+      sessionComposer.appendChild(composer);
+    } else {
+      composerSlot.appendChild(composer);
+    }
+  }
+
+  function renderTabs() {
+    tabsEl.innerHTML = "";
+    tabs.forEach(function (t) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tab" + (t.id === activeId ? " active" : "");
+      var html = "";
+      if (t.dirty) html += '<span class="dirty"></span>';
+      html += "<span>" + t.label + "</span>";
+      if (t.id === activeId) html += '<span class="tab-close" data-close="1" title="Close & stash">×</span>';
+      btn.innerHTML = html;
+      btn.addEventListener("click", function (e) {
+        if (e.target.getAttribute("data-close")) { e.stopPropagation(); closeTab(t.id); return; }
+        switchTab(t.id);
+      });
+      tabsEl.appendChild(btn);
+    });
+    renderStash();
+    document.querySelectorAll(".board").forEach(function (b) {
+      b.classList.toggle("hidden", b.getAttribute("data-board") !== activeId);
+    });
+  }
+
+  function renderStash() {
+    stashList.innerHTML = "";
+    if (!stashed.length) {
+      var empty = document.createElement("div");
+      empty.className = "group-label";
+      empty.style.textTransform = "none";
+      empty.textContent = "No stashed workspaces";
+      stashList.appendChild(empty);
+      return;
+    }
+    stashed.forEach(function (s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = s.branch || ("⑂ " + s.label);
+      b.addEventListener("click", function () {
+        popStash(s.id);
+        addMenu.classList.remove("open");
+        addOpen = false;
+      });
+      stashList.appendChild(b);
+    });
+  }
+
+  function switchTab(id) { activeId = id; renderTabs(); }
+
+  function closeTab(id) {
+    var idx = tabs.findIndex(function (t) { return t.id === id; });
+    if (idx < 0) return;
+    var t = tabs[idx];
+    tabs.splice(idx, 1);
+    stashed.unshift({
+      id: t.id, label: t.label,
+      branch: "⑂ " + t.label.toLowerCase().replace(/\s+/g, "-"),
+      dirty: t.dirty, empty: t.empty
+    });
+    if (!tabs.length) tabs.push({ id: "empty-" + Date.now(), label: "Untitled", dirty: false, empty: true });
+    if (activeId === id) activeId = tabs[Math.max(0, idx - 1)].id;
+    renderTabs();
+  }
+
+  function ensureBoard(t) {
+    if (canvasCol.querySelector('[data-board="' + t.id + '"]')) return;
+    var board = document.createElement("div");
+    board.className = "board hidden";
+    board.setAttribute("data-board", t.id);
+    board.innerHTML = '<div class="empty">Nothing here yet — drag a component from Layers.</div>';
+    canvasCol.insertBefore(board, composerSlot);
+  }
+
+  function popStash(id) {
+    var idx = stashed.findIndex(function (s) { return s.id === id; });
+    if (idx < 0) return;
+    var s = stashed[idx];
+    stashed.splice(idx, 1);
+    if (tabs.some(function (t) { return t.id === s.id; })) { switchTab(s.id); return; }
+    var tab = {
+      id: s.id,
+      label: s.id === "navbar" ? "navbar-experiment" : s.label,
+      dirty: !!s.dirty,
+      empty: s.id === "pricing" ? false : (s.empty !== false)
+    };
+    tabs.push(tab);
+    ensureBoard(tab);
+    activeId = tab.id;
+    renderTabs();
+  }
+
+  document.getElementById("tabAdd").addEventListener("click", function (e) {
+    e.stopPropagation();
+    addOpen = !addOpen;
+    addMenu.classList.toggle("open", addOpen);
+  });
+  addMenu.querySelector('[data-action="new"]').addEventListener("click", function () {
+    var id = "ws-" + Date.now();
+    var tab = { id: id, label: "Untitled", dirty: false, empty: true };
+    tabs.push(tab);
+    ensureBoard(tab);
+    activeId = id;
+    addMenu.classList.remove("open");
+    addOpen = false;
+    renderTabs();
+  });
+  document.addEventListener("click", function () {
+    if (addOpen) { addMenu.classList.remove("open"); addOpen = false; }
+  });
+  addMenu.addEventListener("click", function (e) { e.stopPropagation(); });
+
+  function setSession(open) {
+    document.body.classList.toggle("session-open", open);
+    placeComposer();
+  }
+  function openSession(pane) {
+    setSession(true);
+    if (pane) selectPane(pane);
+  }
+  function selectPane(pane) {
+    document.querySelectorAll(".session-tab").forEach(function (t) {
+      t.classList.toggle("active", t.getAttribute("data-pane") === pane);
+    });
+    document.querySelectorAll(".session-pane").forEach(function (p) {
+      p.classList.toggle("active", p.getAttribute("data-pane") === pane);
+    });
+    document.getElementById("railAgent").classList.toggle("on", pane === "agent");
+    document.getElementById("railDiff").classList.toggle("on", pane === "changes");
+  }
+
+  document.getElementById("compExpand").addEventListener("click", function () { openSession("agent"); });
+  document.getElementById("sessionHide").addEventListener("click", function () { setSession(false); });
+  document.getElementById("railAgent").addEventListener("click", function () { openSession("agent"); });
+  document.getElementById("railDiff").addEventListener("click", function () { openSession("changes"); });
+  document.querySelectorAll(".session-tab").forEach(function (tab) {
+    tab.addEventListener("click", function () { selectPane(tab.getAttribute("data-pane")); });
+  });
+
+  document.getElementById("diffTrigger").addEventListener("click", function () {
+    document.getElementById("diffBlock").classList.toggle("open");
+  });
+  document.getElementById("inspHide").addEventListener("click", function () {
+    document.body.classList.add("inspector-closed");
+  });
+  document.getElementById("inspReopen").addEventListener("click", function () {
+    document.body.classList.remove("inspector-closed");
+  });
+  document.querySelectorAll(".acc-h").forEach(function (h) {
+    h.addEventListener("click", function () { h.parentElement.classList.toggle("open"); });
+  });
+  document.querySelectorAll(".seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      b.parentElement.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+    });
+  });
+  document.querySelectorAll(".mode-seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".mode-seg button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+    });
+  });
+
+  renderTabs();
+})();
+</script>
+<script type="module" src="src/components/variant-nav.js"></script>
+</body>
+</html>

@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Eraser,
-  RefreshCw,
-  SlidersVertical,
-  Wrench,
-  Sun,
-  Moon,
-} from "lucide-react";
+import { SlidersVertical, Wrench, Sun, Moon } from "lucide-react";
 import { usePreviewColorSchemeStore } from "@pg/shared/stores/preview-color-scheme-store";
 
 import {
@@ -24,8 +17,6 @@ import ModelSettingsModal from "@pg/app/ModelSettingsModal";
 
 interface PlaygroundHeaderProps {
   projectName: string;
-  onClear: () => void;
-  onRefreshIterations: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,8 +25,6 @@ interface PlaygroundHeaderProps {
 
 export default function PlaygroundHeader({
   projectName,
-  onClear,
-  onRefreshIterations,
 }: PlaygroundHeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSkillsCatalog = useSkillsUiStore((s) => s.openCatalog);
@@ -101,36 +90,6 @@ export default function PlaygroundHeader({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>Model settings</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onClear}
-                className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
-                aria-label="Clear all"
-              >
-                <Eraser className="w-[18px] h-[18px]" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Clear all</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onRefreshIterations}
-                className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
-                aria-label="Refresh variations"
-              >
-                <RefreshCw className="w-[18px] h-[18px]" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Refresh variations</p>
             </TooltipContent>
           </Tooltip>
         </div>

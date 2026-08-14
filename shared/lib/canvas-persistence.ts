@@ -5,7 +5,7 @@
 // implementation.
 
 import type { Node, Edge } from '@xyflow/react';
-import { STORAGE_KEY } from './constants';
+import { CANVAS_STATE_STORAGE_KEY } from './constants';
 
 /**
  * Explicit parent→child iteration-tree record. Replaces the old React Flow
@@ -51,7 +51,7 @@ export interface CanvasState {
  * read back each other's frames. Falls back to the unscoped key when no id is given.
  */
 export function getCanvasStorageKey(projectId?: string): string {
-  return projectId ? `${STORAGE_KEY}:${projectId}` : STORAGE_KEY;
+  return projectId ? `${CANVAS_STATE_STORAGE_KEY}:${projectId}` : CANVAS_STATE_STORAGE_KEY;
 }
 
 /** Map an iteration node to its dedup key (react filename). */
@@ -97,18 +97,18 @@ function migrateRelations(raw: CanvasState & { edges?: Edge[] }): CanvasRelation
   return [];
 }
 
-export function loadCanvasState(storageKey: string = STORAGE_KEY): CanvasState | null {
+export function loadCanvasState(storageKey: string = CANVAS_STATE_STORAGE_KEY): CanvasState | null {
   if (typeof window === 'undefined') return null;
   try {
     let stored = localStorage.getItem(storageKey);
     // One-time migration: the canvas used to live under a single unscoped key that
     // every project on this origin shared. Adopt that legacy data for the first
     // project that loads, then drop it so it can't leak into other projects.
-    if (!stored && storageKey !== STORAGE_KEY) {
-      const legacy = localStorage.getItem(STORAGE_KEY);
+    if (!stored && storageKey !== CANVAS_STATE_STORAGE_KEY) {
+      const legacy = localStorage.getItem(CANVAS_STATE_STORAGE_KEY);
       if (legacy) {
         localStorage.setItem(storageKey, legacy);
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(CANVAS_STATE_STORAGE_KEY);
         stored = legacy;
       }
     }

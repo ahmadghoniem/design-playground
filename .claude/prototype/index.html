@@ -16,38 +16,12 @@
 </head>
 <body>
 
-<div class="strip" x-data="editorialTheme()">
-  <span class="brand">design-playground · prototype</span>
-  <span class="sp"></span>
-  <button type="button" @click="toggle()" x-text="label">Light</button>
-</div>
-
-<div class="page">
-
-<header class="mast">
-  <p class="eyebrow">Prototype · corrected against the branch</p>
-  <h1>The whole thing, assembled — click around it.</h1>
-  <p class="stand">This is not a picture. Tabs switch, cards select, the panel retargets, the help
-  popover opens, the branch dialog opens and closes. <b>Every correction from this pass is placed
-  somewhere in here</b>, and the spec map underneath says which spec each part belongs to.</p>
-</header>
-
-<div class="app-frame">
 <div class="app" id="app">
-
-  <div data-partial="src/partials/app-frame-top.html"></div>
-  <div data-partial="src/partials/header.html"></div>
-
   <div class="app-body">
-    <div data-partial="src/partials/sidebar.html"></div>
+    <div data-partial="src/partials/library.html"></div>
     <div data-partial="src/partials/canvas.html"></div>
-    <div data-partial="src/partials/right-panel.html"></div>
+    <div data-partial="src/partials/design-agents.html"></div>
   </div>
-
-</div>
-</div>
-
-<div data-partial="src/partials/spec-fold.html"></div>
 
 </div>
 

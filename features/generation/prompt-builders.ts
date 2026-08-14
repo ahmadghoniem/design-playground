@@ -1,4 +1,4 @@
-import type { ChatSubmitPayload } from "@pg/shared/lib/constants"
+import type { ChatSubmitPayload } from "@pg/shared/lib/chat-submit-payload"
 import {
   elementIterationFromIterationPrompt,
   elementIterationPrompt,

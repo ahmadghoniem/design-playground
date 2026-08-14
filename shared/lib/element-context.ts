@@ -32,16 +32,31 @@ function getReactFiber(el: HTMLElement): unknown | null {
   return (el as unknown as Record<string, unknown>)[key] ?? null;
 }
 
-function getReactComponentName(el: HTMLElement): string | null {
+/**
+ * Resolve a fiber `type` to a component name. Checks `displayName` first (shadcn,
+ * forwardRef and memo wrappers set it), then a plain function's `name`, then
+ * unwraps `forwardRef` (`.render`) and `memo` (`.type`) so those don't resolve to
+ * an ancestor's name. Host types (a string like `'div'`) return null.
+ */
+function resolveTypeName(type: unknown): string | null {
+  if (!type || typeof type === 'string') return null;
+  const displayName = (type as { displayName?: unknown }).displayName;
+  if (typeof displayName === 'string' && displayName) return displayName;
+  if (typeof type === 'function') return (type as { name?: string }).name || null;
+  const render = (type as { render?: unknown }).render;
+  if (render) return resolveTypeName(render);
+  const inner = (type as { type?: unknown }).type;
+  if (inner) return resolveTypeName(inner);
+  return null;
+}
+
+export function getReactComponentName(el: HTMLElement): string | null {
   let fiber = getReactFiber(el) as Record<string, unknown> | null;
   while (fiber) {
-    const type = fiber.type as ((...args: unknown[]) => unknown) | string | null;
-    if (typeof type === 'function' && (type as { name?: string }).name) {
-      const name = (type as { name: string }).name;
-      // Skip React internals and styled wrappers
-      if (!name.startsWith('_') && name[0] === name[0].toUpperCase()) {
-        return name;
-      }
+    const name = resolveTypeName(fiber.type);
+    // Skip React internals and styled/lowercase wrappers
+    if (name && !name.startsWith('_') && name[0] === name[0].toUpperCase()) {
+      return name;
     }
     fiber = fiber.return as Record<string, unknown> | null;
   }

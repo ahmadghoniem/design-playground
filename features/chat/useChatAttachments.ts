@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { SelectedElement } from '@pg/shared/lib/element-context';
 import type { SelectedNodeContext } from './useNodeSelection';
-import type { ChatSubmitPayload } from '@pg/shared/lib/constants';
+import type { ChatSubmitPayload } from '@pg/shared/lib/chat-submit-payload';
 
 export interface UseChatAttachmentsOptions {
   selectedElements?: SelectedElement[];

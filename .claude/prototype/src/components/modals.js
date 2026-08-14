@@ -1,7 +1,33 @@
 import Alpine from 'alpinejs';
 
+const MOCK_SKILLS = [
+  { id: 'tailwind', label: 'tailwind', installed: true },
+  { id: 'frontend-design', label: 'frontend-design', installed: true },
+  { id: 'dataviz', label: 'dataviz', installed: false },
+  { id: 'visual-plan', label: 'visual-plan', installed: false },
+  { id: 'tdd', label: 'tdd', installed: false },
+];
+
 export function registerModals() {
   document.addEventListener('alpine:init', () => {
+    Alpine.store('modals', {
+      modelSettingsOpen: false,
+      skillsCatalogOpen: false,
+
+      openModelSettings() {
+        this.modelSettingsOpen = true;
+      },
+      closeModelSettings() {
+        this.modelSettingsOpen = false;
+      },
+      openSkillsCatalog() {
+        this.skillsCatalogOpen = true;
+      },
+      closeSkillsCatalog() {
+        this.skillsCatalogOpen = false;
+      },
+    });
+
     Alpine.data('branchModal', () => ({
       branchName: 'pg/calmer-pricing-card',
 
@@ -28,13 +54,44 @@ export function registerModals() {
 
       stash() {
         this.$store.mock.isDirty = false;
-        this.$dispatch('stash-files');
       },
 
       commit() {
         const name = this.branchName.trim();
-        this.$dispatch('branch-commit', { name });
+        Alpine.store('chat').setBranch(name);
         this.close();
+      },
+    }));
+
+    Alpine.data('modelSettingsModal', () => ({
+      close() {
+        this.$store.modals.closeModelSettings();
+      },
+    }));
+
+    Alpine.data('skillsModal', () => ({
+      tab: 'installed',
+      search: '',
+      skills: MOCK_SKILLS.map((s) => ({ ...s })),
+
+      get filteredSkills() {
+        const q = this.search.toLowerCase();
+        return this.skills.filter((s) => {
+          const matches = s.label.toLowerCase().includes(q);
+          return this.tab === 'installed' ? matches && s.installed : matches;
+        });
+      },
+
+      setTab(tab) {
+        this.tab = tab;
+      },
+
+      toggleInstall(skill) {
+        skill.installed = !skill.installed;
+      },
+
+      close() {
+        this.$store.modals.closeSkillsCatalog();
       },
     }));
   });

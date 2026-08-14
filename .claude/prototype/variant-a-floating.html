@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Playground — Floating chrome</title>
+<style>
+  :root {
+    --accent: #7c5cff;
+    --accent-soft: rgba(124, 92, 255, 0.18);
+    --canvas: #f7f6f3;
+    --chrome: #1c1917;
+    --chrome-2: #292524;
+    --chrome-text: #fafaf8;
+    --chrome-muted: #a8a29e;
+    --chrome-border: rgba(255,255,255,0.08);
+    --danger: #ef4444;
+    --ok: #4ade80;
+    --warn: #f59e0b;
+    --r: 10px;
+    --shadow: 0 8px 28px rgba(28,25,23,0.18), 0 2px 6px rgba(28,25,23,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: #1c1917;
+    background: var(--canvas);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Canvas */
+  .stage {
+    position: absolute; inset: 0;
+    background-color: var(--canvas);
+    background-image: radial-gradient(circle, #d6d3d1 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  /* Floating chrome shared */
+  .float {
+    background: var(--chrome);
+    color: var(--chrome-text);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--chrome-border);
+  }
+  .muted { color: var(--chrome-muted); }
+  .accent { color: var(--accent); }
+
+  /* Top-left tabs pill */
+  .tabs-pill {
+    position: absolute; top: 12px; left: 12px; z-index: 40;
+    display: flex; align-items: center; gap: 2px;
+    padding: 5px 6px 5px 8px;
+    max-width: calc(100% - 200px);
+  }
+  .logo {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; margin-right: 6px; flex-shrink: 0;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 8px;
+    color: var(--chrome-muted); white-space: nowrap; font-size: 12px;
+  }
+  .tab:hover { color: var(--chrome-text); background: rgba(255,255,255,0.05); }
+  .tab.active { background: rgba(255,255,255,0.1); color: var(--chrome-text); }
+  .dirty {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); display: inline-block;
+  }
+  .tab-close {
+    width: 14px; height: 14px; border-radius: 4px;
+    display: none; align-items: center; justify-content: center;
+    color: var(--chrome-muted); font-size: 11px; line-height: 1;
+  }
+  .tab.active .tab-close { display: inline-flex; }
+  .tab-close:hover { background: rgba(255,255,255,0.12); color: var(--chrome-text); }
+  .tab-add {
+    width: 24px; height: 24px; border-radius: 7px;
+    display: grid; place-items: center;
+    color: var(--chrome-muted); font-size: 15px; position: relative;
+  }
+  .tab-add:hover { background: rgba(255,255,255,0.08); color: var(--chrome-text); }
+  .add-menu {
+    display: none; position: absolute; top: calc(100% + 8px); left: 0;
+    min-width: 200px; padding: 6px; z-index: 50;
+  }
+  .add-menu.open { display: block; }
+  .add-menu button {
+    display: block; width: 100%; text-align: left;
+    padding: 7px 10px; border-radius: 7px; font-size: 12px;
+    color: var(--chrome-text);
+  }
+  .add-menu button:hover { background: rgba(255,255,255,0.08); }
+  .add-menu .group-label {
+    padding: 8px 10px 4px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--chrome-muted);
+  }
+
+  /* Top-right */
+  .tr-pill {
+    position: absolute; top: 12px; right: 12px; z-index: 40;
+    display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 8px;
+  }
+  .share-btn {
+    padding: 5px 10px; border-radius: 7px; font-size: 12px;
+    background: rgba(255,255,255,0.08); color: var(--chrome-text);
+  }
+  .share-btn:hover { background: rgba(255,255,255,0.12); }
+  .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(135deg, #44403c, #78716c);
+  }
+
+  /* Tool strip */
+  .tools {
+    position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
+    z-index: 30; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .tool {
+    width: 34px; height: 34px; border-radius: 8px;
+    display: grid; place-items: center; color: var(--chrome-muted); font-size: 14px;
+  }
+  .tool:hover, .tool.on { background: rgba(255,255,255,0.1); color: var(--chrome-text); }
+  .tool.on { color: var(--accent); }
+
+  /* Left edge reopen */
+  .left-edge {
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    z-index: 25; width: 14px; height: 56px;
+    border-radius: 0 8px 8px 0;
+    background: var(--chrome); color: var(--chrome-muted);
+    display: grid; place-items: center; font-size: 10px;
+    box-shadow: var(--shadow); opacity: 0.85;
+  }
+  .left-edge:hover { opacity: 1; color: var(--chrome-text); }
+  body.session-open .left-edge { display: none; }
+
+  /* Session panel */
+  .session {
+    position: absolute; top: 60px; left: 12px; bottom: 12px; width: 340px;
+    z-index: 35; display: none; flex-direction: column; overflow: hidden;
+  }
+  body.session-open .session { display: flex; }
+  .session-head {
+    display: flex; align-items: center; gap: 4px;
+    padding: 8px 10px; border-bottom: 1px solid var(--chrome-border);
+  }
+  .session-tab {
+    padding: 5px 10px; border-radius: 7px; font-size: 12px; color: var(--chrome-muted);
+  }
+  .session-tab.active { background: rgba(255,255,255,0.1); color: var(--chrome-text); }
+  .session-hide {
+    margin-left: auto; width: 26px; height: 26px; border-radius: 7px;
+    display: grid; place-items: center; color: var(--chrome-muted);
+  }
+  .session-hide:hover { background: rgba(255,255,255,0.08); color: var(--chrome-text); }
+  .session-body { flex: 1; overflow: auto; padding: 12px; }
+  .session-pane { display: none; }
+  .session-pane.active { display: block; }
+
+  .agent-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .agent-meta {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 11px; color: var(--chrome-muted); margin-bottom: 10px;
+  }
+  .progress {
+    height: 3px; border-radius: 2px; background: rgba(255,255,255,0.08);
+    overflow: hidden; margin-bottom: 14px;
+  }
+  .progress > i {
+    display: block; height: 100%; width: 68%;
+    background: var(--accent); border-radius: 2px;
+  }
+  .activity { list-style: none; margin-bottom: 16px; }
+  .activity li {
+    display: flex; gap: 8px; padding: 5px 0; font-size: 11px;
+    color: var(--chrome-muted); border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .activity .ok { color: var(--ok); }
+  .activity .fail { color: var(--danger); }
+  .activity .time { margin-left: auto; flex-shrink: 0; }
+
+  .thread { display: flex; flex-direction: column; gap: 10px; }
+  .bubble {
+    background: rgba(255,255,255,0.06); border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.45;
+  }
+  .bubble.user { border-left: 2px solid var(--accent); }
+  .step {
+    padding: 6px 0 6px 10px; border-left: 2px solid rgba(255,255,255,0.1);
+    font-size: 11px; color: var(--chrome-muted);
+  }
+  .step strong { color: var(--chrome-text); font-weight: 550; }
+  .step .body { margin-top: 3px; color: #78716c; }
+
+  .branch-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 7px; font-size: 11px;
+    background: rgba(255,255,255,0.06); margin-bottom: 12px;
+  }
+  .file-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 7px; font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    cursor: pointer;
+  }
+  .file-row:hover { background: rgba(255,255,255,0.05); }
+  .file-row .counts { margin-left: auto; color: var(--chrome-muted); }
+  .file-row .plus { color: var(--ok); }
+  .file-row .minus { color: #f87171; }
+  .micro {
+    font-size: 11px; color: var(--chrome-muted); padding: 4px 8px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .diff {
+    display: none; margin: 0 8px 10px; border-radius: 8px; overflow: hidden;
+    background: #0c0a09; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; line-height: 1.5;
+  }
+  .diff.open { display: block; }
+  .diff .del { background: rgba(239,68,68,0.15); color: #fca5a5; padding: 2px 10px; }
+  .diff .add { background: rgba(74,222,128,0.12); color: #86efac; padding: 2px 10px; }
+  .hint {
+    margin-top: 12px; padding: 10px; border-radius: 8px;
+    background: rgba(255,255,255,0.04); font-size: 11px;
+    color: var(--chrome-muted); line-height: 1.45;
+  }
+
+  /* Right inspector */
+  .inspector {
+    position: absolute; top: 60px; right: 12px; bottom: 12px; width: 280px;
+    z-index: 35; display: flex; flex-direction: column; overflow: hidden;
+  }
+  body.inspector-closed .inspector { display: none; }
+  .insp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border-bottom: 1px solid var(--chrome-border);
+    font-size: 11px; color: var(--chrome-muted); text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .insp-hide {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: grid; place-items: center; color: var(--chrome-muted);
+  }
+  .insp-hide:hover { background: rgba(255,255,255,0.08); color: var(--chrome-text); }
+  .insp-body { flex: 1; overflow: auto; }
+  .acc-sec { border-bottom: 1px solid var(--chrome-border); }
+  .acc-h {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; font-size: 12px; font-weight: 550; color: var(--chrome-text);
+    text-align: left;
+  }
+  .acc-h:hover { background: rgba(255,255,255,0.04); }
+  .acc-h .chev { font-size: 10px; color: var(--chrome-muted); transition: transform .15s; }
+  .acc-sec:not(.open) .chev { transform: rotate(-90deg); }
+  .acc-body { display: none; padding: 0 12px 12px; }
+  .acc-sec.open .acc-body { display: block; }
+
+  .tree { list-style: none; font-size: 12px; }
+  .tree li { padding: 3px 0; }
+  .tree .row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 6px; border-radius: 5px; color: var(--chrome-muted);
+  }
+  .tree .row:hover { background: rgba(255,255,255,0.05); }
+  .tree .row.sel { background: var(--accent-soft); color: var(--chrome-text); }
+  .tree .indent-1 { padding-left: 14px; }
+  .tree .indent-2 { padding-left: 28px; }
+  .ico { width: 12px; text-align: center; font-size: 10px; opacity: 0.7; }
+
+  .group-label-sm {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--chrome-muted); margin: 10px 0 6px;
+  }
+  .prop-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;
+  }
+  .prop-row > span.label { width: 52px; color: var(--chrome-muted); font-size: 11px; flex-shrink: 0; }
+  .chip {
+    display: inline-flex; align-items: center; padding: 3px 7px;
+    border-radius: 5px; background: rgba(255,255,255,0.07);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--chrome-text); cursor: ew-resize;
+  }
+  .seg {
+    display: inline-flex; border-radius: 6px; overflow: hidden;
+    background: rgba(255,255,255,0.06); padding: 2px;
+  }
+  .seg button {
+    padding: 3px 8px; border-radius: 4px; font-size: 11px; color: var(--chrome-muted);
+  }
+  .seg button.on { background: rgba(255,255,255,0.12); color: var(--chrome-text); }
+  .swatch-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,0.06); font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .swatch {
+    width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15);
+  }
+  .prop-caption {
+    margin-top: 10px; font-size: 11px; color: var(--chrome-muted); line-height: 1.4;
+  }
+  .token-row, .prim-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 4px; font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .badge-warn {
+    margin-left: auto; font-size: 9px; font-family: inherit;
+    padding: 2px 5px; border-radius: 4px;
+    background: rgba(245,158,11,0.2); color: var(--warn);
+    letter-spacing: 0.03em;
+  }
+  .cva-chips { margin: 4px 0 0 20px; display: flex; flex-direction: column; gap: 4px; }
+  .cva-line { font-size: 11px; color: var(--chrome-muted); }
+  .cva-line em {
+    font-style: normal; display: inline-flex; gap: 3px; margin-left: 4px;
+  }
+  .cva-line em span {
+    padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.07);
+    color: var(--chrome-text); font-size: 10px;
+  }
+
+  .insp-reopen {
+    position: absolute; top: 60px; right: 12px; z-index: 30;
+    display: none; padding: 8px 10px; font-size: 11px;
+  }
+  body.inspector-closed .insp-reopen { display: block; }
+
+  /* Canvas nodes */
+  .board {
+    position: absolute; inset: 0; overflow: hidden;
+  }
+  .board.hidden { display: none; }
+  .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: #a8a29e; font-size: 13px;
+  }
+  .nodes { position: absolute; inset: 0; }
+  .node {
+    position: absolute; width: 200px;
+  }
+  .node-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: #78716c; margin-bottom: 4px; padding: 0 2px;
+  }
+  .node-label .name { font-weight: 500; }
+  .adopted {
+    font-size: 9px; padding: 1px 6px; border-radius: 999px;
+    background: rgba(74,222,128,0.2); color: #166534; font-weight: 550;
+  }
+  .preview-ico {
+    margin-left: auto; opacity: 0.5; font-size: 11px; cursor: default;
+  }
+  .card {
+    background: #fff; border: 1px solid #e7e5e4; border-radius: 12px;
+    padding: 16px; box-shadow: 0 1px 3px rgba(28,25,23,0.06);
+    position: relative;
+  }
+  .card.calm { border-color: #e7e5e4; box-shadow: none; }
+  .card h3 { font-size: 12px; font-weight: 550; color: #57534e; margin-bottom: 4px; }
+  .card .price { font-size: 28px; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; }
+  .card .price span { font-size: 13px; font-weight: 400; color: #78716c; }
+  .card ul { list-style: none; margin: 12px 0; }
+  .card ul li {
+    font-size: 11px; color: #57534e; padding: 3px 0;
+    padding-left: 14px; position: relative;
+  }
+  .card ul li::before {
+    content: "✓"; position: absolute; left: 0; color: var(--accent); font-size: 10px;
+  }
+  .card .cta {
+    width: 100%; padding: 7px; border-radius: 8px;
+    background: #1c1917; color: #fafaf8; font-size: 12px; font-weight: 500;
+  }
+  .card.calm .cta { background: transparent; color: #1c1917; border: 1px solid #d6d3d1; }
+  .card.v2 .price { color: var(--accent); }
+  .pin {
+    position: absolute; top: -6px; right: -6px; z-index: 2;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700;
+    display: grid; place-items: center;
+    box-shadow: 0 2px 6px rgba(124,92,255,0.4);
+  }
+  .fail-card {
+    background: #fff; border: 1px solid #fecaca; border-radius: 12px;
+    padding: 14px; min-height: 120px;
+  }
+  .fail-card .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; color: #b91c1c; margin-bottom: 6px;
+  }
+  .fail-card .msg { font-size: 12px; color: #44403c; line-height: 1.4; margin-bottom: 10px; }
+  .fail-card .retry {
+    font-size: 11px; color: var(--accent); cursor: pointer;
+  }
+
+  /* Composer */
+  .composer-wrap {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 40; width: min(560px, calc(100% - 40px));
+  }
+  body.session-open .composer-wrap {
+    left: 12px; transform: none; width: 340px; bottom: 12px;
+  }
+  body.session-open .composer-wrap .composer {
+    border-radius: 0 0 12px 12px; border-top: 1px solid #e7e5e4;
+    box-shadow: none;
+  }
+  .composer {
+    background: #fafaf8; border: 1px solid #e7e5e4; border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .attach {
+    display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 12px 0;
+  }
+  .achip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 6px; font-size: 11px;
+    background: #f5f5f4; border: 1px solid #e7e5e4; color: #44403c;
+  }
+  .achip.anno { border-color: rgba(124,92,255,0.35); background: var(--accent-soft); }
+  .achip .n {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .comp-top {
+    display: flex; align-items: flex-start; gap: 6px; padding: 8px 12px 4px;
+  }
+  .comp-top textarea {
+    flex: 1; border: none; resize: none; outline: none;
+    font: inherit; font-size: 13px; background: transparent;
+    min-height: 40px; color: #1c1917;
+  }
+  .comp-top textarea::placeholder { color: #a8a29e; }
+  .expand-btn {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: grid; place-items: center; color: #78716c; flex-shrink: 0;
+  }
+  .expand-btn:hover { background: #f5f5f4; color: #1c1917; }
+  .comp-foot {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px 10px; flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 6px; font-size: 11px;
+    background: #f5f5f4; border: 1px solid #e7e5e4; color: #57534e;
+  }
+  .comp-foot .spacer { flex: 1; }
+  .mode-seg {
+    display: inline-flex; background: #f5f5f4; border: 1px solid #e7e5e4;
+    border-radius: 7px; padding: 2px;
+  }
+  .mode-seg button {
+    padding: 4px 9px; border-radius: 5px; font-size: 11px; color: #78716c;
+  }
+  .mode-seg button.on { background: #fff; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .mode-count {
+    margin-left: 2px; font-size: 10px; color: var(--accent); font-weight: 600;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <!-- Canvas boards -->
+    <div class="board" data-board="pricing">
+      <div class="nodes">
+        <div class="node" style="left:12%; top:18%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span class="muted" style="font-size:10px;">original</span>
+            <button class="preview-ico" title="Preview">⤢</button>
+          </div>
+          <div class="card">
+            <span class="pin" title="Annotation ①">①</span>
+            <h3>Growth</h3>
+            <div class="price">$29<span>/mo</span></div>
+            <ul>
+              <li>Up to 10 seats</li>
+              <li>Priority support</li>
+              <li>Custom domains</li>
+            </ul>
+            <button class="cta">Choose Growth</button>
+          </div>
+        </div>
+        <div class="node" style="left:38%; top:16%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span class="muted" style="font-size:10px;">#1</span>
+            <button class="preview-ico" title="Preview">⤢</button>
+          </div>
+          <div class="card calm">
+            <h3>Growth</h3>
+            <div class="price">$29<span>/mo</span></div>
+            <ul>
+              <li>Up to 10 seats</li>
+              <li>Priority support</li>
+              <li>Custom domains</li>
+            </ul>
+            <button class="cta">Choose Growth</button>
+          </div>
+        </div>
+        <div class="node" style="left:64%; top:20%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span class="muted" style="font-size:10px;">#2</span>
+            <span class="adopted">Adopted</span>
+            <button class="preview-ico" title="Preview">⤢</button>
+          </div>
+          <div class="card v2">
+            <h3>Growth</h3>
+            <div class="price">$29<span>/mo</span></div>
+            <ul>
+              <li>Up to 10 seats</li>
+              <li>Priority support</li>
+              <li>Custom domains</li>
+            </ul>
+            <button class="cta">Choose Growth</button>
+          </div>
+        </div>
+        <div class="node" style="left:38%; top:58%;">
+          <div class="node-label">
+            <span class="name">PriceCard</span>
+            <span class="muted" style="font-size:10px;">#3 · failed</span>
+            <button class="preview-ico" title="Preview">⤢</button>
+          </div>
+          <div class="fail-card">
+            <div class="mono">token not in host</div>
+            <div class="msg">Used <code>bg-chart-1</code>, which the host maps but never defines.</div>
+            <button class="retry" type="button">↻ Retry with the token list</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="board hidden" data-board="pricecard">
+      <div class="empty">Nothing here yet — drag a component from Layers.</div>
+    </div>
+    <div class="board hidden" data-board="checkout">
+      <div class="empty">Nothing here yet — drag a component from Layers.</div>
+    </div>
+
+    <!-- Tool strip -->
+    <div class="tools float" role="toolbar" aria-label="Canvas tools">
+      <button class="tool on" title="Select" type="button">↖</button>
+      <button class="tool" title="Hand" type="button">✋</button>
+      <button class="tool" title="Frame" type="button">▢</button>
+      <button class="tool" title="Text" type="button">T</button>
+    </div>
+
+    <button class="left-edge" id="leftEdge" title="Open session" type="button">›</button>
+
+    <!-- Top-left tabs -->
+    <div class="tabs-pill float" id="tabsPill">
+      <div class="logo" title="Playground">P</div>
+      <div id="tabs"></div>
+      <div style="position:relative;">
+        <button class="tab-add" id="tabAdd" title="New workspace" type="button" aria-haspopup="menu">+</button>
+        <div class="add-menu float" id="addMenu" role="menu">
+          <button type="button" data-action="new">New workspace…</button>
+          <div class="group-label">Stashed</div>
+          <div id="stashList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top-right -->
+    <div class="tr-pill float">
+      <button class="share-btn" type="button">Share</button>
+      <div class="avatar" title="You"></div>
+    </div>
+
+    <!-- Session panel -->
+    <aside class="session float" id="session" aria-label="Session">
+      <div class="session-head">
+        <button class="session-tab active" data-pane="agent" type="button">Agent</button>
+        <button class="session-tab" data-pane="changes" type="button">Changes</button>
+        <button class="session-hide" id="sessionHide" title="Hide session" type="button">‹</button>
+      </div>
+      <div class="session-body">
+        <div class="session-pane active" data-pane="agent">
+          <div class="agent-title">Calmer pricing card</div>
+          <div class="agent-meta">
+            <span>rewynd-worktree</span>
+            <span>·</span>
+            <span>⑂ pg/pricing-calm</span>
+          </div>
+          <div class="progress" aria-hidden="true"><i></i></div>
+          <ul class="activity">
+            <li><span class="ok">✓</span> Wrote PriceCard.iteration-2.tsx <span class="time">now</span></li>
+            <li><span class="ok">✓</span> Wrote PriceCard.iteration-1.tsx <span class="time">12s</span></li>
+            <li><span class="fail">✕</span> iteration-3 — token not in host <span class="time">14s</span></li>
+            <li><span>·</span> Read stripe-pricing.png <span class="time">31s</span></li>
+          </ul>
+          <div class="thread">
+            <div class="bubble user">Make this calmer — less chrome, let the number carry it.</div>
+            <div class="step"><strong>Thought</strong> · 4s<div class="body">Strip borders and drop the filled CTA so $29 reads first.</div></div>
+            <div class="step"><strong>Read</strong> · 3 files<div class="body">PriceCard.tsx, tokens.css, stripe-pricing.png</div></div>
+            <div class="step"><strong>Wrote</strong> · 3 iterations<div class="body">Calm variant, accent price, failed chart-1 attempt.</div></div>
+          </div>
+        </div>
+        <div class="session-pane" data-pane="changes">
+          <div class="branch-chip">⑂ pg/pricing-calm — workspace branch</div>
+          <div class="file-row" data-diff="1"><span>PriceCard.iteration-1.tsx</span><span class="counts"><span class="plus">+42</span></span></div>
+          <div class="file-row" data-diff="2"><span>PriceCard.iteration-2.tsx</span><span class="counts"><span class="plus">+38</span></span></div>
+          <div class="file-row" data-diff="3" id="diffTrigger"><span>PriceCard.tsx</span><span class="counts"><span class="plus">+12</span> <span class="minus">−7</span></span></div>
+          <div class="diff" id="diffBlock">
+            <div class="del">- className="rounded-xl border bg-card p-6 shadow-sm"</div>
+            <div class="add">+ className={cn(</div>
+            <div class="add">+   "rounded-xl bg-card p-4",</div>
+          </div>
+          <div class="micro">PriceCard.tsx · p-6 → p-4 — properties panel</div>
+          <div class="hint">Closing this workspace stashes these on its branch. Reopening the tab restores them.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Inspector -->
+    <aside class="inspector float" id="inspector" aria-label="Inspector">
+      <div class="insp-head">
+        <span>Inspector</span>
+        <button class="insp-hide" id="inspHide" title="Hide right sidebar" type="button">›</button>
+      </div>
+      <div class="insp-body">
+        <section class="acc-sec open" data-acc="layers">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Layers</button>
+          <div class="acc-body">
+            <ul class="tree">
+              <li><div class="row"><span class="ico">▣</span> PricingPage</div></li>
+              <li class="indent-1"><div class="row"><span class="ico">▸</span> Hero</div></li>
+              <li class="indent-1"><div class="row"><span class="ico">▸</span> PlanGrid</div></li>
+              <li class="indent-2"><div class="row sel"><span class="ico">◇</span> PriceCard</div></li>
+              <li class="indent-1"><div class="row"><span class="ico">▸</span> Footer</div></li>
+            </ul>
+          </div>
+        </section>
+        <section class="acc-sec open" data-acc="props">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Properties</button>
+          <div class="acc-body">
+            <div class="group-label-sm">Spacing</div>
+            <div class="prop-row"><span class="label">padding</span><span class="chip" title="Scrub">p-4</span></div>
+            <div class="prop-row"><span class="label">gap</span><span class="chip" title="Scrub">gap-3</span></div>
+            <div class="group-label-sm">Typography</div>
+            <div class="prop-row"><span class="label">size</span><span class="chip">text-4xl</span></div>
+            <div class="prop-row">
+              <span class="label">weight</span>
+              <div class="seg">
+                <button type="button">normal</button>
+                <button type="button" class="on">medium</button>
+                <button type="button">bold</button>
+              </div>
+            </div>
+            <div class="group-label-sm">Color</div>
+            <div class="prop-row">
+              <button class="swatch-btn" type="button"><span class="swatch" style="background:#fff"></span>bg-card</button>
+              <button class="swatch-btn" type="button"><span class="swatch" style="background:#1c1917"></span>text-foreground</button>
+              <button class="swatch-btn" type="button"><span class="swatch" style="background:var(--accent)"></span>bg-primary</button>
+            </div>
+            <div class="group-label-sm">Radius</div>
+            <div class="prop-row"><span class="chip">rounded-xl</span></div>
+            <p class="prop-caption">Writes Tailwind classes via cn() — staged into the session diff.</p>
+          </div>
+        </section>
+        <section class="acc-sec" data-acc="tokens">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Tokens</button>
+          <div class="acc-body">
+            <div class="token-row"><span class="swatch" style="background:var(--accent)"></span>--primary</div>
+            <div class="token-row"><span class="swatch" style="background:#a8a29e"></span>--muted</div>
+            <div class="token-row"><span class="swatch" style="background:#d6d3d1"></span>--radius</div>
+            <div class="token-row"><span class="swatch" style="background:#fff;border-color:#ccc"></span>--card</div>
+            <div class="token-row"><span class="swatch" style="background:#fde68a"></span>--chart-1 <span class="badge-warn">UNDEF</span></div>
+          </div>
+        </section>
+        <section class="acc-sec" data-acc="prims">
+          <button class="acc-h" type="button"><span class="chev">▾</span> Primitives</button>
+          <div class="acc-body">
+            <div class="prim-row" data-prim="button" style="cursor:pointer;"><span>▾</span> Button</div>
+            <div class="cva-chips" id="btnCva">
+              <div class="cva-line">variant: <em><span>default</span><span>ghost</span><span>outline</span></em></div>
+              <div class="cva-line">size: <em><span>sm</span><span>md</span><span>lg</span></em></div>
+            </div>
+            <div class="prim-row">Badge</div>
+            <div class="prim-row">Input</div>
+          </div>
+        </section>
+      </div>
+    </aside>
+    <button class="insp-reopen float" id="inspReopen" type="button">‹ Inspector</button>
+
+    <!-- Composer -->
+    <div class="composer-wrap" id="composerWrap">
+      <div class="composer">
+        <div class="attach">
+          <span class="achip">⌗ PriceCard</span>
+          <span class="achip">▦ stripe-pricing.png</span>
+          <span class="achip anno"><span class="n">①</span> too cramped</span>
+        </div>
+        <div class="comp-top">
+          <textarea rows="2" placeholder="Describe a change, or drop a reference…" aria-label="Prompt"></textarea>
+          <button class="expand-btn" id="compExpand" title="Open session panel" type="button">⤢</button>
+        </div>
+        <div class="comp-foot">
+          <button class="pill" type="button">✳ Claude Opus 5 · high</button>
+          <button class="pill" type="button">Ask before edits</button>
+          <span class="spacer"></span>
+          <div class="mode-seg" role="group" aria-label="Mode">
+            <button type="button" data-mode="edit">Edit</button>
+            <button type="button" class="on" data-mode="explore">Explore <span class="mode-count">×4</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var tabs = [
+    { id: "pricing", label: "Pricing page", dirty: true, empty: false },
+    { id: "pricecard", label: "PriceCard", dirty: false, empty: true },
+    { id: "checkout", label: "Checkout", dirty: false, empty: true }
+  ];
+  var stashed = [
+    { id: "navbar", label: "navbar-experiment", branch: "⑂ navbar-experiment" }
+  ];
+  var activeId = "pricing";
+  var addOpen = false;
+
+  var tabsEl = document.getElementById("tabs");
+  var stashList = document.getElementById("stashList");
+  var addMenu = document.getElementById("addMenu");
+
+  function renderTabs() {
+    tabsEl.innerHTML = "";
+    tabs.forEach(function (t) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tab" + (t.id === activeId ? " active" : "");
+      btn.setAttribute("data-tab", t.id);
+      var html = "";
+      if (t.dirty) html += '<span class="dirty" title="Unsaved"></span>';
+      html += "<span>" + t.label + "</span>";
+      if (t.id === activeId) {
+        html += '<span class="tab-close" data-close="' + t.id + '" title="Close & stash" role="button">×</span>';
+      }
+      btn.innerHTML = html;
+      btn.addEventListener("click", function (e) {
+        if (e.target.getAttribute("data-close")) {
+          e.stopPropagation();
+          closeTab(t.id);
+          return;
+        }
+        switchTab(t.id);
+      });
+      tabsEl.appendChild(btn);
+    });
+    renderStash();
+    document.querySelectorAll(".board").forEach(function (b) {
+      b.classList.toggle("hidden", b.getAttribute("data-board") !== activeId);
+    });
+  }
+
+  function renderStash() {
+    stashList.innerHTML = "";
+    if (!stashed.length) {
+      var empty = document.createElement("div");
+      empty.className = "group-label";
+      empty.style.textTransform = "none";
+      empty.textContent = "No stashed workspaces";
+      stashList.appendChild(empty);
+      return;
+    }
+    stashed.forEach(function (s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = s.branch || ("⑂ " + s.label);
+      b.addEventListener("click", function () {
+        popStash(s.id);
+        addMenu.classList.remove("open");
+        addOpen = false;
+      });
+      stashList.appendChild(b);
+    });
+  }
+
+  function switchTab(id) {
+    activeId = id;
+    renderTabs();
+  }
+
+  function closeTab(id) {
+    var idx = tabs.findIndex(function (t) { return t.id === id; });
+    if (idx < 0) return;
+    var t = tabs[idx];
+    tabs.splice(idx, 1);
+    stashed.unshift({ id: t.id, label: t.label, branch: "⑂ " + t.label.toLowerCase().replace(/\s+/g, "-"), dirty: t.dirty, empty: t.empty });
+    if (!tabs.length) {
+      tabs.push({ id: "empty-" + Date.now(), label: "Untitled", dirty: false, empty: true });
+    }
+    if (activeId === id) activeId = tabs[Math.max(0, idx - 1)].id;
+    renderTabs();
+  }
+
+  function popStash(id) {
+    var idx = stashed.findIndex(function (s) { return s.id === id; });
+    if (idx < 0) return;
+    var s = stashed[idx];
+    stashed.splice(idx, 1);
+    if (tabs.some(function (t) { return t.id === s.id; })) {
+      switchTab(s.id);
+      return;
+    }
+    tabs.push({
+      id: s.id,
+      label: s.label.replace(/^navbar-experiment$/, "navbar-experiment"),
+      dirty: !!s.dirty,
+      empty: s.empty !== false && s.id !== "pricing"
+    });
+    // Prefer readable label for navbar
+    var last = tabs[tabs.length - 1];
+    if (last.id === "navbar") last.label = "navbar-experiment";
+    if (last.id === "pricing") last.empty = false;
+    activeId = last.id;
+    // Ensure board exists for popped stash
+    ensureBoard(last);
+    renderTabs();
+  }
+
+  function ensureBoard(t) {
+    var stage = document.getElementById("stage");
+    if (stage.querySelector('[data-board="' + t.id + '"]')) return;
+    var board = document.createElement("div");
+    board.className = "board hidden";
+    board.setAttribute("data-board", t.id);
+    board.innerHTML = '<div class="empty">Nothing here yet — drag a component from Layers.</div>';
+    stage.insertBefore(board, stage.querySelector(".tools"));
+  }
+
+  document.getElementById("tabAdd").addEventListener("click", function (e) {
+    e.stopPropagation();
+    addOpen = !addOpen;
+    addMenu.classList.toggle("open", addOpen);
+  });
+  addMenu.querySelector('[data-action="new"]').addEventListener("click", function () {
+    var id = "ws-" + Date.now();
+    tabs.push({ id: id, label: "Untitled", dirty: false, empty: true });
+    ensureBoard(tabs[tabs.length - 1]);
+    activeId = id;
+    addMenu.classList.remove("open");
+    addOpen = false;
+    renderTabs();
+  });
+  document.addEventListener("click", function () {
+    if (addOpen) { addMenu.classList.remove("open"); addOpen = false; }
+  });
+  addMenu.addEventListener("click", function (e) { e.stopPropagation(); });
+
+  // Session panel
+  function setSession(open) {
+    document.body.classList.toggle("session-open", open);
+  }
+  document.getElementById("compExpand").addEventListener("click", function () { setSession(true); });
+  document.getElementById("leftEdge").addEventListener("click", function () { setSession(true); });
+  document.getElementById("sessionHide").addEventListener("click", function () { setSession(false); });
+
+  document.querySelectorAll(".session-tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      var pane = tab.getAttribute("data-pane");
+      document.querySelectorAll(".session-tab").forEach(function (t) {
+        t.classList.toggle("active", t === tab);
+      });
+      document.querySelectorAll(".session-pane").forEach(function (p) {
+        p.classList.toggle("active", p.getAttribute("data-pane") === pane);
+      });
+    });
+  });
+
+  // Diff expand
+  document.getElementById("diffTrigger").addEventListener("click", function () {
+    document.getElementById("diffBlock").classList.toggle("open");
+  });
+
+  // Inspector
+  document.getElementById("inspHide").addEventListener("click", function () {
+    document.body.classList.add("inspector-closed");
+  });
+  document.getElementById("inspReopen").addEventListener("click", function () {
+    document.body.classList.remove("inspector-closed");
+  });
+  document.querySelectorAll(".acc-h").forEach(function (h) {
+    h.addEventListener("click", function () {
+      h.parentElement.classList.toggle("open");
+    });
+  });
+  document.querySelectorAll(".seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      b.parentElement.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+    });
+  });
+  document.querySelectorAll(".mode-seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".mode-seg button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+    });
+  });
+  document.querySelectorAll(".tool").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll(".tool").forEach(function (x) { x.classList.remove("on"); });
+      t.classList.add("on");
+    });
+  });
+
+  renderTabs();
+})();
+</script>
+<script type="module" src="src/components/variant-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playground — goo lab</title>
+  <link rel="stylesheet" href="dist/app.css">
+  <style>[x-cloak]{display:none!important}</style>
+  <script type="importmap">
+  {
+    "imports": {
+      "alpinejs": "./node_modules/alpinejs/dist/module.esm.js"
+    }
+  }
+  </script>
+</head>
+<body class="goo-lab-page">
+
+<div class="goo-lab" x-data="gooLab()">
+  <div class="goo-lab-controls">
+    <div class="goo-lab-controls-head">shape <span x-text="activeShape.toUpperCase()"></span></div>
+
+    <div class="goo-lab-seg">
+      <template x-for="kind in kinds" :key="kind">
+        <button type="button"
+                :class="{ active: active().kind === kind }"
+                @click="onKindChange(active(), kind)"
+                x-text="kind"></button>
+      </template>
+    </div>
+
+    <label class="goo-lab-row">
+      <span>width</span>
+      <input type="range" min="20" max="240" step="1" x-model.number="active().width" @input="clampShape(active())">
+      <output x-text="active().width"></output>
+    </label>
+
+    <label class="goo-lab-row">
+      <span>height</span>
+      <input type="range" min="20" max="240" step="1" x-model.number="active().height" @input="clampShape(active())">
+      <output x-text="active().height"></output>
+    </label>
+
+    <label class="goo-lab-row" :class="{ 'goo-lab-row-off': radiusDisabled(active().kind) }">
+      <span>radius</span>
+      <input type="range" min="0" max="120" step="1"
+             x-model.number="active().radius"
+             :disabled="radiusDisabled(active().kind)">
+      <output x-text="radiusDisabled(active().kind) ? '—' : active().radius"></output>
+    </label>
+
+    <div class="goo-lab-pick">
+      <button type="button" :class="{ active: activeShape === 'a' }" @click="selectShape('a')">A</button>
+      <button type="button" :class="{ active: activeShape === 'b' }" @click="selectShape('b')">B</button>
+    </div>
+
+    <div class="goo-lab-metrics">
+      <div class="goo-lab-metric">
+        <span>edge gap</span>
+        <strong x-text="`${Math.round(edgeGap())}px`"></strong>
+      </div>
+      <div class="goo-lab-metric">
+        <span>center distance</span>
+        <strong x-text="`${Math.round(centerDistance())}px`"></strong>
+      </div>
+    </div>
+
+    <label class="goo-lab-row">
+      <span>sweep B</span>
+      <input type="range" min="0" max="100" step="1" x-model.number="sweep" @input="onSweepInput()">
+      <output x-text="sweep"></output>
+    </label>
+  </div>
+
+  <div class="goo-lab-stage" x-ref="stage">
+    <div class="goo-lab-shapes">
+      <div class="goo-lab-shape"
+           :style="shapeStyle(shapeA)"
+           @pointerdown="onShapePointerDown('a', $event)"
+           @pointermove="onShapePointerMove($event)"
+           @pointerup="onShapePointerUp($event)"
+           @pointercancel="onShapePointerUp($event)"></div>
+      <div class="goo-lab-shape"
+           :style="shapeStyle(shapeB)"
+           @pointerdown="onShapePointerDown('b', $event)"
+           @pointermove="onShapePointerMove($event)"
+           @pointerup="onShapePointerUp($event)"
+           @pointercancel="onShapePointerUp($event)"></div>
+    </div>
+
+    <div class="goo-lab-toolbar" x-data="canvas()">
+      <div data-partial="src/partials/canvas-toolbar.html"></div>
+    </div>
+  </div>
+
+  <div data-partial="src/partials/goo-panel.html"></div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -21,7 +21,6 @@ import { useChatSubmit } from "@pg/app/useChatSubmit";
 import { useCanvasFrameOps } from "@pg/features/canvas/hooks/useCanvasFrameOps";
 import { useCanvasNodeDelete } from "@pg/features/canvas/hooks/useCanvasNodeDelete";
 import { useCanvasAutoArrange } from "@pg/features/canvas/hooks/useCanvasAutoArrange";
-import { useCanvasClear } from "@pg/features/canvas/hooks/useCanvasClear";
 import { useCanvasDrawTool } from "@pg/features/canvas/hooks/useCanvasDrawTool";
 import { useElementSelection } from "@pg/features/canvas/hooks/useElementSelection";
 import { useNodeSelection } from "@pg/features/chat/useNodeSelection";
@@ -42,8 +41,6 @@ export interface UsePlaygroundCanvasControllerParams {
   nodeIdCounterRef: MutableRefObject<number>;
   getNodeId: () => string;
   contextMenu: { x: number; y: number; nodeId?: string } | null;
-  showClearDialog: boolean;
-  setShowClearDialog: Dispatch<SetStateAction<boolean>>;
   reactFlowWrapper: RefObject<HTMLDivElement | null>;
   activeTool: "select" | "text" | "shape" | "hand";
   setActiveTool: Dispatch<
@@ -72,8 +69,6 @@ export function usePlaygroundCanvasController({
   nodeIdCounterRef,
   getNodeId,
   contextMenu,
-  showClearDialog,
-  setShowClearDialog,
   reactFlowWrapper,
   activeTool,
   setActiveTool,
@@ -169,16 +164,6 @@ export function usePlaygroundCanvasController({
     handleIterationDelete,
   });
 
-  const { confirmClearAllNodes } = useCanvasClear({
-    showClearDialog,
-    setShowClearDialog,
-    setNodes,
-    setRelations,
-    setKnownIterations,
-    setCollapsedNodeIds,
-    storageKey,
-  });
-
   useGenerationLifecycle({
     coord,
     isGenerating,
@@ -236,8 +221,6 @@ export function usePlaygroundCanvasController({
     handleChatSubmit,
     elementSelection,
     nodeSelection,
-    confirmClearAllNodes,
     autoArrangeNodes,
-    scanForIterations,
   };
 }

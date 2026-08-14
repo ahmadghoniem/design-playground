@@ -14,10 +14,8 @@ import {
 import { freeformReferencePrompt } from "@pg/features/generation/prompts/freeform-reference.prompt";
 import { editPrompt } from "@pg/features/generation/prompts/edit.prompt";
 import { iterationsFile } from "@pg/shared/lib/playground-paths";
-import {
-  CHAT_DEFAULT_COUNT,
-  type ChatSubmitPayload,
-} from "@pg/shared/lib/constants";
+import { CHAT_DEFAULT_COUNT } from "@pg/shared/lib/constants";
+import type { ChatSubmitPayload } from "@pg/shared/lib/chat-submit-payload";
 
 /** Minimal node shape needed to resolve text-node reference content. */
 export type ChatPromptNode = {

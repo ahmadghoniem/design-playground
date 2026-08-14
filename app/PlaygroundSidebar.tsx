@@ -1,25 +1,12 @@
-import {
-  useState,
-  useMemo,
-} from "react";
-import {
-  ChevronRight,
-  ChevronDown,
-  ChevronLeft,
-} from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { ProjectBoxIcon } from "@pg/shared/ui/playground-nav-icons";
 import type { RegistryLeafItem } from "@pg/registry-types";
 import { buildRegistryChildrenMap } from "@pg/features/registry-sidebar/registry-children";
 import RegistryDragRow from "@pg/features/registry-sidebar/RegistryDragRow";
 import { useRegistryItems } from "@pg/features/registry-sidebar/useRegistryItems";
 
-interface PlaygroundSidebarProps {
-  onCollapse: () => void;
-}
-
-export default function PlaygroundSidebar({
-  onCollapse,
-}: PlaygroundSidebarProps) {
+export default function PlaygroundSidebar() {
   const [search, setSearch] = useState("");
   const [componentsExpanded, setComponentsExpanded] = useState(true);
   const registryItems = useRegistryItems();
@@ -47,26 +34,12 @@ export default function PlaygroundSidebar({
 
   return (
     <aside className="w-[280px] h-full bg-white rounded-2xl border border-pg-border flex flex-col overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between px-3 pt-3 pb-2 flex-shrink-0">
+      <div className="flex items-center px-3 pt-3 pb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <ProjectBoxIcon className="text-stone-400 shrink-0" size={13} />
           <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-stone-400 select-none">
             Project
           </span>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              onCollapse();
-            }}
-            onClick={onCollapse}
-            className="flex items-center justify-center w-[24px] h-[24px] rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-            aria-label="Collapse sidebar"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
         </div>
       </div>
 

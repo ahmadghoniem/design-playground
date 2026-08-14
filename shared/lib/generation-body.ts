@@ -10,7 +10,6 @@ export function getClaudeCodeFields(): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
 
   if (claudeCodeOptions.effort) fields.effort = claudeCodeOptions.effort;
-  if (claudeCodeOptions.maxBudgetUsd != null) fields.maxBudgetUsd = claudeCodeOptions.maxBudgetUsd;
   fields.claudeDetailedStdout = claudeCodeOptions.detailedStdout;
 
   return fields;

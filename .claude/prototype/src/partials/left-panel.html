@@ -1,0 +1,42 @@
+<!-- Left flank (variant-flanks.html) — one persistent card holding the workspace switcher
+     and the agent thread at the same time: what you're working on up top, the work's
+     context below. No pills, no switcher menus — the list is always visible, so the
+     dirty dots and the active row are glanceable without opening anything. -->
+<aside class="left-panel" x-data="{ wsOpen: true }">
+  <div class="lp-sec-head">
+    <button type="button" class="lp-sec-toggle" @click="wsOpen = !wsOpen" :aria-expanded="wsOpen">
+      <svg class="chev" :class="{ open: wsOpen }" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      <span>Workspaces</span>
+    </button>
+    <button type="button" class="lp-add" @click="$store.boards.add()" x-tip.right="'New workspace'" aria-label="New workspace">+</button>
+  </div>
+
+  <div class="lp-ws" x-show="wsOpen" x-cloak>
+    <template x-for="board in $store.boards.list" :key="board.id">
+      <div class="lp-ws-row" :class="{ sel: $store.boards.active === board.id }"
+           @click="$store.boards.select(board.id)" role="button" tabindex="0">
+        <span class="nm" x-text="board.label"></span>
+        <span class="ct-dirty" x-show="board.dirty" x-tip="'Uncommitted work on this branch'" aria-hidden="true"></span>
+        <span class="br"><span class="gl">⑂</span><span x-text="board.branch"></span></span>
+        <span class="lp-x" x-show="$store.boards.list.length > 1" @click.stop="$store.boards.close(board.id)"
+              x-tip.left="'Park — stashes this branch'" aria-label="Park workspace">×</span>
+      </div>
+    </template>
+    <template x-if="$store.boards.stashed.length">
+      <div>
+        <div class="lp-parked-lbl" x-text="'Parked — ' + $store.boards.stashed.length"></div>
+        <template x-for="s in $store.boards.stashed" :key="s.id">
+          <div class="lp-ws-row parked" @click="$store.boards.popStash(s.id)" role="button" tabindex="0"
+               x-tip.right="'Restore this workspace'">
+            <span class="gl">⑂</span><span class="nm" x-text="s.branch"></span>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <div class="lp-sec-head lp-agent-head">
+    <span class="lp-sec-lbl">Agent</span>
+  </div>
+  <div data-partial="src/partials/agent-thread.html"></div>
+</aside>
