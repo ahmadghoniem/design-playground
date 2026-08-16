@@ -3,32 +3,48 @@ import { layers } from '../data/layers.js';
 import { primitives } from '../data/primitives.js';
 import { tokenGroups, swatchVar } from '../data/tokens.js';
 
-const TAB_HINTS = {
-  layers: { search: 'Search layers', foot: 'Drag any item onto the canvas' },
-  prims: { search: 'Search primitives', foot: 'Drag any item onto the canvas' },
-  tokens: { search: 'Search tokens', foot: 'Semantic colour tokens from the host stylesheet' },
-};
-
 export function registerLibrary() {
   document.addEventListener('alpine:init', () => {
     Alpine.data('library', () => ({
-      tab: 'layers',
       search: '',
+      primQuery: '',
+      layersOpen: true,
+      primsOpen: true,
+      layerSearchOpen: false,
+      primSearchOpen: false,
       layers,
       primitives,
       tokenGroups,
       expanded: { badge: false },
 
-      get searchPlaceholder() {
-        return TAB_HINTS[this.tab]?.search ?? 'Search';
+      // Search takes over the fold's own header rather than opening a row beneath it:
+      // the title becomes the field, the magnifier becomes the way out. Closing clears
+      // the query so a collapsed search never leaves an invisible filter behind.
+      toggleLayerSearch() {
+        this.layerSearchOpen = !this.layerSearchOpen;
+        if (this.layerSearchOpen) {
+          this.layersOpen = true;
+          // rAF, not just $nextTick: x-show's display flip has to land before focus()
+          // will take on the input.
+          this.$nextTick(() => requestAnimationFrame(() => this.$refs.layerSearch?.focus()));
+        } else {
+          this.search = '';
+        }
       },
 
-      get footHint() {
-        return TAB_HINTS[this.tab]?.foot ?? 'Drag any item onto the canvas';
+      togglePrimSearch() {
+        this.primSearchOpen = !this.primSearchOpen;
+        if (this.primSearchOpen) {
+          this.primsOpen = true;
+          this.$nextTick(() => requestAnimationFrame(() => this.$refs.primSearch?.focus()));
+        } else {
+          this.primQuery = '';
+        }
       },
 
-      setTab(id) {
-        this.tab = id;
+      matchesPrim(label) {
+        const q = this.primQuery.trim().toLowerCase();
+        return !q || label.toLowerCase().includes(q);
       },
 
       layerIndex(row) {
@@ -81,7 +97,6 @@ export function registerLibrary() {
       },
 
       isLayerVisible(row) {
-        if (this.tab !== 'layers') return false;
         if (!this.isLayerExpandedVisible(row)) return false;
         const q = this.search.trim().toLowerCase();
         if (!q) return true;

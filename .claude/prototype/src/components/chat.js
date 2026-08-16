@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs';
-import { MODELS, EFFORTS, SKILLS, PERMISSIONS, WORKSPACES, CURRENT_WORKTREE } from '../data/shared.js';
+import { AGENTS, MODEL_INDEX, DEFAULT_MODEL, EFFORT_LADDER, SKILLS, PERMISSIONS, CURRENT_BRANCH, CURRENT_WORKTREE } from '../data/shared.js';
 
 export function registerChat() {
   document.addEventListener('alpine:init', () => {
@@ -7,10 +7,10 @@ export function registerChat() {
     // Agents tab) that both read this store, so expanding relocates the same
     // Composer and keeps the same thread.
     Alpine.store('chat', {
-      model: MODELS[0],
+      model: DEFAULT_MODEL,
       effort: 'high',
       mode: 'explore',
-      branch: 'pg/quiet-numeric',
+      branch: CURRENT_BRANCH,
       worktree: CURRENT_WORKTREE,
       permission: PERMISSIONS[0].id,
       annotations: 2,
@@ -23,22 +23,61 @@ export function registerChat() {
         { id: 'img', type: 'img', label: 'stripe-pricing' },
       ],
 
+      get currentPermission() {
+        return PERMISSIONS.find((p) => p.id === this.permission) ?? PERMISSIONS[0];
+      },
+
       get permissionLabel() {
-        return (PERMISSIONS.find((p) => p.id === this.permission) ?? PERMISSIONS[0]).label;
+        return this.currentPermission.label;
       },
 
+      get permissionTone() {
+        return this.currentPermission.tone;
+      },
+
+      // The chip shows one word, so the sentence has to reach the user somewhere:
+      // it is the tooltip and the accessible name, not just a menu row you have to open.
+      get permissionHint() {
+        return `${this.currentPermission.label} — ${this.currentPermission.hint}`;
+      },
+
+      agents: AGENTS,
+
+      effortLabelFor(id) {
+        return (EFFORT_LADDER.find((e) => e.id === id) ?? EFFORT_LADDER[2]).label;
+      },
+
+      get currentModel() {
+        return MODEL_INDEX[this.model] ?? MODEL_INDEX[DEFAULT_MODEL];
+      },
+      get modelLabel() {
+        return this.currentModel.label;
+      },
+      get agentName() {
+        return this.currentModel.agent;
+      },
       get effortLabel() {
-        return (EFFORTS.find((e) => e.id === this.effort) ?? EFFORTS[2]).label;
+        return this.effortLabelFor(this.effort);
+      },
+      // The effort picker is rebuilt from the chosen model: the levels a model supports
+      // differ per model, so a fixed list would offer options the model cannot honour.
+      get availableEfforts() {
+        const supported = this.currentModel.efforts;
+        return EFFORT_LADDER.filter((e) => supported.includes(e.id));
+      },
+      // The reset row is only useful once you have hand-overridden the model's own default.
+      get effortIsDefault() {
+        return this.effort === this.currentModel.effort;
       },
 
+      // The composer lives in the Agents tab whenever that tab is showing, and floats
+      // on the canvas otherwise. One control, two placements, one state.
       get isComposerEmbedded() {
-        return this.expanded && Alpine.store('ui').rightTab === 'agents';
+        return Alpine.store('ui').rightTab === 'agents';
       },
 
-      // True when the composer is floating on the canvas rather than living inside an agent panel.
-      // agent-right mounts it in the rail permanently; canvas-dock moves it there when expanded.
       get isComposerDocked() {
-        return Alpine.store('ui').layout !== 'agent-right' && !this.isComposerEmbedded;
+        return !this.isComposerEmbedded;
       },
 
       get annotationsTipLabel() {
@@ -58,36 +97,23 @@ export function registerChat() {
         return desc ? `${this.annotationsTipLabel}. ${desc}` : this.annotationsTipLabel;
       },
 
-      cycleModel() {
-        this.model = MODELS[(MODELS.indexOf(this.model) + 1) % MODELS.length];
-      },
-      setModel(m) {
-        this.model = m;
+      // Picking a model applies that model's own default effort, and the effort picker
+      // moves with it — the common case never needs a second trip into the submenu.
+      setModel(id) {
+        this.model = id;
+        this.effort = this.currentModel.effort;
       },
       setEffort(id) {
         this.effort = id;
       },
-      resetModelDefaults() {
-        this.model = MODELS[0];
-        this.effort = 'high';
+      resetEffort() {
+        this.effort = this.currentModel.effort;
       },
       setMode(mode) {
         this.mode = mode;
       },
       setPermission(id) {
         this.permission = id;
-      },
-      get workspace() {
-        return WORKSPACES.find((w) => w.branch === this.branch) ?? WORKSPACES[0];
-      },
-
-      get scene() {
-        return this.workspace.scene;
-      },
-
-      setBranch(name) {
-        this.branch = name;
-        this.tags = this.workspace.tags.map((t) => ({ ...t }));
       },
       bumpAnnotations() {
         // simulate select-into-prompt: each click increments, wraps at max
@@ -99,11 +125,10 @@ export function registerChat() {
       toggleExpanded() {
         if (this.isComposerEmbedded) {
           this.expanded = false;
+          Alpine.store('ui').rightTab = 'design';
         } else {
           this.expanded = true;
-          const ui = Alpine.store('ui');
-          ui.rightTab = 'agents';
-          ui.rightOpen = true;
+          Alpine.store('ui').rightTab = 'agents';
         }
       },
     });
@@ -111,43 +136,30 @@ export function registerChat() {
     // Right-column tab state, lifted to a store so the Composer's expand can
     // switch the DesignAgents panel to the Agents tab.
     Alpine.store('ui', {
-      layout: document.body.dataset.layout ?? 'canvas-dock',
       rightTab: 'design',
-      agentOpen: true,
-      // Right flank (single-sidebar): one card showing Design or Agent, long-lived, open.
-      rightOpen: true,
-      sections: { layers: true, props: true, tokens: false, prims: false },
-
-      // The composer floats on the canvas in every layout except agent-right (where the rail owns it).
-      get composerDocks() {
-        return this.layout !== 'agent-right';
-      },
+      // Wonder collapse: the flank leaves the grid and its head survives as a
+      // floating pill, so the panel is never lost, only put away.
+      leftCollapsed: false,
+      rightCollapsed: false,
 
       setRightTab(tab) {
         this.rightTab = tab;
         if (tab !== 'agents') Alpine.store('chat').expanded = false;
       },
 
-      // The right flank's switcher: pick a view; also reopens the flank if it was closed.
-      showView(view) {
-        this.setRightTab(view);
-        this.rightOpen = true;
+      toggleLeftFlank() {
+        this.leftCollapsed = !this.leftCollapsed;
       },
 
-      toggleSection(id) {
-        this.sections[id] = !this.sections[id];
+      toggleRightFlank() {
+        this.rightCollapsed = !this.rightCollapsed;
       },
 
-      // Reaching for a design section from anywhere: open the flank, open that section.
-      revealSection(id) {
-        this.rightOpen = true;
-        this.rightTab = 'design';
-        this.sections[id] = true;
-      },
-
-      toggleAgent() {
-        if (this.layout !== 'agent-right') return;
-        this.agentOpen = !this.agentOpen;
+      // The collapsed pill keeps its tabs live, so picking one reopens the
+      // panel on that view instead of only switching a hidden tab.
+      openRight(tab) {
+        this.setRightTab(tab);
+        this.rightCollapsed = false;
       },
     });
 
@@ -157,10 +169,8 @@ export function registerChat() {
       submenu: null,
       submenuFlip: false,
       modelMenuWidth: null,
-      models: MODELS,
-      efforts: EFFORTS,
+      modelQuery: '',
       permissions: PERMISSIONS,
-      workspaces: WORKSPACES,
       skillPickerOpen: false,
       skillQuery: '',
       skillHighlight: 0,
@@ -214,17 +224,24 @@ export function registerChat() {
         this.$store.chat.setPermission(id);
         this.closeMenu();
       },
-      pickBranch(name) {
-        this.$store.chat.setBranch(name);
-        this.closeMenu();
-      },
       openModelSettings() {
         this.closeMenu();
         Alpine.store('modals').openModelSettings();
       },
-      resetModelDefaults() {
-        this.$store.chat.resetModelDefaults();
+      resetEffort() {
+        if (this.$store.chat.effortIsDefault) return;
+        this.$store.chat.resetEffort();
         this.closeMenu();
+      },
+
+      // Search filters within each agent group; a group with no match drops out entirely,
+      // heading included, so the list never shows an empty section.
+      matchesModel(model) {
+        const q = this.modelQuery.trim().toLowerCase();
+        return !q || model.label.toLowerCase().includes(q);
+      },
+      agentHasMatch(agent) {
+        return agent.models.some((m) => this.matchesModel(m));
       },
 
       syncSkillPicker() {

@@ -5,52 +5,8 @@
      @pointerup="onBoardPointerUp($event)"
      @pointercancel="onBoardPointerUp($event)"
      @contextmenu.prevent>
-  <!-- Workspace tabs are parked. The strip only still mounts on the frozen
-       single-sidebar variant; index / agent-right are one canvas. -->
-  <template x-if="$store.ui.layout === 'single-sidebar'">
-  <div class="canvas-tabstrip" role="tablist" aria-label="Workspaces"
-       @keydown="$store.boards.onTabKeydown($event)" tabindex="0">
-    <template x-for="board in $store.boards.list" :key="board.id">
-      <button type="button" role="tab" class="ct-tab"
-              :data-board="board.id"
-              :id="'ctab-' + board.id"
-              :aria-selected="$store.boards.active === board.id"
-              :aria-controls="'cboard-' + board.id"
-              @click="$store.boards.select(board.id)">
-        <span class="ct-kind" aria-hidden="true">
-          <svg x-show="board.kind === 'page'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
-          <svg x-show="board.kind !== 'page'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7.3 12 12l8.7-4.7M12 22V12"/></svg>
-        </span>
-        <span class="ct-lbl" x-text="board.label"></span>
-        <span class="ct-dirty" x-show="board.dirty && $store.boards.active !== board.id"
-              x-tip="'Uncommitted work on this branch'" aria-hidden="true"></span>
-        <span class="ct-close" x-show="$store.boards.active === board.id && $store.boards.list.length > 1"
-              @click.stop="$store.boards.close(board.id)" x-tip.bottom="'Close — stashes this branch'"
-              aria-label="Close workspace">×</span>
-      </button>
-    </template>
-    <div class="ct-add-wrap" @click.outside="$store.boards.addMenuOpen = false">
-      <button type="button" class="ct-add" @click="$store.boards.addMenuOpen = !$store.boards.addMenuOpen"
-              :aria-expanded="$store.boards.addMenuOpen" aria-label="New workspace">+</button>
-      <div class="ct-menu" x-show="$store.boards.addMenuOpen" x-cloak x-transition.opacity.duration.120ms>
-        <button type="button" class="ct-menu-item" @click="$store.boards.add()">New workspace…</button>
-        <template x-if="$store.boards.stashed.length">
-          <div>
-            <div class="ct-menu-lbl">Stashed</div>
-            <template x-for="s in $store.boards.stashed" :key="s.id">
-              <button type="button" class="ct-menu-item mono" @click="$store.boards.popStash(s.id)">
-                <span class="gl">⑂</span><span x-text="s.branch"></span>
-              </button>
-            </template>
-          </div>
-        </template>
-      </div>
-    </div>
-  </div>
-  </template>
-
   <div class="canvas-face">
-    <div class="board" :style="boardStyle()" x-show="$store.chat.scene !== 'empty'">
+    <div class="board" :style="boardStyle()">
     <div class="col">
       <div class="node" :class="{ sel: selectedNode === 'price' }" id="loc-orig" @click="selectNode('price', 'orig', $event)">
         <div class="node-bar">
@@ -84,9 +40,9 @@
       <div style="font-family:var(--mono);font-size:9.5px;color:var(--pgc-muted-fg);text-align:center;padding-top:2px">alt&#8209;click a part of the card</div>
     </div>
 
-    <span class="arrow" x-show="$store.chat.scene === 'explore'">→</span>
+    <span class="arrow">→</span>
 
-    <div class="row" x-show="$store.chat.scene === 'explore'">
+    <div class="row">
       <div class="node" :class="{ sel: selectedNode === 'it1' }" @click="selectNode('it1', 'iter', $event)">
         <div class="node-bar">
           <div class="node-bar-left">
@@ -181,7 +137,7 @@
       </div>
     </div>
 
-    <div class="col" style="padding-top:6px" x-show="$store.chat.scene === 'explore'">
+    <div class="col" style="padding-top:6px">
       <div class="node text-node" :class="{ sel: selectedNode === 'text' }" @click="selectNode('text', 'text', $event)">
         <div class="node-main">
           <div class="text-frame">
@@ -216,64 +172,34 @@
     </div>
     </div>
 
-    <div class="board-empty" x-show="$store.chat.scene === 'empty'" x-cloak>
-      <p>Nothing here yet — drag a component from the Library</p>
-    </div>
   </div>
 
   <div data-partial="src/partials/canvas-toolbar.html"></div>
   <div data-partial="src/partials/zoom-controls.html"></div>
 
-  <div class="chat-dock" id="loc-chat" x-show="$store.ui.composerDocks && !$store.chat.isComposerEmbedded">
+  <div class="chat-dock" id="loc-chat" x-show="$store.chat.isComposerDocked">
     <div data-partial="src/partials/composer.html"></div>
-  </div>
-
-  <div class="scrim" x-data="branchModal()" x-show="$store.mock.branchModalOpen" x-cloak @keydown.escape.window="close()" @click.self="close()">
-    <div class="modal" role="dialog" aria-modal="true" @click.stop>
-      <h5 x-text="title"></h5>
-      <div class="mb">
-        <div class="dirty-warn" x-show="isDirty">
-          <b>⚠ You have uncommitted changes</b>
-          <ul><li>src/lib/auth.ts</li><li>src/routes/login.tsx</li><li>vite.config.ts</li></ul>
-          <p style="font-size:10.5px">These aren’t ours, so we won’t sweep them into the branch. Stash them and we’ll put them straight back.</p>
-        </div>
-        <div class="fieldrow">
-          <label>Branch name — proposed from your prompt</label>
-          <div class="fin">⑂&nbsp;<span contenteditable="true" spellcheck="false" x-init="$el.textContent = branchName" @input="branchName = $event.target.textContent"></span><span style="color:var(--pgc-muted-fg)">✎</span></div>
-        </div>
-        <div class="plan">
-          <div><i>1</i> branch from master, in the rewynd worktree</div>
-          <div><i>2</i> apply iteration 1 to <span style="color:var(--pgc-fg)">src/components/PriceCard.tsx</span></div>
-          <div><i>3</i> stage that file only — nothing else</div>
-          <div><i>4</i> commit “calmer pricing card, less chrome”</div>
-          <div><i>5</i> remove iterations 1–3 from the canvas</div>
-        </div>
-      </div>
-      <div class="mf">
-        <button type="button" @click="close()">Cancel</button>
-        <button type="button" class="warn" x-show="isDirty" @click="stash()">Stash my 3 files</button>
-        <button type="button" class="pri" :disabled="isDirty" @click="commit()">Create branch &amp; commit</button>
-      </div>
-    </div>
   </div>
 
   <div class="scrim" x-data="modelSettingsModal()" x-show="$store.modals.modelSettingsOpen" x-cloak @keydown.escape.window="close()" @click.self="close()">
     <div class="modal model-settings-modal" role="dialog" aria-modal="true" @click.stop>
       <h5>Model settings</h5>
       <div class="mb">
-        <p>Choose which models appear in the picker and set Claude Code defaults.</p>
-        <div class="fieldrow">
-          <label>Enabled models</label>
-          <div class="settings-checks">
-            <label><input type="checkbox" checked disabled> Claude Opus 5</label>
-            <label><input type="checkbox" checked disabled> Claude Sonnet 5</label>
-            <label><input type="checkbox"> Claude Haiku 5</label>
+        <p>Choose which coding agents and models appear in the picker, and each model's default effort.</p>
+        <template x-for="agent in $store.chat.agents" :key="agent.id">
+          <div class="fieldrow">
+            <label x-text="agent.name"></label>
+            <div class="settings-checks">
+              <template x-for="m in agent.models" :key="m.id">
+                <label>
+                  <input type="checkbox" :checked="agent.id === 'claude-code'" :disabled="agent.id !== 'claude-code'">
+                  <span x-text="m.label"></span>
+                  <span class="settings-effort" x-text="$store.chat.effortLabelFor(m.effort)"></span>
+                </label>
+              </template>
+            </div>
           </div>
-        </div>
-        <div class="fieldrow">
-          <label>Default effort</label>
-          <div class="settings-effort">High</div>
-        </div>
+        </template>
       </div>
       <div class="mf">
         <button type="button" class="pri" @click="close()">Done</button>

@@ -4,72 +4,6 @@ import { NODE_NAMES, ADOPT } from '../data/shared.js';
 
 export function registerCanvas() {
   document.addEventListener('alpine:init', () => {
-    // A tab is a workspace: a subject (page = topmost god component, or a component),
-    // its branch and its chat. `dirty` is uncommitted work on that workspace's branch.
-    // Lifted to a store: the tab strip (inside the canvas component) and the app rail
-    // (outside it) both drive the same list.
-    Alpine.store('boards', {
-      list: [
-        { id: 'board-1', label: 'Pricing page', kind: 'page', dirty: true, branch: 'pg/pricing-page' },
-        { id: 'board-2', label: 'PriceCard', kind: 'component', dirty: false, branch: 'pg/price-card' },
-        { id: 'board-3', label: 'Checkout', kind: 'page', dirty: false, branch: 'pg/checkout' },
-      ],
-      active: 'board-1',
-      _counter: 3,
-      stashed: [{ id: 'board-nav', label: 'navbar-experiment', kind: 'component', branch: 'pg/navbar-experiment' }],
-      addMenuOpen: false,
-
-      select(id) {
-        this.active = id;
-      },
-
-      get activeBoard() {
-        return this.list.find((b) => b.id === this.active) ?? this.list[0];
-      },
-
-      // Closing a workspace stashes its branch; the workspace menu pops it back as a tab.
-      close(id) {
-        if (this.list.length <= 1) return;
-        const idx = this.list.findIndex((b) => b.id === id);
-        if (idx === -1) return;
-        const board = this.list[idx];
-        this.list = this.list.filter((b) => b.id !== id);
-        this.stashed.unshift({ ...board });
-        if (this.active === id) {
-          const next = this.list[Math.min(idx, this.list.length - 1)];
-          this.active = next.id;
-        }
-      },
-
-      popStash(id) {
-        const idx = this.stashed.findIndex((s) => s.id === id);
-        if (idx === -1) return;
-        const [board] = this.stashed.splice(idx, 1);
-        this.list.push({ ...board, dirty: true });
-        this.active = board.id;
-        this.addMenuOpen = false;
-      },
-
-      add() {
-        this._counter += 1;
-        const id = `board-${this._counter}`;
-        this.list.push({ id, label: 'Untitled', kind: 'component', dirty: false, branch: `pg/untitled-${this._counter}` });
-        this.active = id;
-        this.addMenuOpen = false;
-      },
-
-      onTabKeydown(event) {
-        const idx = this.list.findIndex((b) => b.id === this.active);
-        if (event.key === 'ArrowRight') {
-          event.preventDefault();
-          this.select(this.list[(idx + 1) % this.list.length].id);
-        } else if (event.key === 'ArrowLeft') {
-          event.preventDefault();
-          this.select(this.list[(idx - 1 + this.list.length) % this.list.length].id);
-        }
-      },
-    });
-
     Alpine.store('help', {
       items: helpItems,
       whatsNew,
@@ -186,12 +120,11 @@ export function registerCanvas() {
         return (ADOPT[kind] ?? {}).label ?? 'Keep';
       },
 
+      // Prototype stub — the button and its states are the design; what Keep does
+      // to git is out of scope for the mock.
       adopt(kind) {
         if (!this.adoptOn(kind)) return;
-        const store = Alpine.store('mock');
-        store.selectedKind = kind;
-        store.crumbName = NODE_NAMES[kind] ?? 'PriceCard';
-        store.branchModalOpen = true;
+        console.log('[prototype] adopt', kind);
       },
 
       // Prototype stub — logs only; does not remove mock nodes.
@@ -205,10 +138,6 @@ export function registerCanvas() {
 
       zoomOut() {
         this.zoom = Math.max(25, this.zoom - 25);
-      },
-
-      zoomToSelection() {
-        this.zoom = 150;
       },
 
       undo() {

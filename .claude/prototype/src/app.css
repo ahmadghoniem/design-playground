@@ -35,15 +35,6 @@
 @layer base {
   :root {
     --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", ui-monospace, monospace;
-    --goo-surface-pad: 96px;
-    --goo-blob-size: 16px;
-    --goo-blob-reach: 8px;
-    --goo-blob-overlap: 8px;
-    --goo-anchor-size: 18px;
-    --goo-filter: url(#pg-goo);
-  }
-  :root.goo-off {
-    --goo-filter: none;
   }
   :root {
     --pgc-bg: #ffffff;
@@ -55,14 +46,9 @@
     --pgc-canvas-grid: #dedcda;
     --pgc-select: #2563eb;
     --pgc-select-bg: #eff6ff;
-    /* Tab strip. The field sits one step below --pgc-canvas so the active tab — which is
-       painted in --pgc-canvas and fillets into --canvas-face — reads as continuous with the
-       surface while the inactive ones stay on the field. Light-on-light, no dark band. */
-    --ct-h: 34px;
-    --ct-field: #dedcda;
-    /* Both flank cards are the same width, inset from the stage edges. */
-    --flank-w: 276px;
-    --flank-inset: 10px;
+    /* Both flanks are the same width — the canvas is the subject and they frame it,
+       so unequal frames would read as one of them mattering more. */
+    --pg-flank-w: 280px;
     --pgc-orange: #c2410c;
     --pgc-orange-bg: #fff7ed;
     --pgc-orange-border: #fdba74;
@@ -148,270 +134,64 @@
     color-scheme: light;
   }
 
-  /* One canvas: no tab-strip reservation on the root / agent-right shells. */
-  .app:not(.app-single) .canvas-face { top: 0; }
-  .app:not(.app-single) .canvas-wrap .canvas-toolbar { top: 50%; }
+  /* Library | canvas | Design+Agents. The toolbar rail sits at the top of the canvas. */
+  .app .canvas-wrap .canvas-toolbar { top: 16px; transform: none; left: 16px; }
 
-  .app-body { display: grid; grid-template-columns: 280px minmax(0,1fr) 306px; min-height: 0; height: 100%; }
-  .app-agent-right { --pg-rail-w: 300px; }
-  .app-agent-right .app-body { grid-template-columns: var(--pg-rail-w) minmax(0, 1fr); }
-
-  /* agent-right layered shell — rail behind, canvas slides over it */
-  .app-agent-right .stage {
-    position: relative; overflow: hidden; min-width: 0; min-height: 0;
-    background: var(--pgc-muted);
-    background-image: linear-gradient(135deg, #f7f6f4 0%, #eceae7 50%, #f2f1ef 100%);
+  /* Wonder collapse: the flank gives up its grid column and its head survives as
+     a floating pill, so the panel is put away rather than lost. The canvas grows
+     into the vacated space, carrying the toolbar rail left with it. */
+  .app-body {
+    display: grid; position: relative; min-height: 0; height: 100%;
+    grid-template-columns: var(--left-w, var(--pg-flank-w)) minmax(0, 1fr) var(--right-w, var(--pg-flank-w));
   }
-  .app-agent-right .agent-rail {
-    position: absolute; top: 0; right: 0; bottom: 0; width: var(--pg-rail-w); z-index: 0; border-left: none;
-    background: rgba(252, 252, 251, 0.66);
-    backdrop-filter: blur(28px) saturate(140%);
-    -webkit-backdrop-filter: blur(28px) saturate(140%);
+  /* Pinned columns: a collapsed flank goes absolute and stops occupying a cell, so
+     without this the canvas auto-places into column 1 and inherits its 0 width. */
+  .app > .app-body > .library { grid-column: 1; }
+  .app > .app-body > .canvas-wrap { grid-column: 2; }
+  .app > .app-body > .design-agents { grid-column: 3; }
+  .app.left-collapsed { --left-w: 0px; }
+  .app.right-collapsed { --right-w: 0px; }
+  .app.left-collapsed .library,
+  .app.right-collapsed .design-agents {
+    position: absolute; top: 16px; z-index: 9; width: auto; height: auto;
+    border: 1px solid var(--pgc-border); border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: visible;
   }
-  .app-agent-right .rail-head,
-  .app-agent-right .rail-composer { background: transparent; }
-  .app-agent-right .rail-composer .model-pill {
-    display: inline-flex; min-width: 0; max-width: 100%; overflow: hidden;
+  .app.left-collapsed .library { left: 16px; }
+  .app.right-collapsed .design-agents { right: 16px; }
+  .app.left-collapsed .library .stack-head,
+  .app.right-collapsed .design-agents .stack-head { border-bottom: none; }
+  .app.left-collapsed .library-body,
+  .app.right-collapsed .design-agents-body { display: none; }
+  /* The rail drops below the collapsed pill instead of colliding with it. */
+  .app.left-collapsed .canvas-wrap .canvas-toolbar { top: 66px; }
+
+  .stack-head {
+    display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+    border-bottom: 1px solid var(--pgc-border); flex: none;
   }
-  /* The model name is the only part of the pill that may truncate — the agent mark,
-     the effort label and the chevron all stay whole, so the row never loses its meaning. */
-  .app-agent-right .rail-composer .model-pill > span:not(.agent-mark):not(.chev):not(.effort-dim) {
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  /* Each flank's collapse control sits on its inner edge, facing the canvas:
+     trailing on the left panel, leading on the right one. The tabs hold the far
+     edge so the control and the tabs are never crowded together. */
+  .stack-head-left .fold-tools { margin-left: auto; }
+  .stack-head-right .stack-tabs { margin-left: auto; }
+  .stack-tabs { display: flex; align-items: center; gap: 2px; min-width: 0; }
+  .stack-tab {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 8px;
+    font-size: 12px; font-weight: 500; color: var(--pgc-muted-fg); white-space: nowrap;
   }
-  .app-agent-right .rail-composer .model-pill .effort-dim { flex: none; }
-  .app-agent-right .rail-composer .composer-footer-left { min-width: 0; flex-shrink: 1; }
-  /* The canvas layer moves by its RIGHT edge, not by translate. Translating slid its left
-     edge out of the stage's overflow:hidden, taking the CanvasToolbar and zoom controls
-     with it — they are pinned to the canvas's left edge. Animating `right` keeps both edges
-     on screen; the rail is still overlapped mid-transition, which is the whole look. */
-  .app-agent-right .stage-canvas { position: absolute; inset: 0; z-index: 1; border-radius: 0; overflow: hidden;
-                                     background: var(--pgc-canvas); box-shadow: 0 10px 40px -8px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.06);
-                                     transition: right .3s cubic-bezier(.4,0,.2,1), border-radius .3s cubic-bezier(.4,0,.2,1); }
-  .app-agent-right .stage-canvas.shifted { right: var(--pg-rail-w); border-radius: 0 22px 22px 0; }
-  .app-agent-right .stage-canvas .canvas-wrap { height: 100%; border-radius: 0; }
-  .app-agent-right .stage-open-agent { position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 2;
-                                       width: 28px; height: 28px; border-radius: 50% 0 0 50%; background: var(--pgc-accent);
-                                       color: var(--pgc-accent-fg); display: grid; place-items: center; box-shadow: -2px 0 8px rgba(0,0,0,.12); }
-  .app-agent-right .stage-open-agent:hover { background: var(--pgc-accent-hover); }
-
-  /* ── right-flank layout (variant-single-sidebar.html) ──
-     One persistent column on the right: a card showing Design or Agent (switched from the
-     strip-level head). The card floats on the canvas rather than docking, and the tab
-     strip stops at the column so the switcher is always visible. The left side of the
-     stage keeps no chrome above the canvas at all — tools float on it, help and zoom sit
-     on its floor. */
-  .app-single .app-body { display: flex; position: relative; }
-  .app-single .stage-single { flex: 1 1 auto; min-width: 0; position: relative; display: flex; flex-direction: column; }
-  .app-single .stage-single .canvas-wrap { flex: 1; height: 100%; }
-
-  /* Shared flank-card recipe: same surface, edge and elevation as .canvas-toolbar and the
-     zoom pill, so every floating thing on the canvas reads as one family. */
-  .ctx-panel, .design-panel, .left-panel {
-    position: absolute; top: calc(var(--ct-h) + var(--flank-inset)); bottom: var(--flank-inset);
-    width: var(--flank-w); z-index: 6;
-    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-    background: var(--pgc-bg); border: 1px solid var(--pgc-border); border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  }
-  .ctx-panel { right: var(--flank-inset); }
-  .design-panel { right: var(--flank-inset); }
-  .left-panel { left: var(--flank-inset); }
-
-  /* The tab strip stops where the right flank's column begins; the flank's strip-level
-     head (view switcher + settings) occupies that slot and never disappears, so a closed
-     panel always has its reopen affordance in the same place. */
-  .app-single .canvas-tabstrip { right: calc(var(--flank-w) + var(--flank-inset) * 2); }
-  .right-head {
-    position: absolute; top: 0; right: var(--flank-inset); width: var(--flank-w);
-    height: var(--ct-h); z-index: 6;
-    display: flex; align-items: center; justify-content: flex-end; gap: 6px;
-  }
-  .rh-switch { display: inline-flex; align-items: center; gap: 2px; padding: 2px;
-               border-radius: 9px; background: rgba(0, 0, 0, 0.045); }
-  .rh-switch button { display: inline-flex; align-items: center; gap: 5px; height: 22px;
-                      padding: 0 8px; border-radius: 7px; font-size: 11px; font-weight: 600;
-                      color: var(--pgc-muted-fg); }
-  .rh-switch button:hover { color: var(--pgc-fg); }
-  .rh-switch button[aria-pressed="true"] { background: var(--pgc-bg); color: var(--pgc-fg);
-                                           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
-  .rh-ic { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
-           color: var(--pgc-muted-fg); }
-  .rh-ic:hover { background: rgba(0, 0, 0, 0.05); color: var(--pgc-fg); }
-  .rh-ic[aria-expanded="true"] { background: rgba(0, 0, 0, 0.07); color: var(--pgc-fg); }
-  .rh-menu-wrap { position: relative; }
-  .rh-menu-wrap .ct-menu { top: calc(100% + 6px); right: 0; }
-
-  /* ── workspace-pill layout (variant-ws-pill.html) ──
-     No strip at all: the canvas is full-bleed and every piece of chrome floats on it —
-     workspace pill top-left, panel head top-right, panels below it. The pill and the
-     head use the same card recipe as the flank panels so the whole surface is one family. */
-  .app-wspill .canvas-face { top: 0; }
-  .app-wspill .ctx-panel, .app-wspill .design-panel { top: 48px; }
-  .app-wspill .right-head {
-    top: var(--flank-inset); height: 30px; padding: 0 3px;
-    background: var(--pgc-bg); border: 1px solid var(--pgc-border); border-radius: 11px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  }
-  .ws-bar { position: absolute; top: var(--flank-inset); left: var(--flank-inset); z-index: 7; }
-  .ws-pill {
-    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px;
-    background: var(--pgc-bg); border: 1px solid var(--pgc-border); border-radius: 11px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    font-size: 12px; font-weight: 600; color: var(--pgc-fg);
-  }
-  .ws-pill .ws-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ws-pill .ws-branch { display: inline-flex; align-items: center; gap: 3px; font-family: var(--mono);
-                        font-size: 10.5px; font-weight: 400; color: var(--pgc-muted-fg); }
-  .ws-pill .ws-chev { color: var(--pgc-muted-fg); flex: none; }
-  .ws-bar .ws-menu { top: calc(100% + 6px); left: 0; min-width: 264px; }
-  .ws-menu .ws-row-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ws-menu .ws-row-branch { display: inline-flex; align-items: center; gap: 3px; font-family: var(--mono);
-                            font-size: 10px; color: var(--pgc-muted-fg); }
-  .ws-menu-sep { height: 1px; background: var(--pgc-border); margin: 4px 5px; }
-  .ws-kbd { margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--pgc-muted-fg);
-            border: 1px solid var(--pgc-border); border-radius: 4px; padding: 1px 4px; }
-
-  /* ── flanks layout (variant-flanks.html) ──
-     Two persistent cards: Workspaces + Agent on the left, Design (always on, no head,
-     no switcher) on the right. Both are permanent, so the canvas clears them — board,
-     toolbar and zoom/help all shift right of the left card by the same offset. */
-  .app-flanks .canvas-face { top: 0; }
-  .app-flanks .left-panel, .app-flanks .design-panel { top: var(--flank-inset); }
-  .app-flanks .board { padding-left: calc(var(--flank-w) + var(--flank-inset) * 2 + 64px); }
-  .app-flanks .canvas-wrap .canvas-toolbar { left: calc(var(--flank-w) + var(--flank-inset) * 2 + 6px); }
-  .app-flanks .bottom-left-wrap { left: calc(var(--flank-w) + var(--flank-inset) * 2 + 6px); }
-  /* Centre the composer in the free canvas between the cards, not the full stage. */
-  .app-flanks .chat-dock { left: calc(50% + 3px); }
-
-  /* Left panel: workspace list above, agent thread below. */
-  .lp-sec-head { display: flex; align-items: center; justify-content: space-between;
-                 padding: 12px 12px 6px; flex: none; }
-  .lp-sec-toggle { display: inline-flex; align-items: center; gap: 6px;
-                   font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-                   color: var(--pgc-muted-fg); user-select: none; }
-  .lp-sec-toggle:hover { color: var(--pgc-fg); }
-  .lp-sec-toggle .chev { color: var(--pgc-muted-fg); transition: transform .15s; flex: none; }
-  .lp-sec-toggle .chev.open { transform: rotate(90deg); }
-  .lp-sec-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-                color: var(--pgc-muted-fg); user-select: none; }
-  .lp-add { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
-            color: var(--pgc-muted-fg); font-size: 15px; line-height: 1; }
-  .lp-add:hover { background: var(--pgc-muted); color: var(--pgc-fg); }
-  .lp-ws { padding: 0 6px 8px; flex: none; }
-  .lp-ws-row { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: 7px;
-               cursor: pointer; font-size: 12px; color: var(--pgc-fg); }
-  .lp-ws-row:hover { background: var(--pgc-muted); }
-  .lp-ws-row.sel { background: var(--pgc-muted); font-weight: 600; }
-  .lp-ws-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lp-ws-row .br { display: inline-flex; align-items: center; gap: 3px; flex: none;
-                   font-family: var(--mono); font-size: 10px; color: var(--pgc-muted-fg); }
-  .lp-ws-row .lp-x { display: none; width: 16px; height: 16px; border-radius: 5px; flex: none;
-                     place-items: center; color: var(--pgc-muted-fg); font-size: 13px; line-height: 1; }
-  .lp-ws-row:hover .lp-x { display: grid; }
-  .lp-ws-row .lp-x:hover { background: rgba(0, 0, 0, 0.07); color: var(--pgc-fg); }
-  .lp-ws-row.parked { font-family: var(--mono); font-size: 11px; color: var(--pgc-muted-fg); }
-  .lp-parked-lbl { padding: 6px 8px 2px; font-family: var(--mono); font-size: 9.5px;
-                   letter-spacing: .06em; text-transform: uppercase; color: var(--pgc-muted-fg); }
-  .lp-agent-head { border-top: 1px solid var(--pgc-border); padding-top: 10px; }
-
-  .cp-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 8px; flex: none; }
-  .cp-head .cp-title { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-                       color: var(--pgc-muted-fg); user-select: none; }
-  .cp-head .cp-close { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
-                       color: var(--pgc-muted-fg); font-size: 14px; line-height: 1; }
-  .cp-head .cp-close:hover { background: var(--pgc-muted); color: var(--pgc-fg); }
-  .cp-agent { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-  .cp-agent .cp-agent-scroll { flex: 1; min-height: 0; overflow-y: auto; }
-
-  /* ── design panel (right flank) ──
-     Four sections in one scroll, each collapsible. Layers and Properties are the working
-     pair (what is this / what does it look like); Tokens and Primitives are the vocabulary
-     underneath, folded away until you reach for them. */
-  .dp-head { display: flex; align-items: center; gap: 6px; padding: 10px 8px 8px 12px; flex: none; }
-  .dp-head .dp-subject { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .dp-head .dp-subject .ic { display: flex; color: var(--pgc-muted-fg); flex: none; }
-  .dp-head .dp-subject .nm { font-size: 12px; font-weight: 600; color: var(--pgc-fg);
-                              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dp-head .dp-subject .kd { font-size: 10px; color: var(--pgc-muted-fg); flex: none; }
-  .dp-head .dp-btn { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
-                     color: var(--pgc-muted-fg); flex: none; }
-  .dp-head .dp-btn:hover { background: var(--pgc-muted); color: var(--pgc-fg); }
-  .dp-head .dp-btn.last { margin-left: auto; }
-  .dp-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d6d3d1 transparent; }
-  .dp-body::-webkit-scrollbar { width: 8px; }
-  .dp-body::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
-
-  .acc { border-top: 1px solid var(--pgc-border); }
-  .acc:first-child { border-top: 0; }
-  .acc-h {
-    display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 10px 8px 8px;
-    font-size: 11px; font-weight: 650; letter-spacing: .02em; color: var(--pgc-fg); text-align: left;
-  }
-  .acc-h:hover { background: var(--pgc-muted); }
-  .acc-h .chev { color: var(--pgc-muted-fg); transition: transform .15s; flex: none; }
-  .acc-h .chev.open { transform: rotate(90deg); }
-  .acc-h .acc-tools { display: flex; align-items: center; gap: 2px; margin-left: auto; opacity: 0; }
-  .acc-h:hover .acc-tools { opacity: 1; }
-  .acc-h .acc-tools span { width: 18px; height: 18px; border-radius: 5px; display: grid;
-                           place-items: center; color: var(--pgc-muted-fg); }
-  .acc-h .acc-tools span:hover { background: var(--pgc-border); color: var(--pgc-fg); }
-  .acc-body { padding: 0 6px 10px; }
-  .acc-note { padding: 6px 8px 0; font-size: 10.5px; line-height: 1.5; color: var(--pgc-muted-fg); }
-  .acc-note code { font-family: var(--mono); font-size: 10px; color: var(--pgc-fg); }
-
-  /* properties — every control writes a Tailwind class, so the value chip IS the class */
-  .prop-group { padding: 4px 2px 8px; }
-  .prop-group + .prop-group { border-top: 1px dashed var(--pgc-border); }
-  .prop-lbl { padding: 6px 6px 5px; font-size: 9.5px; font-weight: 700; letter-spacing: .09em;
-              text-transform: uppercase; color: var(--pgc-muted-fg); }
-  .prop-row { display: flex; align-items: center; gap: 6px; padding: 2px 6px 4px; }
-  .prop-row .k { font-size: 11px; color: var(--pgc-muted-fg); width: 52px; flex: none; }
-  .prop-val {
-    display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 7px;
-    font-family: var(--mono); font-size: 10.5px; color: var(--pgc-fg);
-    background: var(--pgc-muted); border: 1px solid var(--pgc-border); cursor: ew-resize;
-  }
-  .prop-val:hover { border-color: var(--pgc-select); color: var(--pgc-select); }
-  .prop-seg { display: flex; gap: 2px; padding: 2px; background: var(--pgc-muted); border-radius: 7px; }
-  .prop-seg button { padding: 3px 8px; border-radius: 5px; font-size: 10.5px; color: var(--pgc-muted-fg); }
-  .prop-seg button[aria-pressed="true"] { background: #fff; color: var(--pgc-fg); font-weight: 600;
-                                          box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-  .prop-swatches { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 6px 4px; }
-  .prop-swatch {
-    display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 4px; border-radius: 7px;
-    font-family: var(--mono); font-size: 10px; color: var(--pgc-fg);
-    background: var(--pgc-muted); border: 1px solid var(--pgc-border);
-  }
-  .prop-swatch:hover { border-color: var(--pgc-select); }
-  .prop-swatch i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--pgc-border); }
-  .prop-staged {
-    display: flex; align-items: center; gap: 6px; margin: 6px 6px 0; padding: 6px 8px;
-    background: var(--pgc-muted); border-radius: 8px; font-family: var(--mono); font-size: 10px;
-    color: var(--pgc-fg);
-  }
-  .prop-staged .add { color: #15803d; margin-left: auto; }
-
-  /* ── shared tab strip (DesignAgents: Design | Agents) ── */
-  .tabs { display: flex; border-bottom: 1px solid var(--pgc-border); background: var(--pgc-bg); flex: none; }
-  .tabs button { flex: 1; padding: 9px 4px 8px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em;
-                 color: var(--pgc-muted-fg); border-bottom: 2px solid transparent; white-space: nowrap; }
-  .tabs button:hover { color: var(--pgc-fg); }
-  .tabs button[aria-selected="true"] { color: var(--pgc-fg); border-bottom-color: var(--pgc-fg); }
+  .stack-tab:hover { color: var(--pgc-fg); }
+  .stack-tab[aria-selected="true"] { color: var(--pgc-fg); font-weight: 600; }
+  .agent-cluster { display: inline-flex; align-items: center; width: 18px; height: 12px; position: relative; flex: none; }
+  .agent-cluster .agent-mark { width: 11px; height: 11px; position: absolute; left: 0; top: 0.5px; }
+  .agent-cluster .agent-mark:last-child { left: 6px; opacity: .55; }
 
   /* ── Library ── */
-  .library { border-right: 1px solid var(--pgc-border); display: flex; flex-direction: column; min-height: 0; background: var(--pgc-bg); }
+  .library { border-right: 1px solid var(--pgc-border); display: flex; flex-direction: column; min-height: 0; background: var(--pgc-bg); overflow: hidden; }
   .library-head { display: flex; align-items: center; gap: 6px; padding: 12px 12px 8px; flex: none; }
   .library-head .proj-name { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: var(--pgc-muted-fg); user-select: none; }
 
-  .seg-tabs { display: flex; gap: 2px; margin: 0 12px 10px; padding: 2px; background: var(--pgc-muted); border-radius: 8px; flex: none; }
-  .seg-tabs button { flex: 1; font-size: 10.5px; font-weight: 600; padding: 5px 0; border-radius: 6px; color: var(--pgc-muted-fg); }
-  .seg-tabs button[aria-selected="true"] { background: #fff; color: var(--pgc-fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-  .seg-tabs button:hover:not([aria-selected="true"]) { color: var(--pgc-fg); }
 
-  .library-search { padding: 0 12px 10px; flex: none; }
-  .library-search input { width: 100%; padding: 7px 10px; font-size: 12.5px; background: var(--pgc-muted);
-                        border: 1px solid var(--pgc-border); border-radius: 10px; color: var(--pgc-fg); }
-  .library-search input::placeholder { color: var(--pgc-muted-fg); }
 
   .library-body { overflow-y: auto; min-height: 0; flex: 1; padding: 0 6px;
                scrollbar-width: thin; scrollbar-color: #d6d3d1 transparent; }
@@ -419,9 +199,6 @@
   .library-body::-webkit-scrollbar-track { background: transparent; }
   .library-body::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
   .library-body::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
-  /* F3 — footer helper aligned to the control column width (seg-tabs / search inset) */
-  .library-foot { padding: 8px 12px; border-top: 1px solid var(--pgc-border); flex: none; }
-  .library-foot span { display: block; text-align: left; font-size: 10.5px; color: var(--pgc-muted-fg); user-select: none; }
 
   /* layer tree rows */
   .ltree-row { display: flex; align-items: center; height: 26px; padding: 0 6px 0 2px; border-radius: 8px; cursor: grab; user-select: none; }
@@ -465,6 +242,12 @@
   .tok-row { width: 100%; display: flex; align-items: center; gap: 8px; height: 27px; padding: 0 8px; border-radius: 8px; text-align: left; }
   .tok-row .sw { width: 26px; height: 14px; border-radius: 3px; border: 1px solid var(--pgc-border); flex: none; }
   .tok-row .sw.undef { background: transparent; border: 1px dashed #d97706; }
+  /* Swatch doubles as the colour picker: the native input covers it, invisibly. */
+  .tok-row .sw-pick { position: relative; display: inline-flex; flex: none; cursor: pointer; }
+  .tok-row .sw-pick input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%;
+                        opacity: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+  .tok-row .sw-pick .sw { pointer-events: none; }
+  .tok-row .sw-pick:hover .sw { border-color: var(--pgc-muted-fg); }
   .tok-row .name { font-size: 12px; font-weight: 500; color: var(--pgc-fg); flex: 1; min-width: 0;
                     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tok-row.undef .name { color: #b45309; }
@@ -472,100 +255,18 @@
                            color: #b45309; background: #fffbeb; padding: 1px 5px; border-radius: 4px; flex: none; }
 
   /* ── canvas ── */
-  .canvas-wrap {
-    position: relative; overflow: hidden; background: var(--ct-field); min-height: 0;
-  }
+  .canvas-wrap { position: relative; overflow: hidden; min-height: 0; }
   .canvas-wrap.tool-hand { cursor: grab; }
   .canvas-wrap.is-panning { cursor: grabbing; }
 
-  /* ── workspace tabs ──
-     The active tab IS the canvas surface: same fill, joined by two concave fillets so
-     the seam disappears (the Chrome-tab merge). Inactive tabs are text on the dark
-     field — no chips, no borders, no per-tab close, nothing that mimics browser chrome. */
-  .canvas-tabstrip {
-    position: absolute; top: 0; left: 0; right: 0; height: var(--ct-h); z-index: 2;
-    display: flex; align-items: flex-end; padding: 0 8px 0 0; gap: 8px;
-  }
-  .canvas-tabstrip .ct-tab {
-    position: relative;
-    display: inline-flex; align-items: center; gap: 7px; height: calc(var(--ct-h) - 6px);
-    padding: 0 13px; font-size: 12px; font-weight: 550; line-height: 1;
-    border-radius: 12px 12px 0 0; color: var(--pgc-muted-fg);
-    min-width: 0; max-width: 210px; transition: color .15s, background-color .15s;
-  }
-  .canvas-tabstrip .ct-tab:hover:not([aria-selected="true"]) {
-    color: var(--pgc-fg); background: rgba(0, 0, 0, 0.045);
-  }
-  .canvas-tabstrip .ct-tab[aria-selected="true"] {
-    height: var(--ct-h); color: var(--pgc-fg); background: var(--pgc-canvas); font-weight: 600;
-  }
-  .canvas-tabstrip .ct-tab[aria-selected="true"]::before,
-  .canvas-tabstrip .ct-tab[aria-selected="true"]::after {
-    content: ""; position: absolute; bottom: 0; width: 12px; height: 12px; pointer-events: none;
-  }
-  .canvas-tabstrip .ct-tab[aria-selected="true"]::before {
-    left: -12px;
-    background: radial-gradient(circle at 0 0, transparent 12px, var(--pgc-canvas) 12.5px);
-  }
-  /* The first tab sits flush on the surface's left edge, so there is no gap to fill —
-     drawing the fillet there turns the corner into one big S-curved blob. */
-  .canvas-tabstrip .ct-tab:first-child::before { content: none; }
-  .canvas-tabstrip .ct-tab[aria-selected="true"]::after {
-    right: -12px;
-    background: radial-gradient(circle at 100% 0, transparent 12px, var(--pgc-canvas) 12.5px);
-  }
-  /* subject kind — a page (god component) or a component; monochrome, inherits tab colour */
-  .canvas-tabstrip .ct-kind { display: flex; flex: none; opacity: .55; }
-  .canvas-tabstrip .ct-tab[aria-selected="true"] .ct-kind { opacity: .75; }
-  .canvas-tabstrip .ct-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ct-dirty { width: 5px; height: 5px; border-radius: 50%; flex: none;
-              background: var(--pgc-accent); }
-  .canvas-tabstrip .ct-close {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 17px; height: 17px; margin: 0 -5px 0 1px; border-radius: 5px; flex: none;
-    font-size: 14px; line-height: 1; color: var(--pgc-muted-fg);
-  }
-  .canvas-tabstrip .ct-close:hover { background: rgba(0,0,0,.07); color: var(--pgc-fg); }
-
-  .canvas-tabstrip .ct-add-wrap { position: relative; align-self: center; }
-  .canvas-tabstrip .ct-add {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 26px; height: 26px; border-radius: 8px;
-    font-size: 17px; line-height: 1; color: var(--pgc-muted-fg); flex: none;
-  }
-  .canvas-tabstrip .ct-add:hover { color: var(--pgc-fg); background: rgba(0,0,0,.05); }
-  /* Workspace menu recipe — shared by the tab strip's + menu and the rail flyout. */
-  .ct-menu {
-    position: absolute; z-index: 30; min-width: 208px;
-    padding: 5px; background: var(--pgc-bg); border: 1px solid var(--pgc-border);
-    border-radius: 11px; box-shadow: 0 12px 32px -8px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.04);
-  }
-  .canvas-tabstrip .ct-menu { top: calc(100% + 6px); left: 0; }
-  .ct-check { width: 12px; flex: none; color: var(--pgc-muted-fg); font-size: 11px; }
-  .ct-menu-item {
-    display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
-    padding: 6px 9px; border-radius: 7px; font-size: 12px; color: var(--pgc-fg);
-  }
-  .ct-menu-item.mono { font-family: var(--mono); font-size: 11px; }
-  .ct-menu-item .gl { color: var(--pgc-muted-fg); display: flex; flex: none; }
-  .ct-menu-item:hover { background: var(--pgc-muted); }
-  .ct-menu-lbl {
-    padding: 8px 9px 3px; font-size: 9.5px; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase; color: var(--pgc-muted-fg);
-  }
-
   .canvas-face {
-    position: absolute; top: var(--ct-h); left: 0; right: 0; bottom: 0; overflow: hidden;
+    position: absolute; inset: 0; overflow: hidden;
     background-color: var(--pgc-canvas);
     background-image: radial-gradient(circle, var(--pgc-canvas-grid) 1px, transparent 1px);
     background-size: 18px 18px;
   }
   .board { position: absolute; inset: 0; padding: 28px 28px 100px 74px; display: flex; gap: 34px; align-items: flex-start;
            will-change: transform; }
-  .board-empty {
-    position: absolute; inset: 0; display: grid; place-items: center;
-    font-size: 12px; color: var(--pgc-muted-fg); pointer-events: none;
-  }
 
   .col { display: flex; flex-direction: column; gap: 14px; }
   .row { display: flex; gap: 48px; align-items: flex-start; }
@@ -674,7 +375,6 @@
   .arrow { align-self: center; color: var(--pgc-muted-fg); font-size: 14px; flex: none; padding-top: 28px; }
 
   /* ── CanvasToolbar ── */
-  .canvas-wrap .canvas-toolbar { top: calc(50% + var(--ct-h) / 2); }
   .canvas-toolbar { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); z-index: 8;
                display: flex; flex-direction: column; align-items: center; gap: 3px;
                background: #fff; border: 1px solid var(--pgc-border); border-radius: 16px;
@@ -697,7 +397,6 @@
   .zoom-controls button { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--pgc-muted-fg); }
   .zoom-controls button:hover { background: var(--pgc-muted); color: var(--pgc-fg); }
   .zoom-controls .zv { min-width: 40px; text-align: center; font-size: 12px; color: var(--pgc-muted-fg); font-variant-numeric: tabular-nums; }
-  .zoom-controls .vsep { width: 1px; height: 18px; background: var(--pgc-border); margin: 0 3px; }
 
   /* help & resources popover — a fixed dark surface, matching the real popover */
   .help-pop { position: absolute; left: 0; bottom: calc(100% + 10px); width: 196px;
@@ -720,9 +419,11 @@
   .chat-ctx { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
   .wt-readonly { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 9px 4px 8px; border-radius: 8px;
                  border: 1px solid var(--pgc-border); background: #fff; color: var(--pgc-muted-fg); user-select: none; }
+  /* Read-only, like the worktree beside it: the row reports where the agent runs,
+     it does not switch anything. Only the dirty dot is state. */
   .branch-lbl { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 9px; border-radius: 8px;
-                border: 1px solid var(--pgc-orange-border); background: var(--pgc-orange-bg); color: var(--pgc-orange); }
-  .branch-lbl .chev { opacity: .55; }
+                border: 1px solid var(--pgc-orange-border); background: var(--pgc-orange-bg); color: var(--pgc-orange);
+                user-select: none; }
 
   .chat-box { position: relative; border: 1px solid var(--pgc-border); border-radius: 20px; background: #fbfbfb;
               box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 10px 30px -12px rgba(0,0,0,.28); }
@@ -742,13 +443,6 @@
   .ctx-menu button:hover { background: var(--pgc-muted); }
   .ctx-menu button.on { background: var(--pgc-select-bg); color: var(--pgc-select); }
   .ctx-menu .gl { font-family: var(--mono); }
-  .branch-menu { min-width: 220px; }
-  .branch-menu button { align-items: flex-start; }
-  .ws-pick { display: grid; gap: 1px; min-width: 0; flex: 1; }
-  .ws-pick-branch { font-family: var(--mono); font-size: 11px; }
-  .ws-pick-title { font-size: 10px; color: var(--pgc-muted-fg); }
-  .branch-menu button.on .ws-pick-title { color: var(--pgc-select); opacity: .8; }
-  .branch-lbl .ct-dirty { background: var(--pgc-orange); }
   .perm-menu { min-width: 220px; }
   .perm-menu button { display: grid; gap: 1px; }
   .perm-menu .pm-l { font-size: 11.5px; font-weight: 600; }
@@ -793,11 +487,20 @@
                  border-radius: 999px; background: var(--pgc-select); color: #fff; font-size: 9px; font-weight: 700;
                  line-height: 14px; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
 
-  /* permissions pill (Codex-style approval mode) */
+  /* Permissions chip. One short word, tinted by blast radius — the tint is redundant
+     with the word, never the only signal (WCAG 1.4.1). The sentence that explains the
+     mode is the tooltip and the accessible name; the menu carries it in full. */
   .perm-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px;
-               border: 1px solid var(--pgc-border); background: #fff; color: var(--pgc-muted-fg); font-size: 11px; }
-  .perm-pill:hover { color: var(--pgc-fg); border-color: #a8a29e; }
-  .perm-pill .chev { opacity: .55; }
+               border: 1px solid var(--pgc-border); background: #fff; color: var(--pgc-muted-fg);
+               font-size: 11px; font-weight: 600; }
+  .perm-pill:hover { border-color: #a8a29e; }
+  .perm-pill .chev { opacity: .55; font-weight: 400; }
+  /* safe → gate → part → open, in ascending blast radius */
+  .perm-pill.tone-safe { color: var(--pgc-muted-fg); }
+  .perm-pill.tone-gate { color: var(--pgc-fg); }
+  .perm-pill.tone-part { color: var(--pgc-warn); background: var(--pgc-warn-bg); border-color: var(--pgc-warn-border); }
+  .perm-pill.tone-open { color: var(--pgc-orange); background: var(--pgc-orange-bg); border-color: var(--pgc-orange-border); }
+  .perm-pill.tone-part:hover, .perm-pill.tone-open:hover { border-color: currentColor; }
 
   /* model picker — left of Send on the input row */
   .model-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px;
@@ -819,17 +522,42 @@
                        padding: 6px 8px; border-radius: 6px; font-size: 12px; color: var(--pgc-fg); }
   .model-menu-action:hover { background: var(--pgc-muted); }
   .model-menu-action.dim { color: var(--pgc-muted-fg); }
+  /* Reset is a no-op while the effort already is the model's default, so it is dimmed
+     rather than hidden — a control that vanishes is harder to find than one that waits. */
+  .model-menu-action:disabled { opacity: .4; cursor: default; }
+  .model-menu-action:disabled:hover { background: transparent; }
   .model-menu-action .mm-reset { font-size: 11px; opacity: .7; }
   .ctx-submenu { position: absolute; left: 100%; top: 0; min-width: 180px; z-index: 30; margin-left: 4px;
                  border: 1px solid var(--pgc-border); border-radius: 8px; background: #fff;
                  box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); padding: 4px; }
   .ctx-submenu.flip { left: auto; right: 100%; margin-left: 0; margin-right: 4px; }
+  /* An upward-opening menu sits near the bottom of the window, so its submenu has to
+     grow up from the row too — top-aligned, the model list ran off the viewport. */
+  .ctx-menu.up .ctx-submenu { top: auto; bottom: 0; }
   .ctx-submenu button { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 6px 8px;
                        border-radius: 6px; font-size: 12px; color: var(--pgc-fg); }
   .ctx-submenu button:hover { background: var(--pgc-muted); }
   .ctx-submenu button.on { background: var(--pgc-select-bg); color: var(--pgc-select); }
   .ctx-submenu .mm-opt { flex: 1; }
   .ctx-submenu .mm-check { margin-left: auto; font-size: 11px; }
+
+  /* Model submenu: grouped by the agent that runs the model, because the agent is what
+     you are choosing. Each row carries that model's own default effort, dimmed — the
+     same dim the trigger pill uses, so the two read as the same fact in two places. */
+  .model-submenu { min-width: 216px; max-height: 320px; overflow-y: auto; padding: 4px; }
+  .model-submenu .mm-search {
+    width: 100%; margin-bottom: 4px; padding: 6px 8px; font-size: 12px;
+    background: var(--pgc-muted); border: 1px solid transparent; border-radius: 7px; color: var(--pgc-fg);
+  }
+  .model-submenu .mm-search:focus { outline: none; border-color: var(--pgc-select); background: var(--pgc-bg); }
+  .model-submenu .mm-search::placeholder { color: var(--pgc-muted-fg); }
+  .model-submenu .mm-group + .mm-group { margin-top: 2px; }
+  .model-submenu .mm-group-lbl {
+    padding: 6px 8px 3px; font-size: 9.5px; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--pgc-muted-fg); user-select: none;
+  }
+  .model-submenu .effort-dim { color: var(--pgc-muted-fg); font-size: 11px; flex: none; }
+  .model-submenu button.on .effort-dim { color: var(--pgc-select); opacity: .75; }
 
   .composer-input-area { position: relative; }
   .skill-picker { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 50;
@@ -911,21 +639,10 @@
   .modal p { margin: 0; font-size: 11.5px; color: var(--pgc-muted-fg); line-height: 1.5; }
   .fieldrow { display: grid; gap: 4px; }
   .fieldrow label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--pgc-muted-fg); }
-  .fieldrow .fin { display: flex; align-items: center; gap: 6px; border: 1px solid var(--pgc-orange-border); border-radius: 8px;
-                   background: var(--pgc-orange-bg); padding: 6px 9px; font-family: var(--mono); font-size: 11px; color: var(--pgc-orange); }
-  .fieldrow .fin span[contenteditable] { outline: none; flex: 1; }
-  .plan { border: 1px solid var(--pgc-border); border-radius: 8px; background: var(--pgc-muted); padding: 8px 9px;
-          font-family: var(--mono); font-size: 10px; color: var(--pgc-fg); display: grid; gap: 3px; }
-  .plan i { font-style: normal; color: var(--pgc-muted-fg); }
-  .dirty-warn { border: 1px solid var(--pgc-warn-border); background: var(--pgc-warn-bg); border-radius: 8px; padding: 9px 10px; display: grid; gap: 6px; }
-  .dirty-warn b { color: var(--pgc-warn); font-size: 11px; }
-  .dirty-warn ul { margin: 0; padding-left: 15px; font-family: var(--mono); font-size: 10px; color: var(--pgc-fg); }
   .modal .mf { display: flex; gap: 6px; padding: 0 14px 13px; }
   .modal .mf button { flex: 1; border-radius: 8px; padding: 7px; font-size: 11.5px; border: 1px solid var(--pgc-border); color: var(--pgc-fg); }
   .modal .mf button.pri { background: #1c1917; color: #fff; border-color: #1c1917; font-weight: 600; }
-  .modal .mf button.pri[disabled] { background: var(--pgc-muted); color: var(--pgc-muted-fg); border-color: var(--pgc-border); cursor: default; }
-  .modal .mf button.warn { background: var(--pgc-warn); color: #fff; border-color: var(--pgc-warn); font-weight: 600; }
-  .modal .mf button:hover:not([disabled]):not(.pri):not(.warn) { border-color: #a8a29e; }
+  .modal .mf button:hover:not(.pri) { border-color: #a8a29e; }
 
   /* ── DesignAgents ── */
   .design-agents { border-left: 1px solid var(--pgc-border); display: flex; flex-direction: column; min-height: 0; background: var(--pgc-bg); }
@@ -936,6 +653,56 @@
   .crumb button { color: var(--pgc-muted-fg); }
   .crumb button:hover { color: var(--pgc-fg); }
   .crumb .cur { color: var(--pgc-fg); font-weight: 600; }
+
+  .fold-h {
+    display: flex; align-items: center; gap: 4px; min-height: 32px;
+    padding: 0 8px 0 6px; border-bottom: 1px solid var(--pgc-border);
+  }
+  .fold-toggle {
+    display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0;
+    padding: 7px 4px; font-size: 12px; font-weight: 600; color: var(--pgc-fg); text-align: left;
+  }
+  .fold-chev { flex: none; color: var(--pgc-muted-fg); transition: transform .15s; }
+  .fold-chev.open { transform: rotate(90deg); }
+  .fold-count { font-size: 11px; font-weight: 500; color: var(--pgc-muted-fg); }
+  .fold-tools { display: flex; gap: 1px; flex: none; }
+  .fold-ic { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: var(--pgc-muted-fg); }
+  .fold-ic:hover { color: var(--pgc-fg); background: var(--pgc-muted); }
+  .fold.nested .fold-h { padding-left: 18px; border-bottom-color: transparent; }
+  .fold.nested .fold-toggle { font-size: 11.5px; font-weight: 550; color: var(--pgc-muted-fg); }
+  /* Search takes the header's own row — the title is replaced, nothing is inserted
+     below it, so the fold never grows a second bar while you type. */
+  .fold-h-input {
+    flex: 1; min-width: 0; height: 24px; padding: 0 4px; font-size: 12px; font-weight: 500;
+    background: transparent; border: 0; color: var(--pgc-fg);
+  }
+  .fold-h-input:focus { outline: none; }
+  .fold-h-input::placeholder { color: var(--pgc-muted-fg); font-weight: 500; }
+  .fold-in { padding: 0 8px 8px 28px; }
+
+  /* Accordion fill: the fold stack owns the panel's height, an open fold takes the
+     leftover space and scrolls inside itself, so every fold header stays on screen
+     instead of the whole column scrolling as one page. */
+  .fold-stack { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+  .fold-stack > .fold { display: flex; flex-direction: column; min-height: 0; flex: none; }
+  .fold-stack > .fold.fold-open { flex: 1 1 0; }
+  .fold-stack > .fold > .fold-h { flex: none; }
+  .fold-stack > .fold > .fold-body { min-height: 0; overflow-y: auto; scrollbar-width: thin;
+                                     scrollbar-color: #d6d3d1 transparent; }
+  .fold-stack > .fold > .fold-body::-webkit-scrollbar { width: 8px; }
+  .fold-stack > .fold > .fold-body::-webkit-scrollbar-track { background: transparent; }
+  .fold-stack > .fold > .fold-body::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
+  .tok-val { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--pgc-muted-fg); }
+  .icon-pack { padding: 8px 12px 6px 28px; font-size: 11px; color: var(--pgc-muted-fg);
+               display: flex; align-items: center; gap: 8px; }
+  .icon-pack-select { margin-left: auto; font: inherit; font-size: 11.5px; color: var(--pgc-fg);
+               background: var(--pgc-muted); border: 1px solid var(--pgc-border); border-radius: 7px;
+               padding: 3px 6px; cursor: pointer; }
+  .icon-pack-select:hover { border-color: #a8a29e; }
+  .icon-list { padding: 0 8px 10px 28px; }
+  .icon-row { display: flex; align-items: center; gap: 8px; height: 26px; font-size: 12px; color: var(--pgc-fg); }
+  .ic-box { width: 18px; height: 18px; border-radius: 4px; background: var(--pgc-muted); border: 1px solid var(--pgc-border);
+            display: grid; place-items: center; font-size: 9px; font-weight: 700; color: var(--pgc-muted-fg); }
 
   .vb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .viewport-selector { display: inline-flex; gap: 1px; background: var(--pgc-muted); border-radius: 8px; padding: 2px; }
@@ -1010,48 +777,22 @@
   .flash { animation: fl 1.6s ease-out 2; }
   @keyframes fl { 0%,100% { box-shadow: 0 0 0 0 rgba(242,166,90,0); } 30% { box-shadow: 0 0 0 3px var(--pgc-orange); } }
 
-  /* Alpine x-tip — gooey connector pill (differs from product tooltip.tsx) */
+  /* Tooltip — plain inverted pill with a rotated-square arrow.
+     Differs from the product's tooltip.tsx (white surface, shadow, no arrow). */
   .pg-tip {
     position: fixed; z-index: 100; pointer-events: none; width: fit-content;
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: transparent; color: #ffffff; padding: 6px 12px; font-size: 12px;
+    background: var(--pgc-accent); color: #ffffff; padding: 6px 12px; font-size: 12px;
+    border-radius: 6px;
     opacity: 0; transform: scale(0.95) translateY(8px);
     transition: opacity 150ms ease, transform 150ms ease;
   }
-  .pg-tip-surface {
-    position: absolute;
-    inset: calc(-1 * var(--goo-surface-pad));
-    filter: var(--goo-filter);
-    pointer-events: none;
+  .pg-tip-arrow {
+    position: absolute; width: 10px; height: 10px; background: var(--pgc-accent);
+    transform: rotate(45deg); border-radius: 1px; z-index: -1;
   }
-  .pg-tip-body {
-    position: absolute;
-    inset: var(--goo-surface-pad);
-    background: var(--pgc-accent);
-    border-radius: 6px;
-  }
-  .pg-tip-blob {
-    position: absolute;
-    width: var(--goo-blob-size);
-    height: var(--goo-blob-size);
-    margin-left: calc(var(--goo-blob-size) * -0.5);
-    margin-top: calc(var(--goo-blob-size) * -0.5);
-    border-radius: 50%;
-    background: var(--pgc-accent);
-  }
-  .pg-tip-anchor {
-    position: absolute;
-    width: var(--goo-anchor-size);
-    height: var(--goo-anchor-size);
-    margin-left: calc(var(--goo-anchor-size) * -0.5);
-    margin-top: calc(var(--goo-anchor-size) * -0.5);
-    border-radius: 50%;
-    background: var(--pgc-accent);
-  }
-  .pg-tip-anchor[hidden] { display: none; }
   .pg-tip-text { position: relative; white-space: nowrap; }
-  .pg-tip-rich { max-width: 200px; padding: 10px; white-space: normal; }
-  .pg-tip-rich .pg-tip-body { border-radius: 8px; }
+  .pg-tip-rich { max-width: 200px; padding: 10px; white-space: normal; border-radius: 8px; }
   .pg-tip-rich .pg-tip-text { display: block; white-space: normal; font-size: 12.5px; font-weight: 500; color: #fff; }
   .pg-tip-desc { position: relative; display: block; font-size: 11px; color: rgba(255,255,255,.55); margin-top: 2px; }
   .pg-tip-desc[hidden] { display: none; }
@@ -1059,195 +800,15 @@
   .pg-tip-art[hidden] { display: none; }
   .pg-tip-key { position: relative; color: rgba(255,255,255,.55); margin-left: 8px; font-size: 11px; }
   .pg-tip-key[hidden] { display: none; }
-  .pg-tip[data-side="top"] .pg-tip-blob {
-    left: 50%;
-    bottom: calc(var(--goo-surface-pad) - var(--goo-blob-reach) - var(--goo-blob-overlap) + var(--goo-blob-size) * 0.5);
-  }
+  .pg-tip[data-side="top"] .pg-tip-arrow { left: 50%; margin-left: -5px; bottom: -4px; }
   .pg-tip[data-side="bottom"] { transform: scale(0.95) translateY(-8px); }
-  .pg-tip[data-side="bottom"] .pg-tip-blob {
-    left: 50%;
-    top: calc(var(--goo-surface-pad) - var(--goo-blob-reach) - var(--goo-blob-overlap) + var(--goo-blob-size) * 0.5);
-  }
+  .pg-tip[data-side="bottom"] .pg-tip-arrow { left: 50%; margin-left: -5px; top: -4px; }
   .pg-tip[data-side="left"] { transform: scale(0.95) translateX(8px); }
-  .pg-tip[data-side="left"] .pg-tip-blob {
-    top: 50%;
-    right: calc(var(--goo-surface-pad) - var(--goo-blob-reach) - var(--goo-blob-overlap) + var(--goo-blob-size) * 0.5);
-  }
+  .pg-tip[data-side="left"] .pg-tip-arrow { top: 50%; margin-top: -5px; right: -4px; }
   .pg-tip[data-side="right"] { transform: scale(0.95) translateX(-8px); }
-  .pg-tip[data-side="right"] .pg-tip-blob {
-    top: 50%;
-    left: calc(var(--goo-surface-pad) - var(--goo-blob-reach) - var(--goo-blob-overlap) + var(--goo-blob-size) * 0.5);
-  }
+  .pg-tip[data-side="right"] .pg-tip-arrow { top: 50%; margin-top: -5px; left: -4px; }
   /* .pg-tip.pg-tip-visible, not .pg-tip-visible: the per-side entry transforms above are
      (0,2,0) and would otherwise outrank it, leaving bottom/left/right tips permanently
-     offset by their 8px entry translate — which now also aims the blob off its trigger. */
+     offset by their 8px entry translate. */
   .pg-tip.pg-tip-visible { opacity: 1; transform: scale(1) translate(0, 0); }
-
-  /* Goo dev panel */
-  .goo-panel {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    z-index: 200;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: #e7e5e4;
-  }
-  .goo-panel-toggle {
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    border: 1px solid #44403c;
-    background: #292524;
-    color: #d6d3d1;
-    display: grid;
-    place-items: center;
-  }
-  .goo-panel-card {
-    position: absolute;
-    right: 0;
-    bottom: 44px;
-    width: 260px;
-    border: 1px solid #44403c;
-    border-radius: 8px;
-    background: #1c1917;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  }
-  .goo-panel-head,
-  .goo-panel-foot {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-bottom: 1px solid #292524;
-  }
-  .goo-panel-foot {
-    border-bottom: 0;
-    border-top: 1px solid #292524;
-    justify-content: flex-end;
-  }
-  .goo-panel-title { flex: 1; text-transform: uppercase; letter-spacing: 0.06em; color: #a8a29e; }
-  .goo-panel-switch { display: flex; align-items: center; gap: 6px; }
-  .goo-panel-chevron {
-    border: 0;
-    background: transparent;
-    color: #a8a29e;
-    padding: 2px;
-  }
-  .goo-panel-body { display: grid; gap: 6px; padding: 8px 10px; max-height: 52vh; overflow: auto; }
-  .goo-panel-row {
-    display: grid;
-    grid-template-columns: 72px 1fr 36px;
-    align-items: center;
-    gap: 6px;
-  }
-  .goo-panel-row-bool { grid-template-columns: 1fr auto; }
-  .goo-panel-val { text-align: right; color: #d6d3d1; }
-  .goo-panel-foot button {
-    border: 1px solid #44403c;
-    background: #292524;
-    color: #e7e5e4;
-    border-radius: 4px;
-    padding: 4px 8px;
-  }
-
-  /* Goo lab page */
-  .goo-lab-page { margin: 0; }
-  .goo-lab {
-    position: fixed;
-    inset: 0;
-    background: #1c1917;
-    color: #e7e5e4;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  .goo-lab-stage {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-  }
-  .goo-lab-shapes {
-    position: absolute;
-    inset: 0;
-    filter: var(--goo-filter);
-  }
-  .goo-lab-shape {
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: #e7e5e4;
-    touch-action: none;
-    cursor: grab;
-  }
-  .goo-lab-shape:active { cursor: grabbing; }
-  .goo-lab-controls {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 10;
-    width: 280px;
-    border: 1px solid #44403c;
-    border-radius: 8px;
-    background: rgba(28, 25, 23, 0.92);
-    padding: 10px;
-    display: grid;
-    gap: 8px;
-    font-size: 12px;
-  }
-  .goo-lab-controls-head {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: #a8a29e;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .goo-lab-seg {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .goo-lab-seg button,
-  .goo-lab-pick button {
-    border: 1px solid #44403c;
-    background: #292524;
-    color: #d6d3d1;
-    border-radius: 4px;
-    padding: 3px 6px;
-    font-size: 11px;
-    font-family: var(--mono);
-  }
-  .goo-lab-seg button.active,
-  .goo-lab-pick button.active {
-    border-color: #78716c;
-    background: #44403c;
-    color: #fafaf9;
-  }
-  .goo-lab-row {
-    display: grid;
-    grid-template-columns: 72px 1fr 40px;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 11px;
-  }
-  .goo-lab-row-off { opacity: 0.45; }
-  .goo-lab-pick { display: flex; gap: 6px; }
-  .goo-lab-metrics {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 8px;
-    border: 1px solid #292524;
-    border-radius: 6px;
-    background: #141210;
-  }
-  .goo-lab-metric { display: grid; gap: 2px; }
-  .goo-lab-metric span { color: #a8a29e; font-family: var(--mono); font-size: 10px; text-transform: uppercase; }
-  .goo-lab-metric strong { font-size: 18px; font-weight: 600; color: #fafaf9; }
-  .goo-lab-toolbar {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-  }
-  .goo-lab-toolbar .canvas-toolbar { position: static; }
 }

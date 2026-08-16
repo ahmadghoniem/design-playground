@@ -4,12 +4,11 @@ const OPEN_DELAY = 700;
 const SKIP_DELAY = 300;
 
 let tipEl = null;
-let tipSurface = null;
+let tipArrow = null;
 let tipContent = null;
 let tipDescEl = null;
 let tipArtEl = null;
 let tipKeyEl = null;
-let tipAnchor = null;
 let showTimer = null;
 let activeTrigger = null;
 let lastHideTime = 0;
@@ -33,40 +32,14 @@ const TIP_ARTIFACTS = {
   },
 };
 
-function ensureGooFilter() {
-  if (document.getElementById('pg-goo')) return;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '0');
-  svg.setAttribute('height', '0');
-  svg.setAttribute('style', 'position:absolute');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = `<defs>
-    <filter id="pg-goo">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
-      <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo"/>
-      <feBlend in="SourceGraphic" in2="goo"/>
-    </filter>
-  </defs>`;
-  document.body.appendChild(svg);
-}
-
 function getTipEl() {
   if (!tipEl) {
-    ensureGooFilter();
     tipEl = document.createElement('div');
     tipEl.className = 'pg-tip';
     tipEl.setAttribute('role', 'tooltip');
 
-    tipSurface = document.createElement('div');
-    tipSurface.className = 'pg-tip-surface';
-    const tipBody = document.createElement('div');
-    tipBody.className = 'pg-tip-body';
-    const tipBlob = document.createElement('span');
-    tipBlob.className = 'pg-tip-blob';
-    tipAnchor = document.createElement('span');
-    tipAnchor.className = 'pg-tip-anchor';
-    tipAnchor.hidden = true;
-    tipSurface.append(tipBody, tipBlob, tipAnchor);
+    tipArrow = document.createElement('span');
+    tipArrow.className = 'pg-tip-arrow';
 
     tipContent = document.createElement('span');
     tipContent.className = 'pg-tip-text';
@@ -79,7 +52,7 @@ function getTipEl() {
     tipKeyEl = document.createElement('span');
     tipKeyEl.className = 'pg-tip-key';
 
-    tipEl.append(tipSurface, tipContent, tipDescEl, tipArtEl, tipKeyEl);
+    tipEl.append(tipArrow, tipContent, tipDescEl, tipArtEl, tipKeyEl);
     tipEl.style.display = 'none';
     document.body.appendChild(tipEl);
   }
@@ -102,31 +75,7 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(n, max));
 }
 
-function getTipOffset() {
-  try {
-    if (typeof Alpine === 'undefined' || !Alpine.store) return 14;
-    const store = Alpine.store('goo');
-    return store?.tipOffset ?? 14;
-  } catch {
-    return 14;
-  }
-}
-
-function getSurfacePad() {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue('--goo-surface-pad');
-  const parsed = parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : 96;
-}
-
-function getAnchorEnabled() {
-  try {
-    if (typeof Alpine === 'undefined' || !Alpine.store) return true;
-    const store = Alpine.store('goo');
-    return store?.anchor ?? true;
-  } catch {
-    return true;
-  }
-}
+const TIP_OFFSET = 8;
 
 function positionTip(trigger, side) {
   const tip = getTipEl();
@@ -134,7 +83,7 @@ function positionTip(trigger, side) {
   const boundary = trigger.closest('[data-tip-boundary]');
   const boundaryRect = boundary ? boundary.getBoundingClientRect() : rect;
   const tipRect = tip.getBoundingClientRect();
-  const offset = getTipOffset();
+  const offset = TIP_OFFSET;
   const pad = 8;
   let top;
   let left;
@@ -160,48 +109,6 @@ function positionTip(trigger, side) {
   tip.style.top = `${clamp(top, pad, window.innerHeight - tipRect.height - pad)}px`;
   tip.style.left = `${clamp(left, pad, window.innerWidth - tipRect.width - pad)}px`;
   tip.dataset.side = side;
-}
-
-function positionAnchor(trigger, side) {
-  if (!tipAnchor) return;
-
-  if (!getAnchorEnabled()) {
-    tipAnchor.hidden = true;
-    return;
-  }
-
-  const tip = getTipEl();
-  const rect = trigger.getBoundingClientRect();
-  const boundary = trigger.closest('[data-tip-boundary]');
-  const boundaryRect = boundary ? boundary.getBoundingClientRect() : rect;
-  const tipRect = tip.getBoundingClientRect();
-  const surfacePad = getSurfacePad();
-  let anchorX;
-  let anchorY;
-
-  switch (side) {
-    case 'bottom':
-      anchorX = rect.left + rect.width / 2;
-      anchorY = boundaryRect.bottom;
-      break;
-    case 'left':
-      anchorX = boundaryRect.left;
-      anchorY = rect.top + rect.height / 2;
-      break;
-    case 'right':
-      anchorX = boundaryRect.right;
-      anchorY = rect.top + rect.height / 2;
-      break;
-    default:
-      anchorX = rect.left + rect.width / 2;
-      anchorY = boundaryRect.top;
-  }
-
-  const localX = anchorX - tipRect.left + surfacePad;
-  const localY = anchorY - tipRect.top + surfacePad;
-  tipAnchor.style.left = `${localX}px`;
-  tipAnchor.style.top = `${localY}px`;
-  tipAnchor.hidden = false;
 }
 
 function showTip(trigger, text, side) {
@@ -244,7 +151,6 @@ function showTip(trigger, text, side) {
   tip.style.visibility = 'hidden';
   tip.classList.remove('pg-tip-visible');
   positionTip(trigger, side);
-  positionAnchor(trigger, side);
   tip.style.visibility = 'visible';
   requestAnimationFrame(() => tip.classList.add('pg-tip-visible'));
   activeTrigger = trigger;

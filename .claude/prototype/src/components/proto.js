@@ -5,7 +5,6 @@ import { registerChat } from './chat.js';
 import { registerDesignAgents } from './design-agents.js';
 import { registerModals } from './modals.js';
 import { registerTooltip } from './tooltip.js';
-import { registerGoo, registerGooLab } from './goo.js';
 import { registerTheme } from './theme.js';
 import { NODE_NAMES } from '../data/shared.js';
 
@@ -15,8 +14,6 @@ registerChat();
 registerDesignAgents();
 registerModals();
 registerTooltip();
-registerGoo();
-registerGooLab();
 registerTheme();
 
 document.addEventListener('alpine:init', () => {
@@ -24,8 +21,6 @@ document.addEventListener('alpine:init', () => {
     selectedKind: 'orig',
     crumbName: NODE_NAMES.orig,
     crumbLeaf: 'root',
-    branchModalOpen: false,
-    isDirty: false,
   });
 });
 

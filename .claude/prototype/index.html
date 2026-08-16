@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Playground — corrected prototype</title>
+  <title>Playground — prototype</title>
   <link rel="stylesheet" href="dist/app.css">
   <style>[x-cloak]{display:none!important}</style>
   <script type="importmap">
@@ -16,7 +16,8 @@
 </head>
 <body>
 
-<div class="app" id="app">
+<div class="app" id="app" x-data
+     :class="{ 'left-collapsed': $store.ui.leftCollapsed, 'right-collapsed': $store.ui.rightCollapsed }">
   <div class="app-body">
     <div data-partial="src/partials/library.html"></div>
     <div data-partial="src/partials/canvas.html"></div>

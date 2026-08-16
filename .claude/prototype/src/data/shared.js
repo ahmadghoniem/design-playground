@@ -16,14 +16,75 @@ export const ADOPT = {
   failed: { on: false, label: 'Keep' },
 };
 
-export const MODELS = ['Claude Opus 5', 'Claude Sonnet 5', 'Claude Haiku 5'];
-
-export const EFFORTS = [
+/**
+ * The effort ladder, ordered from cheapest to deepest. This is the shared *vocabulary* —
+ * no model offers all of it. Each model declares the subset it actually supports.
+ */
+export const EFFORT_LADDER = [
+  { id: 'minimal', label: 'Minimal' },
   { id: 'low', label: 'Low' },
   { id: 'medium', label: 'Med' },
   { id: 'high', label: 'High' },
   { id: 'max', label: 'Max' },
 ];
+
+/**
+ * Models are grouped under the coding agent that runs them, because the agent is the
+ * thing you are actually choosing — the same model behaves differently under a different
+ * harness. The heading names the agent, so the rows do not repeat it: under Claude Code
+ * the row is `Opus 5`, never `Claude Opus 5`.
+ *
+ * Two per-model facts drive the picker:
+ * - `efforts` — the levels this model actually supports. **The set differs per model**
+ *   (a flagship offers five, a fast model two), so the effort picker is rebuilt from the
+ *   chosen model rather than showing one fixed list with dead options in it.
+ * - `effort` — this model's own default, always a member of `efforts`. Picking a model
+ *   applies it, so the common case costs one click instead of two, and the effort picker
+ *   moves to match. This is also what makes switching models safe: an effort the new
+ *   model does not offer can never survive the switch.
+ */
+export const AGENTS = [
+  {
+    id: 'claude-code',
+    name: 'Claude Code',
+    models: [
+      { id: 'opus-5', label: 'Opus 5', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high' },
+      { id: 'sonnet-5', label: 'Sonnet 5', efforts: ['low', 'medium', 'high', 'max'], effort: 'high' },
+      { id: 'haiku-4-5', label: 'Haiku 4.5', efforts: ['low', 'medium', 'high'], effort: 'medium' },
+    ],
+  },
+  {
+    id: 'cursor',
+    name: 'Cursor',
+    models: [
+      { id: 'composer-2-5', label: 'Composer 2.5', efforts: ['low', 'medium'], effort: 'low' },
+      { id: 'grok-4-6', label: 'Grok 4.6', efforts: ['low', 'medium', 'high', 'max'], effort: 'high' },
+    ],
+  },
+  {
+    id: 'codex',
+    name: 'Codex',
+    models: [
+      { id: 'gpt-5-6', label: 'GPT-5.6', efforts: ['minimal', 'low', 'medium', 'high'], effort: 'medium' },
+      { id: 'gpt-5-6-sol', label: 'GPT-5.6 Sol', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high' },
+    ],
+  },
+  {
+    id: 'antigravity',
+    name: 'Antigravity',
+    models: [
+      { id: 'gemini-3-pro', label: 'Gemini 3 Pro', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high' },
+      { id: 'gemini-flash-3-7', label: 'Gemini Flash 3.7', efforts: ['low', 'medium', 'high'], effort: 'low' },
+    ],
+  },
+];
+
+/** Flat id → { …model, agent } lookup, so nothing has to walk the groups to resolve one. */
+export const MODEL_INDEX = Object.fromEntries(
+  AGENTS.flatMap((a) => a.models.map((m) => [m.id, { ...m, agent: a.name, agentId: a.id }])),
+);
+
+export const DEFAULT_MODEL = 'sonnet-5';
 
 export const SKILLS = [
   { id: 'tailwind', label: 'tailwind', description: 'Tailwind CSS design system guidance' },
@@ -44,43 +105,30 @@ export const SKILLS = [
 ];
 
 // Codex-style approval modes for the Composer permissions pill.
+/**
+ * Approval modes. `label` is one short word because it has to fit the footer chip —
+ * and the menu row shows that *same* word, never a longer synonym: OpenAI shipped
+ * drift between its own pill and menu copy and users filed confusion reports over it.
+ * The sentence that explains the mode lives in `hint`.
+ *
+ * `tone` tints the chip by blast radius, redundantly with the word — colour alone
+ * would fail WCAG 1.4.1. `auto` and `full` stay separate states: every shipping tool
+ * surveyed keeps reviewed-autonomy and no-review apart, so they are never merged.
+ */
 export const PERMISSIONS = [
-  { id: 'ask', label: 'Ask for approval', hint: 'Pause for sign-off before edits or commands' },
-  { id: 'auto', label: 'Auto', hint: 'Run edits and safe commands, ask on anything risky' },
-  { id: 'full', label: 'Full access', hint: 'Run everything without asking' },
-  { id: 'read', label: 'Read only', hint: 'Look, never write' },
+  { id: 'ask', label: 'Ask', tone: 'gate', hint: 'Sign off before each change' },
+  { id: 'auto', label: 'Auto', tone: 'part', hint: 'Edits and safe commands run' },
+  { id: 'full', label: 'Full', tone: 'open', hint: 'Runs everything, no prompts' },
+  { id: 'read', label: 'Read', tone: 'safe', hint: 'Look, never write' },
 ];
 
+/**
+ * Where the agent runs and what it runs on. Both are **read-only** in the composer's
+ * context row: you choose a worktree by launching the app in it, and you change branch
+ * with git. The row reports where you are; it is not a switcher.
+ *
+ * A branch is still the unit of parallel work — keeping an iteration creates one — but
+ * the app does not offer a way to hop between them, so there is no catalogue of them here.
+ */
 export const CURRENT_WORKTREE = 'rewynd';
-
-/** A workspace is a git branch. Switching branches is the only way to change boards. */
-export const WORKSPACES = [
-  {
-    branch: 'master',
-    dirty: false,
-    scene: 'host',
-    title: 'Pricing page',
-    summary: 'The host component on master. Iterations live on their own branches.',
-    tags: [{ id: 'comp', type: 'comp', label: 'PriceCard' }],
-  },
-  {
-    branch: 'pg/quiet-numeric',
-    dirty: true,
-    scene: 'explore',
-    title: 'Calmer pricing card',
-    summary: 'Three variations of PriceCard from one prompt — a text note, a reference image and the component, sent together.',
-    tags: [
-      { id: 'comp', type: 'comp', label: 'PriceCard' },
-      { id: 'text', type: 'text', label: 'text' },
-      { id: 'img', type: 'img', label: 'stripe-pricing' },
-    ],
-  },
-  {
-    branch: 'feat/layers-sidebar',
-    dirty: true,
-    scene: 'empty',
-    title: 'Layers sidebar',
-    summary: 'Parked feature branch. Nothing on the canvas yet.',
-    tags: [],
-  },
-];
+export const CURRENT_BRANCH = 'pg/quiet-numeric';
