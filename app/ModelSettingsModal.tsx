@@ -130,7 +130,10 @@ export default function ModelSettingsModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Model Settings</DialogTitle>
-          <DialogDescription className="flex items-center justify-between">
+          <DialogDescription
+            render={<div />}
+            className="flex items-center justify-between"
+          >
             <span>Choose Claude models and options.</span>
             <button
               onClick={() => fetchModels()}

@@ -4,11 +4,8 @@
   "private": true,
   "description": "Local-dev design playground. Its dependencies install NESTED under src/app/playground/node_modules (via setup.mjs) so the host project's package.json and lockfile are never touched. Local-dev only — never built in CI/prod. Vite-compatible. react/react-dom/tailwindcss are provided by the host (peerDependencies).",
   "dependencies": {
+    "@base-ui/react": "^1.7.0",
     "@hono/node-server": "^1.19.14",
-    "@radix-ui/react-alert-dialog": "^1.1.16",
-    "@radix-ui/react-dialog": "^1.1.16",
-    "@radix-ui/react-slot": "^1.2.5",
-    "@radix-ui/react-tooltip": "^1.2.9",
     "@tailwindcss/typography": "^0.5.20",
     "@xyflow/react": "^12.11.0",
     "class-variance-authority": "^0.7.1",

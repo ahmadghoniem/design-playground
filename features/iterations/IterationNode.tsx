@@ -439,33 +439,35 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
         >
           {/* Use this (adopt) */}
           <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={adoption.openAdoptConfirm}
-                disabled={
-                  adoption.adoptionStatus === "adopting" || isGlobalGenerating
-                }
-                className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
-                  adoption.adoptionStatus === "adopted"
-                    ? "bg-green-50 border-green-300 text-green-600"
-                    : adoption.adoptionStatus === "error"
-                      ? "bg-red-50 border-red-300 text-red-500"
-                      : "bg-white border-stone-200 text-stone-400 hover:text-green-600 hover:border-green-300"
-                }`}
-                aria-label={
-                  adoption.adoptionStatus === "adopting"
-                    ? "Adopting..."
-                    : adoption.adoptionStatus === "adopted"
-                      ? "Adopted"
-                      : "Adopt this variation"
-                }
-              >
-                {adoption.adoptionStatus === "adopting" ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <GitMerge className="w-3.5 h-3.5" />
-                )}
-              </button>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={adoption.openAdoptConfirm}
+                  disabled={
+                    adoption.adoptionStatus === "adopting" || isGlobalGenerating
+                  }
+                  className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
+                    adoption.adoptionStatus === "adopted"
+                      ? "bg-green-50 border-green-300 text-green-600"
+                      : adoption.adoptionStatus === "error"
+                        ? "bg-red-50 border-red-300 text-red-500"
+                        : "bg-white border-stone-200 text-stone-400 hover:text-green-600 hover:border-green-300"
+                  }`}
+                  aria-label={
+                    adoption.adoptionStatus === "adopting"
+                      ? "Adopting..."
+                      : adoption.adoptionStatus === "adopted"
+                        ? "Adopted"
+                        : "Adopt this variation"
+                  }
+                />
+              }
+            >
+              {adoption.adoptionStatus === "adopting" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <GitMerge className="w-3.5 h-3.5" />
+              )}
             </TooltipTrigger>
             <TooltipContent side="right">
               <p>
@@ -509,15 +511,17 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
           {/* Delete */}
           <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
-                aria-label="Delete variation"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
+                  aria-label="Delete variation"
+                />
+              }
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </TooltipTrigger>
             <TooltipContent side="right">
               <p>Delete variation</p>

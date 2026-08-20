@@ -90,14 +90,16 @@ export function ShapeToolGroup({
     <div ref={containerRef} className="relative">
       {/* Main button — static Shapes icon; click toggles the flyout */}
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={() => setFlyoutOpen((v) => !v)}
-            className={mainButtonClasses}
-            aria-label="Shape tools"
-          >
-            <Shapes className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          </button>
+        <TooltipTrigger
+          render={
+            <button
+              onClick={() => setFlyoutOpen((v) => !v)}
+              className={mainButtonClasses}
+              aria-label="Shape tools"
+            />
+          }
+        >
+          <Shapes className="w-[18px] h-[18px]" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent side="right">Shape tools</TooltipContent>
       </Tooltip>
@@ -107,18 +109,20 @@ export function ShapeToolGroup({
         <div className="absolute left-full top-0 ml-2 z-50 flex flex-col items-center gap-1 bg-white rounded-2xl border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-1.5">
           {SUB_TOOLS.map((tool) => (
             <Tooltip key={`${tool.type}-${tool.kind}`}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => activateSubTool(tool)}
-                  className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
-                    isSubToolActive(tool)
-                      ? "bg-stone-100 text-stone-900"
-                      : "text-stone-500 hover:text-stone-800 hover:bg-stone-50"
-                  }`}
-                  aria-label={`${tool.label} (${tool.shortcut})`}
-                >
-                  <tool.Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
-                </button>
+              <TooltipTrigger
+                render={
+                  <button
+                    onClick={() => activateSubTool(tool)}
+                    className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${
+                      isSubToolActive(tool)
+                        ? "bg-stone-100 text-stone-900"
+                        : "text-stone-500 hover:text-stone-800 hover:bg-stone-50"
+                    }`}
+                    aria-label={`${tool.label} (${tool.shortcut})`}
+                  />
+                }
+              >
+                <tool.Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
               </TooltipTrigger>
               <TooltipContent side="right">
                 {tool.label} ({tool.shortcut})

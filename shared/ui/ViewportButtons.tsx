@@ -37,18 +37,20 @@ export function ViewportButtons({
     <div className="flex items-center gap-0.5">
       {sizes.map(({ key, icon, label }) => (
         <Tooltip key={key}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => onSizeChange(key)}
-              className={`p-1 rounded transition-colors ${
-                currentSize === key
-                  ? "text-[#0B99FF] bg-blue-50"
-                  : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"
-              }`}
-              aria-label={label}
-            >
-              {icon}
-            </button>
+          <TooltipTrigger
+            render={
+              <button
+                onClick={() => onSizeChange(key)}
+                className={`p-1 rounded transition-colors ${
+                  currentSize === key
+                    ? "text-[#0B99FF] bg-blue-50"
+                    : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"
+                }`}
+                aria-label={label}
+              />
+            }
+          >
+            {icon}
           </TooltipTrigger>
           <TooltipContent>
             <p>{label}</p>

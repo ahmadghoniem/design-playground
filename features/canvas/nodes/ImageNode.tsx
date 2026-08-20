@@ -143,14 +143,16 @@ function ImageNodeInner({
           className={`absolute top-0 left-full pl-2 flex flex-col items-center gap-2 nodrag transition-opacity ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
           <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleDelete}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors"
-                aria-label="Delete image"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={handleDelete}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors"
+                  aria-label="Delete image"
+                />
+              }
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </TooltipTrigger>
             <TooltipContent side="right">
               <p>Delete image</p>

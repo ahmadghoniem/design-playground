@@ -31,14 +31,16 @@ export default function PlaygroundCanvasViewControls({
   return (
     <div className="absolute left-6 bottom-6 z-20 flex flex-row items-center gap-2 bg-white rounded-2xl border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-2">
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onZoomOut}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
-            aria-label="Zoom out"
-          >
-            <Minus className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          </button>
+        <TooltipTrigger
+          render={
+            <button
+              onClick={onZoomOut}
+              className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
+              aria-label="Zoom out"
+            />
+          }
+        >
+          <Minus className="w-[18px] h-[18px]" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent side="top">Zoom out</TooltipContent>
       </Tooltip>
@@ -48,14 +50,16 @@ export default function PlaygroundCanvasViewControls({
       </span>
 
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onZoomIn}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
-            aria-label="Zoom in"
-          >
-            <Plus className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          </button>
+        <TooltipTrigger
+          render={
+            <button
+              onClick={onZoomIn}
+              className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
+              aria-label="Zoom in"
+            />
+          }
+        >
+          <Plus className="w-[18px] h-[18px]" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent side="top">Zoom in</TooltipContent>
       </Tooltip>
@@ -63,29 +67,33 @@ export default function PlaygroundCanvasViewControls({
       <div className="w-px h-5 bg-stone-200 mx-0.5" />
 
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors disabled:opacity-35 disabled:pointer-events-none"
-            aria-label="Undo"
-          >
-            <Undo2 className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          </button>
+        <TooltipTrigger
+          render={
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors disabled:opacity-35 disabled:pointer-events-none"
+              aria-label="Undo"
+            />
+          }
+        >
+          <Undo2 className="w-[18px] h-[18px]" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent side="top">Undo</TooltipContent>
       </Tooltip>
 
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onRedo}
-            disabled={!canRedo}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors disabled:opacity-35 disabled:pointer-events-none"
-            aria-label="Redo"
-          >
-            <Redo2 className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          </button>
+        <TooltipTrigger
+          render={
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="flex items-center justify-center w-9 h-9 rounded-xl text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors disabled:opacity-35 disabled:pointer-events-none"
+              aria-label="Redo"
+            />
+          }
+        >
+          <Redo2 className="w-[18px] h-[18px]" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent side="top">Redo</TooltipContent>
       </Tooltip>
