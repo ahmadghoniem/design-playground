@@ -1,41 +1,45 @@
 # AGENTS.md
-- Choose the simplest implementation that fully meets the current requirements. Avoid speculative abstractions, configuration, and indirection.
-- Do not preserve backward compatibility. Remove obsolete paths instead of adding compatibility layers, fallbacks, or migrations.
 
-- Keep components modular and concerns clearly separated.
+## Say only what is present and works
 
-- Prefer established, well-maintained libraries when they reduce overall complexity or improve reliability. Do not reimplement common functionality without a clear reason.
+Whatever you write — response, note, spec, commit message — state only what exists and works. An absence no one would look for carries no information, and stating one costs a longer, harder-to-parse sentence than the fact deserves. Two absences still earn a line: one a reader would otherwise hunt for, and an idea worth stopping someone from re-proposing.
 
-- Lean on the dependencies already in the project before writing your own implementation or adding packages. Do not assume a library lacks a capability without checking its documentation and types.
-- 
-> **your response should only be about what is present and does work.** An absence carries no information — a non-event, or something a constraint removed, is noise, and stating it costs a longer, harder-to-parse sentence than the fact deserves. Two things still earn a line: a missing piece a reader would otherwise hunt for, and an idea worth stopping someone from re-proposing.
+Example: I hand you a mock or snippet and say "use X from it; don't include Y." Y exists only in that supplied context — nowhere in the codebase or docs. Replying "I added X and made sure to remove Y" announces the removal of something that never existed. The same failure shows up in the wild as "removed X because of Y" comments written into source (anthropics/claude-code#65961); uncontextualized negation is slower to parse and uninformative (Nordmeyer & Frank, CogSci 2014).
 
-- if i did point out something that i don't like such like the agent defaulting to preserving for backward compatability or jumping into conclusion before reading the documentation)
-or not liking some of the way you phrase stuff
-for example (How we redesigned the Magic Patterns chat thread — and the two things we refused to compromise on.) or (This isn't X. This is Y.) if any of these could be added in agents.md provide suggestions it at the end of your response
+## Changes
 
-- Don't read DRAFT.md it's my personal scratchpad
+- Keep changes focused: no unrelated edits, unnecessary abstractions, or low-signal tests.
+- Choose a simple implementation that fully meets current requirements — no speculative abstraction, configuration, or indirection.
 
-# AGENTS.md
+## Dependencies
 
+- Reach for libraries already in the project before writing your own or adding packages.
+- Prefer established, well-maintained libraries over reimplementing common functionality, unless there is a clear reason.
+- Check a library's docs and types before assuming it lacks a capability.
 
-Guidance for working in this repository.
-**Source of truth:** follow [`CLAUDE.md`](./CLAUDE.md). This file exists so agent runners that look for `AGENTS.md` find the same guidance. Do not diverge the two — edit `CLAUDE.md` and keep this pointer.
+## Context economy
+
+- Filter noisy command output on routine runs — quiet flags, last-N per shell (PowerShell `Select-Object -Last 20`, bash `tail -n 20`) — because output is re-sent to the model every turn. If a filtered run fails, re-run it unfiltered: the error is the payload.
+- Shells differ by tool: Claude Code uses Git Bash if Git for Windows is installed (else PowerShell); Codex and Cursor Agent default to PowerShell. Match the syntax to the shell; don't assume one.
+- When a command floods the session, name the flag that would have quieted it next time — the goal isn't silence, it's a tighter context window: flooded output is re-sent to the model every turn.
+- If the user names a file you had to search for, note that @-mentioning attaches it directly. Report what finding it cost; don't estimate savings.
 
 ## Writing things down
 
-> **Record only what is present and does work.** An absence carries no information — a non-event, or something a constraint removed, is noise, and stating it costs a longer, harder-to-parse sentence than the fact deserves. Two things still earn a line: a missing piece a reader would otherwise hunt for, and an idea worth stopping someone from re-proposing.
+**A delta needs both sides.** Before recording "X was A, now B", verify A is recorded in the project — spec, docs, or code. A change measured against a prototype draft is prototype history, not a spec delta — filing it as one smuggles in a decision nobody made.
 
-## Quick facts (must match CLAUDE.md)
+## Reporting
 
-- **Agent CLI:** Claude Code only (`claude`) **for now** — a maintenance choice, not a commitment; more agents are planned. Still no provider registry and no `shared/lib/providers/`: don't pre-build the abstraction, just keep CLI knowledge inside `shared/lib/agent-config.ts` and process concerns inside `server/lib/spawn-agent.ts` so a second agent stays a contained change. `--max-budget-usd` is deliberately not exposed.
-- **Events:** no window `CustomEvent` is dispatched anywhere. Use a callback, a `shared/stores/` zustand store, or `generation-events`.
-- **Frontend:** React mounted from `dev-entry.tsx` → `<PlaygroundClient />`. No `react-router-dom`.
-- **Selection:** inline DOM (`useElementSelection` + `element-context`). No iframes, no penpal.
-- **Stream parser:** `server/lib/claude-jsonl.ts`.
-- **Docs:** `.claude/specs/` is the source of truth for post-cleanup work, split per feature for a Fable audit. `.claude/research/` is a frozen archive, not a source of truth. `.claude/ROADMAP.md` holds open work plus the "how we work" process decisions.
-- **Model helper:** `shared/lib/model-selection.ts`.
-- **Spawn:** `server/lib/spawn-agent.ts` (server-only). Config: `shared/lib/agent-config.ts`.
-- **Checks:** `bun run check:architecture` (dependency-cruiser + knip triage + host typecheck reminder).
+- Report meaningful blockers, outcomes, and evidence — no play-by-play progress.
+- Keep responses brief and focused. Disclaimers and caveats short; spend the response on the answer.
 
-See `CLAUDE.md` for directory layout, Hono conventions, setup, and gotchas.
+## Never
+
+- Never undo work you didn't do — a deleted file, a reverted edit, a removed feature is intentional until told otherwise. If it looks like a mistake, flag it; don't reverse it.
+- Never take destructive, production, or external actions (force-push, deploy, publish, send, deleting anything outside the current change) without the user naming the action. Approval of the task is not approval of the operation.
+- Never preserve backward compatibility unless the user asks. When your change replaces a path, delete the old one in the same change instead of adding compatibility layers, fallbacks, or migrations — shims hide the current design and tax every future change.
+- Never read DRAFT.md; it is a personal scratchpad.
+
+## If rules conflict
+
+- Take the safer action and flag the conflict instead of silently picking one.

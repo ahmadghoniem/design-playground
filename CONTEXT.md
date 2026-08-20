@@ -27,7 +27,7 @@ _Avoid_: catalog, component list, assets
 ### Generation
 
 **Agent**:
-A coding-agent product that can run models in this playground (Claude Code, Cursor, Codex, Antigravity). The thing the model picker groups by.
+A coding-agent product that can run models in this playground (Claude Code, Cursor, Codex). The thing the model picker groups by.
 _Avoid_: provider, harness, CLI, vendor
 
 **Model**:
@@ -161,7 +161,7 @@ The ComposerFooter control that chooses Model and Effort. Models group under the
 _Avoid_: model menu, LLM picker, provider picker
 
 **SkillPicker**:
-The `/` menu in the Composer that inserts a Skill. A row can open a nested list, and Add a skill opens the Skills catalog.
+The `/` menu in the Composer that inserts a Skill. A flat list of the Agent's own skills; picking one inserts its name as a token the Agent resolves.
 _Avoid_: slash menu, command palette, mention menu
 
 **Attachment**:
@@ -177,12 +177,8 @@ How freely the Agent may change the checkout without asking: Ask, Auto, Full, or
 _Avoid_: approval mode, approvals, permissions, policy, sandbox, yolo
 
 **Effort**:
-How thoroughly the chosen Model works a turn. The closed model pill shows the Model name with Effort dimmed beside it, never Effort instead of the Model.
-_Avoid_: reasoning, thinking, reasoning effort, budget, temperature
-
-**Effort ladder**:
-The shared, ordered vocabulary of Effort levels: minimal, low, medium, high, max. Each Model offers a subset and a default; the picker is rebuilt from the chosen Model.
-_Avoid_: effort enum, thinking budget, reasoning levels
+How thoroughly the chosen Model works a turn, drawn from one ordered ladder shared by every Model: minimal, low, medium, high, max. Each Model offers a subset of the ladder and a default; the picker is rebuilt from the chosen Model. The closed model pill shows the Model name with Effort dimmed beside it, never Effort instead of the Model.
+_Avoid_: reasoning, thinking, reasoning effort, budget, temperature, effort enum, thinking budget, reasoning levels
 
 **Worktree**:
 The git working directory this playground was launched in. Named read-only at the top of the Composer, so you can tell which checkout a Generation will land in.
