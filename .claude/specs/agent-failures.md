@@ -48,19 +48,9 @@ the fix order that resolves them without a re-roll.
   has no partial implementation anywhere in the tree to reconcile against — it is text to be written
   into a prompt, plus a small piece of card UI, both starting from zero.
 
-## Open → ROADMAP
+## Open
 
 - **Which failure names actually get shown, and the meaning table the agent reads.** The framing is
   settled (stable names, shown on the card face); the mechanism is not — whether every name in the
   settled list is a distinct detectable failure mode or some collapse into one shown name, and the
   table that tells the agent what each name means well enough to recognize and fix it, are both open.
-
-## Context absorbed (sources below were folded in, then retired in this docs restructure)
-
-- `spec.md` §5 "Prompt additions" — the named-failure list, fix order, and "recoverable failures get
-  stable names" framing absorbed in full (this file's slice of §5; the vocabulary/commit-
-  message/delivery slice is `agent-vocabulary.md`).
-- `journey.md` "From studying Loora" → "Design judgment (prompt additions)" — the same two settled
-  bullets (named-failure list, fix order) with their "why," consistent with `spec.md` §5.
-- `features/generation/prompts/shared-sections.ts` read directly (`getQualityChecklist()`) to confirm
-  no existing overlap with design-judgment content.

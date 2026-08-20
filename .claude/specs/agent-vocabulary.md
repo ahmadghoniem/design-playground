@@ -79,20 +79,14 @@ file.
   natural place a named-action block would slot in — same pairing mechanics, different tool/payload
   shape — but nothing today looks for one.
 
-- **The skills installer is unimplemented, not partially built.** `features/skills/
-  SkillsCatalogModal.tsx` already POSTs to `/api/skills/{add,update,remove,preview}`; `server/routes/
-  skills.ts` serves only `GET /api/skills` (reads `SKILL.md` files from a builtin dir shipped with the
-  package and a user dir at `.claude/skills/`, tags each `source: 'builtin' | 'user'`, and
-  de-duplicates by id with **user skills currently shadowing builtins** — `[...user, ...builtin]`
-  iteration order — which the settled decision above doesn't yet resolve one way or the other). The
-  four mutating endpoints 404. A block comment already on `skillsRoutes()` documents the constraints
-  an implementation must respect: only ever write to the user skills dir, never the builtin one;
-  validate `id` as a single path segment with an explicit regex (matching the pattern
-  `ITERATION_FILENAME_PATTERN` already sets in `shared/lib/constants.ts`) rather than
-  sanitizing-by-stripping, since a bad id becomes a directory name that `remove` deletes recursively;
-  a skill is a directory containing `SKILL.md`, not a single file; the user skills dir is gitignored,
-  so a remove is unrecoverable; `preview` must fetch and return only, no directory creation, no disk
-  cache.
+- **There is no skills installer, and there will not be one.** Installing a skill means fetching
+  someone else's prompt off GitHub and writing it where the Agent reads it — a job every Agent's own
+  tooling already does. `server/routes/skills.ts` is read-only: `GET /api/skills` reads `SKILL.md`
+  files from a builtin dir shipped with the package and a user dir at `.claude/skills/`, tags each
+  `source: 'builtin' | 'user'`, and de-duplicates by name with **user skills shadowing builtins**
+  (`[...user, ...builtin]` iteration order). The in-app catalog that once POSTed to
+  `/api/skills/{add,update,remove,preview}` is deleted, along with its featured-skills list and the
+  header entry point that opened it.
 
 - **Lean-prompts consolidation is not done.** `features/generation/prompts/` still holds separate
   `iteration.prompt.ts`, `element-iteration.prompt.ts`, `freeform-reference.prompt.ts`, and
@@ -113,7 +107,7 @@ file.
   `CLAUDE.md` confirms directly: "nothing in the source dispatches [a window CustomEvent]; the last
   four were removed in `95710ae`." The migration this file's roadmap item names is already done.
 
-## Open → ROADMAP
+## Open
 
 - **The window-CustomEvents migration decision — already resolved, not open.** The decision this
   item names was whether a typed emitter buys anything over `window` events, given that one end of
@@ -122,20 +116,3 @@ file.
   the removal happened. Left here as a pointer so the closed item isn't rediscovered as "still open"
   from an older plan record; the one real loose end is `generation-events.ts`'s own header comment,
   which still describes the migration as a replacement in progress rather than a completed one.
-
-## Context absorbed (sources below were folded in, then retired in this docs restructure)
-
-- `spec.md` §5 "Prompt additions" — absorbed in full (the vocabulary-object decision, stable failure
-  names as a delivery-adjacent idea now split into `agent-failures.md`, the agent-written commit
-  message, and the `claude-jsonl.ts` delivery mechanism).
-- `journey.md` "From studying Loora" → "The agent" — absorbed in full; consistent with `spec.md` §5.
-- `.claude/plans/summary.md` — "Address later" (lean prompts / `fill-template`) and "Still open" table
-  (skills mutate APIs, lifecycle/coordination docs-as-debt) absorbed in full; the JSX-stamp
-  clarification in that file belongs to `discovery-engine.md`, not here.
-- `.claude/plans/4-deferred-refactors.md` §4.1 — read in full to source the window-CustomEvents item;
-  cross-checked against current `shared/lib/constants.ts` and found already resolved (see above), a
-  plan-vs-code mismatch worth flagging on handoff.
-- `server/routes/skills.ts` — read directly for the installed constraints comment above
-  `skillsRoutes()`, folded into the settled decision and the code-reality section.
-- `server/lib/claude-jsonl.ts`, `features/generation/prompt-builders.ts`, and
-  `features/generation/prompts/shared-sections.ts` read directly to confirm what exists today.

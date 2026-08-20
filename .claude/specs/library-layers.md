@@ -1,8 +1,8 @@
-# Spec — sidebar: Layers tab
+# Layers fold
 
-The Layers tab of the left sidebar: a Figma-style layer tree over the component registry, for
-finding and dragging components onto the canvas. The sidebar container itself (280px, docked, tab
-switching, per-tab search + footer) is `shell-and-layout.md`; this file covers only the tree.
+The **Layers** fold of the Library: a Figma-style layer tree over the component registry, for
+finding and dragging components onto the canvas. The Library container itself is
+`shell-and-layout.md`'s subject; this file covers only the tree.
 
 ## Settled
 
@@ -10,24 +10,34 @@ switching, per-tab search + footer) is `shell-and-layout.md`; this file covers o
   composition — walk from `createRoot(...).render(<X />)`, down through local imports — not from an
   agent describing the app. *Why:* composition is a static property of the code; a deterministic
   walk is instant and can't hallucinate structure the agent scan (`/api/discover` today) can.
-- **First-load with no button, no agent.** Opening the Layers tab shows the tree immediately; there
+- **First-load with no button, no agent.** Opening the Layers fold shows the tree immediately; there
   is no "Add components" step to click through and no CLI spawn to wait on.
 - **Draggable.** Every row — leaf or branch — can be dragged onto the canvas to create a node.
 - **Ancestry-preserving search.** A match keeps its parents visible rather than flattening the
   result into a list, so the path to a hit stays readable. Every surviving branch auto-expands while
   a query is active.
-- **Per-project expansion.** Which rows are expanded is state scoped to the sidebar for the current
+- **Per-project expansion.** Which rows are expanded is state scoped to the Library for the current
   project, not written into the tree data and not carried across projects.
+- **No badges on layer rows.** No node-count badge, no instance-count chip, no conditional marker.
+  Proposed twice and rejected both times — do not re-propose.
 - **Row affordances:**
-  - Indent guides — one hairline per ancestor level; depth is unreadable without them past three
-    levels.
-  - Type icons — a folder-shaped icon for a row with children, a leaf icon for one without.
+  - Indent guides — real 1px rules, one per ancestor level; depth is unreadable without them past
+    three levels.
+  - Kind icons — six kinds (layout, layers, box, chart, table, primitive), not a two-way folder/leaf
+    split.
+  - Chevron on parent rows only — leaf rows have no chevron.
+  - Dimmed rows — components that render no markup of their own (providers and similar) read as
+    dimmed.
   - Truncation + tooltip — long labels truncate; the full label (and source path) is the tooltip.
   - Hover actions — a "focus on canvas" affordance appears on hover, hidden otherwise.
-  - Conditional marker — a row whose JSX sits behind a ternary, `&&`, or `.map()` is marked, so the
-    tree communicates "this may or may not render" rather than presenting it as unconditional.
   - Canvas ↔ tree selection sync — selecting a node on the canvas highlights its row in the tree,
     and selecting/focusing a row highlights and centers the matching canvas node. Bidirectional.
+- **Chevron hit area.** Icon-only controls in dense rows get a 24×24 minimum hit area, with the glyph
+  size unchanged. The chevron must not steal the row's own selection click.
+- **Demo/reference tree.** The reference tree used for design work is a realistic application render
+  tree, not a two-node toy example — depth is the thing being designed for. The published
+  "Layers Sidebar — 5 Layout Studies" artifact (`ef903ba0-c540-4763-bfa8-46cf93496ec3`) is
+  the living reference for prototyping against.
 - **Omit for v1:** visibility toggle, lock, reorder, rename. The tree is a navigation and
   drag-source surface, not a layers-panel editor.
 
@@ -36,13 +46,13 @@ switching, per-tab search + footer) is `shell-and-layout.md`; this file covers o
 Read from `feat/layers-sidebar` (`app/PlaygroundSidebar.tsx`, `features/discovery/LayerTree.tsx`,
 `features/discovery/registry-tree.ts`).
 
-- **Data source mismatch with the settled decision.** The Layers tab does not render the live
+- **Data source mismatch with the settled decision.** The Layers fold does not render the live
   static-discovery render tree (`scanRenderTree` / `GET /api/discover/tree`, which the Primitives
-  and Tokens tabs do consume via `useStaticScan`). It renders `registry` — the flat
+  and Variables folds do consume via `useStaticScan`). It renders `registry` — the flat
   `RegistryLeafItem[]` manifest from `registry.tsx` (`discoveredRegistry`) — through
   `buildRegistryTree()` in `registry-tree.ts`, which expresses nesting via each item's `parentId`.
   Reconciling this with the deterministic-scan decision above is discovery-engine.md's problem, not
-  this file's, but the gap is real: today the Layers tab shows whatever the manifest holds, and
+  this file's, but the gap is real: today the Layers fold shows whatever the manifest holds, and
   nothing currently writes that manifest from the deterministic scan.
 - **First-load still has a button and an agent.** `PlaygroundSidebar.tsx` renders a `+` icon button
   (`aria-label="Add components"`) in the header that calls `onOpenDiscovery`, and an empty-state CTA
@@ -58,13 +68,14 @@ Read from `feat/layers-sidebar` (`app/PlaygroundSidebar.tsx`, `features/discover
   in `PlaygroundSidebar`; nothing persists it to disk or `localStorage`. It resets on reload.
 - **Row affordances — partially built:**
   - Indent guides — built: one `w-[11px]` span with a hairline border per depth level.
-  - Type icons — built: `Layers` icon when `children.length > 0`, `Box` icon otherwise.
+  - Type icons — built: `Layers` icon when `children.length > 0`, `Box` icon otherwise (two-way
+    split, not the six kind icons settled above).
   - Truncation + tooltip — built: `truncate` class plus a `title={item.label}` attribute.
   - Hover actions — built: a `Crosshair` button (`aria-label="Focus {label} on canvas"`) fades in on
     `group-hover`, calling `useFocusNode().focusNode(id)` → `fitView({ nodes: [{ id }] })`.
   - Conditional marker — **not built**. `RegistryLeafItem` (`registry.tsx`) carries no `conditional`
     field at all — that flag exists only on `RenderTreeNode` (`server/lib/static-discovery/scan.ts`),
-    the type the Layers tab does not consume (see the data-source mismatch above). `LayerRow` renders
+    the type the Layers fold does not consume (see the data-source mismatch above). `LayerRow` renders
     nothing for it.
   - Canvas ↔ tree selection sync — **only tree → canvas is built**. Double-click or the crosshair
     button calls `focusNode`, which pans/fits the canvas to the node. There is no reverse path:
@@ -78,21 +89,8 @@ Read from `feat/layers-sidebar` (`app/PlaygroundSidebar.tsx`, `features/discover
   label) for any `PendingSidebarAdd` not yet present in `registry` — a leftover of the agent-add flow
   this spec's "no button, no agent" decision would remove.
 
-## Open → ROADMAP
+## Open
 
 - **Virtualization / `react-arborist`** for very large trees. `LayerTree` renders the full
   `visibleRows()` flat list directly; the code comment already notes rows are flattened rather than
   recursed specifically so a virtualizer is a one-line swap later, but nothing virtualizes today.
-
-## Context absorbed (sources below were folded in, then retired in this docs restructure)
-
-- `.claude/plans/layout-sidebar-tranquil-galaxy.md` and the other sidebar/discovery plans on
-  `.claude/plans/` (being deleted per the docs restructure) — absorbed in full above.
-- Branch reality read directly via `git show feat/layers-sidebar:...` for `LayerTree.tsx`,
-  `registry-tree.ts`, `PlaygroundSidebar.tsx`, `useFocusNode.ts`, and `registry.tsx`.
-- `journey.md` §"Built but parked on feat/layers-sidebar" and `spec.md` "UI decisions — locked" for
-  the three-tabs decision (shared with `shell-and-layout.md`, not re-specified here).
-- The published "Layers Sidebar — 5 Layout Studies" artifact (`ef903ba0-c540-4763-bfa8-46cf93496ec3`)
-  is the living reference for prototyping against; it returned only the frame/font preamble on
-  fetch, so this file's code-reality section was authored from the branch components instead, per
-  the documented fallback.

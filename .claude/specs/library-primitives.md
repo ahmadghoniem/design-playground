@@ -1,8 +1,8 @@
-# Spec — sidebar: Primitives tab
+# Primitives fold
 
-The Primitives tab of the left sidebar: a flat listing of the host's shadcn primitives, with CVA
-variants exposed as expandable drag sources. The sidebar container itself (280px, docked, tab
-switching, per-tab search + footer) is `shell-and-layout.md`; this file covers only the tab body.
+The **Primitives** fold of the Library: a flat listing of the host's shadcn primitives, with CVA
+variants exposed as expandable drag sources. The Library container itself is `shell-and-layout.md`'s
+subject; this file covers only the Primitives fold body.
 
 ## Settled
 
@@ -16,10 +16,12 @@ switching, per-tab search + footer) is `shell-and-layout.md`; this file covers o
   variant group (`variant`, `size`, …) as a child row of option chips. `defaultVariants` marks the
   default chip. `compoundVariants` suppress option combinations the component doesn't actually
   support, rather than offering every option as if freely combinable.
+- **The `cva` flag is not surfaced as a badge on the row.** It still decides which rows expand into
+  variant/size chips — the expansion arrow already says the row has more in it.
 - **Dragging a variant pre-sets its props.** Dropping a variant chip onto the canvas creates the node
   with that group's option already set, not a bare default instance.
-- **`components.json` is the host contract.** `aliases.ui` (this tab's source), `tailwind.css`
-  (Tokens' source), `aliases.utils` (where `cn` lives), and `style` (density) are read from it, never
+- **`components.json` is the host contract.** `aliases.ui` (this fold's source), `tailwind.css`
+  (Variables' source), `aliases.utils` (where `cn` lives), and `style` (density) are read from it, never
   hardcoded — this is what makes the package host-agnostic.
 
 ## As the code is today
@@ -51,8 +53,13 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/scan.ts`,
   `tailwind.cssVariables`. `aliases.utils` and `baseColor`/`rsc` are named in the contract this spec
   settles on but are not read by any field on `HostConfig` today.
 
-## Open → ROADMAP
+## Open
 
+- **Overlay primitive disabled treatment is temporary.** The muted label, `Ban` icon,
+  `draggable={false}`, and portal warning tooltip exist because preview containment is not built —
+  blocked on containment landing. Once containment lands, overlay primitives become ordinary draggable
+  rows. This is not a decision that overlay primitives stay disabled forever; `shell-and-layout.md`
+  separately settles that they are listed but never mounted live until containment exists.
 - **Fitting primitive cards in a 280px panel.** The built version uses an indented chip row for
   variants, which works but was never checked against a design mockup for the panel width.
 - **The `shadcn info` spike.** CLI v4's `shadcn info` reports framework version, CSS variables,
@@ -61,14 +68,4 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/scan.ts`,
   designing around it.
 - **The agent-output panel.** A separate right-edge surface (streaming assistant text/tool calls from
   generation runs) that only becomes buildable once the canvas toolbar moves off the right edge — not
-  part of this tab, but the two are sequenced together in the source plan.
-
-## Context absorbed (sources below were folded in, then retired in this docs restructure)
-
-- `.claude/plans/3-sidebar-and-ui.md` §3.4 (Primitives tab) and §3.8 (stack alignment —
-  `components.json` contract, `shadcn info`, style presets) — absorbed in full above.
-- Branch reality read directly via `git show feat/layers-sidebar:...` for `scan.ts`,
-  `host-config.ts`, `PrimitivesList.tsx`, and `useStaticScan.ts`.
-- The published "Layers Sidebar — 5 Layout Studies" artifact (`ef903ba0-c540-4763-bfa8-46cf93496ec3`)
-  is the living reference for prototyping against, per the same fallback noted in
-  `sidebar-layers.md`.
+  part of this fold, but the two are sequenced together in the source plan.

@@ -121,7 +121,7 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,
   old per-click analyze flow (next point) is still the thing calling it today.
 
 - **The old LLM-driven flow is what's actually wired to the sidebar's "+" button.** Confirmed both
-  in `sidebar-layers.md` ("first-load still has a button and an agent") and by reading
+  in `library-layers.md` ("first-load still has a button and an agent") and by reading
   `DiscoveryModal.tsx` and `discover.ts` directly: `POST /api/discover` spawns one `claude` process
   running `discoveryPrompt()` (an `rg --files` candidate list, then per-file INCLUDE/SKIP
   classification, then a one-sentence `description` per entry — the exact field this spec drops) to
@@ -143,7 +143,7 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,
   `.claude/plans/summary.md` shows the intended before/after but flags it "planned — illustrative,
   not in repo."
 
-## Open → ROADMAP
+## Open
 
 - **Stamping HMR cost** — does stamping every host JSX element in a Vite `transform` measurably slow
   HMR? The highest-risk unknown; the whole feature (source anchors, and the selection-label fallback)
@@ -161,20 +161,3 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,
 - **CVA `compoundVariants`.** `extractCva()` has two known bugs: it returns after the first `cva()`
   call in a file, and `compoundVariants` (which suppresses invalid variant combinations) is ignored
   entirely.
-
-## Context absorbed (sources below were folded in, then retired in this docs restructure)
-
-- `.claude/plans/2-discovery-engine.md` — absorbed in full (prior-art comparison, the three-pass
-  table, the walk algorithm, the JSX-stamping section, runtime enrichment, and its own "open
-  questions owned by this part").
-- `.claude/plans/1-diagnosis-and-cleanup.md` §1.1–1.2 — absorbed in full (why adding one component is
-  slow today, the six-processes-to-zero table, the exact `N+1` mechanics: `handleAddComponent` →
-  process 1, `analyzeChildren`'s awaited-inside-loop → processes 2–6).
-- `spec.md` §2 "Built but parked on `feat/layers-sidebar`" — the host-token-parsing / CVA-bug facts
-  folded in above.
-- `CLAUDE.md`'s registry section — "there is currently no discovery mechanism" on `master`, read
-  directly to establish the current-master baseline.
-- Branch reality read directly via `git show feat/layers-sidebar:...` for `scan.ts`, `host-config.ts`,
-  `tokens.ts`, `discover.ts`, `DiscoveryModal.tsx`, `discovery.prompt.ts`,
-  `discovery-analyze.prompt.ts`; `server/lib/discovered-registry.ts` and `registry.tsx` read directly
-  from `master`.

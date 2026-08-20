@@ -8,19 +8,23 @@ spec or is a flagged bug; nothing is pulled in opportunistically. Items that exi
 `feat/layers-sidebar` (the discovery scan's primitives-naming fix, the `/api/discover/analyze` route)
 belong to whichever branch reintroduces discovery, not here.
 
-**Landed this pass:** cnfast, the constants tidy, and the element-selection fixes.
-**Remaining:** Base UI, the comment-sweep trims, the density-preset read. **Deferred:** de-arbitrary
-Tailwind.
+**Landed this pass:** cnfast, the constants tidy, the element-selection fixes, and Base UI (code
+landed; not yet exercised in a browser).
+**Remaining:** the comment-sweep trims, the density-preset read. **Deferred:** de-arbitrary Tailwind.
 
 ## Work
 
-- **Radix UI → Base UI** for the four primitives in use — `alert-dialog`, `dialog`, `slot`, `tooltip`.
-  Same public API, so an implementation swap, not a new abstraction; Base UI is shadcn's default as of
-  July 2026. Manual migration is viable at four primitives (or `skills add shadcn/ui` →
-  *"migrate dialog to base-ui"*, with commands adapted to Bun). Base UI's `Portal` takes a `container`
-  prop that traps the overlay in the preview card's DOM subtree — but a `position: fixed` overlay still
-  paints over the viewport, so overlay/portal primitives stay listed-but-not-mounted in the registry,
-  as today.
+- **Radix UI → Base UI — landed, unverified in a browser.** `@base-ui/react` 1.7.0 replaces the four
+  Radix packages across `alert-dialog`, `dialog`, `tooltip`, and `button`'s `asChild`; no `@radix-ui`
+  import remains. The public API is unchanged, so this was an implementation swap rather than a new
+  abstraction. The names that differ, and that any further work must use: **`Backdrop`** not `Overlay`,
+  **`Popup`** not `Content`, a required **`Positioner`** wrapper for tooltips, **`data-open`/`data-closed`**
+  not `data-[state=open|closed]`, and **`useRender`** / a `render` prop instead of `asChild` (our
+  `Button` keeps `asChild` as its public prop and maps it internally). Base UI's `Portal` takes a
+  `container` prop that traps the overlay in the preview card's DOM subtree — but a `position: fixed`
+  overlay still paints over the viewport, so overlay/portal primitives stay listed-but-not-mounted in
+  the registry, as today. **Still to do:** open the four overlays in the host dev server; nothing has
+  confirmed them at runtime.
 
 - **clsx + tailwind-merge → cnfast.** `shared/lib/utils.ts` re-exports `cn` + `ClassValue` from
   `cnfast` (byte-identical output, ~3.8× faster), matching the host's `src/utils/styling.ts`. `cnfast`
@@ -34,7 +38,7 @@ Tailwind.
   Tailwind config governing radius, shadow, spacing, and typography, not a CSS skin. Read the host's
   density from `components.json` rather than hardcoding; **Mira** is the preferred default. The tool's
   own chrome takes no preset (chrome is always light — see `shell-and-layout.md`). The parsing itself is
-  `discovery-engine.md` / `sidebar-tokens.md` territory.
+  `discovery-engine.md` / `design-variables.md` territory.
 
 - **Tidy `shared/lib/constants.ts`.** Payload interfaces move to their real homes: `ChatSubmitPayload`
   → `shared/lib/chat-submit-payload.ts` (in `shared/` rather than beside the composer, because a
