@@ -503,30 +503,79 @@
   .perm-pill.tone-part:hover, .perm-pill.tone-open:hover { border-color: currentColor; }
 
   /* model picker — left of Send on the input row */
-  .model-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px;
-                font-size: 11.5px; color: var(--pgc-muted-fg); transition: min-width .18s cubic-bezier(.4,0,.2,1); }
-  .model-pill:hover { color: var(--pgc-fg); background: var(--pgc-muted); }
-  .model-pill.open { background: var(--pgc-muted); color: var(--pgc-fg); }
+  /* Closed the trigger is one shape. Open, a channel carves through it and the two
+     segments part — the split is what makes expansion read as deliberate rather than
+     as a pill that merely got wider. Model on the left, its current state on the right.
+     Prototype mechanism: radial-gradient corner masks fake the concave join. A real
+     implementation should cut one path; do not port the gradients. */
+  .model-pill { display: inline-flex; align-items: stretch; font-size: 11.5px;
+                color: var(--pgc-muted-fg); border-radius: 999px;
+                transition: min-width .18s cubic-bezier(.4,0,.2,1); }
+  .model-pill .mp-seg { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
+                        border-radius: 999px; transition: border-radius .18s cubic-bezier(.4,0,.2,1); }
+  .model-pill:hover { color: var(--pgc-fg); }
+  .model-pill:hover .mp-seg { background: var(--pgc-muted); }
+  .model-pill.open { color: var(--pgc-fg); }
+  .model-pill.open .mp-seg { background: var(--pgc-muted); }
+
+  /* Closed: the two segments abut, so the join is square on both sides and the pair
+     reads as one continuous pill. */
+  .model-pill .mp-seg-model { border-radius: 999px 0 0 999px; padding-right: 3px; }
+  .model-pill .mp-seg-state { border-radius: 0 999px 999px 0; padding-left: 3px; }
+  .model-pill .mp-split { width: 0; transition: width .18s cubic-bezier(.4,0,.2,1); }
+
+  /* Open: a channel opens between them. Its walls are the segments' own round ends,
+     and the concave flare where the channel meets the top and bottom edges comes from
+     the masks below. */
+  .model-pill.open .mp-split { width: 6px; }
+  .model-pill.open .mp-seg-model { border-radius: 999px; padding-right: 8px; }
+  .model-pill.open .mp-seg-state { border-radius: 999px; padding-left: 8px; }
   .model-pill.open .chev { margin-left: auto; }
+
+  .model-pill .mp-split { position: relative; }
+  .model-pill.open .mp-split::before,
+  .model-pill.open .mp-split::after {
+    content: ''; position: absolute; left: -3px; right: -3px; height: 5px;
+    background:
+      radial-gradient(circle at 0 100%, transparent 5px, var(--pgc-muted) 5px) left top / 50% 100% no-repeat,
+      radial-gradient(circle at 100% 100%, transparent 5px, var(--pgc-muted) 5px) right top / 50% 100% no-repeat;
+  }
+  .model-pill.open .mp-split::before { top: 0; }
+  .model-pill.open .mp-split::after { bottom: 0; transform: scaleY(-1); }
+
   .model-pill .effort-dim { color: var(--pgc-muted-fg); }
   .model-pill .chev { opacity: .55; }
-  .model-menu { min-width: 200px; padding: 4px; }
+  .model-menu { min-width: 176px; padding: 4px; }
   .model-menu-row { position: relative; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px;
                     padding: 6px 8px; border-radius: 6px; cursor: default; }
   .model-menu-row:hover { background: var(--pgc-muted); }
   .model-menu-row .mm-label { font-size: 12px; font-weight: 500; color: var(--pgc-fg); }
   .model-menu-row .mm-value { font-size: 12px; color: var(--pgc-muted-fg); }
   .model-menu-row .mm-chev { color: var(--pgc-muted-fg); font-size: 13px; }
+  /* Fast mode: a per-model capability, so the row stays put and goes dead on models
+     without a fast variant — the tooltip says which model lacks it. */
+  /* This row is a <button>, so `.ctx-menu button` makes it flex and the row's own
+     grid-template-columns never applies — space-between is what puts the switch on the
+     right, in line with the value column of the Model and Effort rows above it. */
+  .model-menu-switch { justify-content: space-between; width: 100%; text-align: left; cursor: pointer; }
+  /* aria-disabled rather than `disabled`: a disabled button swallows pointer events, and
+     the tooltip explaining *why* it is dead is the whole point of the dead state. */
+  .model-menu-switch[aria-disabled="true"] { opacity: .4; cursor: default; }
+  .model-menu-switch[aria-disabled="true"]:hover { background: transparent; }
+  .mm-switch { width: 24px; height: 14px; border-radius: 999px; background: var(--pgc-border);
+               position: relative; transition: background .15s ease; }
+  .mm-switch.on { background: var(--pgc-select); }
+  .mm-knob { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%;
+             background: #fff; transition: transform .15s ease; }
+  .mm-switch.on .mm-knob { transform: translateX(10px); }
+  /* Fast reads as a second state word beside Effort, so it takes Effort's treatment.
+     It was accent-coloured, which made a capability toggle look like a selection. */
+  .model-pill .fast-mark { color: var(--pgc-muted-fg); }
+  .mm-section { padding: 6px 8px 2px; }
   .ctx-menu-divider { height: 1px; background: var(--pgc-border); margin: 4px 0; }
   .model-menu-action { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left;
                        padding: 6px 8px; border-radius: 6px; font-size: 12px; color: var(--pgc-fg); }
   .model-menu-action:hover { background: var(--pgc-muted); }
-  .model-menu-action.dim { color: var(--pgc-muted-fg); }
-  /* Reset is a no-op while the effort already is the model's default, so it is dimmed
-     rather than hidden — a control that vanishes is harder to find than one that waits. */
-  .model-menu-action:disabled { opacity: .4; cursor: default; }
-  .model-menu-action:disabled:hover { background: transparent; }
-  .model-menu-action .mm-reset { font-size: 11px; opacity: .7; }
   .ctx-submenu { position: absolute; left: 100%; top: 0; min-width: 180px; z-index: 30; margin-left: 4px;
                  border: 1px solid var(--pgc-border); border-radius: 8px; background: #fff;
                  box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); padding: 4px; }
@@ -540,6 +589,11 @@
   .ctx-submenu button.on { background: var(--pgc-select-bg); color: var(--pgc-select); }
   .ctx-submenu .mm-opt { flex: 1; }
   .ctx-submenu .mm-check { margin-left: auto; font-size: 11px; }
+  /* The effort list names its default rung instead of offering a control that returns to
+     it. The label sits beside the word it qualifies, so the row's own name has to stop
+     stretching — the check still takes the right edge. */
+  .effort-submenu .mm-opt { flex: 0 1 auto; }
+  .effort-submenu .mm-default { font-size: 11px; color: var(--pgc-muted-fg); }
 
   /* Model submenu: grouped by the agent that runs the model, because the agent is what
      you are choosing. Each row carries that model's own default effort, dimmed — the
@@ -565,35 +619,13 @@
                   box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); padding: 6px; }
   .skill-picker-group { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
                         color: var(--pgc-muted-fg); padding: 4px 8px 6px; }
-  .skill-picker-head { display: flex; align-items: center; gap: 8px; padding: 4px 8px 6px; }
-  .skill-back { font-size: 11px; font-weight: 500; color: var(--pgc-muted-fg); padding: 2px 4px; border-radius: 4px; }
-  .skill-back:hover { color: var(--pgc-fg); }
-  .skill-picker-subtitle { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pgc-muted-fg); }
   .skill-picker-list { display: grid; gap: 2px; max-height: 220px; overflow: auto; }
   .skill-picker-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
                       border-radius: 8px; padding: 6px 8px; min-height: 32px; }
   .skill-picker-row:hover, .skill-picker-row.on { background: var(--pgc-muted); }
   .skill-picker-row .skill-label { font-size: 13px; font-weight: 500; color: var(--pgc-fg); flex: 1; min-width: 0; }
   .skill-picker-row .skill-desc { font-size: 11px; color: var(--pgc-muted-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
-  .skill-picker-row .skill-chev { margin-left: auto; color: var(--pgc-muted-fg); font-size: 13px; }
-  .skill-picker-row .skill-cat { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-                                  color: var(--pgc-muted-fg); background: var(--pgc-muted); border-radius: 4px; padding: 2px 5px; flex: none; }
-  .impeccable-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
-                      border-radius: 999px; font-size: 10px; font-weight: 700; color: #fff; flex: none;
-                      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-                      box-shadow: 0 1px 3px rgba(124,58,237,.35), inset 0 -2px 3px rgba(0,0,0,.12), inset 0 2px 2px rgba(255,255,255,.3); }
-  .skill-picker-add { display: block; width: 100%; text-align: left; margin-top: 4px; padding: 8px;
-                      border-top: 1px solid var(--pgc-border); font-size: 12px; font-weight: 500; color: var(--pgc-muted-fg); border-radius: 0 0 8px 8px; }
-  .skill-picker-add:hover { background: var(--pgc-muted); color: var(--pgc-fg); }
 
-  .skills-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
-  .skills-tabs button { flex: 1; padding: 6px; border-radius: 6px; font-size: 11.5px; border: 1px solid var(--pgc-border); color: var(--pgc-muted-fg); }
-  .skills-tabs button[aria-selected="true"] { background: var(--pgc-muted); color: var(--pgc-fg); font-weight: 600; }
-  .skills-search { width: 100%; border: 1px solid var(--pgc-border); border-radius: 8px; padding: 7px 10px; font-size: 12px; margin-bottom: 8px; }
-  .skills-rows { display: grid; gap: 4px; }
-  .skills-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 8px; font-size: 12px; }
-  .skills-row:hover { background: var(--pgc-muted); }
-  .skills-row button { font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--pgc-border); color: var(--pgc-fg); }
   .settings-checks { display: grid; gap: 6px; font-size: 12px; color: var(--pgc-fg); }
   .settings-effort { font-size: 12px; color: var(--pgc-muted-fg); }
 

@@ -206,28 +206,4 @@
       </div>
     </div>
   </div>
-
-  <div class="scrim" x-data="skillsModal()" x-show="$store.modals.skillsCatalogOpen" x-cloak @keydown.escape.window="close()" @click.self="close()">
-    <div class="modal skills-modal" role="dialog" aria-modal="true" @click.stop>
-      <h5>Skills</h5>
-      <div class="mb">
-        <div class="skills-tabs" role="tablist">
-          <button type="button" role="tab" :aria-selected="tab === 'installed'" @click="setTab('installed')">Installed</button>
-          <button type="button" role="tab" :aria-selected="tab === 'browse'" @click="setTab('browse')">Browse</button>
-        </div>
-        <input class="skills-search" type="search" x-model="search" placeholder="Search skills…">
-        <div class="skills-rows">
-          <template x-for="skill in filteredSkills" :key="skill.id">
-            <div class="skills-row">
-              <span x-text="skill.label"></span>
-              <button type="button" @click="toggleInstall(skill)" x-text="skill.installed ? 'Remove' : 'Install'"></button>
-            </div>
-          </template>
-        </div>
-      </div>
-      <div class="mf">
-        <button type="button" @click="close()">Close</button>
-      </div>
-    </div>
-  </div>
 </div>

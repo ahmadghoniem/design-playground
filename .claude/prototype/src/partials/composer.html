@@ -45,30 +45,18 @@
 
     <div class="composer-input-area">
       <div class="skill-picker" x-show="skillPickerOpen" x-transition x-cloak @mousedown.prevent>
-        <template x-if="impeccableSubOpen">
-          <div class="skill-picker-head">
-            <button type="button" class="skill-back" @click="backFromImpeccable()">‹ back</button>
-            <span class="skill-picker-subtitle">IMPECCABLE</span>
-          </div>
-        </template>
-        <template x-if="!impeccableSubOpen">
-          <div class="skill-picker-group">Skills</div>
-        </template>
+        <div class="skill-picker-group">Skills</div>
         <div class="skill-picker-list">
           <template x-for="(item, index) in visibleSkills" :key="item.id">
             <button type="button" class="skill-picker-row"
                     :class="{ on: skillHighlight === index }"
                     @mouseenter="onSkillHover(index)"
                     @click="pickSkill(index)">
-              <span class="impeccable-badge" x-show="isImpeccableRow(item)" aria-hidden="true">i</span>
-              <span class="skill-cat" x-show="impeccableSubOpen && item.category" x-text="item.category"></span>
-              <span class="skill-label" x-text="skillRowLabel(item)"></span>
-              <span class="skill-desc" x-show="item.description && !isImpeccableRow(item)" x-text="item.description"></span>
-              <span class="skill-chev" x-show="isImpeccableRow(item)">›</span>
+              <span class="skill-label" x-text="item.label"></span>
+              <span class="skill-desc" x-show="item.description" x-text="item.description"></span>
             </button>
           </template>
         </div>
-        <button type="button" class="skill-picker-add" x-show="!impeccableSubOpen" @click="openSkillsCatalog()">+ Add a skill…</button>
       </div>
       <textarea class="chat-input" x-model="$store.chat.draft" rows="1"
                 placeholder="Vary this, ask a question, / for skills, @ to tag a node"
@@ -114,10 +102,16 @@
                   x-tip.top="menu === 'model' ? '' : 'Select model'"
                   :style="menu === 'model' && modelMenuWidth ? 'min-width:' + modelMenuWidth + 'px' : ''"
                   :class="{ open: menu === 'model' }">
-            <span class="agent-mark" aria-hidden="true"></span>
-            <span x-text="$store.chat.modelLabel"></span>
-            <span class="effort-dim" x-text="$store.chat.effortLabel"></span>
-            <span class="chev">⌄</span>
+            <span class="mp-seg mp-seg-model">
+              <span class="agent-mark" aria-hidden="true"></span>
+              <span x-text="$store.chat.modelLabel"></span>
+            </span>
+            <span class="mp-split" aria-hidden="true"></span>
+            <span class="mp-seg mp-seg-state">
+              <span class="effort-dim" x-text="$store.chat.effortLabel"></span>
+              <span class="fast-mark" x-show="$store.chat.fast" x-cloak>Fast</span>
+              <span class="chev">⌄</span>
+            </span>
           </button>
           <div class="ctx-menu up right model-menu" x-show="menu === 'model'" x-transition x-cloak>
             <div class="model-menu-row" @mouseenter="openSubmenu('model', $event)" @click="openSubmenu('model', $event)">
@@ -144,23 +138,29 @@
               <span class="mm-label">Effort</span>
               <span class="mm-value" x-text="$store.chat.effortLabel"></span>
               <span class="mm-chev">›</span>
-              <div class="ctx-submenu" :class="{ flip: submenuFlip }" x-show="submenu === 'effort'" x-cloak @click.stop>
+              <div class="ctx-submenu effort-submenu" :class="{ flip: submenuFlip }" x-show="submenu === 'effort'" x-cloak @click.stop>
                 <template x-for="e in $store.chat.availableEfforts" :key="e.id">
                   <button type="button" :class="{ on: e.id === $store.chat.effort }" @click="pickEffort(e.id)">
                     <span class="mm-opt" x-text="e.label"></span>
+                    <span class="mm-default" x-show="e.id === $store.chat.modelDefaultEffort" x-cloak>(default)</span>
                     <span class="mm-check" x-show="e.id === $store.chat.effort">✓</span>
                   </button>
                 </template>
               </div>
             </div>
+            <div class="mm-group-lbl mm-section">Options</div>
+            <button type="button" class="model-menu-row model-menu-switch"
+                    role="switch"
+                    :aria-checked="$store.chat.fast ? 'true' : 'false'"
+                    :aria-disabled="!$store.chat.fastSupported ? 'true' : 'false'"
+                    x-tip.top="$store.chat.fastHint"
+                    :aria-label="'Fast mode. ' + $store.chat.fastHint"
+                    @click="$store.chat.toggleFast()">
+              <span class="mm-label">Fast</span>
+              <span class="mm-switch" :class="{ on: $store.chat.fast }" aria-hidden="true"><span class="mm-knob"></span></span>
+            </button>
             <div class="ctx-menu-divider"></div>
             <button type="button" class="model-menu-action" @click="openModelSettings()">Model settings</button>
-            <button type="button" class="model-menu-action dim" @click="resetEffort()"
-                    :disabled="$store.chat.effortIsDefault"
-                    :aria-label="'Reset effort to ' + $store.chat.agentName + ' ' + $store.chat.modelLabel + '\'s default'">
-              <span>Reset effort to default</span>
-              <span class="mm-reset">↺</span>
-            </button>
           </div>
         </div>
         <button type="button" class="send" aria-label="Send">

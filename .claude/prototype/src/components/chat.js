@@ -9,6 +9,7 @@ export function registerChat() {
     Alpine.store('chat', {
       model: DEFAULT_MODEL,
       effort: 'high',
+      fast: false,
       mode: 'explore',
       branch: CURRENT_BRANCH,
       worktree: CURRENT_WORKTREE,
@@ -65,9 +66,23 @@ export function registerChat() {
         const supported = this.currentModel.efforts;
         return EFFORT_LADDER.filter((e) => supported.includes(e.id));
       },
-      // The reset row is only useful once you have hand-overridden the model's own default.
-      get effortIsDefault() {
-        return this.effort === this.currentModel.effort;
+      // Fast mode is a per-model capability, so the row is present for every model and
+      // dead for the ones without the variant — a control that vanishes teaches nothing
+      // about why it is gone.
+      get fastSupported() {
+        return Boolean(this.currentModel.fast);
+      },
+      get fastHint() {
+        return this.fastSupported
+          ? `Faster output from ${this.modelLabel}, same model`
+          : `${this.modelLabel} has no fast variant`;
+      },
+
+      // The effort list marks this rung "(default)" rather than offering a way back to it:
+      // a label is readable before you commit, where a reset row only speaks after you have
+      // already left the default and never says what the default is.
+      get modelDefaultEffort() {
+        return this.currentModel.effort;
       },
 
       // The composer lives in the Agents tab whenever that tab is showing, and floats
@@ -102,12 +117,15 @@ export function registerChat() {
       setModel(id) {
         this.model = id;
         this.effort = this.currentModel.effort;
+        // Fast cannot survive a switch to a model that has no fast variant.
+        if (!this.fastSupported) this.fast = false;
+      },
+      toggleFast() {
+        if (!this.fastSupported) return;
+        this.fast = !this.fast;
       },
       setEffort(id) {
         this.effort = id;
-      },
-      resetEffort() {
-        this.effort = this.currentModel.effort;
       },
       setMode(mode) {
         this.mode = mode;
@@ -174,7 +192,6 @@ export function registerChat() {
       skillPickerOpen: false,
       skillQuery: '',
       skillHighlight: 0,
-      impeccableSubOpen: false,
 
       growInput(el) {
         el.style.height = 'auto';
@@ -228,12 +245,6 @@ export function registerChat() {
         this.closeMenu();
         Alpine.store('modals').openModelSettings();
       },
-      resetEffort() {
-        if (this.$store.chat.effortIsDefault) return;
-        this.$store.chat.resetEffort();
-        this.closeMenu();
-      },
-
       // Search filters within each agent group; a group with no match drops out entirely,
       // heading included, so the list never shows an empty section.
       matchesModel(model) {
@@ -262,26 +273,11 @@ export function registerChat() {
         this.skillPickerOpen = false;
         this.skillQuery = '';
         this.skillHighlight = 0;
-        this.impeccableSubOpen = false;
       },
 
       get visibleSkills() {
         const q = this.skillQuery.toLowerCase();
-        if (this.impeccableSubOpen) {
-          const parent = SKILLS.find((s) => s.id === 'impeccable');
-          const children = parent?.children ?? [];
-          return children.filter((c) => c.id.toLowerCase().includes(q) || c.id.split(':')[1]?.includes(q));
-        }
         return SKILLS.filter((s) => s.label.toLowerCase().includes(q));
-      },
-
-      isImpeccableRow(item) {
-        return !this.impeccableSubOpen && item.id === 'impeccable';
-      },
-
-      skillRowLabel(item) {
-        if (this.impeccableSubOpen) return item.id.split(':')[1] ?? item.id;
-        return item.label;
       },
 
       insertSkill(item) {
@@ -319,7 +315,7 @@ export function registerChat() {
           this.closeSkillPicker();
           return;
         }
-        if (evt.key === ' ' && this.skillQuery === '' && !this.impeccableSubOpen) {
+        if (evt.key === ' ' && this.skillQuery === '') {
           this.closeSkillPicker();
           return;
         }
@@ -338,46 +334,16 @@ export function registerChat() {
           this.selectHighlightedSkill();
           return;
         }
-        if (evt.key === 'ArrowRight' && !this.impeccableSubOpen) {
-          const item = items[this.skillHighlight];
-          if (item?.id === 'impeccable') {
-            evt.preventDefault();
-            this.impeccableSubOpen = true;
-            this.skillHighlight = 0;
-          }
-          return;
-        }
-        if ((evt.key === 'ArrowLeft' || evt.key === 'Backspace') && this.impeccableSubOpen && this.skillQuery === '') {
-          evt.preventDefault();
-          this.impeccableSubOpen = false;
-          this.skillHighlight = 0;
-        }
       },
 
       selectHighlightedSkill() {
         const item = this.visibleSkills[this.skillHighlight];
-        if (!item) return;
-        if (!this.impeccableSubOpen && item.id === 'impeccable') {
-          this.impeccableSubOpen = true;
-          this.skillHighlight = 0;
-          return;
-        }
-        this.insertSkill(item);
+        if (item) this.insertSkill(item);
       },
 
       pickSkill(index) {
         this.skillHighlight = index;
         this.selectHighlightedSkill();
-      },
-
-      backFromImpeccable() {
-        this.impeccableSubOpen = false;
-        this.skillHighlight = 0;
-      },
-
-      openSkillsCatalog() {
-        this.closeSkillPicker();
-        Alpine.store('modals').openSkillsCatalog();
       },
     }));
   });

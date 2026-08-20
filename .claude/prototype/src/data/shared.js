@@ -42,14 +42,19 @@ export const EFFORT_LADDER = [
  *   applies it, so the common case costs one click instead of two, and the effort picker
  *   moves to match. This is also what makes switching models safe: an effort the new
  *   model does not offer can never survive the switch.
+ * - `fast` — whether this model has a faster-output variant. It is a per-model capability,
+ *   not a level on the ladder: a model either has the variant or it does not, so the
+ *   control is a toggle that goes dead (shown, disabled, explained) on models without one
+ *   rather than disappearing. Like effort, it cannot survive a switch to a model that
+ *   lacks it.
  */
 export const AGENTS = [
   {
     id: 'claude-code',
     name: 'Claude Code',
     models: [
-      { id: 'opus-5', label: 'Opus 5', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high' },
-      { id: 'sonnet-5', label: 'Sonnet 5', efforts: ['low', 'medium', 'high', 'max'], effort: 'high' },
+      { id: 'opus-5', label: 'Opus 5', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high', fast: true },
+      { id: 'sonnet-5', label: 'Sonnet 5', efforts: ['low', 'medium', 'high', 'max'], effort: 'high', fast: true },
       { id: 'haiku-4-5', label: 'Haiku 4.5', efforts: ['low', 'medium', 'high'], effort: 'medium' },
     ],
   },
@@ -57,7 +62,7 @@ export const AGENTS = [
     id: 'cursor',
     name: 'Cursor',
     models: [
-      { id: 'composer-2-5', label: 'Composer 2.5', efforts: ['low', 'medium'], effort: 'low' },
+      { id: 'composer-2-5', label: 'Composer 2.5', efforts: ['low', 'medium'], effort: 'low', fast: true },
       { id: 'grok-4-6', label: 'Grok 4.6', efforts: ['low', 'medium', 'high', 'max'], effort: 'high' },
     ],
   },
@@ -67,14 +72,6 @@ export const AGENTS = [
     models: [
       { id: 'gpt-5-6', label: 'GPT-5.6', efforts: ['minimal', 'low', 'medium', 'high'], effort: 'medium' },
       { id: 'gpt-5-6-sol', label: 'GPT-5.6 Sol', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high' },
-    ],
-  },
-  {
-    id: 'antigravity',
-    name: 'Antigravity',
-    models: [
-      { id: 'gemini-3-pro', label: 'Gemini 3 Pro', efforts: ['minimal', 'low', 'medium', 'high', 'max'], effort: 'high' },
-      { id: 'gemini-flash-3-7', label: 'Gemini Flash 3.7', efforts: ['low', 'medium', 'high'], effort: 'low' },
     ],
   },
 ];
@@ -91,17 +88,7 @@ export const SKILLS = [
   { id: 'frontend-design', label: 'frontend-design', description: 'Distinctive UI design patterns' },
   { id: 'dataviz', label: 'dataviz', description: 'Charts and data visualization' },
   { id: 'visual-plan', label: 'visual-plan', description: 'Interactive visual planning' },
-  {
-    id: 'impeccable',
-    label: 'impeccable',
-    description: 'Design critique and polish commands',
-    children: [
-      { id: 'impeccable:critique', category: 'review', description: 'Run a design critique' },
-      { id: 'impeccable:polish', category: 'refine', description: 'Polish spacing and typography' },
-      { id: 'impeccable:audit', category: 'review', description: 'Accessibility audit' },
-      { id: 'impeccable:animate', category: 'motion', description: 'Add purposeful motion' },
-    ],
-  },
+  { id: 'nothing-design', label: 'nothing-design', description: 'Restraint-first visual direction' },
 ];
 
 // Codex-style approval modes for the Composer permissions pill.
