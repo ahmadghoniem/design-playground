@@ -1,8 +1,18 @@
 import type { ComponentType } from "react"
-import type { RegistryLeafItem } from "./registry-types"
+import type { ComponentSize } from "@pg/shared/lib/constants"
 import { discoveredRegistry } from "./discovered-registry.gen"
 
-export type { RegistryLeafItem } from "./registry-types"
+export interface RegistryLeafItem {
+  id: string
+  label: string
+  Component: ComponentType<Record<string, unknown>>
+  props?: Record<string, unknown>
+  getProps?: () => Promise<Record<string, unknown>> | Record<string, unknown>
+  parentId?: string
+  sourcePath: string
+  childComponents?: string[]
+  size?: ComponentSize
+}
 
 /**
  * The full component list consumers see: the playground-discovered components
@@ -13,7 +23,8 @@ export type { RegistryLeafItem } from "./registry-types"
  * regenerates without a full page reload. Prefer `subscribeRegistry` / the
  * sidebar hook rather than capturing this export once at module init.
  */
-export let registry: RegistryLeafItem[] = discoveredRegistry
+export let registry: RegistryLeafItem[] =
+  discoveredRegistry as RegistryLeafItem[]
 
 type RegistryListener = (items: RegistryLeafItem[]) => void
 const registryListeners = new Set<RegistryListener>()

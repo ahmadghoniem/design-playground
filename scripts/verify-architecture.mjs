@@ -46,7 +46,6 @@ run(
     'shared/**/*.{ts,tsx}',
     'server/**/*.{ts,tsx}',
     'registry.tsx',
-    'registry-types.ts',
     'dev-entry.tsx',
   ],
 );

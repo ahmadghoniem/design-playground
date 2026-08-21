@@ -3,7 +3,7 @@ import path from 'path';
 
 /**
  * Candidate playground locations, in preference order, as POSIX paths relative
- * to the host project root. Shared with host-gitignore and PlaygroundPaths.
+ * to the host project root. Shared with PlaygroundPaths.
  */
 export const PLAYGROUND_CANDIDATE_RELATIVE_DIRS = [
   'src/app/playground',

@@ -1,6 +1,6 @@
 import type { DragEvent } from "react";
 import { DND_DATA_KEY } from "@pg/shared/lib/constants";
-import type { RegistryLeafItem } from "@pg/registry-types";
+import type { RegistryLeafItem } from "@pg/registry";
 import { useFocusNode } from "@pg/features/registry-sidebar/useFocusNode";
 
 interface RegistryDragRowProps {

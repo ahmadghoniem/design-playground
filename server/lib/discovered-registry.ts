@@ -56,9 +56,7 @@ const GEN_HEADER = `/**
  */
 `;
 
-const EMPTY_MODULE = `${GEN_HEADER}import type { RegistryLeafItem } from "./registry-types"
-
-export const discoveredRegistry: RegistryLeafItem[] = []
+const EMPTY_MODULE = `${GEN_HEADER}export const discoveredRegistry = []
 `;
 
 export function manifestPath(playgroundDir: string): string {
@@ -157,11 +155,10 @@ function buildModule(entries: DiscoveredRegistryEntry[]): string {
   const items = entries.map(renderEntry).join('\n');
 
   return `${GEN_HEADER}import type { ComponentType } from "react"
-import type { RegistryLeafItem } from "./registry-types"
 
 ${imports}
 
-export const discoveredRegistry: RegistryLeafItem[] = [
+export const discoveredRegistry = [
 ${items}
 ]
 `;

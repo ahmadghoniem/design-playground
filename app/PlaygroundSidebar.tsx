@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { ProjectBoxIcon } from "@pg/shared/ui/playground-nav-icons";
-import type { RegistryLeafItem } from "@pg/registry-types";
+import type { RegistryLeafItem } from "@pg/registry";
 import { buildRegistryChildrenMap } from "@pg/features/registry-sidebar/registry-children";
 import RegistryDragRow from "@pg/features/registry-sidebar/RegistryDragRow";
 import { useRegistryItems } from "@pg/features/registry-sidebar/useRegistryItems";

@@ -16,8 +16,7 @@ import {
   getStylingQualityItem,
 } from "@pg/features/generation/prompts/shared-sections"
 import { iterationsFile } from "@pg/shared/lib/playground-paths"
-import { registryIdToPascalCase, resolveRegistryItem } from "@pg/registry"
-import type { RegistryLeafItem } from "@pg/registry-types"
+import { registryIdToPascalCase, resolveRegistryItem, type RegistryLeafItem } from "@pg/registry"
 
 /**
  * Everything the four iteration prompt variants derive identically from the

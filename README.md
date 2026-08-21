@@ -7,13 +7,15 @@ _Originally forked from [B1u3B01t/design-playground](https://github.com/B1u3B01t
 ## Quick Start
 
 ```bash
-# 1. Run the setup script (requires Bun — https://bun.sh)
-node src/app/playground/setup.mjs
+# 1. Install the playground's deps, nested (requires Bun — https://bun.sh)
+cd src/app/playground && bun install
 
-# 2. Start your dev server
+# 2. Register the Vite plugin and add the .gitignore block — see SETUP.md
+
+# 3. Start your dev server
 bun dev
 
-# 3. Open the playground
+# 4. Open the playground
 # Visit http://localhost:5173/playground   (or whatever port Vite reports)
 ```
 
@@ -32,7 +34,7 @@ This is a **local-dev-only** tool. It is never built into CI or production — i
 
 The playground lives entirely in `app/playground/` — no global config changes, no wrappers. To uninstall, just delete that folder: its dependencies live nested inside it and are removed with it. Your `package.json` is never touched.
 
-The setup script checks your project and installs the playground's dependencies with **Bun**, **nested** under `app/playground/node_modules/` (so your host `package.json` and lockfile stay clean). It also **configures `.gitignore`** so the playground and generated artifacts (iterations, temp files) are not committed. Run `node src/app/playground/setup.mjs --untrack` if playground files were already tracked. See [SETUP.md](SETUP.md) for details.
+`bun install` run from inside the playground folder installs its dependencies **nested** under `app/playground/node_modules/`, so your host `package.json` and lockfile stay clean. [SETUP.md](SETUP.md) carries the Vite plugin registration, the `.gitignore` block that keeps the playground and its generated artifacts out of version control, and the `git rm --cached` line if those files were already tracked.
 
 ---
 
@@ -153,8 +155,7 @@ app/playground/
 ├── skills/            # Built-in prompt templates
 ├── iterations/        # Generated variation files
 ├── dev-entry.tsx      # createRoot mount entry
-├── registry.tsx       # Component registry (fed by discovery)
-└── setup.mjs          # Setup script
+└── registry.tsx       # Component registry (fed by discovery)
 ```
 
 Client code is feature-based; cross-feature imports use the `@pg/` alias. See `CLAUDE.md` for the full layout and boundary rules.

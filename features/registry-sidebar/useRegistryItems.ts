@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { registry, subscribeRegistry } from "@pg/registry";
-import type { RegistryLeafItem } from "@pg/registry-types";
+import { registry, subscribeRegistry, type RegistryLeafItem } from "@pg/registry";
 
 /** Reactive view of the live registry (updates on HMR of discovered-registry.gen). */
 export function useRegistryItems(): RegistryLeafItem[] {

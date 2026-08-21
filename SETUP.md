@@ -1,78 +1,104 @@
 # Playground Setup
 
-## Quick Start
+Four steps, all by hand. There is no setup script — every step below is a command you
+run or a block you paste, and keeping it that way is deliberate: the script that used to
+wrap this was more code to maintain than the steps it replaced.
 
-1. Copy the `playground/` folder into your React + Vite project's `src/app/` directory
-2. Register the dev-server plugin in your `vite.config.ts`:
-   ```ts
-   import { designPlaygroundPlugin } from './src/app/playground/server/vite-plugin';
-   export default defineConfig({ plugins: [react(), designPlaygroundPlugin()] });
-   ```
-3. Open a terminal in your project root and run the setup script:
-   ```
-   node src/app/playground/setup.mjs
-   ```
-4. Start your dev server (`bun dev`)
-5. Open `http://localhost:5173/playground` (or whatever port Vite reports)
+## 1. Drop in the folder
 
-## Manual Install
+Copy `playground/` into your React + Vite project at `src/app/playground/` (or
+`app/playground/` — both are recognised).
 
-If you prefer to skip the script, install the playground's dependencies **nested** with Bun —
-from inside the playground folder, so nothing lands in your host `package.json`:
+## 2. Register the dev-server plugin
+
+```ts
+// vite.config.ts
+import { designPlaygroundPlugin } from './src/app/playground/server/vite-plugin';
+
+export default defineConfig({ plugins: [react(), designPlaygroundPlugin()] });
+```
+
+## 3. Install the dependencies, nested
+
+From **inside** the playground folder:
 
 ```
 cd src/app/playground
 bun install
 ```
 
-A bare `bun install` reads this folder's `package.json` and `bunfig.toml`. The `bunfig.toml`
-sets `[install] peer = false`, which keeps React (and the other host-provided peers) out of the
-nested `node_modules` so they resolve to your app's single copy (no "invalid hook call").
+Run it from that directory. A bare `bun install` there reads this folder's own
+`package.json` and `bunfig.toml`; your host `package.json` and lockfile are never touched,
+and everything lands in `src/app/playground/node_modules/`.
+
+`bunfig.toml` sets `[install] peer = false`. That is what keeps React, `react-dom`,
+`tailwindcss`, and `vite` **out** of the nested `node_modules` so they resolve up to your
+app's single copy — without it you get "invalid hook call". Don't remove it.
+
+## 4. Add the ignore block
+
+Paste into your host `.gitignore`:
+
+```gitignore
+# Design Playground — local dev tool
+/src/app/playground/
+/app/playground/
+/.playground-temp/
+/skills-lock.json
+/.claude/skills/
+/public/untitled-*/
+```
+
+If you had already committed playground files, stop tracking them (they stay on disk):
+
+```
+git rm -r --cached --ignore-unmatch src/app/playground app/playground .playground-temp skills-lock.json .claude/skills
+```
+
+Then start your dev server (`bun dev`) and open `http://localhost:5173/playground`.
 
 ## Prerequisites
 
-You need Bun installed (https://bun.sh), and your project needs these already installed:
+Bun (https://bun.sh), plus these already in your project:
 
-- **Vite** 5 or 6 (the playground API mounts into the dev server via `server/vite-plugin.ts`)
+- **Vite** 5 or 6 — the playground API mounts into the dev server via `server/vite-plugin.ts`
 - **React** 18 or 19
 - **Tailwind CSS** v4
 
-The playground UI is **self-contained** — it ships its own neutral theme (a private `--pg-*` token namespace) and needs **no color setup**. Your own components, when rendered on the canvas, inherit **your app's** theme tokens automatically (light and dark): if your project uses [shadcn/ui](https://ui.shadcn.com)-style tokens (`--background`, `--primary`, `--muted`, …) in your global stylesheet, previews match your app exactly; if not, previews simply use whatever colors your components specify.
+The playground UI is **self-contained** — it ships its own neutral theme (a private `--pg-*`
+token namespace) and needs no colour setup. Your own components, rendered on the canvas,
+inherit **your app's** theme tokens automatically: if your project uses
+[shadcn/ui](https://ui.shadcn.com)-style tokens (`--background`, `--primary`, `--muted`, …)
+previews match your app exactly; if not, previews use whatever colours your components specify.
 
-## How It Works
+## AI generation
 
-1. **Drag** components from the sidebar onto the canvas
-2. **Generate variations** by clicking the sparkle icon on any component (requires the Claude Code CLI)
-3. **Compare** variations side-by-side on the canvas
-4. **Use a variation** by clicking "Use this" to copy the import path
-5. **Delete** variations you don't want — files are removed from your project automatically
+Variation generation runs the **Claude Code** CLI as a subprocess, so it needs to be on your
+PATH:
 
-## AI Generation
+```
+bun add -g @anthropic-ai/claude-code
+```
 
-The variation generator runs the **Claude Code** CLI as a subprocess — install it and make sure it's in your PATH:
+Everything else works without it — you just can't generate variations from the UI.
 
-- **Claude Code** — `bun add -g @anthropic-ai/claude-code`
+## How it works
 
-The setup script (`node src/app/playground/setup.mjs`) checks for Claude Code and will tell you if it's missing. Without it, everything else works — you just won't be able to generate new variations from the UI.
+1. **Drag** components from the flank onto the canvas
+2. **Generate variations** with the sparkle icon on any component
+3. **Compare** variations side-by-side
+4. **Use a variation** — "Use this" copies the import path
+5. **Delete** variations you don't want; the files go with them
 
 ## Git
 
-Setup updates your project's `.gitignore` so playground files stay out of version control:
+Your host `package.json` and lockfile stay untouched — the playground produces **no
+dependency diff** for your project to commit.
 
-- The full `src/app/playground/` (or `app/playground/`) folder
-- Runtime artifacts: `.playground-temp/`, uploaded images
-- Skills installed by the playground (`skills-lock.json`, `.claude/skills/`)
+**Create Page routes** (`src/app/{slug}/page.tsx`, created from the playground) are host-app
+pages and stay tracked unless you ignore them yourself.
 
-**Your host `package.json` and lockfile are untouched.** The playground's dependencies install nested under `src/app/playground/node_modules/` (gitignored), so setup produces no dependency diff for your project to commit.
+## Removing the playground
 
-**Create Page routes** (`src/app/{slug}/page.tsx` created from the playground) are host-app pages and remain tracked unless you ignore them yourself.
-
-If you previously committed playground files, stop tracking them (files stay on disk):
-
-```
-node src/app/playground/setup.mjs --untrack
-```
-
-## Removing the Playground
-
-Delete the `src/app/playground/` folder. Its nested `node_modules/` (and everything the playground installed) goes with it — there is **nothing to uninstall** from your host project, because the playground never added anything to your `package.json`.
+Delete `src/app/playground/`. Its nested `node_modules/` goes with it — there is nothing to
+uninstall, because nothing was ever added to your `package.json`.

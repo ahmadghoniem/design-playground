@@ -3,7 +3,7 @@
  * safe to unit-test directly with sample registry lists.
  */
 
-import type { RegistryLeafItem } from "@pg/registry-types";
+import type { RegistryLeafItem } from "@pg/registry";
 
 /**
  * Build a map of parentId -> child leaf items from the flat registry list.

@@ -2,7 +2,7 @@
   "name": "design-playground",
   "version": "0.0.0",
   "private": true,
-  "description": "Local-dev design playground. Its dependencies install NESTED under src/app/playground/node_modules (via setup.mjs) so the host project's package.json and lockfile are never touched. Local-dev only — never built in CI/prod. Vite-compatible. react/react-dom/tailwindcss are provided by the host (peerDependencies).",
+  "description": "Local-dev design playground. Its dependencies install NESTED under src/app/playground/node_modules (see SETUP.md) so the host project's package.json and lockfile are never touched. Local-dev only — never built in CI/prod. Vite-compatible. react/react-dom/tailwindcss are provided by the host (peerDependencies).",
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@hono/node-server": "^1.19.14",
@@ -24,7 +24,7 @@
     "vite": "^5 || ^6"
   },
   "scripts": {
-    "check:boundaries": "bunx --bun dependency-cruiser@16 --config .dependency-cruiser.cjs --ts-config tsconfig.json \"app/**/*.{ts,tsx}\" \"features/**/*.{ts,tsx}\" \"shared/**/*.{ts,tsx}\" \"server/**/*.{ts,tsx}\" registry.tsx registry-types.ts dev-entry.tsx",
+    "check:boundaries": "bunx --bun dependency-cruiser@16 --config .dependency-cruiser.cjs --ts-config tsconfig.json \"app/**/*.{ts,tsx}\" \"features/**/*.{ts,tsx}\" \"shared/**/*.{ts,tsx}\" \"server/**/*.{ts,tsx}\" registry.tsx dev-entry.tsx",
     "check:knip": "bunx knip --config knip.json",
     "check:architecture": "bun scripts/verify-architecture.mjs"
   }

@@ -24,7 +24,7 @@ Client code is organized by **feature**, not by layer. Cross-feature imports use
 - `features/<name>/` — `canvas`, `registry-sidebar`, `iterations`, `generation` (owns `prompts/` and `prompt-builders.ts`), `chat`. **Features never import other features** — cross-feature composition lives in `app/`; anything shared is promoted to `shared/`.
 - `shared/` — `shared/ui/` (shadcn primitives + cross-feature components), `shared/lib/` (used by 2+ features or by the server), `shared/stores/` (cross-feature zustand).
 - `server/` — **imports client code via relative paths, not `@pg/`**, so `bun server/index.ts` resolves standalone without a bundler.
-- Root-pinned (do not move): `dev-entry.tsx`, `registry.tsx`, `registry-types.ts`, `setup.mjs`, `bunfig.toml`, `knip.json`, `tsconfig.json`. Content dirs stay put: `iterations/`, `skills/`, `assets/`, `styles/`.
+- Root-pinned (do not move): `dev-entry.tsx`, `registry.tsx`, `bunfig.toml`, `knip.json`, `tsconfig.json`. Content dirs stay put: `iterations/`, `skills/`, `assets/`, `styles/`.
 - Generated, do not hand-edit: `discovered-registry.json` (the component manifest) and `discovered-registry.gen.tsx`. **Nothing writes the manifest today** — the static-analysis scan was removed to be redesigned, so the registry is whatever the committed manifest holds.
 - `playground.html` lives in the **host** app; the Vite plugin rewrites `/playground` to it.
 
@@ -53,7 +53,7 @@ The alias is defined in the package-root `tsconfig.json` (`@pg/* → ./*`, plus 
 
 ## Setup & running
 
-- **This project standardizes on Bun.** `setup.mjs` requires `bun` in PATH. `node setup.mjs --untrack` stops tracking already-committed playground files.
+- **This project standardizes on Bun.** Setup is by hand and documented in `SETUP.md` — `bun install` from inside the playground folder, a Vite plugin registration, and a `.gitignore` block. There is no setup script.
 - `bunfig.toml` sets `[install] peer = false` — this is what keeps `react`/`react-dom`/`tailwindcss`/`vite` out of the nested `node_modules` so they resolve up to the host's single copy. Bun installs peerDependencies by default, so it must stay.
 - Run: start the **host's** Vite dev server (`bun dev`), open `/playground`. This package has no dev script of its own.
 - Standalone API only (rare): `bun server/index.ts` → `http://localhost:4319/playground/api/...`. Use **Bun, not `node`** — the guard is `import.meta.main`.
