@@ -101,18 +101,6 @@ ${customInstructions.trim()}
 `;
 }
 
-export function formatSkillSection(skillPrompt?: string): string {
-  if (!skillPrompt || !skillPrompt.trim()) return '';
-  return `SKILL CONTEXT (read each SKILL.md at the repo paths below)
-══════════════
-
-${skillPrompt.trim()}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-`;
-}
-
 export function formatReferenceNodesSection(
   nodes?: {
     componentName: string;

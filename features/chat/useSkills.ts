@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import type { PlaygroundSkill } from "@pg/skills";
-import { useSkillsUiStore } from "@pg/shared/stores/skills-ui-store";
 
 // ---------------------------------------------------------------------------
 // useSkills — shared, deduped skills fetch
 // ---------------------------------------------------------------------------
-// The docked chat bar (DockedChatBar) and the skills catalog modal both need
-// the skills list. A module-level cache + in-flight promise means they share a
-// single `/playground/api/skills` request instead of each firing their own.
-// Refreshes when skillsVersion bumps (skill added/removed).
+// A module-level cache + in-flight promise means every caller shares a single
+// `/playground/api/skills` request instead of each firing their own. Skills are
+// installed through the Agent, outside this app, so the list is read once per
+// page load and never invalidated from the UI.
 // ---------------------------------------------------------------------------
 
 let cache: PlaygroundSkill[] | null = null;
@@ -35,7 +34,6 @@ function loadSkills(): Promise<PlaygroundSkill[]> {
 
 export function useSkills(): PlaygroundSkill[] {
   const [skills, setSkills] = useState<PlaygroundSkill[]>(() => cache ?? []);
-  const skillsVersion = useSkillsUiStore((s) => s.skillsVersion);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,18 +44,6 @@ export function useSkills(): PlaygroundSkill[] {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (skillsVersion === 0) return;
-    let cancelled = false;
-    cache = null;
-    loadSkills().then((s) => {
-      if (!cancelled) setSkills(s);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [skillsVersion]);
 
   return skills;
 }

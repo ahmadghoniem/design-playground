@@ -143,7 +143,6 @@ export function generateRoutes() {
         effort?: string;
         claudeDetailedStdout?: boolean;
         source?: string;
-        skillIds?: string[];
       }>(c);
 
       if (!body || !body.prompt || !body.componentId) {

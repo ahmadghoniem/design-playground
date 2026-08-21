@@ -500,61 +500,6 @@ body:has(.playground-main-view) {
   color: rgb(185, 183, 181); /* stone-400 */
 }
 
-/* Skill pill — looks like normal inline text, just blue */
-.mention-pill--skill {
-  gap: 0;
-  margin: 0 1px;
-  padding: 1px 2px;
-  border-radius: 3px;
-  vertical-align: baseline;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.mention-pill--skill .mention-pill__label {
-  font-size: inherit;
-  font-weight: 500;
-  line-height: inherit;
-  color: rgb(59, 130, 246);
-}
-
-/* First backspace: selection highlight before delete */
-.mention-pill--skill[data-pending-delete] {
-  background: rgb(219, 234, 254);
-  border-radius: 3px;
-}
-
-.mention-pill--skill[data-pending-delete] .mention-pill__label {
-  color: rgb(29, 78, 216);
-}
-
-/* Impeccable pill: command cleared state (stage 1 of 3-stage deletion). */
-.mention-pill--skill[data-command-cleared] {
-  background: rgb(254, 243, 199);
-  border-radius: 3px;
-}
-
-.mention-pill--skill[data-command-cleared] .mention-pill__label {
-  color: rgb(146, 64, 14);
-}
-
-/* Impeccable command category badge in the sub-menu dropdown */
-.impeccable-cmd-category {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  flex-shrink: 0;
-  background: rgb(243, 244, 246);
-  color: rgb(107, 114, 128);
-  line-height: 1.4;
-}
-
 /* Element selection mode — override all cursors when Alt is held */
 .element-select-mode,
 .element-select-mode *,

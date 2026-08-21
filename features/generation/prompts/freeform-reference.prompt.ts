@@ -11,7 +11,6 @@ import {
 
 function buildPrompt(): string {
   return `
-{{skillSection}}
 NEW COMPONENT REQUEST
 ═════════════════════
 
@@ -63,7 +62,6 @@ Generate the new component now.`;
 }
 
 export interface FreeformReferencePromptVars {
-  skillSection?: string;
   referenceNodesSection: string;
   customInstructionsSection?: string;
   stylingConstraint: string;

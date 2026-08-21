@@ -4,7 +4,6 @@ import { Toaster } from "sonner";
 import PlaygroundSidebar from "@pg/app/PlaygroundSidebar";
 import PlaygroundCanvas from "./PlaygroundCanvas";
 import PlaygroundHeader from "./PlaygroundHeader";
-import SkillsCatalogModal from "@pg/features/skills/SkillsCatalogModal";
 import { CANVAS_STATE_STORAGE_KEY } from "@pg/shared/lib/constants";
 import { preloadAllComponents } from "@pg/registry";
 import { CanvasFlowProvider } from "@pg/features/canvas/canvas-flow";
@@ -13,7 +12,6 @@ import {
   previewSchemeClass,
   usePreviewColorSchemeStore,
 } from "@pg/shared/stores/preview-color-scheme-store";
-import { useSkillsUiStore } from "@pg/shared/stores/skills-ui-store";
 
 // Vite injects the host-relative playground root at bundle time — no HTTP.
 hydratePlaygroundRelativeRoot();
@@ -54,9 +52,6 @@ export default function PlaygroundClient() {
   const project = useProjectBootstrap();
   const projectId = project?.projectId ?? null;
   const projectName = project?.projectName ?? "project";
-  const skillsCatalogOpen = useSkillsUiStore((s) => s.catalogOpen);
-  const setSkillsCatalogOpen = useSkillsUiStore((s) => s.setCatalogOpen);
-  const bumpSkillsVersion = useSkillsUiStore((s) => s.bumpSkillsVersion);
 
   // Preload all dynamic components to prevent HMR cascades on first drop
   useEffect(() => {
@@ -112,13 +107,6 @@ export default function PlaygroundClient() {
           </div>
         </div>
       </div>
-
-      {/* Skills catalog modal */}
-      <SkillsCatalogModal
-        open={skillsCatalogOpen}
-        onOpenChange={setSkillsCatalogOpen}
-        onSkillsChanged={bumpSkillsVersion}
-      />
     </ReactFlowProvider>
   );
 

@@ -20,7 +20,6 @@ import { iterationsGuide } from '@pg/shared/lib/playground-paths';
 
 function buildPrompt(): string {
   return `
-{{skillSection}}
 ITERATION REQUEST
 ═════════════════
 
@@ -63,7 +62,6 @@ Generate the iterations now.`;
 }
 
 export interface IterationPromptVars {
-  skillSection?: string;
   componentName: string;
   sourcePath: string;
   iterationCount: string;
@@ -88,7 +86,6 @@ export function iterationPrompt(vars: IterationPromptVars): string {
 
 function buildFromIterationPrompt(): string {
   return `
-{{skillSection}}
 ITERATION REQUEST (from existing iteration)
 ═════════════════════════════════════════════
 
@@ -132,7 +129,6 @@ Generate the iterations now.`;
 }
 
 export interface IterationFromIterationPromptVars {
-  skillSection?: string;
   componentName: string;
   sourcePath: string;
   iterationSourcePath: string;

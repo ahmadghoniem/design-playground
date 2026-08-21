@@ -11,7 +11,6 @@ import {
   formatChildrenSection,
   formatCustomInstructionsSection,
   formatElementSelectionsSection,
-  formatSkillSection,
   getQualityChecklist,
   getStylingConstraint,
   getStylingQualityItem,
@@ -34,7 +33,6 @@ interface IterationPromptArtifacts {
   iterationSavesBlock: string
   childrenSection: string
   customInstructionsSection: string
-  skillSection: string
 }
 
 function buildIterationArtifacts(
@@ -42,7 +40,6 @@ function buildIterationArtifacts(
   iterationCount: number,
   startNumber: number,
   customInstructions?: string,
-  skillPrompt?: string,
 ): IterationPromptArtifacts | null {
   const item = resolveRegistryItem(componentId)
   if (!item) return null
@@ -68,7 +65,6 @@ function buildIterationArtifacts(
     childrenSection: formatChildrenSection(item.childComponents),
     customInstructionsSection:
       formatCustomInstructionsSection(customInstructions),
-    skillSection: formatSkillSection(skillPrompt),
   }
 }
 
@@ -77,7 +73,6 @@ export function generateIterationPrompt(
   iterationCount: number = 4,
   startNumber: number = 1,
   customInstructions?: string,
-  skillPrompt?: string,
   referenceNodesSection?: string,
 ): string {
   const a = buildIterationArtifacts(
@@ -85,12 +80,10 @@ export function generateIterationPrompt(
     iterationCount,
     startNumber,
     customInstructions,
-    skillPrompt,
   )
   if (!a) return ""
 
   return iterationPrompt({
-    skillSection: a.skillSection,
     componentName: a.componentName,
     sourcePath: a.item.sourcePath,
     iterationCount: String(iterationCount),
@@ -112,7 +105,6 @@ export function generateIterationFromIterationPrompt(
   iterationCount: number,
   startNumber: number,
   customInstructions?: string,
-  skillPrompt?: string,
   referenceNodesSection?: string,
 ): string {
   const a = buildIterationArtifacts(
@@ -120,14 +112,12 @@ export function generateIterationFromIterationPrompt(
     iterationCount,
     startNumber,
     customInstructions,
-    skillPrompt,
   )
   if (!a) return ""
 
   const endNumber = startNumber + iterationCount - 1
 
   return iterationFromIterationPrompt({
-    skillSection: a.skillSection,
     componentName: a.componentName,
     sourcePath: a.item.sourcePath,
     iterationSourcePath: iterationsFile(sourceIterationFilename),
@@ -151,7 +141,6 @@ export function generateElementIterationPrompt(
   iterationCount: number,
   elementSelections: ChatSubmitPayload["elementSelections"],
   customInstructions?: string,
-  skillPrompt?: string,
   referenceNodesSection?: string,
 ): string {
   const a = buildIterationArtifacts(
@@ -159,12 +148,10 @@ export function generateElementIterationPrompt(
     iterationCount,
     startNumber,
     customInstructions,
-    skillPrompt,
   )
   if (!a) return ""
 
   return elementIterationPrompt({
-    skillSection: a.skillSection,
     componentName: a.componentName,
     sourcePath: a.item.sourcePath,
     childrenSection: a.childrenSection,
@@ -187,7 +174,6 @@ export function generateElementIterationFromIterationPrompt(
   iterationCount: number,
   elementSelections: ChatSubmitPayload["elementSelections"],
   customInstructions?: string,
-  skillPrompt?: string,
   referenceNodesSection?: string,
 ): string {
   const a = buildIterationArtifacts(
@@ -195,12 +181,10 @@ export function generateElementIterationFromIterationPrompt(
     iterationCount,
     startNumber,
     customInstructions,
-    skillPrompt,
   )
   if (!a) return ""
 
   return elementIterationFromIterationPrompt({
-    skillSection: a.skillSection,
     componentName: a.componentName,
     sourcePath: a.item.sourcePath,
     iterationSourcePath: iterationsFile(sourceIterationFilename),

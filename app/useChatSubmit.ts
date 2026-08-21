@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { getClaudeCodeFields } from "@pg/shared/lib/generation-body";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
-import { loadDefaultSkillPrompt } from "@pg/shared/lib/load-default-skill-prompt";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
@@ -18,20 +17,6 @@ import {
 
 export interface UseChatSubmitParams {
   coord: GenerationCoordination;
-}
-
-/**
- * Join explicit skill prompts, or fall back to the default skill prompt when
- * `useDefault` (no explicit skills and the mode allows the fallback).
- */
-async function resolveSkillPrompt(
-  skillPrompts: string[],
-  useDefault: boolean,
-): Promise<string | undefined> {
-  if (skillPrompts.length > 0) return skillPrompts.join("\n\n");
-  if (!useDefault) return undefined;
-  const defaultPrompt = await loadDefaultSkillPrompt();
-  return defaultPrompt || undefined;
 }
 
 /**
@@ -92,7 +77,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
       const rawPrompt = payload.text.trim();
 
       const hasFreeformContext =
-        payload.skillPrompts.length > 0 ||
         (payload.referenceNodes?.length ?? 0) > 0;
       if (isRawMode && !rawPrompt && !hasFreeformContext) return;
 
@@ -107,11 +91,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
         const { filePath, componentId: editComponentId, componentName: editComponentName } =
           resolveEditFilePath(payload);
 
-        const editSkillPrompt = await resolveSkillPrompt(
-          payload.skillPrompts,
-          !payload.text,
-        );
-
         const editRefSection = buildReferenceNodesSection(
           payload.referenceNodes,
           getPromptNodes,
@@ -121,7 +100,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
         const prompt = buildEditChatPrompt({
           payload,
           filePath,
-          skillPrompt: editSkillPrompt,
           referenceNodesSection: editRefSection,
         });
 
@@ -143,7 +121,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
           componentId: editComponentId,
           model: editResolvedModel,
           source: "chat_edit",
-          skillIds: payload.skillIds,
           ...getClaudeCodeFields(),
         });
 
@@ -180,13 +157,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
       } = payload;
 
       const resolvedModel = resolveAgentModel(payloadModel);
-
-      // Explicit skills always apply (including raw / text-only refs); the
-      // default skill only kicks in for non-raw submissions with empty text.
-      const combinedSkillPrompt = await resolveSkillPrompt(
-        payload.skillPrompts,
-        !isRawMode && !text,
-      );
 
       const customInstructions = isRawMode ? rawPrompt : text;
 
@@ -235,7 +205,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
             payload,
             isRawMode,
             customInstructions,
-            combinedSkillPrompt,
             referenceNodesSection,
             startNumber,
           });
@@ -258,7 +227,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
           iterationCount,
           model: resolvedModel,
           source: "chat",
-          skillIds: payload.skillIds,
           ...claudeCodeFields,
         });
 
@@ -282,7 +250,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
             isRawMode,
             rawPrompt,
             customInstructions,
-            combinedSkillPrompt,
             referenceNodesSection,
           });
 
@@ -302,7 +269,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
           iterationCount: 0,
           model: resolvedModel,
           source: "chat_freeform",
-          skillIds: payload.skillIds,
           ...claudeCodeFields,
         });
 

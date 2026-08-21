@@ -5,7 +5,6 @@
 export interface EditPromptOptions {
   filePath: string;
   customInstructions: string;
-  skillPrompt?: string;
   referenceNodesSection?: string;
   elementSelections?: Array<{
     tagName: string;
@@ -24,10 +23,6 @@ export function editPrompt(opts: EditPromptOptions): string {
     `Edit the file at ${opts.filePath} according to the following instructions.`,
     "Do NOT create new files. Modify the existing file in-place.",
   );
-
-  if (opts.skillPrompt) {
-    sections.push("## Skills\n" + opts.skillPrompt);
-  }
 
   if (opts.elementSelections && opts.elementSelections.length > 0) {
     const selLines = opts.elementSelections.map((el) => {

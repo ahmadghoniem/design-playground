@@ -6,13 +6,8 @@ import {
   MentionInputField,
   MentionInputContent,
   type Segment,
-  type MentionInputHandle,
 } from "@pg/shared/ui/mention-input";
-import type { PlaygroundSkill } from "@pg/skills";
-import { ImpeccableSkillPicker } from "@pg/shared/ui/impeccable-skill-picker";
-import { ImpeccableDemoteMenu } from "@pg/shared/ui/impeccable-demote-menu";
-import { useImpeccableSkillPicker } from "@pg/shared/lib/useImpeccableSkillPicker";
-import { impeccablePromptFromSegment } from "@pg/shared/lib/impeccable-skill";
+import { SkillPicker } from "@pg/shared/ui/skill-picker";
 import { useAvailableModels } from "@pg/shared/lib/model-selection";
 import { useModelCycle } from "@pg/features/chat/useModelCycle";
 import { useSkills } from "@pg/features/chat/useSkills";
@@ -72,29 +67,20 @@ export default function DockedChatBar({
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inlineRefContainerRef = useRef<HTMLDivElement | null>(null);
-  const mentionHandle = useRef<MentionInputHandle | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
   const { models, isLoading: isLoadingModels } = useAvailableModels();
   const { model, cycleModel } = useModelCycle(models);
 
-  const {
-    impeccableSubMenuOpen,
-    setImpeccableSubMenuOpen,
-    demoteState,
-    skillPickerItems,
-    skillPickerFilterFn,
-    handleSelectItem,
-    handleImpeccableCommandCleared,
-    closeDemoteMenu,
-    resetImpeccablePicker,
-  } = useImpeccableSkillPicker(skills);
-
-  const skillsById = useMemo(() => {
-    const map = new Map<string, PlaygroundSkill>();
-    for (const skill of skills) map.set(skill.id, skill);
-    return map;
-  }, [skills]);
+  const skillPickerItems = useMemo(
+    () =>
+      skills.map((s) => ({
+        id: s.name,
+        label: s.name,
+        description: s.description,
+      })),
+    [skills],
+  );
 
   const getInputEl = useCallback(() => {
     return (
@@ -167,9 +153,7 @@ export default function DockedChatBar({
   }, [clearDwell, getInputEl, dismissedRef, setExpanded]);
 
   const pickerOpen = useCallback(
-    () =>
-      !!document.querySelector('[data-slot="mention-input-content"]') ||
-      !!document.querySelector('[data-slot="impeccable-demote-menu"]'),
+    () => !!document.querySelector('[data-slot="mention-input-content"]'),
     [],
   );
 
@@ -188,37 +172,17 @@ export default function DockedChatBar({
     }
   }, [screenToFlowPosition]);
 
-  const extractPayload = useCallback(() => {
-    const textParts: string[] = [];
-    const skillPrompts: string[] = [];
-    const skillIds: string[] = [];
-
-    for (const segment of segments) {
-      if (segment.type === "text") {
-        const trimmed = segment.value.trim();
-        if (trimmed) textParts.push(trimmed);
-      } else if (segment.type === "reference") {
-        skillIds.push(segment.value);
-        const impeccablePrompt = impeccablePromptFromSegment(
-          segment,
-          skillsById.get("impeccable")?.skillPath,
-        );
-        if (impeccablePrompt) {
-          skillPrompts.push(impeccablePrompt);
-        } else {
-          const skill = skillsById.get(segment.value);
-          const p = skill?.skillPath?.trim();
-          if (p) skillPrompts.push(p);
-        }
-      }
-    }
-
-    return { text: textParts.join("\n").trim(), skillPrompts, skillIds };
-  }, [segments, skillsById]);
+  const extractText = useCallback(() => {
+    return segments
+      .map((segment) => segment.value.trim())
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+  }, [segments]);
 
   const handleSubmit = useCallback(async () => {
-    const { text, skillPrompts, skillIds } = extractPayload();
-    if (!text && skillPrompts.length === 0) return;
+    const text = extractText();
+    if (!text) return;
 
     const mode: "edit" | "explore" | "raw" = canEditOrExplore
       ? chatMode
@@ -226,8 +190,6 @@ export default function DockedChatBar({
 
     const payload: ChatSubmitPayload = {
       text,
-      skillPrompts,
-      skillIds,
       model,
       targetNodeId: editTarget?.nodeId ?? null,
       targetComponentId: editTarget?.componentId ?? null,
@@ -252,11 +214,10 @@ export default function DockedChatBar({
     }
     onClearElements?.();
     onClearNodes?.();
-    resetImpeccablePicker();
 
     await onSubmit(payload);
   }, [
-    extractPayload,
+    extractText,
     canEditOrExplore,
     chatMode,
     model,
@@ -269,7 +230,6 @@ export default function DockedChatBar({
     getInputEl,
     onClearElements,
     onClearNodes,
-    resetImpeccablePicker,
     onSubmit,
   ]);
 
@@ -523,17 +483,8 @@ export default function DockedChatBar({
                 onKeyDownCapture={handleKeyDownCapture}
               >
                 <MentionInput
-                  ref={mentionHandle}
                   value={segments}
                   onValueChange={setSegments}
-                  onSelectItem={handleSelectItem}
-                  onImpeccableCommandCleared={(pillEl) => {
-                    handleImpeccableCommandCleared(
-                      pillEl,
-                      inlineRefContainerRef.current,
-                    );
-                  }}
-                  onSkillPillPendingDelete={() => closeDemoteMenu()}
                   className="w-full cursor-chat-inline-input"
                 >
                   <MentionInputField
@@ -551,30 +502,11 @@ export default function DockedChatBar({
                   <MentionInputContent
                     trigger="/"
                     items={skillPickerItems}
-                    filterFn={skillPickerFilterFn}
                     placement="top"
                     className="rounded-xl border border-stone-200 shadow-lg"
                   >
-                    <ImpeccableSkillPicker
-                      impeccableSubMenuOpen={impeccableSubMenuOpen}
-                      onBackFromSubMenu={() => setImpeccableSubMenuOpen(false)}
-                      showAddSkillButton={false}
-                    />
+                    <SkillPicker />
                   </MentionInputContent>
-
-                  {demoteState && (
-                    <ImpeccableDemoteMenu
-                      demoteState={demoteState}
-                      onSelect={(command) => {
-                        mentionHandle.current?.updateImpeccablePill(
-                          demoteState.pillEl,
-                          command,
-                        );
-                        closeDemoteMenu();
-                      }}
-                      onClose={closeDemoteMenu}
-                    />
-                  )}
                 </MentionInput>
 
                 {/* Send button */}

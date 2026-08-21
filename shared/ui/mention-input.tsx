@@ -1,16 +1,16 @@
 /**
  * MentionInput — a contenteditable field where a trigger character (`/` today)
- * opens a picker and inserts a **pill**: a `contenteditable="false"` span the
- * browser treats as a single atom, so it can't be typed into and deletes whole.
+ * opens a picker. Selecting a skill inserts the literal text `/<name> ` at the
+ * cursor (replacing the typed trigger + query).
  *
  * Same shape as the rest of shared/ui (see dialog.tsx): every part of the
  * compound component lives here, exported together at the bottom, each carrying
- * a `data-slot`. The DOM/pill engine is the one piece that lives apart —
+ * a `data-slot`. The DOM engine is the one piece that lives apart —
  * `mention-input-dom.ts` imports no React and is testable under jsdom.
  *
- * The value is `Segment[]` (`text` | `reference`), re-read from the DOM on every
- * keystroke by `readSegmentsFromDOM` — the DOM is the source of truth here,
- * because the user edits it directly.
+ * The value is `Segment[]` (text only), re-read from the DOM on every keystroke
+ * by `readSegmentsFromDOM` — the DOM is the source of truth here, because the
+ * user edits it directly.
  */
 
 import * as React from "react"
@@ -18,27 +18,13 @@ import * as React from "react"
 import { cn } from "@pg/shared/lib/utils"
 import {
   readSegmentsFromDOM,
-  createPillElement,
-  updateImpeccablePillElement,
-  placeCursorAfter,
   detectTrigger,
   ZERO_WIDTH_SPACE,
-  PILL_ATTR,
-  PILL_TRIGGER_ATTR,
-  PILL_LABEL_ATTR,
-  PILL_DATA_ATTR,
-  PILL_IMPECCABLE_CMD_ATTR,
-  PILL_IMPECCABLE_CLEARED_ATTR,
   type Segment,
-  type ReferenceSegment,
   type TriggerState,
 } from "@pg/shared/ui/mention-input-dom"
 
-export type {
-  Segment,
-  TextSegment,
-  ReferenceSegment,
-} from "@pg/shared/ui/mention-input-dom"
+export type { Segment } from "@pg/shared/ui/mention-input-dom"
 
 // ---------------------------------------------------------------------------
 // Types + context
@@ -49,17 +35,6 @@ export type MentionItemData = {
   label: string
   [key: string]: unknown
 }
-
-/**
- * Callback fired before an item is selected. Return value controls what happens:
- * - `{ preventDefault: true }` — cancels the normal pill insertion
- * - `{ overrideItem: item }` — inserts `item` instead of the originally-selected one
- * - `undefined` / `{}` — normal insertion
- */
-export type OnSelectItemResult = {
-  preventDefault?: boolean
-  overrideItem?: MentionItemData
-} | undefined
 
 type MentionInputContextValue = {
   segments: Segment[]
@@ -85,8 +60,6 @@ type MentionInputContextValue = {
    */
   itemsByTrigger: Map<string, MentionItemData[]>
   listId: string
-  onImpeccableCommandCleared?: (pillEl: HTMLElement) => void
-  onSkillPillPendingDelete?: (pillEl: HTMLElement) => void
 }
 
 const MentionInputContext =
@@ -106,33 +79,20 @@ function useMentionInputContext() {
 // MentionInput (root)
 // ---------------------------------------------------------------------------
 
-export type MentionInputHandle = {
-  updateImpeccablePill(pillEl: HTMLElement, command: string): void
-}
-
 type MentionInputProps = {
   children: React.ReactNode
   value?: Segment[]
   onValueChange?: (segments: Segment[]) => void
-  onSelectItem?: (trigger: string, item: MentionItemData) => OnSelectItemResult
-  onImpeccableCommandCleared?: (pillEl: HTMLElement) => void
-  onSkillPillPendingDelete?: (pillEl: HTMLElement) => void
   className?: string
 }
 
-const MentionInput = React.forwardRef<
-  MentionInputHandle,
-  MentionInputProps & Omit<React.ComponentProps<"div">, "value">
->(function MentionInput({
+function MentionInput({
   children,
   value,
   onValueChange,
-  onSelectItem,
-  onImpeccableCommandCleared,
-  onSkillPillPendingDelete,
   className,
   ...props
-}, ref) {
+}: MentionInputProps & Omit<React.ComponentProps<"div">, "value">) {
   const [internalSegments, setInternalSegments] = React.useState<Segment[]>(
     value ?? []
   )
@@ -165,10 +125,6 @@ const MentionInput = React.forwardRef<
 
   const selectItem = React.useCallback(
     (trigger: string, item: MentionItemData) => {
-      const result = onSelectItem?.(trigger, item)
-      if (result?.preventDefault) return
-      const effectiveItem = result?.overrideItem ?? item
-
       const el = inputRef.current
       if (!el || !triggerState) return
 
@@ -186,43 +142,25 @@ const MentionInput = React.forwardRef<
 
       const beforeText = text.slice(0, triggerIdx)
       const afterText = text.slice(cursorOffset)
-
-      const segment: ReferenceSegment = {
-        type: "reference",
-        trigger,
-        value: effectiveItem.id,
-        label: effectiveItem.label,
-        data: { ...effectiveItem },
-      }
+      const token = `/${item.id} `
+      const nextText = beforeText + token + afterText
 
       const parent = node.parentNode!
-      const frag = document.createDocumentFragment()
+      const textNode = document.createTextNode(nextText)
+      parent.replaceChild(textNode, node)
 
-      if (beforeText) {
-        frag.appendChild(document.createTextNode(beforeText))
-      }
-
-      const deletePill = () => {
-        pill.remove()
-        setSegments(readSegmentsFromDOM(el))
-        el.focus()
-      }
-      const pill = createPillElement(segment, deletePill)
-      frag.appendChild(pill)
-
-      const afterNode = document.createTextNode(
-        afterText ? afterText : ZERO_WIDTH_SPACE
-      )
-      frag.appendChild(afterNode)
-
-      parent.replaceChild(frag, node)
-      placeCursorAfter(pill)
+      const cursorAt = Math.min(beforeText.length + token.length, nextText.length)
+      const nextRange = document.createRange()
+      nextRange.setStart(textNode, cursorAt)
+      nextRange.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(nextRange)
 
       setTriggerState(null)
       setActiveIndex(0)
       setSegments(readSegmentsFromDOM(el))
     },
-    [triggerState, setSegments, onSelectItem]
+    [triggerState, setSegments]
   )
 
   const registerTrigger = React.useCallback(
@@ -237,16 +175,6 @@ const MentionInput = React.forwardRef<
       registeredTriggers.delete(trigger)
     },
     [registeredTriggers]
-  )
-
-  const updateImpeccablePill = React.useCallback(
-    (pillEl: HTMLElement, command: string) => {
-      const el = inputRef.current
-      if (!el) return
-      const next = updateImpeccablePillElement(pillEl, command, el)
-      setSegments(next)
-    },
-    [setSegments]
   )
 
   const contextValue = React.useMemo<MentionInputContextValue>(
@@ -264,8 +192,6 @@ const MentionInput = React.forwardRef<
       unregisterTrigger,
       itemsByTrigger,
       listId,
-      onImpeccableCommandCleared,
-      onSkillPillPendingDelete,
     }),
     [
       segments,
@@ -278,14 +204,8 @@ const MentionInput = React.forwardRef<
       unregisterTrigger,
       itemsByTrigger,
       listId,
-      onImpeccableCommandCleared,
-      onSkillPillPendingDelete,
     ]
   )
-
-  React.useImperativeHandle(ref, () => ({
-    updateImpeccablePill,
-  }), [updateImpeccablePill])
 
   return (
     <MentionInputContext.Provider value={contextValue}>
@@ -298,7 +218,7 @@ const MentionInput = React.forwardRef<
       </div>
     </MentionInputContext.Provider>
   )
-})
+}
 
 // ---------------------------------------------------------------------------
 // MentionInputField — the contenteditable itself
@@ -325,30 +245,16 @@ function MentionInputField({
     registeredTriggers,
     itemsByTrigger,
     listId,
-    onImpeccableCommandCleared,
-    onSkillPillPendingDelete,
   } = useMentionInputContext()
 
   const isComposing = React.useRef(false)
   const [isEmpty, setIsEmpty] = React.useState(true)
-  const pendingDeletePillRef = React.useRef<HTMLElement | null>(null)
-
-  const clearPendingDelete = React.useCallback(() => {
-    const el = pendingDeletePillRef.current
-    if (el) {
-      el.removeAttribute("data-pending-delete")
-      el.removeAttribute(PILL_IMPECCABLE_CLEARED_ATTR)
-      pendingDeletePillRef.current = null
-    }
-  }, [])
 
   const checkEmpty = React.useCallback(() => {
     const el = inputRef.current
     if (!el) return
     const text = el.textContent ?? ""
-    const hasOnlyZWS = text.replace(new RegExp(ZERO_WIDTH_SPACE, "g"), "").trim() === ""
-    const hasPills = el.querySelector(`[${PILL_ATTR}]`) !== null
-    const empty = hasOnlyZWS && !hasPills
+    const empty = text.replace(new RegExp(ZERO_WIDTH_SPACE, "g"), "").trim() === ""
     setIsEmpty(empty)
 
     // After clearing all text, normalize the DOM so the caret sits at the
@@ -371,7 +277,6 @@ function MentionInputField({
     const el = inputRef.current
     if (!el) return
 
-    clearPendingDelete()
     checkEmpty()
 
     const state = detectTrigger(el, registeredTriggers)
@@ -381,135 +286,53 @@ function MentionInputField({
     }
 
     setSegments(readSegmentsFromDOM(el))
-  }, [inputRef, registeredTriggers, setTriggerState, setActiveIndex, setSegments, checkEmpty, clearPendingDelete])
+  }, [inputRef, registeredTriggers, setTriggerState, setActiveIndex, setSegments, checkEmpty])
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      const el = inputRef.current
-      if (!el) return
+      if (!triggerState) return
 
-      if (triggerState) {
-        const items = itemsByTrigger.get(triggerState.trigger) ?? []
-        const count = items.length
+      const items = itemsByTrigger.get(triggerState.trigger) ?? []
+      const count = items.length
 
-        if (e.key === "ArrowDown") {
-          e.preventDefault()
-          setActiveIndex((prev) => (prev + 1) % Math.max(count, 1))
-          return
-        }
-
-        if (e.key === "ArrowUp") {
-          e.preventDefault()
-          setActiveIndex((prev) =>
-            prev <= 0 ? Math.max(count - 1, 0) : prev - 1
-          )
-          return
-        }
-
-        if (e.key === "Enter" || e.key === "Tab") {
-          if (count > 0) {
-            e.preventDefault()
-            const item = items[activeIndex]
-            if (item) {
-              selectItem(triggerState.trigger, item)
-            }
-          }
-          return
-        }
-
-        if (e.key === "Escape") {
-          e.preventDefault()
-          setTriggerState(null)
-          return
-        }
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setActiveIndex((prev) => (prev + 1) % Math.max(count, 1))
+        return
       }
 
-      if (e.key === "Backspace") {
-        const selection = window.getSelection()
-        if (!selection || selection.rangeCount === 0) return
-        const range = selection.getRangeAt(0)
-        if (!range.collapsed) return
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setActiveIndex((prev) =>
+          prev <= 0 ? Math.max(count - 1, 0) : prev - 1
+        )
+        return
+      }
 
-        const node = range.startContainer
-        const cursorOffset = range.startOffset
-
-        const getPillBefore = (): HTMLElement | null => {
-          if (node.nodeType === Node.TEXT_NODE && cursorOffset <= 1) {
-            const prev = node.previousSibling
-            if (prev && (prev as HTMLElement).hasAttribute?.(PILL_ATTR)) {
-              return prev as HTMLElement
-            }
-          }
-          if (node === el && cursorOffset > 0) {
-            const prev = el.childNodes[cursorOffset - 1]
-            if (prev && (prev as HTMLElement).hasAttribute?.(PILL_ATTR)) {
-              return prev as HTMLElement
-            }
-          }
-          return null
-        }
-
-        const pill = getPillBefore()
-        if (pill) {
+      if (e.key === "Enter" || e.key === "Tab") {
+        if (count > 0) {
           e.preventDefault()
-          const isSkillPill = pill.getAttribute(PILL_TRIGGER_ATTR) === "/"
-          const hasImpeccableCmd = pill.hasAttribute(PILL_IMPECCABLE_CMD_ATTR)
-          const isCmdCleared = pill.hasAttribute(PILL_IMPECCABLE_CLEARED_ATTR)
-          const isPendingDelete = pill.hasAttribute("data-pending-delete")
-
-          if (isPendingDelete) {
-            // Final stage — delete (check before impeccable stages so a
-            // highlighted pill always deletes on the next backspace)
-            clearPendingDelete()
-            pill.remove()
-            setSegments(readSegmentsFromDOM(el))
-            checkEmpty()
-          } else if (hasImpeccableCmd && !isCmdCleared) {
-            // Stage 1 (impeccable): clear the command, show yellow + picker
-            clearPendingDelete()
-            pill.setAttribute(PILL_IMPECCABLE_CLEARED_ATTR, "")
-            const labelEl = pill.querySelector(".mention-pill__label")
-            if (labelEl) labelEl.textContent = "/impeccable"
-            pill.setAttribute(PILL_LABEL_ATTR, "impeccable")
-            const dataStr = pill.getAttribute(PILL_DATA_ATTR)
-            if (dataStr) {
-              try {
-                const data = JSON.parse(dataStr) as Record<string, unknown>
-                delete data.impeccableCommand
-                pill.setAttribute(PILL_DATA_ATTR, JSON.stringify(data))
-              } catch { /* ignore */ }
-            }
-            pendingDeletePillRef.current = pill
-            setSegments(readSegmentsFromDOM(el))
-            onImpeccableCommandCleared?.(pill)
-          } else if (isSkillPill) {
-            // Stage 2: highlight for delete (impeccable yellow or any skill)
-            clearPendingDelete()
-            pill.setAttribute("data-pending-delete", "")
-            pendingDeletePillRef.current = pill
-            onSkillPillPendingDelete?.(pill)
+          const item = items[activeIndex]
+          if (item) {
+            selectItem(triggerState.trigger, item)
           }
-          return
         }
+        return
+      }
 
-        clearPendingDelete()
-      } else if (e.key !== "Shift" && e.key !== "Meta" && e.key !== "Alt" && e.key !== "Control") {
-        clearPendingDelete()
+      if (e.key === "Escape") {
+        e.preventDefault()
+        setTriggerState(null)
+        return
       }
     },
     [
-      inputRef,
       triggerState,
       activeIndex,
       selectItem,
       setActiveIndex,
       setTriggerState,
-      setSegments,
       itemsByTrigger,
-      checkEmpty,
-      clearPendingDelete,
-      onImpeccableCommandCleared,
-      onSkillPillPendingDelete,
     ]
   )
 
@@ -599,9 +422,6 @@ type MentionInputContentProps = {
   filterFn?: (item: MentionItemData, query: string) => boolean
   children: React.ReactNode
   className?: string
-  /** When true, show the dropdown even without an active trigger (e.g. impeccable demote). */
-  forceOpen?: boolean
-  forcePosition?: React.CSSProperties | null
   /** Open the dropdown above the trigger ('top') instead of below ('bottom', default).
    *  Used by bottom-docked consumers (e.g. the bottom chat bar) so the `/` picker
    *  opens upward into available space. */
@@ -614,8 +434,6 @@ function MentionInputContent({
   filterFn,
   children,
   className,
-  forceOpen = false,
-  forcePosition = null,
   placement = "bottom",
 }: MentionInputContentProps) {
   const {
@@ -634,7 +452,7 @@ function MentionInputContent({
     return () => unregisterTrigger(trigger)
   }, [trigger, registerTrigger, unregisterTrigger])
 
-  const isActive = forceOpen || triggerState?.trigger === trigger
+  const isActive = triggerState?.trigger === trigger
   const query = triggerState?.trigger === trigger ? (triggerState?.query ?? "") : ""
 
   const defaultFilter = React.useCallback(
@@ -658,23 +476,12 @@ function MentionInputContent({
     }
   }, [trigger, filteredItems, itemsByTrigger])
 
-  React.useEffect(() => {
-    if (forceOpen) {
-      setActiveIndex(0)
-    }
-  }, [forceOpen, setActiveIndex])
-
   const [positionStyle, setPositionStyle] =
     React.useState<React.CSSProperties | null>(null)
 
   React.useEffect(() => {
     if (!isActive) {
       setPositionStyle(null)
-      return
-    }
-
-    if (forceOpen && forcePosition) {
-      setPositionStyle(forcePosition)
       return
     }
 
@@ -723,7 +530,7 @@ function MentionInputContent({
       next.top = rect.bottom - containerRect.top + 4
     }
     setPositionStyle(next)
-  }, [isActive, triggerState, inputRef, forceOpen, forcePosition, placement])
+  }, [isActive, triggerState, inputRef, placement])
 
   if (!isActive) return null
 

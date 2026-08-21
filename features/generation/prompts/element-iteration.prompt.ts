@@ -12,7 +12,6 @@ import {
 
 function buildPrompt(): string {
   return `
-{{skillSection}}
 ELEMENT-TARGETED ITERATION REQUEST
 ════════════════════════════════════
 
@@ -65,7 +64,6 @@ Generate all {{iterationCount}} iterations now.`;
 }
 
 export interface ElementIterationPromptVars {
-  skillSection?: string;
   componentName: string;
   sourcePath: string;
   childrenSection?: string;
@@ -86,7 +84,6 @@ export function elementIterationPrompt(vars: ElementIterationPromptVars): string
 
 function buildFromIterationPrompt(): string {
   return `
-{{skillSection}}
 ELEMENT-TARGETED ITERATION REQUEST (from existing iteration)
 ══════════════════════════════════════════════════════════════
 
@@ -145,7 +142,6 @@ Generate all {{iterationCount}} iterations now.`;
 }
 
 export interface ElementIterationFromIterationPromptVars {
-  skillSection?: string;
   componentName: string;
   sourcePath: string;
   iterationSourcePath: string;

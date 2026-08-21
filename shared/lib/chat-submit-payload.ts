@@ -6,8 +6,6 @@
 /** Payload submitted by the chat composer */
 export interface ChatSubmitPayload {
   text: string;
-  skillPrompts: string[];
-  skillIds: string[];
   model: string;
   targetNodeId: string | null;
   targetComponentId: string | null;

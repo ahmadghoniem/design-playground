@@ -7,7 +7,6 @@ import {
 import { resolveRegistryItem } from "@pg/registry";
 import {
   formatReferenceNodesSection,
-  formatSkillSection,
   formatCustomInstructionsSection,
   getStylingConstraint,
 } from "@pg/features/generation/prompts/shared-sections";
@@ -92,14 +91,12 @@ export function resolveEditFilePath(payload: ChatSubmitPayload): {
 export function buildEditChatPrompt(args: {
   payload: ChatSubmitPayload;
   filePath: string;
-  skillPrompt?: string;
   referenceNodesSection: string;
 }): string {
-  const { payload, filePath, skillPrompt, referenceNodesSection } = args;
+  const { payload, filePath, referenceNodesSection } = args;
   return editPrompt({
     filePath,
     customInstructions: payload.text || "Improve the design",
-    skillPrompt,
     referenceNodesSection: referenceNodesSection || undefined,
     elementSelections: payload.elementSelections,
   });
@@ -122,7 +119,6 @@ export function buildTargetedExplorePrompt(args: {
   payload: ChatSubmitPayload;
   isRawMode: boolean;
   customInstructions: string;
-  combinedSkillPrompt?: string;
   referenceNodesSection: string;
   startNumber: number;
 }): TargetedExplorePromptResult {
@@ -130,7 +126,6 @@ export function buildTargetedExplorePrompt(args: {
     payload,
     isRawMode,
     customInstructions,
-    combinedSkillPrompt,
     referenceNodesSection,
     startNumber,
   } = args;
@@ -152,7 +147,6 @@ export function buildTargetedExplorePrompt(args: {
         iterationCount,
         payload.elementSelections,
         customInstructions,
-        combinedSkillPrompt,
         referenceNodesSection,
       );
     } else {
@@ -162,7 +156,6 @@ export function buildTargetedExplorePrompt(args: {
         iterationCount,
         startNumber,
         customInstructions,
-        combinedSkillPrompt,
         referenceNodesSection,
       );
     }
@@ -174,7 +167,6 @@ export function buildTargetedExplorePrompt(args: {
         iterationCount,
         payload.elementSelections,
         customInstructions,
-        combinedSkillPrompt,
         referenceNodesSection,
       );
     } else {
@@ -183,7 +175,6 @@ export function buildTargetedExplorePrompt(args: {
         iterationCount,
         startNumber,
         customInstructions,
-        combinedSkillPrompt,
         referenceNodesSection,
       );
     }
@@ -199,14 +190,12 @@ export function buildFreeformChatPrompt(args: {
   isRawMode: boolean;
   rawPrompt: string;
   customInstructions: string;
-  combinedSkillPrompt?: string;
   referenceNodesSection: string;
 }): { prompt: string; componentId: string } {
   const {
     isRawMode,
     rawPrompt,
     customInstructions,
-    combinedSkillPrompt,
     referenceNodesSection,
   } = args;
 
@@ -214,18 +203,13 @@ export function buildFreeformChatPrompt(args: {
 
   // Raw mode wraps in the reference template only when there is context to
   // carry; non-raw wraps whenever reference nodes exist.
-  const useTemplate = isRawMode
-    ? Boolean(referenceNodesSection || combinedSkillPrompt)
-    : Boolean(referenceNodesSection);
+  const useTemplate = Boolean(referenceNodesSection);
 
   if (!useTemplate) {
     return { prompt: isRawMode ? rawPrompt : customInstructions, componentId };
   }
 
   const prompt = freeformReferencePrompt({
-    skillSection: combinedSkillPrompt
-      ? formatSkillSection(combinedSkillPrompt)
-      : "",
     referenceNodesSection: referenceNodesSection || "",
     customInstructionsSection: formatCustomInstructionsSection(
       isRawMode ? rawPrompt || customInstructions : customInstructions,
