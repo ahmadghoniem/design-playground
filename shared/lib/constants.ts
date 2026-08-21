@@ -88,21 +88,6 @@ export const TEMP_DIR_RELATIVE = '.playground-temp';
 /** Filename for the generation lockfile */
 export const GENERATION_LOCKFILE_FILENAME = 'generation.lock';
 
-/**
- * Filename for the discovered-components manifest — the playground-owned JSON
- * holding registry entries as pure data. The generated module below is rebuilt
- * from it.
- */
-export const DISCOVERED_REGISTRY_MANIFEST_FILENAME = 'discovered-registry.json';
-
-/**
- * Filename for the generated registry module. Rewritten wholesale from the
- * manifest (JSON can't hold a component reference, so this module carries the
- * real imports); `registry.tsx` accepts it over HMR. Committed as an
- * empty-array module for fresh projects.
- */
-export const DISCOVERED_REGISTRY_MODULE_FILENAME = 'discovered-registry.gen.tsx';
-
 /** Regex pattern to validate iteration filenames (prevents directory traversal) */
 export const ITERATION_FILENAME_PATTERN = /^[A-Za-z0-9]+\.iteration-\d+\.tsx$/;
 
