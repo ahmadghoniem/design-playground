@@ -23,8 +23,13 @@ iterations/iterations-images/*
 
 previews/
 
-# Discovery manifest — AI-generated per-project, not tracked
-discovery.json
+# Discovered-registry artifacts — per-project, never tracked.
+# The manifest is written by discovery inside a host project, and the .gen.tsx
+# module is derived from it; a framework checkout has neither. `ensureModuleExists`
+# (server/lib/discovered-registry.ts) writes an empty .gen.tsx at server boot so
+# registry.tsx's static import always resolves.
+discovered-registry.json
+discovered-registry.gen.tsx
 data/*.mockData.ts
 
 # Skill markdown installed into the host project — matched at any depth, so it
