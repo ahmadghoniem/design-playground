@@ -107,6 +107,14 @@ file.
   `CLAUDE.md` confirms directly: "nothing in the source dispatches [a window CustomEvent]; the last
   four were removed in `95710ae`." The migration this file's roadmap item names is already done.
 
+- **Agent spawn failures report the wrong stream.** `feat/layers-sidebar` carried a
+  `buildAgentErrorMessage()` that fell back to **stdout** when stderr was empty, because the CLI
+  prints its real failure there - `API Error: Unable to connect to API (ConnectionRefused)` - and
+  then appended a hint pointing at a stale `ANTHROPIC_BASE_URL` or `HTTP(S)_PROXY` in the dev
+  server's environment. `master` has no equivalent in `generate.ts`, `spawn-agent.ts` or
+  `agent-config.ts`, so a connection failure currently surfaces as an empty error. Restoring it is
+  a small, known-good change; the branch it came from was deleted 2026-08-23 at `6c685a8`.
+
 ## Open
 
 - **The window-CustomEvents migration decision — already resolved, not open.** The decision this

@@ -30,7 +30,8 @@ for reading named colours, radius, typography, and the Icons set in use. The pan
 
 ## As the code is today
 
-Read from `feat/layers-sidebar` (`server/lib/static-discovery/tokens.ts`,
+Read from `feat/layers-sidebar` (deleted 2026-08-23 at `6c685a8`)
+(`server/lib/static-discovery/tokens.ts`,
 `features/discovery/TokensList.tsx`).
 
 - **CSS parsing and grouping — built and matches the settled shape.** `scanTokens()` reads the
@@ -40,6 +41,13 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/tokens.ts`,
   against the `GROUPS` regex table in the settled order. `--color-*` bridge variables
   (`@theme inline`'s own `--color-primary: var(--primary)` mechanism) are filtered out so the bridge
   doesn't double every row.
+- **Group matching is regex, and the order is load-bearing.** Non-obvious from shadcn's docs:
+  `divider` sat in Neutrals despite not being a stock token; Surfaces matched only `card|popover`;
+  Charts matched a digit run rather than a wildcard; and **Sidebar and Radius are prefix matches
+  that must stay after Actions**, or `--sidebar-primary` leaks into Actions. Values had block
+  comments stripped before storage. The settled bullet names the groups and their order; these are
+  the rules that actually implemented it.
+
 - **Swatch shape is still split, not one-scheme.** `TokensList.tsx`'s `Swatch` renders light and dark
   side by side unconditionally (`<span>` for light, `<span>` for dark, half-width each);
   `usePreviewColorSchemeStore` is not imported or read anywhere in the fold. This is exactly the shape

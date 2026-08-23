@@ -4,9 +4,10 @@ The `master`-branch cleanup that lands before any feature spec, so every feature
 base. Lands on `master` alone, then gets pushed.
 
 **Scope: master as it stands, plus the cnfast port.** Only the items below — each blocks a feature
-spec or is a flagged bug; nothing is pulled in opportunistically. Items that exist only on
+spec or is a flagged bug; nothing is pulled in opportunistically. Items that existed only on
 `feat/layers-sidebar` (the discovery scan's primitives-naming fix, the `/api/discover/analyze` route)
-belong to whichever branch reintroduces discovery, not here.
+belong to whichever branch reintroduces discovery, not here — that branch was deleted 2026-08-23
+at `6c685a8` and its findings live in `discovery-engine.md`.
 
 **Landed this pass:** cnfast, the constants tidy, the element-selection fixes, and Base UI (code
 landed; not yet exercised in a browser).

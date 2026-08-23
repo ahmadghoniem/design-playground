@@ -63,8 +63,9 @@ covers only the Styles fold body.
   fourth `ComponentSize` value, `'tablet'`, with its own `SIZE_CONFIG` entry (`768×1024`), but no
   button currently wires it up — the panel's breakpoint mapping has three live viewport states to
   key off, not four.
-- Token-aware colour depends on host theme parsing that exists but isn't on `master`: on
-  `feat/layers-sidebar`, host-config reading and Tailwind token parsing found that the test host
+- Token-aware colour depends on host theme parsing that does not exist on `master`: on
+  `feat/layers-sidebar` (deleted 2026-08-23 at `6c685a8`), host-config reading and Tailwind token
+  parsing found that the test host
   (Rewynd) maps 41 utilities through `@theme inline` but only defines 28 — 13 are dead
   (`--chart-1..5` and seven `--sidebar*` variables). The Styles fold's struck-through/unpickable
   treatment of undefined tokens is the same fact the Variables fold already surfaces; the panel

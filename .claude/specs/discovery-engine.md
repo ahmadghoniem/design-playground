@@ -79,16 +79,16 @@ agent-driven "Add to Playground" flow.
 
 ## As the code is today
 
-Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,tokens}.ts`,
-`server/routes/discover.ts`, `features/discovery/{useStaticScan,DiscoveryModal}.tsx`,
-`features/generation/prompts/{discovery,discovery-analyze}.prompt.ts`) and current `master`
-(`registry.tsx`, `server/lib/discovered-registry.ts`).
+Read from `feat/layers-sidebar` (deleted 2026-08-23 at `6c685a8`; what was worth keeping is folded
+into the section below and into `library-primitives.md`, `design-variables.md` and
+`library-layers.md`) and current `master` (`registry.tsx`, `server/lib/discovered-registry.ts`).
 
-- **Two parallel systems coexist on `feat/layers-sidebar` today; `master` has neither.** `master`'s
-  `CLAUDE.md` states it plainly: "There is currently no discovery mechanism — the static-analysis
-  scan was removed to be redesigned, so nothing writes the manifest and the registry is whatever the
-  committed manifest holds." `registry.tsx` on `master` is `export let registry = discoveredRegistry`
-  — read-only until something writes `discovered-registry.json` again.
+- **Nothing implements discovery anywhere now.** Two parallel systems coexisted on
+  `feat/layers-sidebar` — the deterministic scan described below and the older agent-driven flow it
+  was replacing — and that branch was deleted. `registry.tsx` is
+  `export let registry = discoveredRegistry`, read-only until something writes
+  `discovered-registry.json` again, and the manifest is a per-project artifact that is never
+  committed, so a fresh checkout starts with an empty registry.
 
 - **The deterministic scan (syntax pass + host-config + CVA + tokens) is built and already wired to
   a route.** `GET /api/discover/tree` (`server/routes/discover.ts`) calls `readHostConfig()` →
@@ -111,14 +111,23 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,
   component listed and draggable on first load, no click, no agent" is not built — the render tree
   is read-only today, consumed once by `useStaticScan.ts` per sidebar-tab mount.
 
-- **`regenerateModule()` already exists on `master`, under that exact name**
-  (`server/lib/discovered-registry.ts`) — it reads the manifest and rewrites
-  `discovered-registry.gen.tsx` wholesale. `feat/layers-sidebar` already has a
-  `POST /api/discover/regenerate` route and a `deferRegen` flag on `POST /api/discover/analyze`
-  whose doc comment states the intent directly: "Batch callers analyze N children with
-  `deferRegen: true` and then call this a single time, turning N+1 full page reloads into one." The
-  mechanism the plan calls for exists — it's just not yet the *only* path that calls it, because the
-  old per-click analyze flow (next point) is still the thing calling it today.
+- **`regenerateModule()` no longer exists and has to be rebuilt.** It lived in
+  `server/lib/discovered-registry.ts` on `master` — read the manifest, rewrite
+  `discovered-registry.gen.tsx` wholesale — alongside `readManifest`, `writeManifest`,
+  `manifestPath`, `modulePath` and the entry types. All of it had zero callers once the scan was
+  removed and all of it was deleted; that file now keeps only `ensureModuleExists`, which writes an
+  empty generated module at server boot so `registry.tsx`'s static import resolves. The deleted
+  branch also had a `POST /api/discover/regenerate` route and a `deferRegen` flag on
+  `POST /api/discover/analyze`, whose doc comment stated the intent directly: "Batch callers analyze
+  N children with `deferRegen: true` and then call this a single time, turning N+1 full page reloads
+  into one." Rebuild the batching behaviour, not the per-click flow that drove it.
+
+- **Where the generated module is written is an open question, not a settled one.** Both artifacts
+  describe the *host's* components and belong to the host, but `link.mjs` junction-mounts this
+  package into the host, so `path.join(playgroundDir, filename)` writes into the package's own
+  source tree. That is how a host's components came to be committed here once already. Any rewrite
+  that keeps `PLAYGROUND_DIR = resolvePlaygroundDir()` as the write target reproduces it verbatim —
+  see Open.
 
 - **The old LLM-driven flow is what's actually wired to the sidebar's "+" button.** Confirmed both
   in `library-layers.md` ("first-load still has a button and an agent") and by reading
@@ -143,6 +152,71 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,
   `.claude/plans/summary.md` shows the intended before/after but flags it "planned — illustrative,
   not in repo."
 
+## Landmines in the built scan
+
+Behaviour of the deleted implementation that the settled prose above does not carry. Each was
+verified against the branch before it was deleted, and each costs real time to rediscover.
+
+- **`findEntry` did not unwrap `<StrictMode>`, and the failure was silent.** For the default Vite
+  template - `createRoot(el).render(<StrictMode><App /></StrictMode>)` - the walk took the *direct*
+  JSX argument, found `StrictMode`, resolved it to `"react"`, failed the bare-specifier check, then
+  fell through every remaining candidate filename and returned `null`. Result: `entry: null`,
+  `tree: []`, `filesParsed: 0` - and `unresolved` was forced to `[]` as well, so the failure
+  reported nothing at all. Primitives still scanned, so the Layers fold read as empty while
+  Primitives worked. **The Rewynd baseline above exists only because that host renders `<App />`
+  directly** - the one measured success case is the unrepresentative one. Unwrapping known wrappers
+  (`StrictMode`, provider stacks, router roots) is a requirement, not a refinement.
+
+- **`ts.createSourceFile` flags are load-bearing.** `setParentNodes: true` is the only reason
+  conditional detection can walk `node.parent`; without it `conditional` is silently always `false`.
+  `ScriptKind.TSX` was selected per-extension, so a `.ts` file containing JSX contributed no edges,
+  and `.mts`/`.cts` were not in the extension list at all. The parse cache was keyed by path plus
+  `mtimeMs` and lived for the process - note that the Settled table attributes mtime caching to the
+  unbuilt TypeChecker pass, but it was implemented here, in the syntax pass.
+
+- **Two JSX shapes produced no edges.** `import * as X` (no `NamespaceImport` handling, so the
+  import map never saw it) and member tags like `<Dialog.Root>` (the tag had to be a plain
+  `Identifier`). The entry matcher also fired on *any* property access named `render`, not on
+  `createRoot` specifically.
+
+- **The `unresolved` seam needs a scoped-package guard.** A specifier was reported only when it
+  started with `.` **or** matched an alias as `spec === prefix || spec.startsWith(prefix + '/')`.
+  The `+ '/'` segment test is the payload: a host tsconfig alias of bare `@` would otherwise report
+  `@tanstack/query`, `@lexical/react` and every scoped package as a broken local import, turning the
+  seam into noise. Rebuilding with a naive `startsWith(prefix)` reintroduces a bug already hit once.
+
+- **Host-config resolution order, and what `components.json` does *not* do.** The order that ran:
+  parse tsconfig as JSONC (regex comment-stripping, which mangles URLs containing `//`) -> try
+  `tsconfig.app.json` then `tsconfig.json` -> follow `extends` (**relative paths only**, so a
+  package like `@tsconfig/vite-react` was ignored) and `references` (solution-style) -> **nearest
+  path prefix wins** -> resolve targets against *that* config's `dir + baseUrl`. Correction to the
+  settled wording above: **`components.json`'s `aliases` are not a module-resolution source.**
+  `aliases.ui` is only fed *through* the tsconfig alias table, so a host that declares
+  `"ui": "src/components/ui"` with no matching `@/` alias gets no primitives at all. `tailwind.css`,
+  by contrast, was joined onto the host root and never alias-resolved - an asymmetry with no stated
+  reason. `cssVariables` defaults to **true** (`!== false`). The scan rooted at `process.cwd()`, the
+  host's Vite cwd, not at the resolved playground dir.
+
+- **Child edges collapsed to first occurrence per file.** One `seen` set per file meant a component
+  rendered five times yielded one child, carrying the first site's line and conditionality - so a
+  component rendered once plainly and once inside `.map()` read as unconditional. `library-layers.md`
+  settles "no instance-count chip" as a *UI* choice; that the data cannot produce one is a separate
+  fact.
+
+- **`isConditional` was broader than the node-shape bullet says, and stopped at the function
+  boundary.** Beyond ternary, `&&` and `.map()` it also matched `||`, `??`, `if`, `.filter()` and
+  `.flatMap()` - and it halted the parent walk at any function-like node, so a component was never
+  judged by its *caller's* conditionals. Without that stop, every descendant of a conditional
+  ancestor inherits the flag.
+
+- **Walk guards: depth capped at 12, cycles tracked per path.** The on-path set was cloned down each
+  branch rather than shared globally, so a diamond (A->B, A->C->B) correctly visits B twice; a
+  cheaper global visited-set silently renders repeated subtrees childless, which looks like bad data
+  rather than a bad algorithm. The depth cap matters because the scan runs synchronously inside a
+  GET.
+
+- **CVA extraction had constraints past the two known bugs** - see `library-primitives.md`.
+
 ## Open
 
 - **Stamping HMR cost** — does stamping every host JSX element in a Vite `transform` measurably slow
@@ -157,6 +231,20 @@ Read from `feat/layers-sidebar` (`server/lib/static-discovery/{scan,host-config,
   static-only. Ship static-only in v1.
 - **Eager-import ceiling.** A generated module importing ~60 host components is fine in dev, but
   cold-start cost is worth measuring before assuming it stays fine.
+- **Where per-project artifacts are written.** The manifest and the generated module describe the
+  host's components and belong to the host, but the package is junction-mounted into the host by
+  `link.mjs`, so "write beside `registry.tsx`" and "write into the framework source tree" are the
+  same filesystem event. The junction is the cause, not the ignore rules, and it is kept
+  deliberately because it is what makes package edits hot-reload in the host. The leading option is
+  a host-owned output directory at `process.cwd()` with the Vite plugin remapping
+  `./discovered-registry.gen` in `resolveId`, so `registry.tsx`'s static import and its
+  `hot.accept` specifier stay package-relative. Risks: `resolveId` and `hot.accept` must agree or
+  HMR of adds and removes dies silently; standalone `bun server/index.ts` would need the host cwd.
+  Ruled out: resolving the mount's real path (it *is* this package), gitignore (a commit filter,
+  not a write barrier), and a read-only junction (Windows will not give one without giving up live
+  HMR). Note this is a class of problem, not one pair of files — `iterations/`, `tree.json` and
+  `data/*.mockData.ts` write through the same mount.
+
 - **Remote registry** — shadcn's network-install registry is out of scope for v1.
 - **CVA `compoundVariants`.** `extractCva()` has two known bugs: it returns after the first `cva()`
   call in a file, and `compoundVariants` (which suppresses invalid variant combinations) is ignored

@@ -43,7 +43,8 @@ The git branch flow, and the Worktree and Branch labels on the Composer.
   Composer's final shape does not need reworking later, but they do nothing beyond reporting
   yet.
 
-  **Branch strategy:** park `feat/layers-sidebar`; cut the cleanup branch off `master`.
+  **Branch strategy:** cut the cleanup branch off `master`. (`feat/layers-sidebar` was
+  parked here and has since been deleted — see below.)
 
 - **Prototype scope note.** The mock stopped drawing branch creation, staging scope, commit
   message, dirty-tree stop, and one-click stash. That is a scope decision about the
@@ -60,10 +61,13 @@ The git branch flow, and the Worktree and Branch labels on the Composer.
 - **No Worktree or Branch labels in the Composer.** `features/chat/DockedChatBar.tsx` and
   `features/chat/ChatComposerControls.tsx` carry no git context row. The composer's current
   control shape (model cycle, Edit/Explore, skills) is documented in `composer.md`.
-- `feat/layers-sidebar` is the parked branch referenced above — it currently holds the
-  Layers/Primitives/Tokens sidebar tabs and host-token parsing, unrelated to branch-model
-  mechanics itself, but it is the concrete reason the branch strategy calls out parking it
-  explicitly rather than merging or deleting it.
+- `feat/layers-sidebar` was the parked branch referenced above — it held the
+  Layers/Primitives/Variables fold implementations and host-token parsing, unrelated to
+  branch-model mechanics itself. It was **deleted 2026-08-23 at `6c685a8`**: it was built
+  against a UI direction still being planned, and its prose had already been absorbed into
+  the feature specs, so it survived only as something agents kept citing as current. What was
+  worth keeping is now in `discovery-engine.md`, `library-primitives.md`, `design-variables.md`,
+  `library-layers.md` and `agent-vocabulary.md`.
 
 ## Open
 
