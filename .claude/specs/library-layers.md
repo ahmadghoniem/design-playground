@@ -55,11 +55,6 @@ Read from `feat/layers-sidebar` (deleted 2026-08-23 at `6c685a8`)
   Reconciling this with the deterministic-scan decision above is discovery-engine.md's problem, not
   this file's, but the gap is real: today the Layers fold shows whatever the manifest holds, and
   nothing currently writes that manifest from the deterministic scan.
-- **Two guards in `buildRegistryTree()` worth keeping.** Items whose `parentId` did not resolve
-  were promoted to roots rather than dropped, so a half-written manifest still rendered something;
-  and the recursion was id-cycle-guarded, so a malformed manifest could not hang the fold. Both
-  survive the switch to the render tree as long as nesting still arrives as `parentId`.
-
 - **First-load still has a button and an agent.** `PlaygroundSidebar.tsx` renders a `+` icon button
   (`aria-label="Add components"`) in the header that calls `onOpenDiscovery`, and an empty-state CTA
   ("Add components") when the registry is empty — both routes into the old agent-driven

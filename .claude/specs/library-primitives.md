@@ -35,12 +35,6 @@ Read from `feat/layers-sidebar` (deleted 2026-08-23 at `6c685a8`)
   `f.replace(/\.(tsx|jsx)$/, '')` on each file under `cfg.uiDir` — rows read `button`, `checkbox`,
   not `Button`, `Checkbox`. There is no export parsing anywhere in `scan.ts`; the settled fix (parse
   the file's exports, take the primary PascalCase one) is not built.
-- **The naming fix and overlay tagging are coupled — this is a trap.** Overlay matching was
-  `OVERLAY_PRIMITIVES.has(kebab(name))` where `name` is the *filename stem*. It works only because
-  of the naming bug above. Rename rows to the PascalCase export without keeping a kebab lookup
-  against the filename and **overlay tagging silently stops**: the `Ban` icon disappears and
-  portal-based primitives become draggable again. Two settled decisions, one shared assumption.
-
 - **Multi-export split — not built.** Because each `uiDir` file becomes exactly one `PrimitiveEntry`,
   a file like `card.tsx` is one row with one (wrong) name; there is no mechanism to list a primary
   export with secondary exports on expand.
@@ -55,14 +49,6 @@ Read from `feat/layers-sidebar` (deleted 2026-08-23 at `6c685a8`)
 - **Overlay primitives — built.** `OVERLAY_PRIMITIVES` (`scan.ts`) flags portal-based primitives
   (`dialog`, `popover`, `select`, …); `PrimitivesList` renders them with a muted label, a `Ban` icon,
   `draggable={false}`, and a tooltip explaining the portal can't preview inside a canvas card yet.
-- **CVA extraction is narrower than "a file containing a `cva(...)` call".** The callee had to be
-  an `Identifier` spelled exactly `cva`, so `import { cva as cv }` was invisible; the config had to
-  be argument two *and* already an object literal, so a hoisted `const config` yielded nothing;
-  `variants`/`defaultVariants` had to be `Identifier` keys; option names came from the keys of the
-  nested objects; and `defaultVariants` values were read **only** when the initializer was a string
-  literal - so a numeric or identifier default silently dropped and the filled-dark default chip
-  rendered on the wrong option.
-
 - **`components.json` contract — partially read.** `readHostConfig()` (`host-config.ts`) reads
   `aliases.ui` (→ `uiDir`), `tailwind.css` (→ `cssPath`), `style`, `iconLibrary`, and
   `tailwind.cssVariables`. `aliases.utils` and `baseColor`/`rsc` are named in the contract this spec

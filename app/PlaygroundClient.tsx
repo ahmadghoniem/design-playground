@@ -5,7 +5,6 @@ import PlaygroundSidebar from "@pg/app/PlaygroundSidebar";
 import PlaygroundCanvas from "./PlaygroundCanvas";
 import PlaygroundHeader from "./PlaygroundHeader";
 import { CANVAS_STATE_STORAGE_KEY } from "@pg/shared/lib/constants";
-import { preloadAllComponents } from "@pg/registry";
 import { CanvasFlowProvider } from "@pg/features/canvas/canvas-flow";
 import { hydratePlaygroundRelativeRoot } from "@pg/shared/lib/playground-paths";
 import {
@@ -52,20 +51,6 @@ export default function PlaygroundClient() {
   const project = useProjectBootstrap();
   const projectId = project?.projectId ?? null;
   const projectName = project?.projectName ?? "project";
-
-  // Preload all dynamic components to prevent HMR cascades on first drop
-  useEffect(() => {
-    const schedule =
-      typeof requestIdleCallback === "function"
-        ? requestIdleCallback
-        : (cb: () => void) => setTimeout(cb, 100);
-    const id = schedule(() => preloadAllComponents());
-    return () => {
-      if (typeof cancelIdleCallback === "function" && typeof id === "number") {
-        cancelIdleCallback(id);
-      }
-    };
-  }, []);
 
   // Per-canvas preview color-scheme override. '' = auto (mirror the host); the
   // `dark`/`light` class sits on the canvas root so the host's own `.dark`

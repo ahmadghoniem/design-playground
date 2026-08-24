@@ -57,24 +57,6 @@ export function flattenRegistry(
 
 export let flatRegistry = flattenRegistry(registry)
 
-/**
- * Preload all lazily-loaded components in the registry, if they expose a
- * `.preload()` method (e.g. React.lazy-wrapped components), to avoid HMR
- * cascades when components are first dropped onto the canvas in dev mode.
- */
-export function preloadAllComponents(): void {
-  for (const item of Object.values(flatRegistry)) {
-    const Component = item.Component as ComponentType<
-      Record<string, unknown>
-    > & {
-      preload?: () => void
-    }
-    if (typeof Component?.preload === "function") {
-      Component.preload()
-    }
-  }
-}
-
 export function resolveRegistryItem(
   componentId: string,
 ): RegistryLeafItem | null {
