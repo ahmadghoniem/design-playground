@@ -19,43 +19,17 @@ export interface RegistryLeafItem {
  * (generated from `discovered-registry.json`). Discovery is the only source —
  * there is no hand-written base list to merge in.
  *
- * Mutable so Vite HMR can swap the array when `discovered-registry.gen.tsx`
- * regenerates without a full page reload. Prefer `subscribeRegistry` / the
- * sidebar hook rather than capturing this export once at module init.
+ * Regenerating `discovered-registry.gen.tsx` reloads the page: this module
+ * exports data and functions rather than components, so it cannot be a React
+ * Refresh boundary and Vite falls back to a full reload. Read these exports
+ * directly — there is nothing to subscribe to.
  */
-export let registry: RegistryLeafItem[] =
+export const registry: RegistryLeafItem[] =
   discoveredRegistry as RegistryLeafItem[]
 
-type RegistryListener = (items: RegistryLeafItem[]) => void
-const registryListeners = new Set<RegistryListener>()
-
-function setRegistry(next: RegistryLeafItem[]): void {
-  registry = next
-  // Rebuild the flat lookup BEFORE notifying: listeners may call
-  // resolveRegistryItem / read flatRegistry synchronously.
-  flatRegistry = flattenRegistry(next)
-  for (const listener of registryListeners) listener(next)
-}
-
-/** Subscribe to registry HMR / programmatic updates. Returns unsubscribe. */
-export function subscribeRegistry(listener: RegistryListener): () => void {
-  registryListeners.add(listener)
-  return () => {
-    registryListeners.delete(listener)
-  }
-}
-
-export function flattenRegistry(
-  items: RegistryLeafItem[],
-): Record<string, RegistryLeafItem> {
-  const result: Record<string, RegistryLeafItem> = {}
-  for (const item of items) {
-    result[item.id] = item
-  }
-  return result
-}
-
-export let flatRegistry = flattenRegistry(registry)
+/** id -> item, for the by-id lookups that would otherwise scan the array. */
+export const flatRegistry: Record<string, RegistryLeafItem> =
+  Object.fromEntries(registry.map((item) => [item.id, item]))
 
 export function resolveRegistryItem(
   componentId: string,
@@ -69,11 +43,4 @@ export function resolveRegistryItem(
  */
 export function registryIdToPascalCase(id: string): string {
   return id.replace(/(^|-)([a-z])/g, (_, _sep, char) => char.toUpperCase())
-}
-
-if (import.meta.hot) {
-  import.meta.hot.accept("./discovered-registry.gen", (mod) => {
-    if (!mod?.discoveredRegistry) return
-    setRegistry(mod.discoveredRegistry as RegistryLeafItem[])
-  })
 }
