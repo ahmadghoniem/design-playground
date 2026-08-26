@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useNodeId, useReactFlow } from "@xyflow/react";
 import { resolveRegistryItem } from "@pg/registry";
-import { ViewportButtons } from "@pg/shared/ui/ViewportButtons";
+import { ViewportSelector } from "@pg/shared/ui/ViewportSelector";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 
 import {
@@ -21,16 +21,16 @@ import {
 } from "@pg/shared/stores/interactive-node-store";
 import { useFrameHoverHint } from "@pg/shared/ui/FrameHoverHint";
 import {
-  SIZE_CONFIG,
+  VIEWPORT_PRESETS,
   getDisplayDimensions,
-  type ComponentSize,
+  type Viewport,
 } from "@pg/shared/lib/constants";
 
 interface ComponentNodeProps {
   data: {
     componentId: string;
-    /** Persisted across reloads — reflects the last user-chosen size */
-    size?: ComponentSize;
+    /** Persisted across reloads — reflects the last user-chosen viewport */
+    viewport?: Viewport;
   };
   selected?: boolean;
 }
@@ -74,15 +74,15 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     };
   }, [isInteractive, setInteractiveNodeId]);
 
-  // Prefer the persisted size from node data (survives reload), then registry default
-  const [size, setSize] = useState<ComponentSize>(
-    data.size || registryItem?.size || "default",
+  // Prefer the persisted viewport from node data (survives reload), then registry default
+  const [viewport, setViewport] = useState<Viewport>(
+    data.viewport || registryItem?.viewport || "default",
   );
 
-  const handleSizeChange = (newSize: ComponentSize) => {
-    setSize(newSize);
+  const handleViewportChange = (next: Viewport) => {
+    setViewport(next);
     if (nodeId) {
-      updateNodeData(nodeId, { size: newSize });
+      updateNodeData(nodeId, { viewport: next });
     }
   };
 
@@ -93,13 +93,13 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
     string,
     unknown
   >;
-  const config = SIZE_CONFIG[size];
-  const isPreset = size !== "default";
-  const displayDims = getDisplayDimensions(size);
+  const config = VIEWPORT_PRESETS[viewport];
+  const isPreset = viewport !== "default";
+  const displayDims = getDisplayDimensions(viewport);
 
   if (!registryItem) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 min-w-[200px]">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 min-w-50">
         <p className="text-red-600 text-sm">Unknown component: {componentId}</p>
       </div>
     );
@@ -107,7 +107,7 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
 
   return (
     <div
-      className={`flex flex-col ${isPreset ? "" : "min-w-[200px]"}`}
+      className={`flex flex-col ${isPreset ? "" : "min-w-50"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
         fontFamily: "var(--pg-font-sans)",
@@ -120,11 +120,14 @@ function ComponentNode({ data, selected = false }: ComponentNodeProps) {
           <NodeLabel color="#0B99FF">{label}</NodeLabel>
         </div>
 
-        {/* Right: size controls — invisible when not selected */}
+        {/* Right: viewport controls — invisible when not selected */}
         <div
           className={`flex items-center gap-1.5 transition-opacity nodrag ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          <ViewportButtons currentSize={size} onSizeChange={handleSizeChange} />
+          <ViewportSelector
+            viewport={viewport}
+            onViewportChange={handleViewportChange}
+          />
         </div>
       </div>
 

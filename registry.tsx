@@ -1,5 +1,5 @@
 import type { ComponentType } from "react"
-import type { ComponentSize } from "@pg/shared/lib/constants"
+import type { Viewport } from "@pg/shared/lib/constants"
 import { discoveredRegistry } from "./discovered-registry.gen"
 
 export interface RegistryLeafItem {
@@ -11,7 +11,7 @@ export interface RegistryLeafItem {
   parentId?: string
   sourcePath: string
   childComponents?: string[]
-  size?: ComponentSize
+  viewport?: Viewport
 }
 
 /**

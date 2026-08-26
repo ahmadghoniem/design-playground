@@ -22,7 +22,7 @@ import {
   ARRANGE_HORIZONTAL_GAP,
   DEFAULT_ITERATION_NODE_WIDTH,
   DEFAULT_COMPONENT_NODE_WIDTH,
-  type ComponentSize,
+  type Viewport,
 } from "@pg/shared/lib/constants";
 
 /** Poll interval while a generation is active (SSE fallback). */
@@ -172,8 +172,8 @@ export function useIterationScan({
           const nodeId = getNodeId();
           pendingNodesByFilename.set(iter.filename, nodeId);
 
-          const parentSize = sourceNode?.data?.size as
-            ComponentSize | undefined;
+          const parentViewport = sourceNode?.data?.viewport as
+            Viewport | undefined;
           const inheritedRegistryId =
             (sourceNode?.data?.componentId as string | undefined) ??
             (sourceNode?.data?.registryId as string | undefined);
@@ -188,7 +188,7 @@ export function useIterationScan({
               filename: iter.filename,
               description: iter.description,
               parentNodeId: sourceNodeId || undefined,
-              parentSize,
+              parentViewport,
               registryId: inheritedRegistryId,
               onDelete: handleIterationDelete,
             },

@@ -36,12 +36,12 @@ export const RESIZE_MIN_WIDTH = 150;
 export const RESIZE_MIN_HEIGHT = 100;
 
 // ---------------------------------------------------------------------------
-// Component Size Configurations
+// Viewport Presets
 // ---------------------------------------------------------------------------
 
-export type ComponentSize = 'default' | 'laptop' | 'tablet' | 'mobile';
+export type Viewport = 'default' | 'laptop' | 'tablet' | 'mobile';
 
-export interface SizeConfigEntry {
+export interface ViewportPreset {
   width: number;
   height: number;
   scale: number;
@@ -49,17 +49,17 @@ export interface SizeConfigEntry {
 }
 
 /** Viewport presets for previewing components at different device sizes */
-export const SIZE_CONFIG: Record<ComponentSize, SizeConfigEntry> = {
+export const VIEWPORT_PRESETS: Record<Viewport, ViewportPreset> = {
   default: { width: 0, height: 0, scale: 1, label: 'Auto' },
   laptop:  { width: 1470, height: 832, scale: 0.6, label: 'Laptop' },
   tablet:  { width: 768, height: 1024, scale: 0.5, label: 'Tablet' },
   mobile:  { width: 393, height: 852, scale: 0.7, label: 'Mobile' },
 };
 
-/** Calculate display dimensions (scaled) for a given size preset */
-export function getDisplayDimensions(size: ComponentSize) {
-  const config = SIZE_CONFIG[size];
-  if (size === 'default') return { width: 'auto' as const, height: 'auto' as const };
+/** Calculate display dimensions (scaled) for a given viewport preset */
+export function getDisplayDimensions(viewport: Viewport) {
+  const config = VIEWPORT_PRESETS[viewport];
+  if (viewport === 'default') return { width: 'auto' as const, height: 'auto' as const };
   return {
     width: Math.round(config.width * config.scale),
     height: Math.round(config.height * config.scale),

@@ -27,15 +27,15 @@ import {
 } from "@pg/shared/ui/alert-dialog";
 import { resolveRegistryItem } from "@pg/registry";
 import { loadIterationComponentModule } from "@pg/shared/lib/iteration-loader";
-import { ViewportButtons } from "@pg/shared/ui/ViewportButtons";
+import { ViewportSelector } from "@pg/shared/ui/ViewportSelector";
 import { NodeLabel } from "@pg/shared/ui/NodeLabel";
 import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 import {
-  SIZE_CONFIG,
+  VIEWPORT_PRESETS,
   getDisplayDimensions,
-  type ComponentSize,
+  type Viewport,
 } from "@pg/shared/lib/constants";
 import {
   useAsyncProps,
@@ -66,10 +66,10 @@ interface IterationNodeProps {
     parentNodeId: string;
     /** Registry ID inherited from the parent node at creation time */
     registryId?: string;
-    /** Size of the parent ComponentNode at the time this iteration was created */
-    parentSize?: ComponentSize;
-    /** Local viewport override — when set, wins over the live parent size */
-    size?: ComponentSize;
+    /** Viewport of the parent ComponentNode at the time this iteration was created */
+    parentViewport?: Viewport;
+    /** Local viewport override — when set, wins over the live parent viewport */
+    viewport?: Viewport;
     hasChildren?: boolean;
     isCollapsed?: boolean;
     /** Whether this iteration has been adopted into the original component */
@@ -178,18 +178,18 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
     unknown
   >;
 
-  // Local override wins; otherwise follow the live parent size (via React Flow).
+  // Local override wins; otherwise follow the live parent viewport (via React Flow).
   const parentData = useNodesData(data.parentNodeId)?.data as
-    | { size?: ComponentSize }
+    | { viewport?: Viewport }
     | undefined;
-  const [localSize, setLocalSize] = useState<ComponentSize | null>(
-    () => data.size ?? null,
+  const [localViewport, setLocalViewport] = useState<Viewport | null>(
+    () => data.viewport ?? null,
   );
-  const size: ComponentSize =
-    localSize ??
-    parentData?.size ??
-    data.parentSize ??
-    resolveRegistryItem(registryId)?.size ??
+  const viewport: Viewport =
+    localViewport ??
+    parentData?.viewport ??
+    data.parentViewport ??
+    resolveRegistryItem(registryId)?.viewport ??
     "default";
 
   useEffect(() => {
@@ -211,9 +211,9 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   }, [id]);
 
 
-  const handleSizeChange = (newSize: ComponentSize) => {
-    setLocalSize(newSize);
-    updateNodeData(id, { size: newSize });
+  const handleViewportChange = (next: Viewport) => {
+    setLocalViewport(next);
+    updateNodeData(id, { viewport: next });
   };
 
   // ---------------------------------------------------------------------------
@@ -255,9 +255,9 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
   );
   const iterationLabel = `${pageName} #${data.iterationNumber}`;
 
-  const config = SIZE_CONFIG[size];
-  const isPreset = size !== "default";
-  const displayDims = getDisplayDimensions(size);
+  const config = VIEWPORT_PRESETS[viewport];
+  const isPreset = viewport !== "default";
+  const displayDims = getDisplayDimensions(viewport);
   const handleWheel = useScrollCapture(scrollContainerRef);
 
   // Resolved renderable component (from iterations registry)
@@ -265,7 +265,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
 
   return (
     <div
-      className={`flex flex-col ${isPreset ? "" : "min-w-[280px]"}`}
+      className={`flex flex-col ${isPreset ? "" : "min-w-70"}`}
       style={{
         ...(isPreset ? { width: displayDims.width } : {}),
         fontFamily: "var(--pg-font-sans)",
@@ -284,7 +284,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
               }
             >
               <ChevronRight
-                className={`w-3 h-3 transition-transform ${data.isCollapsed ? "" : "rotate-90"}`}
+                className={`size-3 transition-transform ${data.isCollapsed ? "" : "rotate-90"}`}
               />
             </button>
           )}
@@ -302,17 +302,20 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
           )}
           {adoption.adoptionStatus === "adopting" && (
             <span className="flex items-center gap-1 text-[9px] text-stone-400 select-none shrink-0">
-              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              <Loader2 className="size-2.5 animate-spin" />
               adopting
             </span>
           )}
         </div>
 
-        {/* Right: size controls — invisible when not selected */}
+        {/* Right: viewport controls — invisible when not selected */}
         <div
           className={`flex items-center gap-1.5 transition-opacity nodrag ${selected ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          <ViewportButtons currentSize={size} onSizeChange={handleSizeChange} />
+          <ViewportSelector
+            viewport={viewport}
+            onViewportChange={handleViewportChange}
+          />
         </div>
       </div>
 
@@ -346,7 +349,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
                 <Suspense
                   fallback={
                     <div className="flex items-center justify-center h-full">
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      <Loader2 className="size-5 animate-spin text-gray-400" />
                     </div>
                   }
                 >
@@ -389,12 +392,12 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
           ) : (
             /* Auto mode: intrinsic sizing */
             <div
-              className={`grid place-items-center min-h-[100px] ${isInteractive ? "nodrag nowheel nopan" : ""}`}
+              className={`grid place-items-center min-h-25 ${isInteractive ? "nodrag nowheel nopan" : ""}`}
             >
               {RenderComponent ? (
                 <Suspense
                   fallback={
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <Loader2 className="size-5 animate-spin text-gray-400" />
                   }
                 >
                   <div className="w-full">
@@ -446,7 +449,7 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
                   disabled={
                     adoption.adoptionStatus === "adopting" || isGlobalGenerating
                   }
-                  className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
+                  className={`size-8 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
                     adoption.adoptionStatus === "adopted"
                       ? "bg-green-50 border-green-300 text-green-600"
                       : adoption.adoptionStatus === "error"
@@ -464,9 +467,9 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
               }
             >
               {adoption.adoptionStatus === "adopting" ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <GitMerge className="w-3.5 h-3.5" />
+                <GitMerge className="size-3.5" />
               )}
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -516,12 +519,12 @@ function IterationNode({ id, data, selected = false }: IterationNodeProps) {
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
+                  className="size-8 flex items-center justify-center rounded-full bg-white border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-50"
                   aria-label="Delete variation"
                 />
               }
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="size-3.5" />
             </TooltipTrigger>
             <TooltipContent side="right">
               <p>Delete variation</p>
