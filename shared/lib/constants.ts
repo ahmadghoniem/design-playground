@@ -51,7 +51,7 @@ export interface ViewportPreset {
 /** Viewport presets for previewing components at different device sizes */
 export const VIEWPORT_PRESETS: Record<Viewport, ViewportPreset> = {
   default: { width: 0, height: 0, scale: 1, label: 'Auto' },
-  laptop:  { width: 1470, height: 832, scale: 0.6, label: 'Laptop' },
+  laptop:  { width: 1470, height: 832, scale: 0.6, label: 'Desktop' },
   tablet:  { width: 768, height: 1024, scale: 0.5, label: 'Tablet' },
   mobile:  { width: 393, height: 852, scale: 0.7, label: 'Mobile' },
 };
