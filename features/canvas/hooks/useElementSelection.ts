@@ -6,7 +6,6 @@ import {
   type SelectedElement,
 } from '@pg/shared/lib/element-context';
 
-// Selectors for playground chrome that should be excluded from element selection
 const EXCLUDE_SELECTORS = [
   '.react-flow__controls',
   '[data-playground-header]',
@@ -23,10 +22,6 @@ export interface UseElementSelectionReturn {
   removeElement: (index: number) => void;
 }
 
-// -----------------------------------------------------------------------
-// Main hook
-// -----------------------------------------------------------------------
-
 export function useElementSelection(): UseElementSelectionReturn {
   const [isAltHeld, setIsAltHeld] = useState(false);
   const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
@@ -36,10 +31,6 @@ export function useElementSelection(): UseElementSelectionReturn {
 
   const altRef = useRef(false);
   const { getNodes } = useReactFlow();
-
-  // -----------------------------------------------------------------------
-  // Alt key tracking
-  // -----------------------------------------------------------------------
 
   useEffect(() => {
     const holdKey = "Alt";
@@ -78,10 +69,6 @@ export function useElementSelection(): UseElementSelectionReturn {
     };
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Resolve ReactFlow node from a DOM element
-  // -----------------------------------------------------------------------
-
   const resolveNode = useCallback(
     (el: HTMLElement) => {
       const nodeWrapper = el.closest('.react-flow__node') as HTMLElement | null;
@@ -103,10 +90,6 @@ export function useElementSelection(): UseElementSelectionReturn {
     [getNodes],
   );
 
-  // -----------------------------------------------------------------------
-  // Hover detection (when Alt is held) — React components only
-  // -----------------------------------------------------------------------
-
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!altRef.current) return;
@@ -119,7 +102,6 @@ export function useElementSelection(): UseElementSelectionReturn {
         return;
       }
 
-      // Filter out playground chrome
       for (const sel of EXCLUDE_SELECTORS) {
         if (el.closest(sel)) {
           setHoveredElement(null);
@@ -129,7 +111,6 @@ export function useElementSelection(): UseElementSelectionReturn {
         }
       }
 
-      // Must be inside a ReactFlow node
       if (!el.closest('.react-flow__node')) {
         setHoveredElement(null);
         setHoveredRect(null);
@@ -150,26 +131,19 @@ export function useElementSelection(): UseElementSelectionReturn {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // -----------------------------------------------------------------------
-  // Click handling (when Alt is held) — React components only
-  // -----------------------------------------------------------------------
-
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
 
       const target = e.target as HTMLElement;
 
-      // If Alt is NOT held, clear selections on any click
       if (!altRef.current) {
         setSelectedElements((prev) => (prev.length > 0 ? [] : prev));
         return;
       }
 
-      // Must be inside a ReactFlow node
       if (!target.closest('.react-flow__node')) return;
 
-      // Block event from reaching ReactFlow
       e.stopPropagation();
       e.preventDefault();
 
@@ -186,13 +160,11 @@ export function useElementSelection(): UseElementSelectionReturn {
       };
 
       setSelectedElements((prev) => {
-        // Check if already selected — toggle off
         const existingIndex = prev.findIndex((s) => s.element === target);
         if (existingIndex !== -1) {
           return prev.filter((_, i) => i !== existingIndex);
         }
 
-        // Shift = multi-select, otherwise replace
         if (e.shiftKey) {
           return [...prev, newElement];
         }
@@ -203,10 +175,6 @@ export function useElementSelection(): UseElementSelectionReturn {
     window.addEventListener('mousedown', handleMouseDown, true);
     return () => window.removeEventListener('mousedown', handleMouseDown, true);
   }, [resolveNode]);
-
-  // -----------------------------------------------------------------------
-  // Stale element cleanup + rect refresh
-  // -----------------------------------------------------------------------
 
   useEffect(() => {
     if (selectedElements.length === 0) return;
@@ -220,10 +188,6 @@ export function useElementSelection(): UseElementSelectionReturn {
 
     return () => clearInterval(interval);
   }, [selectedElements.length]);
-
-  // -----------------------------------------------------------------------
-  // Public API
-  // -----------------------------------------------------------------------
 
   const clearSelection = useCallback(() => {
     setSelectedElements([]);

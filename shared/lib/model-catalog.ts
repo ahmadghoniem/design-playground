@@ -1,9 +1,5 @@
 import type { ModelOption } from './constants';
 
-// ---------------------------------------------------------------------------
-// Claude Code static catalog (no CLI list command — docs-verified slugs)
-// ---------------------------------------------------------------------------
-
 /** Alias models shown by default; always track Anthropic's latest for each tier. */
 export const CLAUDE_FEATURED_MODEL_IDS = [
   'sonnet',
@@ -39,10 +35,6 @@ const CLAUDE_MIN_VERSIONS = {
   fable5: '2.1.170',
 } as const;
 
-// ---------------------------------------------------------------------------
-// Legacy slug migration
-// ---------------------------------------------------------------------------
-
 const CLAUDE_LEGACY_ALIASES: Record<string, string> = {
   'claude-opus-4-6': 'claude-opus-4-8',
   'claude-sonnet-4-5': 'claude-sonnet-4-6',
@@ -71,10 +63,6 @@ export function migrateEnabledModels(
   const unique = [...new Set(migrated)];
   return unique.length === 0 ? [...defaultIds] : unique;
 }
-
-// ---------------------------------------------------------------------------
-// Claude Code model partitioning (aliases vs pinned full names)
-// ---------------------------------------------------------------------------
 
 export interface ModelPartition {
   featured: ModelOption[];

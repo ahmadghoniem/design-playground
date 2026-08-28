@@ -7,22 +7,6 @@ import {
   generationEvents,
 } from "@pg/shared/lib/generation-events";
 
-// ---------------------------------------------------------------------------
-// useIterationAdoption
-//
-// Owns the full adoption lifecycle for an iteration node:
-//   - open/close the confirm dialog
-//   - POST to /playground/api/generate with the adopt prompt
-//   - update node data + toast
-//
-// Interface:
-//   openAdoptConfirm()    — show the confirm dialog
-//   handleAdoptConfirm()  — perform the API call
-//   adoptionStatus        — 'idle' | 'adopting' | 'adopted' | 'error'
-//   showAdoptConfirm      — whether the dialog is open
-//   setShowAdoptConfirm   — close the dialog
-// ---------------------------------------------------------------------------
-
 export interface UseIterationAdoptionParams {
   id: string;
   registryId: string;
@@ -65,7 +49,6 @@ export function useIterationAdoption({
 
     const toastId = `adopt-${id}`;
 
-    // Generate the adopt prompt
     const adoptPrompt = generateAdoptPrompt(registryId, data.filename);
 
     const componentId = registryId;

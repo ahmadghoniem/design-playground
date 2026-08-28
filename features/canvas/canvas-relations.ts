@@ -1,9 +1,6 @@
 // Explicit parent→child relation model for the canvas iteration tree.
 //
-// These records replace the old React Flow `Edge[]` state, which was never
-// rendered (no edges are passed to <ReactFlow>) and only
-// ever encoded which node was the parent of which. A relation carries just that:
-// parentId → childId. No presentation (`type`, `animated`, `style`) is stored.
+// A relation carries parentId → childId. No presentation (`type`, `animated`, `style`) is stored.
 //
 // Pure module (no React, no side effects) — the traversal helpers below are the
 // only vocabulary the canvas needs for children maps, descendant sets, and
@@ -22,7 +19,6 @@ export function buildChildrenMap(relations: CanvasRelation[]): Map<string, strin
   return childrenMap;
 }
 
-/** Direct children of a node. */
 export function getChildIds(relations: CanvasRelation[], parentId: string): string[] {
   return relations.filter((r) => r.parentId === parentId).map((r) => r.childId);
 }

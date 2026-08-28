@@ -33,7 +33,6 @@ export function useCanvasFrameOps({
 }: UseCanvasFrameOpsParams) {
   const [helperLines, setHelperLines] = useState<HelperLineState>({});
 
-  // Re-stack selected nodes (or the right-clicked node) along the z-axis.
   const handleZOrder = useCallback(
     (op: "front" | "back" | "forward" | "backward") => {
       setNodes((nds) => {
@@ -86,10 +85,6 @@ export function useCanvasFrameOps({
     [setNodes, contextMenu],
   );
 
-  // ---------------------------------------------------------------------------
-  // Figma-style frames: Group wraps the current selection in a `frame` node and
-  // re-parents the children (parentId + extent:'parent'); Ungroup reverses it.
-  // ---------------------------------------------------------------------------
   const nodeDim = (n: Node): { w: number; h: number } => ({
     w:
       n.measured?.width ??

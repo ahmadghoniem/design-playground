@@ -5,26 +5,13 @@
  * DOM nodes or segment data. No React imports — testable with jsdom.
  */
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export type Segment = {
   type: "text"
   value: string
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 export const ZERO_WIDTH_SPACE = "​"
 
-// ---------------------------------------------------------------------------
-// DOM engine functions
-// ---------------------------------------------------------------------------
-
-/** Read segments from the contenteditable DOM. */
 export function readSegmentsFromDOM(el: HTMLDivElement): Segment[] {
   const segments: Segment[] = []
   const nodes = el.childNodes

@@ -1,10 +1,3 @@
-// ---------------------------------------------------------------------------
-// Element Context Extraction
-// ---------------------------------------------------------------------------
-// Extracts rich context from DOM elements for targeted AI iterations.
-// Uses React fiber walking to resolve component names without react-grab.
-// ---------------------------------------------------------------------------
-
 export interface ElementContext {
   tagName: string;
   displayName: string;
@@ -21,10 +14,6 @@ export interface SelectedElement {
   nodeId: string;
   componentName: string;
 }
-
-// ---------------------------------------------------------------------------
-// React fiber helpers
-// ---------------------------------------------------------------------------
 
 function getReactFiber(el: HTMLElement): unknown | null {
   const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
@@ -80,10 +69,6 @@ function getAncestorComponents(el: HTMLElement, maxDepth = 10): string[] {
   return components;
 }
 
-// ---------------------------------------------------------------------------
-// Attribute extraction
-// ---------------------------------------------------------------------------
-
 const MEANINGFUL_ATTRS = ['className', 'id', 'role', 'aria-label', 'href', 'src', 'type', 'placeholder'];
 
 function getMeaningfulAttributes(el: HTMLElement): Record<string, string> {
@@ -96,10 +81,6 @@ function getMeaningfulAttributes(el: HTMLElement): Record<string, string> {
   return attrs;
 }
 
-// ---------------------------------------------------------------------------
-// CSS selector builder
-// ---------------------------------------------------------------------------
-
 function buildCssSelector(el: HTMLElement): string {
   const tag = el.tagName.toLowerCase();
   const id = el.id;
@@ -108,10 +89,6 @@ function buildCssSelector(el: HTMLElement): string {
   const classes = Array.from(el.classList).slice(0, 3).join('.');
   return classes ? `${tag}.${classes}` : tag;
 }
-
-// ---------------------------------------------------------------------------
-// Main extraction
-// ---------------------------------------------------------------------------
 
 export function extractElementContext(el: HTMLElement): ElementContext {
   const tagName = el.tagName.toLowerCase();

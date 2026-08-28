@@ -24,7 +24,6 @@ export function classifyClipboard(data: DataTransfer | null): PasteIntent {
   const items = data.items;
   if (!items) return { kind: 'none' };
 
-  // --- Image paste ---
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.startsWith('image/')) {
       const file = items[i].getAsFile();

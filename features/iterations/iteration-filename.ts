@@ -6,10 +6,6 @@
  * in registry.tsx and the adoption API depend on it.
  */
 
-// ---------------------------------------------------------------------------
-// Component-name → kebab registry-id
-// ---------------------------------------------------------------------------
-
 /**
  * Convert a PascalCase component name to the kebab-case registry id.
  *
@@ -25,10 +21,6 @@ export function componentNameToRegistryId(componentName: string): string {
     .toLowerCase()
     .replace(/^-/, '');
 }
-
-// ---------------------------------------------------------------------------
-// Iteration page-name (display label, used in the node header)
-// ---------------------------------------------------------------------------
 
 /**
  * Derive the short display label for an iteration node header.

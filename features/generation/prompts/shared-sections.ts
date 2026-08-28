@@ -1,24 +1,12 @@
-// ---------------------------------------------------------------------------
-// Shared Prompt Sections
-// ---------------------------------------------------------------------------
-// Reusable prompt content shared across iteration templates.
-// ---------------------------------------------------------------------------
-
 import {
   iterationsFile,
   iterationsTree,
 } from '@pg/shared/lib/playground-paths';
 
-// ---------------------------------------------------------------------------
-// Styling constraint resolvers
-// ---------------------------------------------------------------------------
-
-/** Returns the styling constraint instruction */
 export function getStylingConstraint(): string {
   return "Use only existing Tailwind classes already present in the codebase. Prefer the host app's semantic theme tokens (bg-background, text-foreground, bg-primary, text-primary-foreground, bg-card, bg-muted, text-muted-foreground, border-border, etc.) over literal colors so the result inherits the host's theme — including light/dark mode. Do NOT hardcode hex/rgb colors. Do not use inline style={{}}.";
 }
 
-/** Returns the quality checklist line item for styling */
 export function getStylingQualityItem(): string {
   return "Uses the host's semantic theme tokens (no hardcoded hex); only allowed Tailwind classes already present in the codebase";
 }
@@ -35,7 +23,6 @@ export function importConstraint(): string {
   return `- **Imports**: The iteration is saved to a DIFFERENT directory than the original, so relative imports from the source will NOT resolve. Rewrite every relative ("../" or "./") import from the original to the host alias "@/" (which maps to the host's "src/"), deriving the original's location from its source path. Example: a component at src/features/daily-recap/components/DailyRecapItem.tsx importing "../hooks/useDailyRecap" MUST become "@/features/daily-recap/hooks/useDailyRecap". Imports that are already "@/..." or bare packages (react, lucide-react) are copied unchanged.`;
 }
 
-/** Returns the full quality checklist with the appropriate styling line */
 export function getQualityChecklist(): string {
   return `QUALITY CHECKLIST (FOR EACH ITERATION)
 - [ ] Props interface unchanged from original
@@ -77,10 +64,6 @@ ${metadataLine}
 
    This sequential approach ensures each iteration is visible on the canvas as soon as it's done.`;
 }
-
-// ---------------------------------------------------------------------------
-// Prompt section formatters
-// ---------------------------------------------------------------------------
 
 export function formatChildrenSection(children?: string[]): string {
   if (!children || children.length === 0) return '';

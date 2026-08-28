@@ -14,10 +14,6 @@ import {
 } from './shared-sections';
 import { iterationsGuide } from '@pg/shared/lib/playground-paths';
 
-// ---------------------------------------------------------------------------
-// From the original source component
-// ---------------------------------------------------------------------------
-
 function buildPrompt(): string {
   return `
 ITERATION REQUEST
@@ -79,10 +75,6 @@ export interface IterationPromptVars {
 export function iterationPrompt(vars: IterationPromptVars): string {
   return fillTemplate(buildPrompt(), vars as unknown as Record<string, string>);
 }
-
-// ---------------------------------------------------------------------------
-// From an existing iteration
-// ---------------------------------------------------------------------------
 
 function buildFromIterationPrompt(): string {
   return `

@@ -2,10 +2,6 @@ import { useState, useCallback } from 'react';
 import { useOnSelectionChange } from '@xyflow/react';
 import { flatRegistry } from '@pg/registry';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface SelectedNodeContext {
   nodeId: string;
   componentId: string;
@@ -21,10 +17,6 @@ export interface UseNodeSelectionReturn {
   clearNodeSelection: () => void;
   removeNode: (nodeId: string) => void;
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export function useNodeSelection(): UseNodeSelectionReturn {
   const [selectedNodes, setSelectedNodes] = useState<SelectedNodeContext[]>([]);

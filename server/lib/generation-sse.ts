@@ -70,7 +70,6 @@ export function streamGenerationEvents(
 
       const cleanup = subscribeGenerationSse({ onIteration, onDone });
 
-      // Client disconnect — mirror the old req.on('close') cleanup.
       stream.onAbort(() => {
         cleanup();
         resolve();

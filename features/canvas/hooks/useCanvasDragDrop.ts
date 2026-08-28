@@ -58,7 +58,6 @@ export function useCanvasDragDrop({
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
 
-      // Check for image file drops
       const files = event.dataTransfer.files;
       if (files.length > 0) {
         const imageFiles = Array.from(files).filter((f) =>

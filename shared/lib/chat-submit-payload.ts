@@ -3,7 +3,6 @@
 // (prompt-builders). It lives in shared/ rather than beside the composer because
 // a feature (generation) consumes it, and features may not import each other.
 
-/** Payload submitted by the chat composer */
 export interface ChatSubmitPayload {
   text: string;
   model: string;

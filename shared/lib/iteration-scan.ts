@@ -1,9 +1,8 @@
 // Pure helpers for tree-aware iteration scanning + positioning.
 //
-// Extracted from PlaygroundCanvas's scan logic. These functions take
-// (nodes, generationInfo, ...) and return values only — no setNodes, no
-// side effects — so the scan handlers in PlaygroundCanvas can call them
-// directly without reaching into component state.
+// These functions take (nodes, generationInfo, ...) and return values only — no
+// setNodes, no side effects — so the scan handlers in PlaygroundCanvas can call
+// them directly without reaching into component state.
 
 import type { Node } from '@xyflow/react';
 import type { GenerationInfo } from './canvas-persistence';
@@ -60,7 +59,6 @@ export function resolveIterationPosition(
   return fallbackPosition ?? { x: 400, y: 200 };
 }
 
-/** Find the source component node for a generated iteration (reads from provided nodes). */
 export function findParentNode(
   nodes: Node[],
   componentName: string,
@@ -85,14 +83,12 @@ export function findParentNode(
   });
 }
 
-/** Find an iteration node by its filename (for tree-aware connections). */
 export function findIterationNodeByFilename(nodes: Node[], filename: string): Node | undefined {
   return nodes.find(
     (n) => n.type === 'iteration' && (n.data.filename as string) === filename,
   );
 }
 
-/** Calculate the position for a new iteration node relative to its parent. */
 export function calculateIterationPosition(
   nodes: Node[],
   parentNode: Node,

@@ -86,7 +86,6 @@ export function listPlaygroundDirs(): string[] {
   return [resolved, ...existing.filter((dir) => dir !== resolved)];
 }
 
-/** All playground roots that exist on disk (both layouts). */
 function resolveAllPlaygroundDirs(): string[] {
   const root = process.cwd();
   return candidateRelativeDirs()

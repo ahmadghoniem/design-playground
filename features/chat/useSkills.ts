@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import type { PlaygroundSkill } from "@pg/skills";
 
-// ---------------------------------------------------------------------------
-// useSkills — shared, deduped skills fetch
-// ---------------------------------------------------------------------------
-// A module-level cache + in-flight promise means every caller shares a single
-// `/playground/api/skills` request instead of each firing their own. Skills are
-// installed through the Agent, outside this app, so the list is read once per
-// page load and never invalidated from the UI.
-// ---------------------------------------------------------------------------
-
+// Skills are installed through the Agent, outside this app, so the list is read
+// once per page load and never invalidated from the UI.
 let cache: PlaygroundSkill[] | null = null;
 let inflight: Promise<PlaygroundSkill[]> | null = null;
 

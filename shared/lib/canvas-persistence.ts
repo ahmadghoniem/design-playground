@@ -1,15 +1,10 @@
 // Canvas localStorage persistence + shared canvas types.
-//
-// Extracted from PlaygroundCanvas so the flow provider (canvas-flow.tsx) can seed state from
-// the same source PlaygroundCanvas reads. Behavior is identical to the original inline
-// implementation.
 
 import type { Node, Edge } from '@xyflow/react';
 import { CANVAS_STATE_STORAGE_KEY } from './constants';
 
 /**
- * Explicit parent→child iteration-tree record. Replaces the old React Flow
- * `Edge[]` state (which was never rendered). Persistence owns the stored shape;
+ * Explicit parent→child iteration-tree record. Persistence owns the stored shape;
  * `features/canvas/canvas-relations.ts` provides traversal helpers only
  * (shared/ may not import features/).
  */
@@ -28,7 +23,7 @@ export interface GenerationInfo {
   /** First iteration number in this batch */
   startNumber?: number;
   skeletonNodeIds: string[];
-  startTime: number; // Timestamp when generation started
+  startTime: number;
   /** Skeleton positions for post-generation repositioning (set when skeletons are created) */
   skeletonPositions?: { x: number; y: number }[];
   /** Legacy alias for `skeletonPositions`; still read from old snapshots, never written. */
@@ -120,7 +115,6 @@ export function loadCanvasState(storageKey: string = CANVAS_STATE_STORAGE_KEY): 
         ...raw,
         relations: migrateRelations(raw),
       };
-      // `edges` is no longer part of the persisted shape.
       delete (state as { edges?: unknown }).edges;
 
       // A mid-run refresh drops the live view: always strip skeleton nodes and
@@ -136,8 +130,7 @@ export function loadCanvasState(storageKey: string = CANVAS_STATE_STORAGE_KEY): 
           r => !skeletonIds.has(r.parentId) && !skeletonIds.has(r.childId),
         );
       }
-      // Freeform NodeResizeControl was removed from component/iteration nodes;
-      // scrub persisted width/height so old stretched wrappers don't stick.
+      // Scrub persisted width/height so old stretched wrappers don't stick.
       state.nodes = state.nodes.map((n) => {
         if (n.type !== 'component' && n.type !== 'iteration') return n;
         const next = { ...n };

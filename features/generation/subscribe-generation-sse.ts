@@ -34,9 +34,7 @@ export function subscribeGenerationSse(
         handlers.onDone?.();
         es.close();
       }
-    } catch {
-      /* ignore parse errors */
-    }
+    } catch {}
   };
 
   es.onerror = () => {

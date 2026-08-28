@@ -26,7 +26,6 @@ export function useCanvasNodeDelete({
 }: UseCanvasNodeDeleteParams) {
   const [deleteDialogNode, setDeleteDialogNode] = useState<Node | null>(null);
 
-  // Handle node deletion - check for children first
   const onNodesDelete = useCallback(
     async (deletedNodes: Node[]) => {
       for (const node of deletedNodes) {
@@ -41,15 +40,12 @@ export function useCanvasNodeDelete({
             console.error("Error deleting image file:", error);
           }
         } else if (node.type === "iteration" && node.data.filename) {
-          // Check if this node has children
           const childRelations = relations.filter((r) => r.parentId === node.id);
           if (childRelations.length > 0) {
-            // Has children -- show cascade/reparent dialog instead of deleting immediately
             setDeleteDialogNode(node);
-            return; // Don't delete yet, wait for dialog action
+            return;
           }
 
-          // No children -- simple delete
           try {
             await fetch("/playground/api/iterations", {
               method: "DELETE",
@@ -68,7 +64,6 @@ export function useCanvasNodeDelete({
     [relations, setKnownIterations],
   );
 
-  // Handle cascade or reparent deletion
   const handleDeleteWithMode = useCallback(
     async (mode: "cascade" | "reparent") => {
       const node = deleteDialogNode;

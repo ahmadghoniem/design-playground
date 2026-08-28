@@ -66,7 +66,6 @@ export function computeAutoArrangePositions(
   const nodeMap = new Map<string, Node>();
   nodes.forEach(n => nodeMap.set(n.id, n));
 
-  // BFS-collect a component node and its visible descendants (its "cluster").
   const collectVisibleClusterNodeIds = (rootNodeId: string): string[] => {
     const collected: string[] = [];
     const visited = new Set<string>();
@@ -86,7 +85,6 @@ export function computeAutoArrangePositions(
     return collected;
   };
 
-  // Tile a cluster's nodes left-to-right, wrapping at CLUSTER_MAX_WIDTH.
   const layoutCluster = (
     rootNodeId: string,
     clusterNodeIds: string[],
@@ -174,7 +172,6 @@ export function computeAutoArrangePositions(
     clusterLayouts.push({ clusterId: '__orphans__', ...layout });
   }
 
-  // Pack clusters left-to-right, wrapping into rows at CLUSTER_ROW_MAX_WIDTH.
   const clusterOrigins = new Map<string, { x: number; y: number }>();
   let clusterCursorX = START_X;
   let clusterCursorY = START_Y;

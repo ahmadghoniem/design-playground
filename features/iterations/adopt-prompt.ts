@@ -59,7 +59,6 @@ Before saving, verify:
 
 Adopt the iteration now. Only modify the original component file.`;
 
-/** Build the adopt prompt for an iteration of `componentId` saved as `iterationFilename`. */
 export function generateAdoptPrompt(
   componentId: string,
   iterationFilename: string,

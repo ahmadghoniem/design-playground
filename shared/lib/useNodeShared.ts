@@ -2,16 +2,12 @@ import { useState, useEffect, useCallback, RefObject } from "react";
 import { flatRegistry } from "@pg/registry";
 
 /** TTL for the shared async-props cache (ms) */
-const PROPS_CACHE_TTL_MS = 60_000; // 60 seconds
+const PROPS_CACHE_TTL_MS = 60_000;
 
 const propsCache = new Map<
   string,
   { ts: number; props: Record<string, unknown> }
 >();
-
-// ---------------------------------------------------------------------------
-// useAsyncProps – loads props via registryItem.getProps with caching
-// ---------------------------------------------------------------------------
 
 export interface AsyncPropsState {
   resolvedProps: Record<string, unknown> | null;
@@ -73,10 +69,6 @@ export function useAsyncProps(registryId: string): AsyncPropsState {
 
   return { resolvedProps, isLoadingProps, propsError };
 }
-
-// ---------------------------------------------------------------------------
-// useScrollCapture – captures wheel events when the container can scroll
-// ---------------------------------------------------------------------------
 
 export function useScrollCapture(
   containerRef: RefObject<HTMLDivElement | null>,

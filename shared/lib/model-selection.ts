@@ -3,7 +3,7 @@
  *   - loadSelectedModel / saveSelectedModel (localStorage)
  *   - useAvailableModels hook
  *
- * Consumers: ModelSettingsModal, DockedChatBar, useModelCycle.
+ * Consumers: ModelSettingsModal, DockedChatBar, useSelectedModel.
  */
 
 import { useEffect } from "react";
@@ -12,16 +12,13 @@ import { AGENT_DEFAULT_ENABLED_MODELS } from "@pg/shared/lib/agent-config";
 import { resolveAgentModel } from "@pg/shared/lib/resolve-agent-model";
 import { migrateModelId, isModelEnabled } from "@pg/shared/lib/model-catalog";
 
-// Re-export ModelOption for consumers
 export type { ModelOption } from "@pg/shared/lib/constants";
 
-/** Key for persisting the user's last selected AI model */
 const SELECTED_MODEL_STORAGE_KEY = 'playground-selected-model';
 
 // Legacy provider-scoped key written by older builds; still read for migration.
 const LEGACY_SCOPED_KEY = `${SELECTED_MODEL_STORAGE_KEY}-claude-code`;
 
-// Load last selected model from localStorage
 export function loadSelectedModel(): string {
   if (typeof window === "undefined") return "";
   try {
@@ -33,7 +30,6 @@ export function loadSelectedModel(): string {
     const rawModel = model;
     model = migrateModelId(model);
 
-    // Validate the model belongs to the enabled models
     if (model) {
       const enabled = useModelSettingsStore.getState().enabledModels;
       const enabledModels = enabled.length ? enabled : AGENT_DEFAULT_ENABLED_MODELS;
@@ -52,7 +48,6 @@ export function loadSelectedModel(): string {
   }
 }
 
-// Save selected model to localStorage
 export function saveSelectedModel(model: string) {
   if (typeof window === "undefined") return;
   try {
@@ -61,10 +56,6 @@ export function saveSelectedModel(model: string) {
     console.error("[Models] Error saving selected model:", e);
   }
 }
-
-// ---------------------------------------------------------------------------
-// useAvailableModels hook
-// ---------------------------------------------------------------------------
 
 export function useAvailableModels() {
   const hasHydrated = useModelSettingsStore((s) => s.hasHydrated);
@@ -78,7 +69,6 @@ export function useAvailableModels() {
     if (hasHydrated && !hasFetched) fetchModels();
   }, [hasHydrated, hasFetched, fetchModels]);
 
-  // Filter by enabled models — fall back to defaults if empty
   const models =
     enabledModels.length === 0
       ? availableModels.filter((m) => AGENT_DEFAULT_ENABLED_MODELS.includes(m.value))

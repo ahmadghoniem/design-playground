@@ -17,7 +17,6 @@ function createChannel<T>() {
   };
 }
 
-/** Payload for generation start event */
 export interface GenerationStartPayload {
   componentId: string;
   componentName: string;
@@ -25,7 +24,6 @@ export interface GenerationStartPayload {
   iterationCount: number;
   /** First iteration number in this batch (e.g. 9 when iterations 1–8 already exist) */
   startNumber?: number;
-  /** Model used for this generation */
   model?: string;
   /** Agent CLI used for this generation. Always Claude Code; kept for back-compat with consumers. */
   provider?: string;
@@ -37,14 +35,12 @@ export interface GenerationStartPayload {
   editMode?: boolean;
 }
 
-/** Payload for generation complete event */
 export interface GenerationCompletePayload {
   componentId: string;
   parentNodeId: string;
   output: string;
 }
 
-/** Payload for generation error event */
 export interface GenerationErrorPayload {
   componentId: string;
   parentNodeId: string;

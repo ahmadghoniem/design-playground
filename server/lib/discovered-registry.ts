@@ -6,13 +6,6 @@
  * committed to this package. A checkout that has not run discovery yet has no
  * such file, so this writes an empty one at server boot and the import
  * resolves either way.
- *
- * The manifest I/O and the code generator that produced a populated module
- * lived here too and are gone: nothing on this branch called them, and the
- * redesign in `.claude/specs/discovery-engine.md` changes the generator's
- * contract (no per-component description, overlay primitives excluded from the
- * module outright). The working scan and its `regenerateModule()` are on
- * `feat/layers-sidebar`.
  */
 
 import fs from 'fs';

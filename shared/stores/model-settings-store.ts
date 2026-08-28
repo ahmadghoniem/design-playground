@@ -9,16 +9,11 @@ import {
 import type { ModelOption } from '@pg/shared/lib/constants';
 import { migrateEnabledModels } from '@pg/shared/lib/model-catalog';
 
-// ---------------------------------------------------------------------------
-// Store Interface
-// ---------------------------------------------------------------------------
-
 interface ModelSettingsState {
   hasHydrated: boolean;
 
   /** Model ids enabled in the picker. Empty means "use defaults". */
   enabledModels: string[];
-  /** Full catalog available to choose from. */
   availableModels: ModelOption[];
   hasFetched: boolean;
 
@@ -32,10 +27,6 @@ interface ModelSettingsState {
   claudeCodeOptions: ClaudeCodeOptions;
   setClaudeCodeOptions: (opts: Partial<ClaudeCodeOptions>) => void;
 }
-
-// ---------------------------------------------------------------------------
-// Store
-// ---------------------------------------------------------------------------
 
 const STORE_KEY = 'playground-model-settings-v3';
 

@@ -23,13 +23,11 @@ export function useCanvasPaste({
   getNodeId,
   setNodes,
 }: UseCanvasPasteParams): void {
-  // Paste images or HTML from clipboard onto the canvas
   useEffect(() => {
     const wrapper = reactFlowWrapper.current;
     if (!wrapper) return;
 
     const handlePaste = async (e: ClipboardEvent) => {
-      // Don't intercept pastes into text inputs
       const active = document.activeElement;
       if (
         active &&
@@ -56,7 +54,6 @@ export function useCanvasPaste({
         });
       };
 
-      // --- Image paste (takes priority) ---
       if (intent.kind === "image") {
         const file = intent.file;
         const reader = new FileReader();

@@ -65,7 +65,6 @@ async function postGenerate(
 export function useChatSubmit({ coord }: UseChatSubmitParams) {
   const handleChatSubmit = useCallback(
     async (payload: ChatSubmitPayload) => {
-      // If generation already in progress, reject this submission
       if (coord.getIsGenerating()) {
         toast.info("Generation in progress — wait for it to finish");
         return;
@@ -86,7 +85,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
           data: n.data as Record<string, unknown>,
         }));
 
-      // ── Edit Mode: modify file in-place, no iterations ──
       if (chatMode === "edit" && payload.targetNodeId) {
         const { filePath, componentId: editComponentId, componentName: editComponentName } =
           resolveEditFilePath(payload);
@@ -104,7 +102,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
         });
 
         const editResolvedModel = resolveAgentModel(payload.model);
-        // Dispatch generation start to kick off generation tracking
         generationEvents.start.emit({
           componentId: editComponentId,
           componentName: editComponentName,
@@ -174,11 +171,9 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
         targetComponentName &&
         targetType
       ) {
-        // --- WITH TARGET NODE ---
         let startNumber = 1;
 
         if (!isRawMode) {
-          // Fetch next available iteration number
           try {
             const cleanName = targetComponentName.replace(/\s+/g, "");
             const response = await fetch("/playground/api/iterations");
@@ -209,7 +204,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
             startNumber,
           });
 
-        // Dispatch generation start (creates skeleton nodes)
         generationEvents.start.emit({
           componentId,
           componentName,
@@ -244,7 +238,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
           });
         }
       } else {
-        // --- FREEFORM (no target) ---
         const { prompt: freeformPrompt, componentId: freeformComponentId } =
           buildFreeformChatPrompt({
             isRawMode,
@@ -253,7 +246,6 @@ export function useChatSubmit({ coord }: UseChatSubmitParams) {
             referenceNodesSection,
           });
 
-        // Dispatch start event — creates skeleton node
         generationEvents.start.emit({
           componentId: freeformComponentId,
           componentName: "Freeform",

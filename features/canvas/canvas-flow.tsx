@@ -3,9 +3,6 @@
 // doesn't care about the underlying state implementation.
 //
 // `relations` are explicit parent→child iteration records (see canvas-relations.ts).
-// They were previously modelled as React Flow `Edge[]` state, but edges were
-// never rendered, so there is no React Flow edge state, `onEdgesChange`, or
-// edge styling here anymore.
 //
 // This provider is also the single loader of persisted canvas state: it reads
 // localStorage once (lazily) and exposes the loaded snapshot via `initialState`,

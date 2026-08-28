@@ -30,7 +30,6 @@ import {
 import { toast } from "sonner";
 import { subscribeGenerationSse } from "@pg/features/generation/subscribe-generation-sse";
 
-/** Delay after generation completes before scanning for iterations */
 const POST_GENERATION_SCAN_DELAY = 1000;
 
 export interface UseGenerationLifecycleParams {
@@ -57,7 +56,6 @@ export function useGenerationLifecycle({
 }: UseGenerationLifecycleParams): void {
   const unsubscribeSseRef = useRef<(() => void) | null>(null);
 
-  // Safety timeout for orphaned skeletons
   useEffect(() => {
     if (!isGenerating || !generationInfo?.startTime) {
       return;
@@ -116,7 +114,6 @@ export function useGenerationLifecycle({
     });
   }, [scanForIterations, stopGenerationEventSource, coord.getGenerationInfo]);
 
-  // Handle generation lifecycle events
   useEffect(() => {
     /**
      * Check whether a rectangle overlaps any existing canvas node.
@@ -144,7 +141,6 @@ export function useGenerationLifecycle({
       const SHIFT_STEP = 80; // px to shift right per attempt
       const MAX_ATTEMPTS = 20;
 
-      // Build bounding boxes for all existing canvas nodes
       const obstacles = existingNodes.map((n) => ({
         x: n.position.x,
         y: n.position.y,
@@ -176,7 +172,6 @@ export function useGenerationLifecycle({
         }
 
         if (hasCollision) {
-          // Shift all candidate rects to the right
           for (const rect of rects) {
             rect.x += SHIFT_STEP;
           }
@@ -246,12 +241,10 @@ export function useGenerationLifecycle({
         coord.setGenerationInfoEager(newInfo);
         coord.setIsGeneratingEager(true);
 
-        // Subscribe to server-sent events for progressive iteration detection
         startGenerationEventSource();
         return;
       }
 
-      // Find the parent node (use ref for current nodes)
       const parentNode = coord.getNodes().find((n) => n.id === parentNodeId);
       if (!parentNode) {
         console.error("[Playground] Parent node not found:", parentNodeId);
@@ -270,12 +263,10 @@ export function useGenerationLifecycle({
           ? DEFAULT_COMPONENT_NODE_HEIGHT
           : DEFAULT_ITERATION_NODE_HEIGHT);
 
-      // Create skeleton nodes
       const skeletonNodes: Node[] = [];
       const skeletonRelations: CanvasRelation[] = [];
       const skeletonNodeIds: string[] = [];
 
-      // Build candidate positions for all skeletons first
       const candidateRects: { x: number; y: number; w: number; h: number }[] =
         [];
 
@@ -324,7 +315,6 @@ export function useGenerationLifecycle({
         });
       }
 
-      // Add skeleton nodes to canvas
       setNodes((nds) => [...nds, ...skeletonNodes]);
       setRelations((rels) => [...rels, ...skeletonRelations]);
 
@@ -347,7 +337,6 @@ export function useGenerationLifecycle({
       coord.setGenerationInfoEager(newInfo);
       coord.setIsGeneratingEager(true);
 
-      // Subscribe to server-sent events for progressive iteration detection
       startGenerationEventSource();
     };
 
@@ -461,7 +450,6 @@ export function useGenerationLifecycle({
     };
 
     const handleGenerationError = (payload: GenerationErrorPayload) => {
-      // Close the SSE connection for progressive iteration detection
       stopGenerationEventSource();
 
       const errorMessage = payload.error || "Unknown error occurred";
@@ -493,7 +481,6 @@ export function useGenerationLifecycle({
         toast.error(errorMessage, { duration: 6000 });
       }
 
-      // Remove skeleton nodes
       if (info) {
         setNodes((nds) =>
           nds.filter((n) => !info.skeletonNodeIds.includes(n.id)),
@@ -505,7 +492,6 @@ export function useGenerationLifecycle({
         );
       }
 
-      // Reset generation state — eagerly sync ref
       coord.clearGenerationEager();
     };
 
