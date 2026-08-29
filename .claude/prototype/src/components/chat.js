@@ -1,5 +1,11 @@
 import Alpine from 'alpinejs';
-import { AGENTS, MODEL_INDEX, DEFAULT_MODEL, EFFORT_LADDER, SKILLS, PERMISSIONS, CURRENT_BRANCH, CURRENT_WORKTREE } from '../data/shared.js';
+import { AGENTS, MODEL_INDEX, DEFAULT_MODEL, EFFORT_LADDER, SKILLS, PERMISSIONS, CURRENT_BRANCH, CURRENT_WORKTREE, CURRENT_LINES_ADDED, CURRENT_LINES_REMOVED, ASK_QUESTIONS } from '../data/shared.js';
+
+// The docked Composer's resting size and the bounds the corner grip may drag it to.
+// Height is the input's: untouched it grows with the draft and stops at AUTO_CAP, and a
+// drag pins it, so the box answers the grip even when there is nothing typed yet.
+const DOCK_W = { min: 320, base: 500, max: 900 };
+const INPUT_H = { min: 24, max: 420, autoCap: 120 };
 
 export function registerChat() {
   document.addEventListener('alpine:init', () => {
@@ -10,19 +16,105 @@ export function registerChat() {
       model: DEFAULT_MODEL,
       effort: 'high',
       fast: false,
-      mode: 'explore',
       branch: CURRENT_BRANCH,
       worktree: CURRENT_WORKTREE,
+      linesAdded: CURRENT_LINES_ADDED,
+      linesRemoved: CURRENT_LINES_REMOVED,
+      dockWidth: DOCK_W.base,
+      inputH: null,
+      resizing: false,
       permission: PERMISSIONS[0].id,
       annotations: 2,
       maxDots: 5,
       expanded: false,
+      stripOpen: true,
+      askIndex: 0,
+      askAnswers: {},
+      askDone: false,
       draft: '',
       tags: [
         { id: 'comp', type: 'comp', label: 'PriceCard' },
         { id: 'text', type: 'text', label: 'text' },
         { id: 'img', type: 'img', label: 'stripe-pricing' },
       ],
+
+      // The dock owns the width but lives in canvas.html, so the size travels as a custom
+      // property rather than an inline style reaching across partials. Nothing scales:
+      // width and height are written as real lengths, so the draft re-wraps at its true
+      // size on every frame instead of being stretched like an image.
+      setDockSize(width, inputH) {
+        this.dockWidth = Math.round(Math.max(DOCK_W.min, Math.min(DOCK_W.max, width)));
+        this.inputH = Math.round(Math.max(INPUT_H.min, Math.min(INPUT_H.max, inputH)));
+        document.documentElement.style.setProperty('--dock-w', `${this.dockWidth}px`);
+      },
+
+      // Back to the declared width and to a height that follows the draft again.
+      resetDockSize() {
+        this.dockWidth = DOCK_W.base;
+        this.inputH = null;
+        document.documentElement.style.removeProperty('--dock-w');
+      },
+
+      // Untouched, the input is as tall as the draft needs up to the cap. Once dragged it
+      // is the height you left it at, and a longer draft scrolls inside it.
+      inputHeightFor(scrollHeight) {
+        return this.inputH ?? Math.min(scrollHeight, INPUT_H.autoCap);
+      },
+
+      // A clean worktree is the absence of a figure, not a pair of zeroes: +0 next to −0
+      // reads as a broken counter rather than as "nothing has changed yet".
+      get hasChanges() {
+        return this.linesAdded > 0 || this.linesRemoved > 0;
+      },
+
+      get linesAddedLabel() {
+        return `+${this.linesAdded.toLocaleString('en-US')}`;
+      },
+
+      // U+2212 MINUS SIGN, so the figure sits on the same optical baseline and width as
+      // the plus above it — a hyphen is shorter and rides low.
+      get linesRemovedLabel() {
+        return `−${this.linesRemoved.toLocaleString('en-US')}`;
+      },
+
+      // One turn at a time: the agent asked, so the strip carries the question it is
+      // waiting on and nothing else. `askDone` is its own flag rather than an index run
+      // off the end, so the current question stays addressable while the strip rests.
+      get askQuestion() {
+        return ASK_QUESTIONS[this.askIndex];
+      },
+
+      get askCounterLabel() {
+        return `Question ${this.askIndex + 1} of ${ASK_QUESTIONS.length}`;
+      },
+
+      // The resting row counts what was actually recorded, so a skipped turn stays visible
+      // instead of being absorbed into a full count.
+      get askAnsweredLabel() {
+        return `Answered · ${Object.keys(this.askAnswers).length} of ${ASK_QUESTIONS.length}`;
+      },
+
+      // Answering and skipping differ only in whether the turn leaves a record.
+      answerQuestion(option) {
+        this.askAnswers[this.askQuestion.id] = option;
+        this.advanceQuestion();
+      },
+
+      skipQuestion() {
+        this.advanceQuestion();
+      },
+
+      advanceQuestion() {
+        if (this.askIndex + 1 < ASK_QUESTIONS.length) {
+          this.askIndex += 1;
+        } else {
+          this.askDone = true;
+        }
+      },
+
+      toggleStrip() {
+        this.stripOpen = !this.stripOpen;
+      },
 
       get currentPermission() {
         return PERMISSIONS.find((p) => p.id === this.permission) ?? PERMISSIONS[0];
@@ -127,9 +219,6 @@ export function registerChat() {
       setEffort(id) {
         this.effort = id;
       },
-      setMode(mode) {
-        this.mode = mode;
-      },
       setPermission(id) {
         this.permission = id;
       },
@@ -186,16 +275,70 @@ export function registerChat() {
       menu: null,
       submenu: null,
       submenuFlip: false,
-      modelMenuWidth: null,
       modelQuery: '',
       permissions: PERMISSIONS,
       skillPickerOpen: false,
       skillQuery: '',
       skillHighlight: 0,
 
+      // What the input would measure with no pin: the height the draft alone asks for.
+      naturalInputHeight(el) {
+        const pinned = el.style.height;
+        el.style.height = 'auto';
+        const natural = Math.min(el.scrollHeight, INPUT_H.autoCap);
+        el.style.height = pinned;
+        return natural;
+      },
+
       growInput(el) {
         el.style.height = 'auto';
-        el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+        el.style.height = `${this.$store.chat.inputHeightFor(el.scrollHeight)}px`;
+      },
+
+      // Top-left corner grip. The dock is centred and bottom-anchored, so the box grows
+      // the two directions there is room in: width opens symmetrically (the cursor moves
+      // one edge, the centring moves the other, hence the doubled dx) and height climbs.
+      // No preventDefault here: it would suppress the compatibility mouse events and take
+      // the double-click reset with them. touch-action and the body's selection lock do
+      // the job the default needed stopping for.
+      resizeStart(e) {
+        if (e.button !== 0) return;
+        const chat = this.$store.chat;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const input = this.$root.querySelector('.chat-input');
+        const startW = chat.dockWidth;
+        // Measured, not read from the store: until the first drag the height belongs to
+        // the draft, so the gesture has to start from whatever is actually on screen.
+        const startH = input ? input.offsetHeight : INPUT_H.min;
+        // The draft's own height is the floor, so grabbing the grip cannot make the box
+        // jump to a taller resting size before the pointer has moved.
+        const floorH = input ? this.naturalInputHeight(input) : INPUT_H.min;
+
+        chat.resizing = true;
+        document.body.classList.add('resizing');
+
+        const move = (ev) => {
+          chat.setDockSize(
+            startW + (startX - ev.clientX) * 2,
+            Math.max(floorH, startH + (startY - ev.clientY)),
+          );
+          if (input) this.growInput(input);
+        };
+        const up = () => {
+          chat.resizing = false;
+          document.body.classList.remove('resizing');
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      },
+
+      resizeReset() {
+        this.$store.chat.resetDockSize();
+        const input = this.$root.querySelector('.chat-input');
+        if (input) this.growInput(input);
       },
 
       toggleMenu(name) {
@@ -205,19 +348,12 @@ export function registerChat() {
           this.menu = name;
           this.submenu = null;
           this.submenuFlip = false;
-          if (name === 'model') {
-            this.$nextTick(() => {
-              const menuEl = this.$root.querySelector('.model-menu');
-              if (menuEl) this.modelMenuWidth = Math.ceil(menuEl.offsetWidth);
-            });
-          }
         }
       },
       closeMenu() {
         this.menu = null;
         this.submenu = null;
         this.submenuFlip = false;
-        this.modelMenuWidth = null;
       },
       openSubmenu(name, evt) {
         this.submenu = name;

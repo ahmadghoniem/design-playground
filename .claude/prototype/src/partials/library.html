@@ -107,6 +107,120 @@
           </template>
         </div>
       </div>
+
+      <div class="fold" :class="{ 'fold-open': tokensOpen }">
+        <div class="fold-h">
+          <button type="button" class="fold-toggle" x-show="!varSearchOpen" @click="tokensOpen = !tokensOpen" :aria-expanded="tokensOpen">
+            <svg class="fold-chev" :class="{ open: tokensOpen }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            Tokens
+            <span class="fold-count" x-text="varCount"></span>
+          </button>
+          <input type="text" class="fold-h-input" x-ref="varSearch" x-show="varSearchOpen" x-cloak
+                 x-model="varQuery" placeholder="Search tokens" @keydown.escape="toggleVarSearch()">
+          <div class="fold-tools">
+            <button type="button" class="fold-ic" @click.stop="toggleVarSearch()"
+                    :aria-label="varSearchOpen ? 'Close search' : 'Search tokens'">
+              <svg x-show="!varSearchOpen" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+              <svg x-show="varSearchOpen" x-cloak width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+            <button type="button" class="fold-ic" x-show="!varSearchOpen" aria-label="Add token">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="fold-body" x-show="tokensOpen">
+          <div class="fold nested">
+            <div class="fold-h">
+              <button type="button" class="fold-toggle" @click="varColorsOpen = !varColorsOpen" :aria-expanded="varColorsOpen">
+                <svg class="fold-chev" :class="{ open: varColorsOpen }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                Colors
+              </button>
+            </div>
+            <div class="fold-in app-theme" x-show="varColorsOpen">
+              <template x-for="group in colorGroups" :key="group.group">
+                <div x-show="groupHasMatch(group)">
+                  <div class="tok-group-lbl" x-text="group.group"></div>
+                  <template x-for="row in group.rows" :key="row.name">
+                    <div class="tok-row" :class="{ undef: row.undef }" x-show="matchesVar(row.name)">
+                      <span class="name" x-text="row.name"></span>
+                      <template x-if="row.undef">
+                        <span class="sw undef"></span>
+                      </template>
+                      <template x-if="!row.undef">
+                        <label class="sw-pick" x-tip.right="'Pick a colour'">
+                          <input type="color" :value="pickValue(row, $el)" @input="setPick(row, $event.target.value)">
+                          <span class="sw" :style="swatchStyle(row)"></span>
+                        </label>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div class="fold nested">
+            <div class="fold-h">
+              <button type="button" class="fold-toggle" @click="varRadiusOpen = !varRadiusOpen" :aria-expanded="varRadiusOpen">
+                <svg class="fold-chev" :class="{ open: varRadiusOpen }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                Radius
+              </button>
+            </div>
+            <div class="fold-in" x-show="varRadiusOpen">
+              <template x-for="row in radiusRows" :key="row.name">
+                <div class="tok-row" x-show="matchesVar(row.name)">
+                  <span class="sw" :style="swatchStyle(row)"></span>
+                  <span class="name" x-text="row.name"></span>
+                  <span class="tok-val" x-text="row.value"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div class="fold nested">
+            <div class="fold-h">
+              <button type="button" class="fold-toggle" @click="varTypeOpen = !varTypeOpen" :aria-expanded="varTypeOpen">
+                <svg class="fold-chev" :class="{ open: varTypeOpen }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                Typography
+              </button>
+            </div>
+            <div class="fold-in" x-show="varTypeOpen">
+              <template x-for="row in typeVars" :key="row.name">
+                <div class="tok-row" x-show="matchesVar(row.name)">
+                  <span class="name" x-text="row.name"></span>
+                  <span class="tok-val" x-text="row.value"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div class="fold nested">
+            <div class="fold-h">
+              <button type="button" class="fold-toggle" @click="iconsOpen = !iconsOpen" :aria-expanded="iconsOpen">
+                <svg class="fold-chev" :class="{ open: iconsOpen }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                Icons
+              </button>
+            </div>
+            <div x-show="iconsOpen">
+              <!-- The fold's job is naming the set in use and letting you swap it,
+                   so it carries a picker rather than a search field. -->
+              <div class="icon-pack">
+                <span>Icon set</span>
+                <select class="icon-pack-select" x-model="iconPackId" aria-label="Icon set">
+                  <template x-for="pack in iconPacks" :key="pack.id">
+                    <option :value="pack.id" x-text="pack.name"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="icon-list">
+                <template x-for="name in iconPack.icons" :key="name">
+                  <div class="icon-row" x-show="matchesVar(name)">
+                    <span class="ic-box" x-text="name.slice(0,1)"></span>
+                    <span x-text="name"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>

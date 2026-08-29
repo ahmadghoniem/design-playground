@@ -66,6 +66,14 @@ export function registerCanvas() {
         return this.selectedEl === elId;
       },
 
+      // Applying pending edits happens in the Design panel, beside the name they belong
+      // to; the canvas owns the undo stack, so it counts the step. The mock counts a step,
+      // it does not restore values.
+      countApplyAsStep() {
+        this.maxUndo = this.maxUndo - this.undone + 1;
+        this.undone = 0;
+      },
+
       setTool(tool) {
         this.activeTool = tool;
       },

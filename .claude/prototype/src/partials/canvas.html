@@ -1,4 +1,5 @@
 <div class="canvas-wrap" x-data="canvas()" @keydown.escape.window="$store.help.close()"
+     @edits-applied.window="countApplyAsStep()"
      :class="{ 'is-panning': isPanning, 'tool-hand': activeTool === 'hand' }"
      @pointerdown="onBoardPointerDown($event)"
      @pointermove="onBoardPointerMove($event)"

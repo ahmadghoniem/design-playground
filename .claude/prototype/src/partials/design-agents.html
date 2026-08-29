@@ -19,233 +19,132 @@
     </div>
   </div>
   <div class="design-agents-body">
-    <div x-show="$store.ui.rightTab === 'design'" class="fold-stack">
-      <div class="fold" :class="{ 'fold-open': folds.styles }">
-        <div class="fold-h">
-          <button type="button" class="fold-toggle" @click="toggleFold('styles')" :aria-expanded="folds.styles">
-            <svg class="fold-chev" :class="{ open: folds.styles }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-            Styles
-          </button>
-        </div>
-        <div class="fold-body" x-show="folds.styles">
-          <div class="design-agents-head">
-            <div class="crumb">
-              <template x-if="storeCrumbLeaf === 'root'">
-                <button type="button" x-text="storeCrumbName">PriceCard</button><span>›</span><span class="cur">root</span>
-              </template>
-              <template x-if="storeCrumbLeaf !== 'root'">
-                <span class="cur" x-text="storeCrumbName + '.' + storeCrumbLeaf"></span>
-              </template>
-            </div>
+    <div x-show="$store.ui.rightTab === 'design'">
+      <div class="design-agents-head" x-data="{ hot: null }">
+        <div class="sel-row">
+          <div class="crumb">
+            <template x-if="storeCrumbLeaf === 'root'">
+              <button type="button" x-text="storeCrumbName">PriceCard</button><span>›</span><span class="cur">root</span>
+            </template>
+            <template x-if="storeCrumbLeaf !== 'root'">
+              <span class="cur" x-text="storeCrumbName + '.' + storeCrumbLeaf"></span>
+            </template>
           </div>
-          <details class="sect" open :class="{ locked: isLocked() }">
-            <summary>Spacing</summary>
-            <div class="sect-in">
-              <div class="prow"><span class="pk">padding</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('p') }" @pointerdown="scrubStart('p', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('p')"></span></span></div>
-              <div class="prow"><span class="pk">gap</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('gap') }" @pointerdown="scrubStart('gap', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('gap')"></span></span></div>
-              <div class="prow"><span class="pk"><abbr x-tip.left="'space-y-* is not CSS — Tailwind generates margin rules between siblings'">space&#8209;y</abbr></span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('space-y') }" @pointerdown="scrubStart('space-y', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('space-y')"></span></span></div>
-            </div>
-          </details>
+          <button type="button" class="sb-apply" @click="applyEdits()" :disabled="!pendingEdits.length"
+                  x-tip.left="'Flatten these into the className'" aria-label="Apply">›</button>
+        </div>
 
-          <details class="sect" open :class="{ locked: isLocked() }">
-            <summary>Typography</summary>
-            <div class="sect-in">
-              <div class="prow"><span class="pk">size</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('text') }" @pointerdown="scrubStart('text', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('text')"></span></span></div>
-              <div class="prow"><span class="pk">weight</span>
-                <span class="pc-ctl"><span class="segs">
-                  <button type="button" @click="setSeg('font','normal')" :aria-pressed="segs.font === 'normal'">normal</button>
-                  <button type="button" @click="setSeg('font','medium')" :aria-pressed="segs.font === 'medium'">medium</button>
-                  <button type="button" @click="setSeg('font','bold')" :aria-pressed="segs.font === 'bold'">bold</button>
-                </span></span></div>
-              <div class="prow"><span class="pk"><abbr x-tip.left="'tracking = letter-spacing, from typesetting'">tracking</abbr></span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('tracking') }" @pointerdown="scrubStart('tracking', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('tracking')"></span></span></div>
-              <div class="prow"><span class="pk"><abbr x-tip.left="'leading = line-height, from the lead strips used in hand typesetting'">leading</abbr></span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('leading') }" @pointerdown="scrubStart('leading', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('leading')"></span></span></div>
-              <div class="prow"><span class="pk"><abbr x-tip.left="'tabular-nums bundles the font-variant-numeric sub-properties'">nums</abbr></span>
-                <span class="pc-ctl"><span class="segs">
-                  <button type="button" @click="setSeg('nums','prop')" :aria-pressed="segs.nums === 'prop'">prop</button>
-                  <button type="button" @click="setSeg('nums','tabular')" :aria-pressed="segs.nums === 'tabular'">tabular</button>
-                </span></span></div>
-            </div>
-          </details>
-
-          <details class="sect" open :class="{ locked: isLocked() }">
-            <summary>Colour</summary>
-            <div class="sect-in app-theme">
-              <div class="prow"><span class="pk">background</span>
-                <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-card)"></span>bg-card<span class="cap">token</span></button></span></div>
-              <div class="prow"><span class="pk">text</span>
-                <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-foreground)"></span>text-foreground<span class="cap">token</span></button></span></div>
-              <div class="prow"><span class="pk">accent</span>
-                <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-primary)"></span>bg-primary<span class="cap">token</span></button></span></div>
-            </div>
-          </details>
-
-          <details class="sect" :class="{ locked: isLocked() }">
-            <summary>Border &amp; shape</summary>
-            <div class="sect-in">
-              <div class="prow"><span class="pk">radius</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('rounded') }" @pointerdown="scrubStart('rounded', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('rounded')"></span></span></div>
-              <div class="prow"><span class="pk">border</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('border') }" @pointerdown="scrubStart('border', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('border')"></span></span></div>
-              <div class="prow"><span class="pk"><abbr x-tip.left="'ring has no CSS property — it is stacked box-shadows that follow border-radius'">ring</abbr></span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('ring') }" @pointerdown="scrubStart('ring', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('ring')"></span></span></div>
-            </div>
-          </details>
-
-          <details class="sect" :class="{ locked: isLocked() }">
-            <summary>Effects</summary>
-            <div class="sect-in">
-              <div class="prow"><span class="pk">shadow</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('shadow') }" @pointerdown="scrubStart('shadow', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('shadow')"></span></span></div>
-              <div class="prow"><span class="pk">opacity</span>
-                <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('opacity') }" @pointerdown="scrubStart('opacity', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('opacity')"></span></span></div>
-            </div>
-          </details>
-
-          <details class="sect" :class="{ locked: isLocked() }">
-            <summary>Layout</summary>
-            <div class="sect-in">
-              <div class="prow"><span class="pk">display</span>
-                <span class="pc-ctl"><span class="segs">
-                  <button type="button" @click="setSeg('disp','block')" :aria-pressed="segs.disp === 'block'">block</button>
-                  <button type="button" @click="setSeg('disp','grid')" :aria-pressed="segs.disp === 'grid'">grid</button>
-                  <button type="button" @click="setSeg('disp','flex')" :aria-pressed="segs.disp === 'flex'">flex</button>
-                </span></span></div>
-              <div class="prow"><span class="pk">align</span>
-                <span class="pc-ctl"><span class="segs">
-                  <button type="button" @click="setSeg('align','start')" :aria-pressed="segs.align === 'start'">start</button>
-                  <button type="button" @click="setSeg('align','center')" :aria-pressed="segs.align === 'center'">center</button>
-                  <button type="button" @click="setSeg('align','end')" :aria-pressed="segs.align === 'end'">end</button>
-                </span></span></div>
-            </div>
-          </details>
+        <div class="sb-pills" x-show="pendingEdits.length" x-cloak>
+          <template x-if="$store.lab.pillMode === 'class'">
+            <template x-for="(c, i) in pendingEdits" :key="i">
+              <span class="sb-pill" x-text="c.cls"></span>
+            </template>
+          </template>
+          <template x-if="$store.lab.pillMode === 'category'">
+            <template x-for="g in groupedEdits" :key="g.category">
+              <span class="sb-pill sb-cat" :class="{ open: hot === g.category }"
+                    @pointerenter="hot = g.category" @pointerleave="hot = null">
+                <svg class="sb-ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" x-html="g.icon"></svg>
+                <span class="sb-cat-cls" x-text="g.cls"></span>
+              </span>
+            </template>
+          </template>
         </div>
       </div>
 
-      <div class="fold" :class="{ 'fold-open': folds.variables }">
-        <div class="fold-h">
-          <button type="button" class="fold-toggle" @click="toggleFold('variables')" :aria-expanded="folds.variables">
-            <svg class="fold-chev" :class="{ open: folds.variables }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-            Variables
-            <span class="fold-count" x-text="varCount"></span>
-          </button>
-          <input type="text" class="fold-h-input" x-ref="varSearch" x-show="varSearchOpen" x-cloak
-                 x-model="varQuery" placeholder="Search variables" @keydown.escape="toggleVarSearch()">
-          <div class="fold-tools">
-            <button type="button" class="fold-ic" @click.stop="toggleVarSearch()"
-                    :aria-label="varSearchOpen ? 'Close search' : 'Search variables'">
-              <svg x-show="!varSearchOpen" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
-              <svg x-show="varSearchOpen" x-cloak width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-            <button type="button" class="fold-ic" x-show="!varSearchOpen" aria-label="Add variable">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            </button>
-          </div>
+      <details class="sect" open :class="{ locked: isLocked() }">
+        <summary>Spacing</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">padding</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('p') }" @pointerdown="scrubStart('p', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('p')"></span></span></div>
+          <div class="prow"><span class="pk">gap</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('gap') }" @pointerdown="scrubStart('gap', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('gap')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'space-y-* is not CSS — Tailwind generates margin rules between siblings'">space&#8209;y</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('space-y') }" @pointerdown="scrubStart('space-y', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('space-y')"></span></span></div>
         </div>
-        <div class="fold-body" x-show="folds.variables">
-          <div class="fold nested">
-            <div class="fold-h">
-              <button type="button" class="fold-toggle" @click="toggleFold('varColors')" :aria-expanded="folds.varColors">
-                <svg class="fold-chev" :class="{ open: folds.varColors }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-                Colors
-              </button>
-            </div>
-            <div class="fold-in app-theme" x-show="folds.varColors">
-              <template x-for="group in colorGroups" :key="group.group">
-                <div x-show="groupHasMatch(group)">
-                  <div class="tok-group-lbl" x-text="group.group"></div>
-                  <template x-for="row in group.rows" :key="row.name">
-                    <div class="tok-row" :class="{ undef: row.undef }" x-show="matchesVar(row.name)">
-                      <span class="name" x-text="row.name"></span>
-                      <template x-if="row.undef">
-                        <span class="sw undef"></span>
-                      </template>
-                      <template x-if="!row.undef">
-                        <label class="sw-pick" x-tip.left="'Pick a colour'">
-                          <input type="color" :value="pickValue(row, $el)" @input="setPick(row, $event.target.value)">
-                          <span class="sw" :style="swatchStyle(row)"></span>
-                        </label>
-                      </template>
-                    </div>
-                  </template>
-                </div>
-              </template>
-            </div>
-          </div>
-          <div class="fold nested">
-            <div class="fold-h">
-              <button type="button" class="fold-toggle" @click="toggleFold('varRadius')" :aria-expanded="folds.varRadius">
-                <svg class="fold-chev" :class="{ open: folds.varRadius }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-                Radius
-              </button>
-            </div>
-            <div class="fold-in" x-show="folds.varRadius">
-              <template x-for="row in radiusRows" :key="row.name">
-                <div class="tok-row" x-show="matchesVar(row.name)">
-                  <span class="sw" :style="swatchStyle(row)"></span>
-                  <span class="name" x-text="row.name"></span>
-                  <span class="tok-val" x-text="row.value"></span>
-                </div>
-              </template>
-            </div>
-          </div>
-          <div class="fold nested">
-            <div class="fold-h">
-              <button type="button" class="fold-toggle" @click="toggleFold('varType')" :aria-expanded="folds.varType">
-                <svg class="fold-chev" :class="{ open: folds.varType }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-                Typography
-              </button>
-            </div>
-            <div class="fold-in" x-show="folds.varType">
-              <template x-for="row in typeVars" :key="row.name">
-                <div class="tok-row" x-show="matchesVar(row.name)">
-                  <span class="name" x-text="row.name"></span>
-                  <span class="tok-val" x-text="row.value"></span>
-                </div>
-              </template>
-            </div>
-          </div>
-          <div class="fold nested">
-            <div class="fold-h">
-              <button type="button" class="fold-toggle" @click="toggleFold('icons')" :aria-expanded="folds.icons">
-                <svg class="fold-chev" :class="{ open: folds.icons }" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-                Icons
-              </button>
-            </div>
-            <div x-show="folds.icons">
-              <!-- The fold's job is naming the set in use and letting you swap it,
-                   so it carries a picker rather than a search field. -->
-              <div class="icon-pack">
-                <span>Icon set</span>
-                <select class="icon-pack-select" x-model="iconPackId" aria-label="Icon set">
-                  <template x-for="pack in iconPacks" :key="pack.id">
-                    <option :value="pack.id" x-text="pack.name"></option>
-                  </template>
-                </select>
-              </div>
-              <div class="icon-list">
-                <template x-for="name in iconPack.icons" :key="name">
-                  <div class="icon-row" x-show="matchesVar(name)">
-                    <span class="ic-box" x-text="name.slice(0,1)"></span>
-                    <span x-text="name"></span>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
+      </details>
+
+      <details class="sect" open :class="{ locked: isLocked() }">
+        <summary>Typography</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">size</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('text') }" @pointerdown="scrubStart('text', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('text')"></span></span></div>
+          <div class="prow"><span class="pk">weight</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('font','normal')" :aria-pressed="segs.font === 'normal'">normal</button>
+              <button type="button" @click="setSeg('font','medium')" :aria-pressed="segs.font === 'medium'">medium</button>
+              <button type="button" @click="setSeg('font','bold')" :aria-pressed="segs.font === 'bold'">bold</button>
+            </span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'tracking = letter-spacing, from typesetting'">tracking</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('tracking') }" @pointerdown="scrubStart('tracking', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('tracking')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'leading = line-height, from the lead strips used in hand typesetting'">leading</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('leading') }" @pointerdown="scrubStart('leading', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('leading')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'tabular-nums bundles the font-variant-numeric sub-properties'">nums</abbr></span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('nums','prop')" :aria-pressed="segs.nums === 'prop'">prop</button>
+              <button type="button" @click="setSeg('nums','tabular')" :aria-pressed="segs.nums === 'tabular'">tabular</button>
+            </span></span></div>
         </div>
-      </div>
+      </details>
+
+      <details class="sect" open :class="{ locked: isLocked() }">
+        <summary>Colour</summary>
+        <div class="sect-in app-theme">
+          <div class="prow"><span class="pk">background</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-card)"></span>bg-card<span class="cap">token</span></button></span></div>
+          <div class="prow"><span class="pk">text</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-foreground)"></span>text-foreground<span class="cap">token</span></button></span></div>
+          <div class="prow"><span class="pk">accent</span>
+            <span class="pc-ctl"><button class="tokbtn" type="button"><span class="sw" style="background:var(--host-primary)"></span>bg-primary<span class="cap">token</span></button></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Border &amp; shape</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">radius</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('rounded') }" @pointerdown="scrubStart('rounded', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('rounded')"></span></span></div>
+          <div class="prow"><span class="pk">border</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('border') }" @pointerdown="scrubStart('border', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('border')"></span></span></div>
+          <div class="prow"><span class="pk"><abbr x-tip.left="'ring has no CSS property — it is stacked box-shadows that follow border-radius'">ring</abbr></span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('ring') }" @pointerdown="scrubStart('ring', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('ring')"></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Effects</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">shadow</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('shadow') }" @pointerdown="scrubStart('shadow', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('shadow')"></span></span></div>
+          <div class="prow"><span class="pk">opacity</span>
+            <span class="pc-ctl"><span class="scrub" :class="{ dirty: stepDirty('opacity') }" @pointerdown="scrubStart('opacity', $event)" x-tip.left="'Drag left / right to change'" x-text="stepVal('opacity')"></span></span></div>
+        </div>
+      </details>
+
+      <details class="sect" :class="{ locked: isLocked() }">
+        <summary>Layout</summary>
+        <div class="sect-in">
+          <div class="prow"><span class="pk">display</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('disp','block')" :aria-pressed="segs.disp === 'block'">block</button>
+              <button type="button" @click="setSeg('disp','grid')" :aria-pressed="segs.disp === 'grid'">grid</button>
+              <button type="button" @click="setSeg('disp','flex')" :aria-pressed="segs.disp === 'flex'">flex</button>
+            </span></span></div>
+          <div class="prow"><span class="pk">align</span>
+            <span class="pc-ctl"><span class="segs">
+              <button type="button" @click="setSeg('align','start')" :aria-pressed="segs.align === 'start'">start</button>
+              <button type="button" @click="setSeg('align','center')" :aria-pressed="segs.align === 'center'">center</button>
+              <button type="button" @click="setSeg('align','end')" :aria-pressed="segs.align === 'end'">end</button>
+            </span></span></div>
+        </div>
+      </details>
     </div>
 
     <div x-show="$store.ui.rightTab === 'agents'" x-cloak>
       <div class="act-head">
         <h4>Calmer pricing card</h4>
-        <div class="act-meta"><span x-text="$store.chat.worktree"></span><span class="branch-lbl" style="font-size:10px;padding:2px 7px"><span class="gl">⑂</span><span x-text="$store.chat.branch"></span></span></div>
+        <div class="act-meta"><span x-text="$store.chat.worktree"></span><span class="act-branch"><span class="gl">⑂</span><span x-text="$store.chat.branch"></span></span><span class="act-diff" x-show="$store.chat.hasChanges"><span class="add" x-text="$store.chat.linesAddedLabel"></span><span class="del" x-text="$store.chat.linesRemovedLabel"></span></span></div>
         <div class="prog"><i></i></div>
         <p class="act-sum">Three variations of PriceCard from one prompt — a text note, a reference image and the component, sent together.</p>
       </div>

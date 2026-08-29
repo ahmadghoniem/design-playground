@@ -30,9 +30,7 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
-}
 
-@layer base {
   :root {
     --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", ui-monospace, monospace;
   }
@@ -52,6 +50,9 @@
     --pgc-orange: #c2410c;
     --pgc-orange-bg: #fff7ed;
     --pgc-orange-border: #fdba74;
+    --pgc-add: #15803d;
+    --pgc-del: #b91c1c;
+    --pgc-wash: rgba(0,0,0,.035);  /* the recessed ground under the Composer's nested card */
     --pgc-ok: #047857;
     --pgc-ok-bg: #ecfdf5;
     --pgc-ok-border: #6ee7b7;
@@ -345,6 +346,39 @@
   .node.sel .el:hover { outline-color: var(--pgc-select); cursor: crosshair; }
   .el.elsel { outline: 1px solid var(--pgc-select); outline-offset: 2px; background: rgba(37,99,235,.08); }
 
+  /* ── Pending edits, shown beside the name of what they are pending on ── */
+  :root {
+    /* Held in the panel and not yet in the file. Green marks that staged state, and it is
+       its own token rather than the adopted-green the node chrome already spends —
+       adopted means written, pending means not. */
+    --pgc-pending: #057a55;
+    --pgc-pending-fg: #ffffff;
+  }
+
+  .sel-row { display: flex; align-items: center; gap: 6px; }
+  .sel-row .crumb { flex: 1; min-width: 0; }
+  /* The panel is ~256px, so the pills wrap rather than clipping: a half-read class is a
+     class you cannot check. */
+  .sb-pills { display: flex; flex-wrap: wrap; gap: 3px;
+              font-family: var(--mono); font-size: 9.5px; font-weight: 500; line-height: 1; }
+  .sb-pill { height: 16px; padding: 0 6px; border-radius: 5px; flex: none;
+             display: inline-flex; align-items: center;
+             background: var(--pgc-pending); color: var(--pgc-pending-fg); }
+  .sb-apply { height: 18px; min-width: 18px; padding: 0 4px; border-radius: 6px; flex: none;
+              display: inline-flex; align-items: center; justify-content: center;
+              background: var(--pgc-accent); color: var(--pgc-accent-fg);
+              font-family: var(--mono); font-size: 12px; line-height: 1; }
+  .sb-apply:hover:not([disabled]) { background: var(--pgc-accent-hover); }
+  .sb-apply[disabled] { opacity: .3; cursor: default; }
+
+  /* Category mode: the glyph is the whole pill at rest, and the classes unroll on hover one
+     section at a time, so the row stays short until you ask a section what it holds. */
+  .sb-pill.sb-cat { padding: 0 5px; }
+  .sb-cat .sb-ic { flex: none; }
+  .sb-cat .sb-cat-cls { display: inline-block; min-width: 0; max-width: 0; overflow: hidden; opacity: 0;
+                        transition: max-width .16s ease, opacity .12s ease, margin-left .16s ease; }
+  .sb-cat.open .sb-cat-cls { max-width: 200px; opacity: 1; margin-left: 4px; }
+
   .node.failed { /* frame border handled on .fail-body */ }
   .fail-body { padding: 13px 12px; display: grid; gap: 7px; background: #fff; }
   .fail-code { font-family: var(--mono); font-size: 10px; color: var(--pgc-err); background: var(--pgc-err-bg);
@@ -415,20 +449,24 @@
   .help-pop .view-all { text-align: center; padding: 7px 8px; font-size: 11.5px; color: #a8a29e; }
 
   /* ── floating chat bar ── */
-  .chat-dock { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; width: min(500px, calc(100% - 40px)); z-index: 9; }
-  .chat-ctx { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-  .wt-readonly { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 9px 4px 8px; border-radius: 8px;
-                 border: 1px solid var(--pgc-border); background: #fff; color: var(--pgc-muted-fg); user-select: none; }
-  /* Read-only, like the worktree beside it: the row reports where the agent runs,
-     it does not switch anything. Only the dirty dot is state. */
-  .branch-lbl { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 9px; border-radius: 8px;
-                border: 1px solid var(--pgc-orange-border); background: var(--pgc-orange-bg); color: var(--pgc-orange);
-                user-select: none; }
-
-  .chat-box { position: relative; border: 1px solid var(--pgc-border); border-radius: 20px; background: #fbfbfb;
+  .chat-dock { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px;
+               width: min(var(--dock-w, 500px), calc(100% - 40px)); z-index: 9; }
+  /* The box is a shell with a card nested inside it. Which part is the card is the one
+     dial worth turning: by default the composing area is the card and the strip is the
+     shell showing beneath it, so the line you read as the divider is the card's own
+     bottom border, turning up into its corners instead of dying into the box's arc.
+     The --nest-* properties are the seam lab's; the fallbacks below are the design. */
+  .chat-box { position: relative; border: 1px solid var(--pgc-border); border-radius: 20px;
+              background: #fbfbfb;
               box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 10px 30px -12px rgba(0,0,0,.28); }
-  .chat-ctx .sp { margin-left: auto; }
-  .chat-ctx .gl { font-family: var(--mono); }
+  /* The nesting exists to seat the strip, and the strip is canvas-floor only, so the two
+     are scoped together: elsewhere the box is one flat card. The inset is the whole shape
+     — it is both the gap the shell shows through and, subtracted from the outer radius,
+     the card's own corner, so the two curves stay concentric at any value. */
+  .chat-dock .chat-box { padding: var(--nest-inset, 2px); background: var(--pgc-wash); }
+  .chat-dock .composer-body { background: #fbfbfb; border: 1px solid var(--pgc-border);
+                              border-radius: calc(20px - var(--nest-inset, 2px)); }
+  .gl { font-family: var(--mono); }
   .agent-mark { width: 15px; height: 15px; border-radius: 50% 50% 50% 6px; background: #d77655; display: inline-block; flex: none; }
 
   /* context-row popover wrappers (branch / model / permissions) */
@@ -442,20 +480,23 @@
                      border-radius: 7px; font-size: 11.5px; color: var(--pgc-fg); }
   .ctx-menu button:hover { background: var(--pgc-muted); }
   .ctx-menu button.on { background: var(--pgc-select-bg); color: var(--pgc-select); }
-  .ctx-menu .gl { font-family: var(--mono); }
   .perm-menu { min-width: 220px; }
   .perm-menu button { display: grid; gap: 1px; }
   .perm-menu .pm-l { font-size: 11.5px; font-weight: 600; }
   .perm-menu .pm-h { font-size: 10px; color: var(--pgc-muted-fg); }
   .perm-menu button.on .pm-h { color: var(--pgc-select); opacity: .8; }
 
-  /* Edit/Explore — slim mode control on the context row */
-  .mode-seg { display: inline-flex; align-items: center; gap: 1px; border: 1px solid var(--pgc-border);
-              background: #fff; border-radius: 999px; padding: 2px; }
-  .mode-seg button { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px;
-                     font-size: 11px; font-weight: 500; color: var(--pgc-muted-fg); }
-  .mode-seg button[aria-pressed="true"] { background: var(--pgc-muted); color: var(--pgc-fg); }
-  .iter-count { font-size: 10.5px; color: var(--pgc-muted-fg); padding-left: 2px; font-variant-numeric: tabular-nums; }
+  /* Corner grip — an arc traced just outside the box's own top-left curve, so the handle
+     reads as the corner rather than as a control sitting on top of one. Quiet until the
+     Composer is hovered, because it is a capability, not a thing to look at. */
+  .composer-grip { position: absolute; top: -6px; left: -6px; width: 24px; height: 24px;
+                   display: grid; place-items: center; cursor: nwse-resize; touch-action: none; user-select: none;
+                   color: #d6d3d1; opacity: 0; transition: opacity .12s ease, color .12s ease; z-index: 3; }
+  .chat-box:hover .composer-grip { opacity: 1; }
+  .composer-grip:hover, .chat-box.resizing .composer-grip { opacity: 1; color: #a8a29e; }
+  /* The pointer leaves the grip the moment the drag outruns it, so the cursor and the
+     text-selection lock have to live on the body for the length of the gesture. */
+  body.resizing, body.resizing * { cursor: nwse-resize !important; user-select: none !important; }
 
   /* expand/collapse: relocates the one Composer between canvas floor and Agents tab */
   .composer-expand { position: absolute; top: 8px; right: 10px; width: 22px; height: 22px; border-radius: 7px;
@@ -476,9 +517,76 @@
   .composer-input-area .chat-input::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
   .composer-input-area .chat-input::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
   .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px;
-                     padding: 7px 8px 8px 10px; border-radius: 0 0 20px 20px; }
+                     padding: 7px 8px 8px 10px; }
   .composer-footer-left { display: inline-flex; align-items: center; gap: 6px; flex: none; }
   .composer-footer-right { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+
+  /* Composer strip — where the agent runs, and what it has changed. Static text
+     throughout: nothing here is a control. It needs no border and no fill of its own,
+     because it sits directly on the washed shell the nested card is cut out of. */
+  .composer-strip { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+                    padding: 6px 14px;
+                    font-size: 10.5px; color: var(--pgc-muted-fg); user-select: none; }
+  /* The strip renders at 500px on the canvas floor and at ~256px in the Agents tab from
+     the one partial. The branch is what gives: a clipped branch name is still
+     recognisable, a clipped figure is a wrong number. */
+  .strip-where { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
+  .strip-where svg { flex: none; }
+  .strip-wt { flex: none; }
+  .strip-where .gl { flex: none; padding-left: 3px; }
+  .strip-branch { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .strip-diff { display: flex; align-items: center; gap: 6px; flex: none; font-variant-numeric: tabular-nums; }
+  .strip-diff .add { color: var(--pgc-add); }
+  .strip-diff .del { color: var(--pgc-del); }
+
+  /* The card, not the box, is what the expand control and the strip's handle belong to:
+     one sits on its top-right corner, the other along its bottom edge, and both have to
+     travel with the card as the strip comes and goes. */
+  .composer-body { position: relative; }
+
+  /* The card floats on the washed ground rather than being cut out of it. It has only the
+     inset's gap to cast into and the box already carries the shadow that lifts the whole
+     Composer off the canvas, so this one stays tight and points down. */
+  .chat-dock .composer-body { box-shadow: 0 1px 1px rgba(0,0,0,.04), 0 2px 4px -2px rgba(0,0,0,.10); }
+
+  /* The strip's control is the line between the card and the strip — the card's own bottom
+     border, already drawn, so the handle adds no chrome of its own and only surfaces on
+     hover. The same edge works both ways, so the strip can always be brought back. */
+  .composer-hem { position: absolute; left: 0; right: 0; bottom: -4px; height: 9px; cursor: pointer; z-index: 2; }
+  .composer-hem::after { content: ''; position: absolute; left: 50%; bottom: 4px;
+                         width: 30px; height: 2px; margin-left: -15px; border-radius: 999px;
+                         background: #d6d3d1; opacity: 0; transition: opacity .12s ease; }
+  .composer-hem:hover::after, .composer-hem:focus-visible::after { opacity: 1; }
+
+  /* Top strip — the turn the agent is waiting on. Same material as the strip below it:
+     no border and no fill, sitting straight on the washed shell, so the card stays the
+     one lit surface and the question reads as the Composer's own context. */
+  .composer-ask { display: grid; gap: 1px; padding: 4px 4px 7px; user-select: none; }
+  .ask-head { display: flex; align-items: flex-start; gap: 8px; padding: 4px 12px; }
+  .ask-title { flex: 1; min-width: 0; font-size: 11.5px; line-height: 1.35; font-weight: 500; color: var(--pgc-fg); }
+  .ask-meta { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+  .ask-count { font-size: 10px; color: var(--pgc-muted-fg); font-variant-numeric: tabular-nums; }
+  .ask-options { display: grid; gap: 1px; }
+  /* The whole row is the target, and the label wraps: this strip also renders at ~256px,
+     and a clipped option is an option you cannot choose. */
+  .ask-option { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left;
+                padding: 5px 12px; border-radius: 8px;
+                font-size: 11.5px; line-height: 1.35; color: var(--pgc-muted-fg); }
+  .ask-option:hover { background: rgba(255,255,255,.6); color: var(--pgc-fg); }
+  .ask-mark { width: 11px; height: 11px; margin-top: 2px; flex: none;
+              border: 1.5px solid #d6d3d1; border-radius: 50%; }
+  .ask-option:hover .ask-mark { border-color: #a8a29e; }
+  .ask-foot { display: flex; align-items: center; justify-content: space-between; padding: 2px 12px 0; }
+  .ask-skip { padding: 2px 6px; border-radius: 6px; font-size: 10px; color: var(--pgc-muted-fg); }
+  .ask-skip:hover { background: rgba(255,255,255,.6); color: var(--pgc-fg); }
+  .ask-dismiss { width: 18px; height: 18px; flex: none; display: grid; place-items: center;
+                 border-radius: 6px; font-size: 13px; line-height: 1; color: var(--pgc-muted-fg); }
+  .ask-dismiss:hover { background: rgba(255,255,255,.6); color: var(--pgc-fg); }
+  /* Answered, the strip holds one row of height: the ground above the card is part of the
+     Composer's shape, and letting it close would move the card the moment the last
+     question landed. */
+  .ask-rest { display: flex; align-items: center; min-height: 26px; padding: 0 12px;
+              font-size: 10.5px; color: var(--pgc-muted-fg); }
 
   /* Onlooks StateCursor — annotations / select-into-prompt */
   .annot-btn { position: relative; width: 28px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--pgc-muted-fg); }
@@ -503,49 +611,79 @@
   .perm-pill.tone-part:hover, .perm-pill.tone-open:hover { border-color: currentColor; }
 
   /* model picker — left of Send on the input row */
-  /* Closed the trigger is one shape. Open, a channel carves through it and the two
-     segments part — the split is what makes expansion read as deliberate rather than
-     as a pill that merely got wider. Model on the left, its current state on the right.
-     Prototype mechanism: radial-gradient corner masks fake the concave join. A real
-     implementation should cut one path; do not port the gradients. */
+  /* Closed the trigger is one shape. Open, a seam parts it into two pills — the seam is
+     what makes expansion read as deliberate rather than as a pill that merely got wider.
+     Model on the left, its current state on the right. */
+  /* Trigger and menu share one width so the open trigger lines up with the menu under it.
+     A JS measurement applied on the next tick animated the pill twice — first to its
+     natural open width, then to the measured one, which reads as a twitch. */
+  /* Every number here is a custom property so the seam widget can drive it live; the
+     widget writes the same names onto :root. */
+  .model-picker-wrap { --mp-open-w: 176px; }
+  :root {
+    --mp-seam: 22px;      /* how far the two pills part */
+    --mp-tuck: 6px;       /* how far the strip slides in behind them */
+    /* Outer corner radius. A real number rather than 999px, and derived from the
+       padding so it stays a full cap as the trigger grows: half of padding*2
+       plus the ~18px line box, rounded up. It clamps to half the height anyway. */
+    --mp-cap: calc(var(--mp-pad-y) + 9px);
+    --mp-inner: 13px;     /* inner corner radius, open */
+    --mp-pad-y: 5px;
+    --mp-pad-x: 10px;
+    /* The seam is a bridge, not a gap: it meets each pill at full height and pinches to a
+       waist in the middle, the two concave bites coming in from the trigger's top and
+       bottom edges. Calendly's profile, redrawn in a unit box at waist 40 / flare 12.
+       preserveAspectRatio is none — it stretches to whatever the seam measures, so the
+       proportion holds at any trigger height. */
+    --mp-channel: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0 0C0 0 12 30 50 30C88 30 100 0 100 0V100C100 100 88 70 50 70C12 70 0 100 0 100Z' fill='%23fff'/%3E%3C/svg%3E");
+  }
   .model-pill { display: inline-flex; align-items: stretch; font-size: 11.5px;
                 color: var(--pgc-muted-fg); border-radius: 999px;
                 transition: min-width .18s cubic-bezier(.4,0,.2,1); }
-  .model-pill .mp-seg { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
-                        border-radius: 999px; transition: border-radius .18s cubic-bezier(.4,0,.2,1); }
+
+  /* flex: none — the segments are the trigger's floor. Let them shrink and a narrow rail
+     wraps the model name onto two lines instead of taking width off the seam. */
+  .model-pill .mp-seg { display: inline-flex; align-items: center; gap: 5px;
+                        padding: var(--mp-pad-y) var(--mp-pad-x);
+                        flex: none; white-space: nowrap;
+                        position: relative; z-index: 1;
+                        transition: padding .18s cubic-bezier(.4,0,.2,1),
+                                    border-radius .18s cubic-bezier(.4,0,.2,1); }
   .model-pill:hover { color: var(--pgc-fg); }
   .model-pill:hover .mp-seg { background: var(--pgc-muted); }
   .model-pill.open { color: var(--pgc-fg); }
   .model-pill.open .mp-seg { background: var(--pgc-muted); }
 
-  /* Closed: the two segments abut, so the join is square on both sides and the pair
-     reads as one continuous pill. */
-  .model-pill .mp-seg-model { border-radius: 999px 0 0 999px; padding-right: 3px; }
-  .model-pill .mp-seg-state { border-radius: 0 999px 999px 0; padding-left: 3px; }
-  .model-pill .mp-split { width: 0; transition: width .18s cubic-bezier(.4,0,.2,1); }
+  /* The outer corners carry a real radius rather than 999px. Chrome scales every radius
+     on an edge down together when they overflow it, so a 999px cap next to a 13px inner
+     corner shrinks that inner corner to about a pixel — the seam then reads as a straight
+     slot cut between two square ends.
+     The inner corners are square closed and round open, and they travel between the two
+     rather than switching: border-radius animates, so the corner rolls open with the seam
+     instead of snapping partway through the close. */
+  .model-pill .mp-seg-model { border-radius: var(--mp-cap) 0 0 var(--mp-cap); }
+  .model-pill .mp-seg-state { border-radius: 0 var(--mp-cap) var(--mp-cap) 0; }
+  .model-pill.open .mp-seg-model { border-radius: var(--mp-cap) var(--mp-inner) var(--mp-inner) var(--mp-cap); }
+  .model-pill.open .mp-seg-state { border-radius: var(--mp-inner) var(--mp-cap) var(--mp-cap) var(--mp-inner); }
 
-  /* Open: a channel opens between them. Its walls are the segments' own round ends,
-     and the concave flare where the channel meets the top and bottom edges comes from
-     the masks below. */
-  .model-pill.open .mp-split { width: 6px; }
-  .model-pill.open .mp-seg-model { border-radius: 999px; padding-right: 8px; }
-  .model-pill.open .mp-seg-state { border-radius: 999px; padding-left: 8px; }
+  /* The strip sits behind the pills, so the tuck hides its square ends under their caps
+     instead of poking past them. Its fill is the segment fill, masked by the profile. */
+  .model-pill .mp-split { flex: none; width: 0; background: var(--pgc-muted);
+                          position: relative; z-index: 0;
+                          -webkit-mask-image: var(--mp-channel); mask-image: var(--mp-channel);
+                          -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+                          -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+                          transition: width .18s cubic-bezier(.4,0,.2,1),
+                                      margin .18s cubic-bezier(.4,0,.2,1); }
+
+  .model-pill.open { min-width: var(--mp-open-w); }
+  .model-pill.open .mp-split { width: var(--mp-seam);
+                               margin-inline: calc(-1 * var(--mp-tuck)); }
   .model-pill.open .chev { margin-left: auto; }
-
-  .model-pill .mp-split { position: relative; }
-  .model-pill.open .mp-split::before,
-  .model-pill.open .mp-split::after {
-    content: ''; position: absolute; left: -3px; right: -3px; height: 5px;
-    background:
-      radial-gradient(circle at 0 100%, transparent 5px, var(--pgc-muted) 5px) left top / 50% 100% no-repeat,
-      radial-gradient(circle at 100% 100%, transparent 5px, var(--pgc-muted) 5px) right top / 50% 100% no-repeat;
-  }
-  .model-pill.open .mp-split::before { top: 0; }
-  .model-pill.open .mp-split::after { bottom: 0; transform: scaleY(-1); }
 
   .model-pill .effort-dim { color: var(--pgc-muted-fg); }
   .model-pill .chev { opacity: .55; }
-  .model-menu { min-width: 176px; padding: 4px; }
+  .model-menu { min-width: var(--mp-open-w); padding: 4px; }
   .model-menu-row { position: relative; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px;
                     padding: 6px 8px; border-radius: 6px; cursor: default; }
   .model-menu-row:hover { background: var(--pgc-muted); }
@@ -782,6 +920,12 @@
   /* agents tab */
   .act-head { padding: 12px 12px 9px; border-bottom: 1px solid var(--pgc-border); }
   .act-head h4 { margin: 0 0 3px; font-size: 13.5px; font-weight: 600; color: var(--pgc-fg); }
+  .act-branch { display: inline-flex; align-items: center; gap: 4px; }
+  /* The RunHeader is where Worktree, Branch and the diff live inside the Agents tab —
+     the Composer's strip stays on the canvas floor rather than repeating them here. */
+  .act-diff { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .act-diff .add { color: var(--pgc-add); }
+  .act-diff .del { color: var(--pgc-del); }
   .act-meta { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; color: var(--pgc-muted-fg); flex-wrap: wrap; }
   .prog { height: 5px; border-radius: 3px; background: var(--pgc-border); overflow: hidden; margin: 9px 0 8px; }
   .prog i { display: block; height: 100%; width: 64%; background: linear-gradient(90deg, var(--pgc-orange) 0 60%, var(--pgc-orange-border) 60% 100%); }
@@ -843,4 +987,39 @@
      (0,2,0) and would otherwise outrank it, leaving bottom/left/right tips permanently
      offset by their 8px entry translate. */
   .pg-tip.pg-tip-visible { opacity: 1; transform: scale(1) translate(0, 0); }
+}
+
+@layer components {
+  /* seam lab — a scratch dial for the model trigger, bottom-right. It writes the
+     --mp-* properties onto :root; nothing in the trigger's CSS knows it is there. */
+  .seam-lab { position: fixed; right: 12px; bottom: 12px; z-index: 90;
+              display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+              font-size: 11px; color: var(--pgc-fg); }
+  .seam-lab-tab { display: inline-flex; align-items: center; gap: 6px;
+                  padding: 5px 10px; border-radius: 999px; cursor: pointer;
+                  background: var(--pgc-bg); border: 1px solid var(--pgc-border);
+                  box-shadow: 0 1px 3px rgb(0 0 0 / .08);
+                  font-size: 11px; color: var(--pgc-muted-fg); }
+  .seam-lab-tab:hover { color: var(--pgc-fg); }
+  .seam-lab-caret { opacity: .55; }
+  .seam-lab-body { width: 216px; padding: 12px; border-radius: 10px;
+                   background: var(--pgc-bg); border: 1px solid var(--pgc-border);
+                   box-shadow: 0 8px 24px rgb(0 0 0 / .12);
+                   display: flex; flex-direction: column; gap: 9px; }
+  /* name and value on one line, the track spanning both under them */
+  .seam-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; cursor: pointer; }
+  .seam-name { color: var(--pgc-muted-fg); }
+  .seam-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 10px; }
+  .seam-row input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--pgc-fg); }
+  /* variant dials — same two-line shape as a slider row, the track replaced by choices */
+  .seam-seg { grid-column: 1 / -1; display: flex; gap: 3px; }
+  .seam-seg button { flex: 1; padding: 4px 2px; border-radius: 6px; cursor: pointer; font-size: 10px;
+                     background: none; border: 1px solid var(--pgc-border); color: var(--pgc-muted-fg); }
+  .seam-seg button:hover { color: var(--pgc-fg); }
+  .seam-seg button.on { background: var(--pgc-fg); border-color: var(--pgc-fg); color: var(--pgc-bg); }
+  .seam-actions { display: flex; gap: 6px; padding-top: 3px; }
+  .seam-actions button { flex: 1; padding: 5px 8px; border-radius: 6px; cursor: pointer;
+                         background: none; border: 1px solid var(--pgc-border);
+                         color: var(--pgc-muted-fg); font-size: 10px; }
+  .seam-actions button:hover { color: var(--pgc-fg); border-color: var(--pgc-fg); }
 }

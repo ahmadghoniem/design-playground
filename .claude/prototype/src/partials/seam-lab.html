@@ -1,0 +1,83 @@
+<div class="seam-lab" x-data="seamLab" :class="{ open: open }">
+  <button type="button" class="seam-lab-tab" @click="open = !open">
+    <span>Seam</span>
+    <span class="seam-lab-caret" x-text="open ? '⌄' : '⌃'"></span>
+  </button>
+
+  <div class="seam-lab-body" x-show="open" x-cloak>
+    <div class="seam-row">
+      <span class="seam-name">Question layout</span>
+      <span class="seam-val" x-text="$store.lab.questionLayout"></span>
+      <div class="seam-seg">
+        <button type="button" :class="{ on: $store.lab.questionLayout === 'full' }"
+                @click="$store.lab.questionLayout = 'full'">Full</button>
+        <button type="button" :class="{ on: $store.lab.questionLayout === 'condensed' }"
+                @click="$store.lab.questionLayout = 'condensed'">Condensed</button>
+      </div>
+    </div>
+
+    <div class="seam-row">
+      <span class="seam-name">Class pills</span>
+      <span class="seam-val" x-text="$store.lab.pillMode"></span>
+      <div class="seam-seg">
+        <button type="button" :class="{ on: $store.lab.pillMode === 'class' }"
+                @click="$store.lab.pillMode = 'class'">Per class</button>
+        <button type="button" :class="{ on: $store.lab.pillMode === 'category' }"
+                @click="$store.lab.pillMode = 'category'">Per category</button>
+      </div>
+    </div>
+
+    <label class="seam-row">
+      <span class="seam-name">Card inset</span>
+      <span class="seam-val" x-text="v.inset + 'px'"></span>
+      <input type="range" min="0" max="8" step="1" x-model.number="v.inset" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Seam width</span>
+      <span class="seam-val" x-text="v.seam + 'px'"></span>
+      <input type="range" min="0" max="48" step="1" x-model.number="v.seam" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Waist</span>
+      <span class="seam-val" x-text="v.waist + '%'"></span>
+      <input type="range" min="0" max="80" step="1" x-model.number="v.waist" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Flare</span>
+      <span class="seam-val" x-text="v.flare + '%'"></span>
+      <input type="range" min="0" max="50" step="1" x-model.number="v.flare" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Tuck</span>
+      <span class="seam-val" x-text="v.tuck + 'px'"></span>
+      <input type="range" min="0" max="16" step="1" x-model.number="v.tuck" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Inner radius</span>
+      <span class="seam-val" x-text="v.inner + 'px'"></span>
+      <input type="range" min="0" max="16" step="1" x-model.number="v.inner" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Height</span>
+      <span class="seam-val" x-text="v.padY + 'px'"></span>
+      <input type="range" min="2" max="12" step="1" x-model.number="v.padY" @input="apply()">
+    </label>
+
+    <label class="seam-row">
+      <span class="seam-name">Side padding</span>
+      <span class="seam-val" x-text="v.padX + 'px'"></span>
+      <input type="range" min="4" max="18" step="1" x-model.number="v.padX" @input="apply()">
+    </label>
+
+    <div class="seam-actions">
+      <button type="button" @click="reset()">Reset</button>
+      <button type="button" @click="copy()">Copy CSS</button>
+    </div>
+  </div>
+</div>

@@ -119,3 +119,48 @@ export const PERMISSIONS = [
  */
 export const CURRENT_WORKTREE = 'rewynd';
 export const CURRENT_BRANCH = 'pg/quiet-numeric';
+
+/**
+ * The worktree's diff against its base, as the Composer strip reports it. Two figures
+ * rather than a net one: a single number cannot say whether a run mostly added or mostly
+ * deleted, which is the thing you glance at the strip to learn.
+ */
+export const CURRENT_LINES_ADDED = 56466;
+export const CURRENT_LINES_REMOVED = 2809;
+
+/**
+ * The agent's AskUserQuestion turns, as the Composer's top strip plays them back. The
+ * options are whole answers rather than one-word chips: the question is about how you
+ * work, and the shades between the answers are the content — shortening one to fit a row
+ * would take its meaning with it, so the row wraps instead.
+ */
+export const ASK_QUESTIONS = [
+  {
+    id: 'build',
+    title: 'How do you build UI these days?',
+    options: [
+      'Mostly agents, I review and steer',
+      'AI-assisted, but I write the code',
+      'Design in Figma, then hand off',
+      'By hand, the old-fashioned way',
+    ],
+  },
+  {
+    id: 'origin',
+    title: 'Where do new ideas take shape first?',
+    options: [
+      'A prompt to an agent',
+      'A Figma canvas',
+      'Straight into code',
+    ],
+  },
+  {
+    id: 'drift',
+    title: 'What usually goes wrong first?',
+    options: [
+      'The spacing drifts',
+      'Colours stop matching the tokens',
+      "It works, but it's not what I meant",
+    ],
+  },
+];

@@ -6,6 +6,7 @@ import { registerDesignAgents } from './design-agents.js';
 import { registerModals } from './modals.js';
 import { registerTooltip } from './tooltip.js';
 import { registerTheme } from './theme.js';
+import { registerSeamLab } from './seam-lab.js';
 import { NODE_NAMES } from '../data/shared.js';
 
 registerLibrary();
@@ -15,6 +16,7 @@ registerDesignAgents();
 registerModals();
 registerTooltip();
 registerTheme();
+registerSeamLab();
 
 document.addEventListener('alpine:init', () => {
   Alpine.store('mock', {

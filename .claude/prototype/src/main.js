@@ -7,6 +7,7 @@ import './components/design-agents.js';
 import './components/modals.js';
 import './components/tooltip.js';
 import './components/theme.js';
+import './components/seam-lab.js';
 import './components/proto.js';
 
 window.Alpine = Alpine;
