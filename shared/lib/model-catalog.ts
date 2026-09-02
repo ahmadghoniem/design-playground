@@ -29,7 +29,6 @@ export const CLAUDE_FALLBACK_MODELS: ModelOption[] = [
   { value: 'opusplan', label: 'Opus plan + Sonnet execute' },
 ];
 
-/** Minimum Claude Code versions for newer models (for UI hints). */
 const CLAUDE_MIN_VERSIONS = {
   opus48: '2.1.154',
   fable5: '2.1.170',
@@ -51,7 +50,6 @@ export function migrateModelId(model: string): string {
   return CLAUDE_LEGACY_ALIASES[trimmed] ?? trimmed;
 }
 
-/** Migrate and dedupe a list of enabled model ids, falling back to defaults when empty. */
 export function migrateEnabledModels(
   ids: string[],
   defaultIds: readonly string[],
@@ -86,7 +84,6 @@ function buildClaudeFeaturedList(allModels: ModelOption[]): ModelOption[] {
   return featured;
 }
 
-/** Split Claude models into featured aliases and advanced pinned ids. */
 export function partitionClaudeModels(allModels: ModelOption[]): ModelPartition {
   const featuredIds = new Set<string>(CLAUDE_FEATURED_MODEL_IDS);
   const featured = buildClaudeFeaturedList(allModels);

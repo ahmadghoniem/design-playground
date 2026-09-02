@@ -1,6 +1,3 @@
-/**
- * Prompt for in-place file editing (edit mode).
- */
 
 export interface EditPromptOptions {
   filePath: string;

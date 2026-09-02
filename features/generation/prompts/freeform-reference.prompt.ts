@@ -1,7 +1,3 @@
-/**
- * @name: freeform-reference-prompt
- * @description: Prompt for generating a brand-new component using selected canvas nodes as design references.
- */
 import { fillTemplate } from '@pg/shared/lib/fill-template';
 import {
   iterationsFile,

@@ -22,14 +22,10 @@ export interface GenerationStartPayload {
   componentName: string;
   parentNodeId: string;
   iterationCount: number;
-  /** First iteration number in this batch (e.g. 9 when iterations 1–8 already exist) */
   startNumber?: number;
   model?: string;
-  /** Agent CLI used for this generation. Always Claude Code; kept for back-compat with consumers. */
   provider?: string;
-  /** Flow-space position where the generation was initiated */
   flowPosition?: { x: number; y: number };
-  /** Node this generation is anchored to, when dropped on a frame */
   targetNodeId?: string | null;
   /** When true, this is an edit-in-place operation — no skeleton nodes should be created */
   editMode?: boolean;

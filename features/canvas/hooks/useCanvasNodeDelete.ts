@@ -87,10 +87,8 @@ export function useCanvasNodeDelete({
         };
 
         if (mode === "cascade") {
-          // Remove the node and all descendants from canvas
           const deletedSet = new Set(deletedFiles);
 
-          // Find all node IDs to remove (match by filename)
           const nodeIdsToRemove = new Set<string>();
           nodes.forEach((n) => {
             if (n.id === node.id) nodeIdsToRemove.add(n.id);
@@ -109,7 +107,6 @@ export function useCanvasNodeDelete({
           );
           setKnownIterations((prev) => prev.filter((f) => !deletedSet.has(f)));
 
-          // Clean up collapsed state
           setCollapsedNodeIds((prev) => {
             const next = new Set(prev);
             nodeIdsToRemove.forEach((id) => next.delete(id));
@@ -120,14 +117,11 @@ export function useCanvasNodeDelete({
           const parentRelation = relations.find((r) => r.childId === node.id);
           const parentId = parentRelation?.parentId;
 
-          // Get child node IDs
           const childRelations = relations.filter((r) => r.parentId === node.id);
           const childNodeIds = childRelations.map((r) => r.childId);
 
-          // Remove the deleted node
           setNodes((nds) => nds.filter((n) => n.id !== node.id));
 
-          // Remove all relations to/from deleted node, and add new relations from parent to children
           setRelations((rels) => {
             const filtered = rels.filter(
               (r) => r.parentId !== node.id && r.childId !== node.id,
@@ -149,7 +143,6 @@ export function useCanvasNodeDelete({
             prev.filter((f) => f !== node.data.filename),
           );
 
-          // Clean up collapsed state for deleted node
           setCollapsedNodeIds((prev) => {
             const next = new Set(prev);
             next.delete(node.id);

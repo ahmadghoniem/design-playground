@@ -30,7 +30,6 @@ export function readSegmentsFromDOM(el: HTMLDivElement): Segment[] {
   return segments
 }
 
-/** Detect if there's an active trigger behind the cursor. */
 export type TriggerState = {
   trigger: string
   query: string

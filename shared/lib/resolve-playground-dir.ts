@@ -93,7 +93,6 @@ function resolveAllPlaygroundDirs(): string[] {
     .filter((dir) => fs.existsSync(dir));
 }
 
-/** Every iterations/ folder under existing playground roots, canonical first. */
 export function resolveIterationsDirs(): string[] {
   return listPlaygroundDirs()
     .map((dir) => path.join(dir, 'iterations'))

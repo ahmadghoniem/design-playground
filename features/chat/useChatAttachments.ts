@@ -13,24 +13,11 @@ export interface UseChatAttachmentsResult {
   editTarget: SelectedNodeContext | null;
   /** All selected nodes that are not the edit target (used as reference context). */
   referenceNodes: SelectedNodeContext[];
-  /** True when there is any meaningful selection (edit target, element selections, or nodes). */
   hasSelection: boolean;
-  /**
-   * True when there is an editable edit target or at least one element selection —
-   * i.e. when Edit/Explore mode is applicable.
-   */
+  /** True when Edit/Explore mode applies: an editable target, or any element selection. */
   canEditOrExplore: boolean;
-  /** True when there is an edit target, element selections, or reference nodes. */
   hasAnyPill: boolean;
-  /**
-   * Serialize the current element selections into the `elementSelections` portion
-   * of `ChatSubmitPayload`. Returns undefined when there are none.
-   */
   buildElementSelectionsPayload(): ChatSubmitPayload['elementSelections'];
-  /**
-   * Serialize the current reference nodes into the `referenceNodes` portion of
-   * `ChatSubmitPayload`. Returns undefined when there are none.
-   */
   buildReferenceNodesPayload(): ChatSubmitPayload['referenceNodes'];
 }
 

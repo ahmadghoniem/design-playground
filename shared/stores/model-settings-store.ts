@@ -12,7 +12,6 @@ import { migrateEnabledModels } from '@pg/shared/lib/model-catalog';
 interface ModelSettingsState {
   hasHydrated: boolean;
 
-  /** Model ids enabled in the picker. Empty means "use defaults". */
   enabledModels: string[];
   availableModels: ModelOption[];
   hasFetched: boolean;

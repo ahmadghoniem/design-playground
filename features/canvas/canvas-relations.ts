@@ -8,7 +8,6 @@
 
 import type { CanvasRelation } from '@pg/shared/lib/canvas-persistence';
 
-/** Map each parentId to the list of its direct childIds. */
 export function buildChildrenMap(relations: CanvasRelation[]): Map<string, string[]> {
   const childrenMap = new Map<string, string[]>();
   for (const rel of relations) {

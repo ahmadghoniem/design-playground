@@ -18,7 +18,6 @@ export function isInExpectedBatch(iterationNumber: number, info: GenerationInfo 
   return iterationNumber >= info.startNumber && iterationNumber <= end;
 }
 
-/** Map a file iteration number to its skeleton node id (slot = number - startNumber). */
 function getSkeletonIdForFileIteration(
   info: GenerationInfo,
   fileIterationNumber: number,

@@ -14,7 +14,6 @@ export interface AgentSpawnOptions {
   claudeDetailedStdout?: boolean;
 }
 
-/** Claude Code CLI options persisted in the client store. */
 export interface ClaudeCodeOptions {
   effort: 'low' | 'medium' | 'high' | 'max';
   /** When true, stream-json for live tooltip; chat download omits raw stream. When false, plain text in chat log. */
@@ -28,10 +27,8 @@ export const DEFAULT_CLAUDE_CODE_OPTIONS: ClaudeCodeOptions = {
 
 export const AGENT_BINARY = 'claude';
 
-/** Human-readable name shown in logs and chat headers. */
 export const AGENT_DISPLAY_NAME = 'Claude Code';
 
-/** User-facing message when the CLI is not on PATH (ENOENT). */
 export const AGENT_NOT_FOUND_MESSAGE =
   'Claude Code CLI not found. Install via: npm install -g @anthropic-ai/claude-code';
 

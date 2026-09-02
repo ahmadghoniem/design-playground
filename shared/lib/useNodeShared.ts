@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, RefObject } from "react";
 import { flatRegistry } from "@pg/registry";
 
-/** TTL for the shared async-props cache (ms) */
 const PROPS_CACHE_TTL_MS = 60_000;
 
 const propsCache = new Map<

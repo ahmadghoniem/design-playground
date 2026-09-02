@@ -33,8 +33,6 @@ export interface ChatSubmitPayload {
     imageUrl?: string;
     textContent?: string;
   }[];
-  /** When true, edit the target file in-place instead of creating iterations */
   editMode?: boolean;
-  /** Cursor chat behavior mode */
   chatMode?: 'explore' | 'edit' | 'raw';
 }

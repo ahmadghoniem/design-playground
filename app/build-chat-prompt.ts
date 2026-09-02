@@ -16,7 +16,6 @@ import { iterationsFile } from "@pg/shared/lib/playground-paths";
 import { CHAT_DEFAULT_COUNT } from "@pg/shared/lib/constants";
 import type { ChatSubmitPayload } from "@pg/shared/lib/chat-submit-payload";
 
-/** Minimal node shape needed to resolve text-node reference content. */
 export type ChatPromptNode = {
   id: string;
   data: Record<string, unknown>;
@@ -68,7 +67,6 @@ export function buildReferenceNodesSection(
   return formatReferenceNodesSection(refNodesResolved);
 }
 
-/** Resolve the on-disk file path for an edit-mode target. */
 export function resolveEditFilePath(payload: ChatSubmitPayload): {
   filePath: string;
   componentId: string;
@@ -183,9 +181,6 @@ export function buildTargetedExplorePrompt(args: {
   return { prompt, componentId, componentName, iterationCount, startNumber };
 }
 
-/**
- * Build the freeform (no-target) prompt — freeform-reference template or raw text.
- */
 export function buildFreeformChatPrompt(args: {
   isRawMode: boolean;
   rawPrompt: string;

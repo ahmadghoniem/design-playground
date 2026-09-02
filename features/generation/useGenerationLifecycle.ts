@@ -115,10 +115,6 @@ export function useGenerationLifecycle({
   }, [scanForIterations, stopGenerationEventSource, coord.getGenerationInfo]);
 
   useEffect(() => {
-    /**
-     * Check whether a rectangle overlaps any existing canvas node.
-     * Returns true if there is a collision.
-     */
     const rectsOverlap = (
       a: { x: number; y: number; w: number; h: number },
       b: { x: number; y: number; w: number; h: number },
@@ -192,7 +188,6 @@ export function useGenerationLifecycle({
         startNumber: genStartNumber,
       } = payload;
 
-      // Edit mode: no skeleton nodes are created
       if (isEditMode) {
         coord.setIsGeneratingEager(true);
         coord.setGenerationInfoEager({
@@ -203,7 +198,7 @@ export function useGenerationLifecycle({
           skeletonNodeIds: [],
           startTime: Date.now(),
         });
-        // Subscribe to SSE for progressive iteration detection — same as iterate/freeform
+        // Same SSE subscription as iterate/freeform.
         startGenerationEventSource();
         return;
       }
@@ -251,7 +246,6 @@ export function useGenerationLifecycle({
         return;
       }
 
-      // Parent node dimensions (used for grid sizing and skeleton sizing)
       const cellW =
         parentNode.measured?.width ??
         (parentNode.type === "component"
@@ -271,7 +265,6 @@ export function useGenerationLifecycle({
         [];
 
       for (let i = 1; i <= iterationCount; i++) {
-        // Place iterations to the right of the parent
         const { x, y } = calculateIterationPosition(
           coord.getNodes(),
           parentNode,
@@ -302,7 +295,6 @@ export function useGenerationLifecycle({
             componentName,
             parentNodeId,
             totalIterations: iterationCount,
-            // Always size skeleton nodes to match parent
             width: cellW,
             height: cellH,
           },

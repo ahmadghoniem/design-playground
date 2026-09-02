@@ -10,7 +10,7 @@ import { AGENT_BINARY, buildAgentArgs } from '../../shared/lib/agent-config';
  * caller's responsibility, since it varies by route.
  */
 
-/** Mask a secret-ish value for logging: keep first/last 2 chars, redact the rest. */
+/** Keep the first and last 2 chars, redact the rest. */
 function maskSecret(v: string | undefined): string {
   if (!v) return '(empty)';
   if (v.length <= 6) return '***';

@@ -1,4 +1,3 @@
-// Canvas localStorage persistence + shared canvas types.
 
 import type { Node, Edge } from '@xyflow/react';
 import { CANVAS_STATE_STORAGE_KEY } from './constants';
@@ -14,17 +13,14 @@ export interface CanvasRelation {
   kind: 'iteration';
 }
 
-/** In-memory generation state for status display during a live run. */
 export interface GenerationInfo {
   componentId: string;
   componentName: string;
   parentNodeId: string;
   iterationCount: number;
-  /** First iteration number in this batch */
   startNumber?: number;
   skeletonNodeIds: string[];
   startTime: number;
-  /** Skeleton positions for post-generation repositioning (set when skeletons are created) */
   skeletonPositions?: { x: number; y: number }[];
   /** Legacy alias for `skeletonPositions`; still read from old snapshots, never written. */
   gridPositions?: { x: number; y: number }[];
@@ -36,7 +32,6 @@ export interface CanvasState {
   nodeIdCounter: number;
   knownIterations: string[];
   collapsedNodeIds?: string[];
-  /** Persisted viewport (pan/zoom) */
   viewport?: { x: number; y: number; zoom: number };
 }
 
@@ -49,7 +44,6 @@ export function getCanvasStorageKey(projectId?: string): string {
   return projectId ? `${CANVAS_STATE_STORAGE_KEY}:${projectId}` : CANVAS_STATE_STORAGE_KEY;
 }
 
-/** Map an iteration node to its dedup key (react filename). */
 export function getIterationKeyFromNode(n: Node): string | null {
   if (n.type !== 'iteration') return null;
   if (n.data.filename) {
@@ -58,7 +52,6 @@ export function getIterationKeyFromNode(n: Node): string | null {
   return null;
 }
 
-/** Keys for iteration nodes currently on the canvas. */
 export function getIterationKeysOnCanvas(nodes: Node[]): Set<string> {
   const keys = new Set<string>();
   for (const n of nodes) {
@@ -68,7 +61,6 @@ export function getIterationKeysOnCanvas(nodes: Node[]): Set<string> {
   return keys;
 }
 
-/** Drop knownIterations entries that have no matching canvas node. */
 export function pruneKnownIterations(knownIterations: string[], nodes: Node[]): string[] {
   const onCanvas = getIterationKeysOnCanvas(nodes);
   return knownIterations.filter((k) => onCanvas.has(k));

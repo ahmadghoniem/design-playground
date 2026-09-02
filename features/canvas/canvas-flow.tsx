@@ -39,13 +39,9 @@ export interface CanvasFlowState {
   isLoading: boolean;
   /** The persisted snapshot loaded once at mount (null when nothing stored). */
   initialState: CanvasState | null;
-  /** Restore the previous canvas snapshot (no-op when history is empty). */
   undo: () => void;
-  /** Re-apply the last undone snapshot (no-op when there is nothing to redo). */
   redo: () => void;
-  /** True when there is at least one snapshot to undo (drives button state). */
   canUndo: boolean;
-  /** True when there is at least one undone snapshot to re-apply. */
   canRedo: boolean;
 }
 
@@ -64,7 +60,6 @@ export function useCanvasFlow(): CanvasFlowState {
   return ctx;
 }
 
-/** Classic local React Flow state seeded from localStorage, with undo/redo. */
 function SoloFlowProvider({ children, storageKey }: { children: ReactNode; storageKey?: string }) {
   const [initial] = useState(() => loadCanvasState(storageKey));
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initial?.nodes ?? []);
@@ -93,7 +88,7 @@ function SoloFlowProvider({ children, storageKey }: { children: ReactNode; stora
     setCanRedo(futureRef.current.length > 0);
   }, []);
 
-  // Capture the CURRENT (pre-mutation) state as a history entry.
+  // Snapshot the pre-mutation state.
   const commit = useCallback(() => {
     pastRef.current.push({ nodes: nodesRef.current, relations: relationsRef.current });
     if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
@@ -182,7 +177,6 @@ export function CanvasFlowProvider({
   storageKey,
 }: {
   children: ReactNode;
-  /** Project-scoped localStorage key for persistence. */
   storageKey?: string;
 }) {
   return <SoloFlowProvider storageKey={storageKey}>{children}</SoloFlowProvider>;

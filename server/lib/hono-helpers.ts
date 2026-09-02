@@ -1,6 +1,3 @@
-/**
- * Small helpers shared across the Hono route modules.
- */
 import type { Context } from 'hono';
 
 /**

@@ -127,7 +127,7 @@ export function extractStreamJsonError(lines: string[]): string | null {
         if (text) return text;
       }
     } catch {
-      /* ignore */
+      /* ignore non-JSON or unexpected shape */
     }
   }
   return null;

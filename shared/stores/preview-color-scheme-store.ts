@@ -35,10 +35,6 @@ export const usePreviewColorSchemeStore = create<PreviewColorSchemeState>()(
   )
 );
 
-/**
- * Class to add to the preview root (canvas `.playground-main-view`, or the
- * standalone `.app-theme` iteration view) for the active override.
- */
 export function previewSchemeClass(scheme: PreviewColorScheme): string {
   return scheme === 'dark' ? 'dark' : 'light';
 }

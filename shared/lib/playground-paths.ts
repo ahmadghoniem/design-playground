@@ -23,7 +23,6 @@ function normalizeRoot(root: string): string {
   return root.replace(/\\/g, '/').replace(/\/+$/, '');
 }
 
-/** Root baked into the client bundle by the Vite plugin (if present). */
 function injectedRoot(): string | null {
   try {
     if (typeof __PG_RELATIVE_ROOT__ === 'string' && __PG_RELATIVE_ROOT__.length > 0) {
@@ -53,9 +52,6 @@ function canResolveFromDisk(): boolean {
   );
 }
 
-/**
- * Playground root relative to the host project (e.g. `src/app/playground`).
- */
 export function relativeRoot(): string {
   if (relativeRootOverride) return relativeRootOverride;
   const injected = injectedRoot();
@@ -81,7 +77,6 @@ export function hydratePlaygroundRelativeRoot(): string {
   return root;
 }
 
-/** Join segments under the playground root (POSIX). */
 export function playgroundJoin(...parts: string[]): string {
   const cleaned = parts
     .flatMap((p) => p.split('/'))

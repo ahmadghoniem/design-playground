@@ -41,10 +41,6 @@ function resolveRegistryPlaygroundDir(): string {
 // registry.tsx's static import of `./discovered-registry.gen` always resolves.
 ensureModuleExists(resolveRegistryPlaygroundDir());
 
-/**
- * Build the Hono app exposing every playground API route. Each route module
- * registers its handlers at `/api/...` and mounts at the root of this app.
- */
 export function createPlaygroundRouter(): Hono {
   const router = new Hono();
 
@@ -57,7 +53,7 @@ export function createPlaygroundRouter(): Hono {
   return router;
 }
 
-/** Lazily-constructed singleton router, exported for direct mounting. */
+/** Lazily constructed, for hosts that mount the router directly. */
 export const playgroundRouter: Hono = createPlaygroundRouter();
 
 /**

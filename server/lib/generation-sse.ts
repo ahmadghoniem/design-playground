@@ -27,7 +27,6 @@ export function emitGenerationDone(): void {
   sseGenerationEvents.emit('done');
 }
 
-/** Subscribe to generation SSE bus events. Returns an unsubscribe cleanup. */
 function subscribeGenerationSse(handlers: GenerationSseHandlers): () => void {
   sseGenerationEvents.on('iteration-added', handlers.onIteration);
   sseGenerationEvents.on('done', handlers.onDone);
@@ -37,10 +36,6 @@ function subscribeGenerationSse(handlers: GenerationSseHandlers): () => void {
   };
 }
 
-/**
- * Wire the Hono `?action=events` SSE stream: push iteration-added / done until
- * the client disconnects or generation finishes.
- */
 export function streamGenerationEvents(
   c: Context,
   generationActive: boolean,

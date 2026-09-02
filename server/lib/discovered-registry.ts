@@ -23,7 +23,6 @@ const EMPTY_MODULE = `/**
 export const discoveredRegistry = []
 `;
 
-/** Ensure the generated module exists on disk (empty default for fresh projects). */
 export function ensureModuleExists(playgroundDir: string): void {
   const p = path.join(playgroundDir, MODULE_FILENAME);
   if (fs.existsSync(p)) return;
