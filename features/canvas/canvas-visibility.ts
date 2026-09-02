@@ -13,7 +13,7 @@ import { buildChildrenMap } from "./canvas-relations";
  * Ids of every node hidden because an ancestor is collapsed. The collapsed node
  * itself stays visible; only its descendants are hidden. Cycle-safe.
  */
-export function computeHiddenDescendants(
+function computeHiddenDescendants(
   relations: CanvasRelation[],
   collapsedNodeIds: Set<string>,
 ): Set<string> {

@@ -52,7 +52,7 @@ function canResolveFromDisk(): boolean {
   );
 }
 
-export function relativeRoot(): string {
+function relativeRoot(): string {
   if (relativeRootOverride) return relativeRootOverride;
   const injected = injectedRoot();
   if (injected) return injected;
@@ -77,7 +77,7 @@ export function hydratePlaygroundRelativeRoot(): string {
   return root;
 }
 
-export function playgroundJoin(...parts: string[]): string {
+function playgroundJoin(...parts: string[]): string {
   const cleaned = parts
     .flatMap((p) => p.split('/'))
     .map((p) => p.trim())

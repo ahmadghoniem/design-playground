@@ -3,9 +3,9 @@ import path from 'path';
 
 /**
  * Candidate playground locations, in preference order, as POSIX paths relative
- * to the host project root. Shared with PlaygroundPaths.
+ * to the host project root.
  */
-export const PLAYGROUND_CANDIDATE_RELATIVE_DIRS = [
+const PLAYGROUND_CANDIDATE_RELATIVE_DIRS = [
   'src/app/playground',
   'app/playground',
 ] as const;
@@ -77,7 +77,7 @@ export function resolvePlaygroundDirRelative(): string {
  * resolved (canonical) directory first. Useful for defensive scanning so that
  * files stranded in a sparse directory from a prior buggy run still surface.
  */
-export function listPlaygroundDirs(): string[] {
+function listPlaygroundDirs(): string[] {
   const root = process.cwd();
   const resolved = resolvePlaygroundDir();
   const existing = candidateRelativeDirs()

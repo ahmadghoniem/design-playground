@@ -6,6 +6,7 @@ import {
 } from "react";
 import type { Node } from "@xyflow/react";
 import type { CanvasRelation } from "@pg/shared/lib/canvas-persistence";
+import { getChildIds } from "@pg/features/canvas/canvas-relations";
 
 export interface UseCanvasNodeDeleteParams {
   nodes: Node[];
@@ -40,8 +41,7 @@ export function useCanvasNodeDelete({
             console.error("Error deleting image file:", error);
           }
         } else if (node.type === "iteration" && node.data.filename) {
-          const childRelations = relations.filter((r) => r.parentId === node.id);
-          if (childRelations.length > 0) {
+          if (getChildIds(relations, node.id).length > 0) {
             setDeleteDialogNode(node);
             return;
           }
@@ -117,8 +117,7 @@ export function useCanvasNodeDelete({
           const parentRelation = relations.find((r) => r.childId === node.id);
           const parentId = parentRelation?.parentId;
 
-          const childRelations = relations.filter((r) => r.parentId === node.id);
-          const childNodeIds = childRelations.map((r) => r.childId);
+          const childNodeIds = getChildIds(relations, node.id);
 
           setNodes((nds) => nds.filter((n) => n.id !== node.id));
 

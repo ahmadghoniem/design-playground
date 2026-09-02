@@ -19,7 +19,7 @@ export function getStylingQualityItem(): string {
  * re-anchors to the playground dir and fails to resolve. This is the single
  * most common way a generated iteration breaks the host's dev server.
  */
-export function importConstraint(): string {
+function importConstraint(): string {
   return `- **Imports**: The iteration is saved to a DIFFERENT directory than the original, so relative imports from the source will NOT resolve. Rewrite every relative ("../" or "./") import from the original to the host alias "@/" (which maps to the host's "src/"), deriving the original's location from its source path. Example: a component at src/features/daily-recap/components/DailyRecapItem.tsx importing "../hooks/useDailyRecap" MUST become "@/features/daily-recap/hooks/useDailyRecap". Imports that are already "@/..." or bare packages (react, lucide-react) are copied unchanged.`;
 }
 
